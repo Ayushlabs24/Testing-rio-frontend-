@@ -27,4 +27,7 @@ export const endpoints = {
     list: "/users",
     create: "/users",
   },
+  audit: {
+    list: "/audit",
+  },
 } as const;

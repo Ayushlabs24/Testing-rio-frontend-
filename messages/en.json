@@ -127,6 +127,7 @@
       "organization": "Organization",
       "roles": "Roles",
       "users": "Users",
+      "audit": "Audit Log",
       "collapse": "Collapse sidebar",
       "expand": "Expand sidebar"
     },
@@ -250,6 +251,36 @@
         "status": {
           "active": "Active",
           "invited": "Invited"
+        }
+      },
+      "audit": {
+        "title": "Audit Log",
+        "description": "An immutable, timestamped history of key actions in your organisation. Entries are append-only — they can't be edited or deleted.",
+        "searchPlaceholder": "Search by actor or item...",
+        "filterLabel": "Filter by action",
+        "filterAll": "All actions",
+        "noResults": "No audit events found.",
+        "immutableNotice": "Records are immutable and retained in full.",
+        "systemActor": "System",
+        "dateColumn": "Date & time",
+        "actorColumn": "Actor",
+        "actionColumn": "Action",
+        "targetColumn": "Item",
+        "actions": {
+          "create": "Created",
+          "edit": "Edited",
+          "approve": "Approved",
+          "share": "Shared",
+          "delete": "Deleted"
+        },
+        "entities": {
+          "organization": "Organisation",
+          "user": "User",
+          "study": "Study",
+          "survey": "Survey",
+          "evidence": "Evidence",
+          "report": "Report",
+          "sharing_request": "Sharing request"
         }
       }
     }

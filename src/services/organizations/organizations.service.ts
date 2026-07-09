@@ -2,6 +2,7 @@ import { findOrganizationById, findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
+import { auditService } from "@/services/audit/audit.service";
 import type {
   Organization,
   UpdateOrganizationPayload,
@@ -39,6 +40,13 @@ export const organizationsService = {
     if (payload.sector !== undefined) organization.sector = payload.sector;
     if (payload.villages !== undefined) organization.villages = payload.villages;
     if (payload.isActive !== undefined) organization.isActive = payload.isActive;
+    auditService.record({
+      action: "edit",
+      entityType: "organization",
+      entityId: organization.id,
+      entityLabel: organization.name,
+      metadata: { changed: Object.keys(payload) },
+    });
     return organization;
   },
 };

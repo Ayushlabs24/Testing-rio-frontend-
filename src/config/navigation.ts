@@ -1,5 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, ShieldCheck, Users2, Building2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  ShieldCheck,
+  Users2,
+  Building2,
+  ScrollText,
+} from "lucide-react";
 import type { PermissionModule } from "@/types/permissions";
 
 export interface NavItem {
@@ -21,4 +27,5 @@ export const appNav: NavItem[] = [
   },
   { labelKey: "roles", href: "/settings/roles", icon: ShieldCheck, module: "usersRoles" },
   { labelKey: "users", href: "/settings/users", icon: Users2, module: "usersRoles" },
+  { labelKey: "audit", href: "/settings/audit", icon: ScrollText, module: "audit" },
 ];

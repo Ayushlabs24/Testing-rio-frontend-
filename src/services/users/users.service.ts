@@ -3,6 +3,7 @@ import { findRoleById, findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId, mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
+import { auditService } from "@/services/audit/audit.service";
 import type {
   CreateUserPayload,
   OrgUser,
@@ -79,6 +80,13 @@ export const usersService = {
       createdAt: new Date().toISOString(),
     };
     users.push(newUser);
+    auditService.record({
+      action: "create",
+      entityType: "user",
+      entityId: newUser.id,
+      entityLabel: newUser.name,
+      metadata: { email: newUser.email, roleId: newUser.roleId },
+    });
     return toOrgUser(newUser);
   },
 
@@ -94,6 +102,13 @@ export const usersService = {
     if (payload.name !== undefined) user.name = payload.name;
     if (payload.roleId !== undefined) user.roleId = payload.roleId;
     if (payload.status !== undefined) user.status = payload.status;
+    auditService.record({
+      action: "edit",
+      entityType: "user",
+      entityId: user.id,
+      entityLabel: user.name,
+      metadata: { changed: Object.keys(payload) },
+    });
     return toOrgUser(user);
   },
 
@@ -104,7 +119,14 @@ export const usersService = {
       throw new ApiError({ message: "You can't remove your own account.", status: 400 });
     }
     const user = requireOrgUser(id, currentUser.organizationId);
+    const removedName = user.name;
     const index = users.indexOf(user);
     users.splice(index, 1);
+    auditService.record({
+      action: "delete",
+      entityType: "user",
+      entityId: id,
+      entityLabel: removedName,
+    });
   },
 };
