@@ -1,0 +1,230 @@
+/**
+ * Rio design tokens — single source of truth for theming.
+ *
+ * Edit ONLY this file to change the application's look and feel
+ * (brand colors, spacing scale, radius scale, shadows, fonts).
+ * Nothing outside this file should ever hardcode a color, spacing,
+ * radius or shadow value — components must consume the semantic
+ * Tailwind utilities (e.g. `bg-primary`, `rounded-lg`, `shadow-md`)
+ * which are wired to these tokens in `src/app/globals.css`.
+ *
+ * Structure:
+ *   1. Primitive palettes  — raw color ramps (50-900), not used directly by components.
+ *   2. Semantic tokens     — light mode aliases consumed by the app/components.
+ *   3. Dark mode overrides — same semantic names, different values.
+ *   4. Non-color tokens    — radius and shadow scales.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* 1. Primitive palettes                                            */
+  /* ---------------------------------------------------------------- */
+
+  /* Primary — brand indigo/violet, anchored on #6059E8 (= oklch(0.554 0.209 279.3)) */
+  --palette-primary-50: oklch(0.97 0.015 279.3);
+  --palette-primary-100: oklch(0.94 0.035 279.3);
+  --palette-primary-200: oklch(0.87 0.07 279.3);
+  --palette-primary-300: oklch(0.78 0.13 279.3);
+  --palette-primary-400: oklch(0.68 0.17 279.3);
+  --palette-primary-500: oklch(0.554 0.209 279.3);
+  --palette-primary-600: oklch(0.5 0.2 279.3);
+  --palette-primary-700: oklch(0.42 0.19 279.3);
+  --palette-primary-800: oklch(0.34 0.16 279.3);
+  --palette-primary-900: oklch(0.27 0.12 279.3);
+
+  /* Secondary — teal */
+  --palette-secondary-50: oklch(0.97 0.012 200);
+  --palette-secondary-100: oklch(0.93 0.03 200);
+  --palette-secondary-200: oklch(0.86 0.055 200);
+  --palette-secondary-300: oklch(0.77 0.08 200);
+  --palette-secondary-400: oklch(0.67 0.1 200);
+  --palette-secondary-500: oklch(0.56 0.11 200);
+  --palette-secondary-600: oklch(0.48 0.1 200);
+  --palette-secondary-700: oklch(0.4 0.09 200);
+  --palette-secondary-800: oklch(0.32 0.07 200);
+  --palette-secondary-900: oklch(0.26 0.055 200);
+
+  /* Accent — amber */
+  --palette-accent-50: oklch(0.98 0.02 80);
+  --palette-accent-100: oklch(0.95 0.05 80);
+  --palette-accent-200: oklch(0.9 0.09 80);
+  --palette-accent-300: oklch(0.83 0.13 80);
+  --palette-accent-400: oklch(0.76 0.15 75);
+  --palette-accent-500: oklch(0.69 0.16 70);
+  --palette-accent-600: oklch(0.6 0.15 65);
+  --palette-accent-700: oklch(0.5 0.13 60);
+  --palette-accent-800: oklch(0.4 0.1 55);
+  --palette-accent-900: oklch(0.32 0.08 50);
+
+  /* Neutral — grayscale used for surfaces/text */
+  --palette-neutral-0: oklch(1 0 0);
+  --palette-neutral-50: oklch(0.985 0 0);
+  --palette-neutral-100: oklch(0.97 0 0);
+  --palette-neutral-200: oklch(0.922 0 0);
+  --palette-neutral-300: oklch(0.87 0 0);
+  --palette-neutral-400: oklch(0.708 0 0);
+  --palette-neutral-500: oklch(0.556 0 0);
+  --palette-neutral-600: oklch(0.439 0 0);
+  --palette-neutral-700: oklch(0.371 0 0);
+  --palette-neutral-800: oklch(0.269 0 0);
+  --palette-neutral-900: oklch(0.205 0 0);
+  --palette-neutral-950: oklch(0.145 0 0);
+
+  /* Status colors */
+  --palette-success-500: oklch(0.6 0.14 150);
+  --palette-success-700: oklch(0.44 0.12 150);
+  --palette-warning-500: oklch(0.75 0.16 85);
+  --palette-warning-700: oklch(0.52 0.13 75);
+  --palette-danger-500: oklch(0.577 0.245 27.325);
+  --palette-danger-700: oklch(0.45 0.2 27.325);
+  --palette-info-500: oklch(0.62 0.14 230);
+  --palette-info-700: oklch(0.46 0.12 230);
+
+  /* Fonts */
+  --font-sans-token: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-mono-token: var(--font-geist-mono, ui-monospace, monospace);
+
+  /* ---------------------------------------------------------------- */
+  /* 2. Semantic tokens — light mode                                   */
+  /* ---------------------------------------------------------------- */
+  --background: var(--palette-neutral-0);
+  --foreground: var(--palette-neutral-950);
+
+  --card: var(--palette-neutral-0);
+  --card-foreground: var(--palette-neutral-950);
+
+  --popover: var(--palette-neutral-0);
+  --popover-foreground: var(--palette-neutral-950);
+
+  --primary: var(--palette-primary-600);
+  --primary-foreground: var(--palette-neutral-50);
+
+  --secondary: var(--palette-secondary-100);
+  --secondary-foreground: var(--palette-secondary-900);
+
+  --accent: var(--palette-accent-100);
+  --accent-foreground: var(--palette-accent-900);
+
+  --muted: var(--palette-neutral-100);
+  --muted-foreground: var(--palette-neutral-600);
+
+  --success: var(--palette-success-500);
+  --success-foreground: var(--palette-neutral-50);
+
+  --warning: var(--palette-warning-500);
+  --warning-foreground: var(--palette-neutral-950);
+
+  --destructive: var(--palette-danger-500);
+  --destructive-foreground: var(--palette-neutral-50);
+
+  --info: var(--palette-info-500);
+  --info-foreground: var(--palette-neutral-50);
+
+  --border: var(--palette-neutral-200);
+  --input: var(--palette-neutral-200);
+  --ring: var(--palette-primary-400);
+
+  --chart-1: var(--palette-primary-400);
+  --chart-2: var(--palette-secondary-400);
+  --chart-3: var(--palette-accent-500);
+  --chart-4: var(--palette-success-500);
+  --chart-5: var(--palette-info-500);
+
+  --sidebar: var(--palette-neutral-50);
+  --sidebar-foreground: var(--palette-neutral-950);
+  --sidebar-primary: var(--palette-primary-600);
+  --sidebar-primary-foreground: var(--palette-neutral-50);
+  --sidebar-accent: var(--palette-neutral-100);
+  --sidebar-accent-foreground: var(--palette-primary-700);
+  --sidebar-border: var(--palette-neutral-200);
+  --sidebar-ring: var(--palette-primary-400);
+
+  /* Brand gradient — used for hero/marketing surfaces (e.g. auth split-screen panel) */
+  --gradient-hero-from: var(--palette-primary-500);
+  --gradient-hero-via: var(--palette-primary-600);
+  --gradient-hero-to: var(--palette-primary-700);
+
+  /*
+   * Content color for the gradient surface above. Deliberately NOT
+   * theme-flipping like --primary-foreground (which pairs with the
+   * lighter --primary used on dark-mode buttons) — the gradient panel
+   * stays mid/dark purple in both themes, so its content color must
+   * stay fixed light in both themes too. Do not override under .dark.
+   */
+  --on-brand-foreground: var(--palette-neutral-50);
+  --on-brand-chip-foreground: var(--palette-primary-600);
+
+  /* ---------------------------------------------------------------- */
+  /* 4. Non-color tokens                                              */
+  /* ---------------------------------------------------------------- */
+  --radius: 0.625rem;
+
+  --shadow-color: 220 3% 15%;
+  --shadow-token-sm: 0 1px 2px 0 hsl(var(--shadow-color) / 0.06);
+  --shadow-token-md: 0 2px 8px 0 hsl(var(--shadow-color) / 0.08);
+  --shadow-token-lg: 0 8px 24px -4px hsl(var(--shadow-color) / 0.12);
+  --shadow-token-xl: 0 16px 40px -8px hsl(var(--shadow-color) / 0.16);
+}
+
+/* ---------------------------------------------------------------- */
+/* 3. Semantic tokens — dark mode overrides                          */
+/* ---------------------------------------------------------------- */
+.dark {
+  --background: var(--palette-neutral-950);
+  --foreground: var(--palette-neutral-50);
+
+  --card: var(--palette-neutral-900);
+  --card-foreground: var(--palette-neutral-50);
+
+  --popover: var(--palette-neutral-900);
+  --popover-foreground: var(--palette-neutral-50);
+
+  --primary: var(--palette-primary-400);
+  --primary-foreground: var(--palette-neutral-950);
+
+  --secondary: var(--palette-secondary-800);
+  --secondary-foreground: var(--palette-secondary-50);
+
+  --accent: var(--palette-accent-800);
+  --accent-foreground: var(--palette-accent-50);
+
+  --muted: var(--palette-neutral-800);
+  --muted-foreground: var(--palette-neutral-400);
+
+  --success: var(--palette-success-500);
+  --success-foreground: var(--palette-neutral-950);
+
+  --warning: var(--palette-warning-500);
+  --warning-foreground: var(--palette-neutral-950);
+
+  --destructive: var(--palette-danger-500);
+  --destructive-foreground: var(--palette-neutral-50);
+
+  --info: var(--palette-info-500);
+  --info-foreground: var(--palette-neutral-950);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--palette-primary-500);
+
+  --chart-1: var(--palette-primary-300);
+  --chart-2: var(--palette-secondary-300);
+  --chart-3: var(--palette-accent-400);
+  --chart-4: var(--palette-success-500);
+  --chart-5: var(--palette-info-500);
+
+  --sidebar: var(--palette-neutral-900);
+  --sidebar-foreground: var(--palette-neutral-50);
+  --sidebar-primary: var(--palette-primary-400);
+  --sidebar-primary-foreground: var(--palette-neutral-950);
+  --sidebar-accent: var(--palette-neutral-800);
+  --sidebar-accent-foreground: var(--palette-primary-200);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: var(--palette-primary-500);
+
+  --gradient-hero-from: var(--palette-primary-600);
+  --gradient-hero-via: var(--palette-primary-700);
+  --gradient-hero-to: var(--palette-primary-900);
+
+  --shadow-color: 220 40% 2%;
+}

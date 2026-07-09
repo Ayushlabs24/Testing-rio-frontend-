@@ -1,0 +1,267 @@
+{
+  "metadata": {
+    "title": "Rio",
+    "description": "Community need assessment platform."
+  },
+  "theme": {
+    "toggleLabel": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "auth": {
+    "login": {
+      "heroTitle": "One platform for your entire community needs assessment lifecycle",
+      "heroSubtitle": "From defining community needs to AI-assisted, human-approved reporting — built for nonprofits.",
+      "heroBullets": [
+        "A dedicated, isolated workspace for every organisation",
+        "Build surveys from a curated, versioned question bank",
+        "AI assists at every step — your team reviews and approves before anything is released",
+        "Deterministic scoring rolls up to a prioritized Top-5 needs report"
+      ],
+      "title": "Welcome back",
+      "description": "Sign in to your Rio workspace",
+      "emailLabel": "Work email",
+      "emailPlaceholder": "you@organisation.org",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "genericError": "Something went wrong. Please try again.",
+      "otp": "Sign in with OTP instead",
+      "noAccount": "Don't have a workspace yet?",
+      "createOne": "Create one"
+    },
+    "signup": {
+      "heroTitle": "Set up your organisation's workspace",
+      "heroSubtitle": "Create a workspace, invite your team, and start running need assessments in minutes.",
+      "title": "Create your workspace",
+      "description": "You'll be the first member and Org Admin.",
+      "organizationNameLabel": "Organisation name",
+      "organizationNamePlaceholder": "Demo Nonprofit Alliance",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Jordan Lee",
+      "emailLabel": "Work email",
+      "emailPlaceholder": "you@organisation.org",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Create a password",
+      "consentLabel": "I agree to share my organisation's assessment data within Rio and consent to it being processed as described in the data-sharing notice.",
+      "submit": "Create workspace",
+      "submitting": "Creating workspace...",
+      "genericError": "Something went wrong. Please try again.",
+      "haveAccount": "Already have a workspace?",
+      "signIn": "Sign in"
+    },
+    "forgotPassword": {
+      "heroTitle": "We'll get you back in",
+      "heroSubtitle": "Enter your email and we'll send a link to reset your password.",
+      "title": "Reset your password",
+      "description": "Enter the email associated with your account.",
+      "emailLabel": "Work email",
+      "emailPlaceholder": "you@organisation.org",
+      "submit": "Send reset link",
+      "submitting": "Sending...",
+      "genericError": "Something went wrong. Please try again.",
+      "sentTitle": "Check your email",
+      "sentDescription": "If that email exists, a reset link has been sent.",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "heroTitle": "Choose a new password",
+      "heroSubtitle": "Make it something you haven't used before.",
+      "title": "Set a new password",
+      "description": "Choose a strong password for your account.",
+      "passwordLabel": "New password",
+      "passwordPlaceholder": "Enter a new password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter the new password",
+      "submit": "Reset password",
+      "submitting": "Resetting...",
+      "genericError": "Something went wrong. Please try again.",
+      "doneTitle": "Password reset",
+      "doneDescription": "Your password has been updated. You can now sign in.",
+      "backToLogin": "Back to sign in"
+    },
+    "otp": {
+      "heroTitle": "Sign in without a password",
+      "heroSubtitle": "We'll send a one-time code to your email.",
+      "title": "Sign in with OTP",
+      "description": "Enter your email to receive a one-time code.",
+      "emailLabel": "Work email",
+      "emailPlaceholder": "you@organisation.org",
+      "sendCode": "Send code",
+      "sending": "Sending...",
+      "genericError": "Something went wrong. Please try again.",
+      "backToLogin": "Back to sign in",
+      "verifyTitle": "Enter your code",
+      "verifyDescription": "We sent a 6-digit code to {email}.",
+      "codeLabel": "One-time code",
+      "codePlaceholder": "123456",
+      "verify": "Verify and sign in",
+      "verifying": "Verifying...",
+      "useDifferentEmail": "Use a different email"
+    },
+    "validation": {
+      "emailInvalid": "Please enter a valid email address.",
+      "passwordMin": "Password must be at least 8 characters.",
+      "passwordsMustMatch": "Passwords must match.",
+      "nameRequired": "Please enter a name.",
+      "organizationNameRequired": "Please enter an organisation name.",
+      "otpLength": "Enter the 6-digit code.",
+      "roleRequired": "Please select a role.",
+      "consentRequired": "You must accept the data-sharing consent to continue."
+    }
+  },
+  "app": {
+    "consent": {
+      "title": "Before you continue",
+      "description": "Rio needs your consent to process your organisation's assessment data.",
+      "body": "Your data will be shared within your organisation and processed to power surveys, scoring, and reports as described in your organisation's data-sharing notice. You can review what this covers with your Org Admin.",
+      "accept": "I agree, continue",
+      "accepting": "Saving...",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "organization": "Organization",
+      "roles": "Roles",
+      "users": "Users",
+      "collapse": "Collapse sidebar",
+      "expand": "Expand sidebar"
+    },
+    "topbar": {
+      "menu": "Menu",
+      "logout": "Log out"
+    },
+    "footer": {
+      "rightsReserved": "All rights reserved.",
+      "version": "v{version}"
+    },
+    "dashboard": {
+      "title": "Welcome, {name}",
+      "description": "Here's what's happening in your workspace.",
+      "stats": {
+        "organizations": "Organization",
+        "users": "Users",
+        "roles": "Roles",
+        "modules": "Modules"
+      }
+    },
+    "settings": {
+      "organization": {
+        "title": "Organization",
+        "description": "Manage your organisation's profile.",
+        "edit": "Edit",
+        "cancel": "Cancel",
+        "detailsTitle": "Details",
+        "nameLabel": "Organisation name",
+        "createdLabel": "Created",
+        "membersLabel": "Members",
+        "uploadLogo": "Upload logo",
+        "save": "Save changes",
+        "saving": "Saving...",
+        "saved": "Saved.",
+        "regionLabel": "Region",
+        "emailLabel": "Email",
+        "sectorLabel": "Sector",
+        "sectorPlaceholder": "Select a sector",
+        "villagesLabel": "Villages",
+        "villagesPlaceholder": "Add a village or community name",
+        "addVillage": "Add",
+        "removeVillage": "Remove {village}",
+        "statusLabel": "Status",
+        "statusHint": "Inactive organisations lose access until reactivated.",
+        "statusActive": "Active",
+        "statusInactive": "Inactive",
+        "sectors": {
+          "education": "Education",
+          "healthcare": "Healthcare",
+          "agriculture": "Agriculture",
+          "wash": "Water, Sanitation & Hygiene",
+          "livelihoods": "Livelihoods",
+          "disaster_relief": "Disaster Relief",
+          "other": "Other"
+        }
+      },
+      "roles": {
+        "title": "Roles",
+        "description": "Roles are fixed and define what each member can read or write.",
+        "viewDetails": "View details",
+        "permissionSummary": "{full} full · {read} read-only · {none} no access",
+        "roleColumn": "Role",
+        "descriptionColumn": "Description",
+        "accessColumn": "Access",
+        "moduleColumn": "Module",
+        "read": "Read",
+        "write": "Write",
+        "access": {
+          "full": "Full access",
+          "read": "Read only",
+          "none": "No access",
+          "fullShort": "RW",
+          "readShort": "R"
+        },
+        "modules": {
+          "organization": "Organization",
+          "usersRoles": "Users & Roles",
+          "onboarding": "Onboarding",
+          "needs": "Needs",
+          "surveys": "Surveys",
+          "collection": "Collection",
+          "evidence": "Evidence",
+          "aiReview": "AI Review",
+          "reports": "Reports",
+          "sharing": "Sharing",
+          "supervisorOversight": "Supervisor Oversight",
+          "audit": "Audit"
+        }
+      },
+      "users": {
+        "title": "Users",
+        "description": "Everyone with access to this organisation.",
+        "searchPlaceholder": "Search by name or email...",
+        "noResults": "No users found.",
+        "newUser": "New user",
+        "newUserTitle": "Add a user",
+        "editUser": "Edit user",
+        "editUserTitle": "Edit user",
+        "deleteUser": "Delete user",
+        "deleteTitle": "Delete this user?",
+        "deleteDescription": "This will permanently remove {name} from the organisation. This can't be undone.",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "save": "Save changes",
+        "saving": "Saving...",
+        "nameLabel": "Name",
+        "emailLabel": "Email",
+        "roleLabel": "Role",
+        "rolePlaceholder": "Select a role",
+        "derivedPermissions": "Permissions from this role",
+        "read": "read",
+        "write": "write",
+        "create": "Create user",
+        "creating": "Creating...",
+        "genericError": "Something went wrong. Please try again.",
+        "nameColumn": "Name",
+        "emailColumn": "Email",
+        "roleColumn": "Role",
+        "statusColumn": "Status",
+        "status": {
+          "active": "Active",
+          "invited": "Invited"
+        }
+      }
+    }
+  },
+  "common": {
+    "appName": "Rio",
+    "loading": "Loading...",
+    "error": "Something went wrong. Please try again."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has moved.",
+    "backHome": "Back to home"
+  }
+}
