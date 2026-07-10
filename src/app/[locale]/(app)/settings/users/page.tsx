@@ -152,16 +152,37 @@ function UserDialog({
   const selectedStatus = useWatch({ control, name: "status" });
   const selectedRole = roles.find((role) => role.id === selectedRoleId);
 
+  // `roles` is the assignable set (cross-entity + Citizen Guest filtered out).
+  // When editing someone who already holds a non-assignable role, keep it in
+  // the options so the Select shows their current role instead of a blank —
+  // it simply can't be freshly assigned to anyone via this entity screen.
+  const roleOptions = useMemo<Array<Pick<RoleSummary, "id" | "name">>>(() => {
+    if (user && !roles.some((role) => role.id === user.role.id)) {
+      return [user.role, ...roles];
+    }
+    return roles;
+  }, [roles, user]);
+
   const onSubmit = async (values: Values) => {
     setFormError(null);
     try {
       let saved: PlatformUser;
       if (isEdit) {
-        saved = await usersService.updateAny(user!.id, {
+        const changes = {
           name: values.name,
           roleId: values.roleId,
           status: values.status,
-        });
+        };
+        // Mirror create/delete: cross-entity roles edit any org via the
+        // unscoped path; an entity role stays scoped to its own org so the
+        // mock's tenant-isolation checks (requireOrgUser) still apply.
+        saved = isCrossEntity
+          ? await usersService.updateAny(user!.id, changes)
+          : await usersService.update(user!.id, changes).then((updated) => ({
+              ...updated,
+              organizationId: user!.organizationId,
+              organizationName: user!.organizationName,
+            }));
       } else if (isCrossEntity) {
         saved = await usersService.createForOrganization({
           organizationId: values.organizationId!,
@@ -244,7 +265,7 @@ function UserDialog({
                   <SelectValue placeholder={t("rolePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
+                  {roleOptions.map((role) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
                     </SelectItem>
@@ -481,16 +502,11 @@ export default function UsersSettingsPage() {
         ),
       );
     }
-    // Only roles a person can actually be assigned within an entity: no
-    // cross-entity roles (System Admin, Center Supervisor) and no Citizen
-    // Guest, which isn't an account at all — see roles.ts.
-    rolesService
-      .list()
-      .then((allRoles) =>
-        setRoles(
-          allRoles.filter((role) => !role.crossEntity && role.key !== "citizen_guest"),
-        ),
-      );
+    // Keep the full role set: it resolves the permissions shown in any
+    // user's detail sheet — including cross-entity users (System Admin,
+    // Center Supervisor) who appear in the platform-wide list. Which roles
+    // are *assignable* is a separate, narrower concern (see assignableRoles).
+    rolesService.list().then(setRoles);
   }, [isCrossEntity, session]);
 
   const filteredUsers = useMemo(() => {
@@ -511,6 +527,14 @@ export default function UsersSettingsPage() {
     currentPage * USERS_PAGE_SIZE,
   );
 
+  // Roles a person can actually be assigned within an entity: no cross-entity
+  // roles (System Admin, Center Supervisor) and no Citizen Guest, which isn't
+  // an account at all — see roles.ts. Used only for the create/edit dropdowns.
+  const assignableRoles = useMemo(
+    () => roles.filter((role) => !role.crossEntity && role.key !== "citizen_guest"),
+    [roles],
+  );
+
   const detailRole = detailUser
     ? roles.find((role) => role.id === detailUser.role.id)
     : undefined;
@@ -527,7 +551,7 @@ export default function UsersSettingsPage() {
           title={t("title")}
           description={isCrossEntity ? tOrgs("usersDescriptionGlobal") : t("description")}
           actions={
-            canWrite && roles.length > 0 ? (
+            canWrite && assignableRoles.length > 0 ? (
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
                 {t("newUser")}
@@ -661,7 +685,7 @@ export default function UsersSettingsPage() {
         </Card>
 
         <UserDialog
-          roles={roles}
+          roles={assignableRoles}
           organizations={organizations}
           isCrossEntity={isCrossEntity}
           open={createOpen}
@@ -670,7 +694,7 @@ export default function UsersSettingsPage() {
         />
 
         <UserDialog
-          roles={roles}
+          roles={assignableRoles}
           organizations={organizations}
           isCrossEntity={isCrossEntity}
           user={editingUser ?? undefined}
