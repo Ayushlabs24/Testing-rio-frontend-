@@ -266,6 +266,12 @@
         "actorColumn": "Actor",
         "actionColumn": "Action",
         "targetColumn": "Item",
+        "viewChanges": "View before & after values",
+        "changesTitle": "Before & after values",
+        "changesDescription": "Field-level changes recorded for {item}.",
+        "fieldColumn": "Field",
+        "beforeColumn": "Before",
+        "afterColumn": "After",
         "actions": {
           "create": "Created",
           "edit": "Edited",

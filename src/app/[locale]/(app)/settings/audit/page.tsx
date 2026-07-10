@@ -28,6 +28,7 @@ import {
 import { AUDIT_ACTIONS, type AuditAction } from "@/config/audit";
 import { auditService } from "@/services/audit/audit.service";
 import type { AuditEvent } from "@/services/audit/audit.types";
+import { ChangeDetailsDialog } from "./change-details-dialog";
 
 /** Badge tone per action — keeps destructive/approval events visually distinct. */
 const ACTION_VARIANT: Record<
@@ -198,13 +199,21 @@ export default function AuditSettingsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-foreground text-sm">
-                            {event.entityLabel}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            {tEntities(event.entityType)}
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-foreground text-sm">
+                              {event.entityLabel}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {tEntities(event.entityType)}
+                            </span>
+                          </div>
+                          {event.changes && event.changes.length > 0 ? (
+                            <ChangeDetailsDialog
+                              changes={event.changes}
+                              entityLabel={event.entityLabel}
+                            />
+                          ) : null}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -24,6 +24,25 @@ describe("auditService", () => {
     expect(Number.isNaN(Date.parse(event.createdAt))).toBe(false);
   });
 
+  it("records before/after changes and freezes them", () => {
+    const event = auditService.record({
+      action: "edit",
+      entityType: "user",
+      entityId: "user_reviewer",
+      entityLabel: "John Doe",
+      changes: [{ field: "Role", before: "Reviewer", after: "Supervisor" }],
+    });
+
+    expect(event.changes).toEqual([
+      { field: "Role", before: "Reviewer", after: "Supervisor" },
+    ]);
+    expect(Object.isFrozen(event.changes)).toBe(true);
+    expect(Object.isFrozen(event.changes?.[0])).toBe(true);
+    expect(() => {
+      (event.changes as { after: string }[])[0].after = "Tampered";
+    }).toThrow();
+  });
+
   it("records immutable (frozen) events", () => {
     const event = auditService.record({
       action: "edit",

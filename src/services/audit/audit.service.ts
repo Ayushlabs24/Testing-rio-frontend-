@@ -41,6 +41,11 @@ export const auditService = {
       entityType: input.entityType,
       entityId: input.entityId,
       entityLabel: input.entityLabel,
+      changes: input.changes
+        ? (Object.freeze(
+            input.changes.map((change) => Object.freeze({ ...change })),
+          ) as AuditEvent["changes"])
+        : undefined,
       metadata: input.metadata ? Object.freeze({ ...input.metadata }) : undefined,
       // ip_address / user_agent are captured server-side from the request; the
       // mock layer has no request context, so they stay null here.

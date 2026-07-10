@@ -3,6 +3,7 @@ import { findRoleById, findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId, mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
+import { diffChanges } from "@/services/audit/audit.diff";
 import { auditService } from "@/services/audit/audit.service";
 import type {
   CreateUserPayload,
@@ -85,6 +86,13 @@ export const usersService = {
       entityType: "user",
       entityId: newUser.id,
       entityLabel: newUser.name,
+      // A creation has no "before" state, so each field's before value is null
+      // (rendered as a hyphen in the audit trail) and after holds the new value.
+      changes: [
+        { field: "Name", before: null, after: newUser.name },
+        { field: "Email", before: null, after: newUser.email },
+        { field: "Role", before: null, after: findRoleById(roleId)?.name ?? roleId },
+      ],
       metadata: { email: newUser.email, roleId: newUser.roleId },
     });
     return toOrgUser(newUser);
@@ -99,14 +107,28 @@ export const usersService = {
       throw new ApiError({ message: "Unknown role.", status: 400 });
     }
 
+    // Resolve role ids to their display names so the audit trail's before/after
+    // values are human-readable rather than opaque ids.
+    const roleName = (roleId: string) => findRoleById(roleId)?.name ?? roleId;
+    const before = {
+      name: user.name,
+      role: roleName(user.roleId),
+      status: user.status,
+    };
     if (payload.name !== undefined) user.name = payload.name;
     if (payload.roleId !== undefined) user.roleId = payload.roleId;
     if (payload.status !== undefined) user.status = payload.status;
+    const after = { name: user.name, role: roleName(user.roleId), status: user.status };
     auditService.record({
       action: "edit",
       entityType: "user",
       entityId: user.id,
       entityLabel: user.name,
+      changes: diffChanges(before, after, {
+        name: "Name",
+        role: "Role",
+        status: "Status",
+      }),
       metadata: { changed: Object.keys(payload) },
     });
     return toOrgUser(user);
@@ -120,6 +142,17 @@ export const usersService = {
     }
     const user = requireOrgUser(id, currentUser.organizationId);
     const removedName = user.name;
+    // A deletion has no "after" state, so record what the record held before it
+    // was removed; each after value is null (rendered as a hyphen).
+    const removedChanges = [
+      { field: "Name", before: removedName, after: null },
+      { field: "Email", before: user.email, after: null },
+      {
+        field: "Role",
+        before: findRoleById(user.roleId)?.name ?? user.roleId,
+        after: null,
+      },
+    ];
     const index = users.indexOf(user);
     users.splice(index, 1);
     auditService.record({
@@ -127,6 +160,7 @@ export const usersService = {
       entityType: "user",
       entityId: id,
       entityLabel: removedName,
+      changes: removedChanges,
     });
   },
 };

@@ -1,6 +1,21 @@
 import type { AuditAction, AuditEntityType } from "@/config/audit";
 
 /**
+ * A single field's before/after values for an audited change. Captured at the
+ * moment the action happened so the log shows exactly what a record looked like
+ * before and after — the "before/after values" required by the audit trail.
+ * `before` is null for created records, `after` is null for deleted ones.
+ * Persisted inside `audit_logs.metadata` (JSONB) alongside the rest of the
+ * event context.
+ */
+export interface AuditFieldChange {
+  /** Human-readable field name, already localised/denormalised for display. */
+  field: string;
+  before: string | null;
+  after: string | null;
+}
+
+/**
  * Who performed an audited action, captured at the moment it happened.
  * Snapshotted into the log (not just referenced by id) so history survives
  * the user later being renamed or deleted — `audit_logs.user_id` has no
@@ -34,6 +49,12 @@ export interface AuditEvent {
    * Denormalised for display; persisted inside `audit_logs.metadata`.
    */
   entityLabel: string;
+  /**
+   * Field-level before/after values for this event, in display order. Present
+   * on edits (and optionally on create/delete). Denormalised for display and
+   * persisted inside `audit_logs.metadata`.
+   */
+  changes?: AuditFieldChange[];
   /** Free-form context bag — maps to `audit_logs.metadata` (JSONB). */
   metadata?: Record<string, unknown>;
   /** Captured server-side; maps to `audit_logs.ip_address`. */
@@ -54,5 +75,7 @@ export interface RecordAuditEventInput {
   entityType: AuditEntityType;
   entityId: string;
   entityLabel: string;
+  /** Field-level before/after values to record for this event. */
+  changes?: AuditFieldChange[];
   metadata?: Record<string, unknown>;
 }
