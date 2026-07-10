@@ -5,5 +5,6 @@ export interface RoleSummary {
   key: string;
   name: string;
   description: string;
+  crossEntity: boolean;
   permissions: ModulePermission[];
 }

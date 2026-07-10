@@ -21,3 +21,18 @@ export interface UpdateOrganizationPayload {
   villages?: string[];
   isActive?: boolean;
 }
+
+export interface OrganizationSummary extends Organization {
+  memberCount: number;
+}
+
+/** System Admin creates an org and its first NGO Admin together, in one action. */
+export interface CreateOrganizationPayload {
+  name: string;
+  region: string;
+  email: string;
+  sector: Sector | null;
+  villages: string[];
+  adminName: string;
+  adminEmail: string;
+}

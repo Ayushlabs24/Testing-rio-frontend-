@@ -17,6 +17,12 @@ export interface MockOrganization {
  * This is intentional for a mock-only phase; swap for real persistence
  * when the backend exists (see `src/services/organizations`).
  */
+/**
+ * Two orgs are seeded on purpose, not one: the accounts/roles/permissions
+ * backbone's acceptance criteria include "cross-entity access prevented,"
+ * and that can't actually be demonstrated or e2e-tested with only a single
+ * organization in the data set.
+ */
 export const organizations: MockOrganization[] = [
   {
     id: "org_demo",
@@ -28,5 +34,16 @@ export const organizations: MockOrganization[] = [
     villages: ["Chipping Norton", "Stow-on-the-Wold", "Bourton-on-the-Water"],
     isActive: true,
     createdAt: "2026-01-15T09:00:00.000Z",
+  },
+  {
+    id: "org_second",
+    name: "Riverside Community Trust",
+    logoUrl: null,
+    region: "Kerala, India",
+    email: "contact@riverside-community-trust.org",
+    sector: "wash",
+    villages: ["Munduthode", "Kalpetta", "Sultan Bathery"],
+    isActive: true,
+    createdAt: "2026-02-01T09:00:00.000Z",
   },
 ];

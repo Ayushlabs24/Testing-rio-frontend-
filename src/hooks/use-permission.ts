@@ -4,7 +4,7 @@ import type { PermissionAction, PermissionModule } from "@/types/permissions";
 /**
  * Gates UI on the current user's role permissions — used both for nav-item
  * visibility and in-page action buttons (e.g. hide "New user" unless the
- * role has write on "usersRoles").
+ * role has write on "entityTeam").
  */
 export function usePermission(
   module: PermissionModule,
