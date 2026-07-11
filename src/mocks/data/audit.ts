@@ -25,6 +25,13 @@ function seed(event: AuditEvent): AuditEvent {
   return Object.freeze({
     ...event,
     actor: event.actor ? Object.freeze({ ...event.actor }) : null,
+    // Freeze the changes array and each entry, mirroring auditService.record —
+    // seeded history must be exactly as immutable as recorded history.
+    changes: event.changes
+      ? (Object.freeze(
+          event.changes.map((change) => Object.freeze({ ...change })),
+        ) as AuditEvent["changes"])
+      : event.changes,
   });
 }
 

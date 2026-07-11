@@ -14,9 +14,19 @@ function requireCurrentUser() {
   return user;
 }
 
-/** Returns a mutable, defensive copy of a stored (frozen) event. */
+/**
+ * Returns a mutable, defensive copy of a stored event. Every nested structure
+ * (actor, changes, metadata) is copied too — a shallow spread would leave the
+ * returned event sharing the store's `changes`/`metadata` references, letting a
+ * caller reach in and rewrite append-only history through `list()`.
+ */
 function clone(event: AuditEvent): AuditEvent {
-  return { ...event, actor: event.actor ? { ...event.actor } : null };
+  return {
+    ...event,
+    actor: event.actor ? { ...event.actor } : null,
+    changes: event.changes?.map((change) => ({ ...change })),
+    metadata: event.metadata ? { ...event.metadata } : undefined,
+  };
 }
 
 /**

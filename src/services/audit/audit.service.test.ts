@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { auditEvents } from "@/mocks/data/audit";
 import { mockSession } from "@/mocks/session";
 import { auditService } from "@/services/audit/audit.service";
+import type { AuditEvent } from "@/services/audit/audit.types";
 
 describe("auditService", () => {
   beforeEach(() => {
@@ -77,6 +78,36 @@ describe("auditService", () => {
     const fresh = await auditService.list();
     expect(auditEvents.length).toBe(storedLength);
     expect(fresh.every((event) => event.actor?.name !== "Tampered")).toBe(true);
+  });
+
+  it("copies nested changes so the store can't be rewritten through list()", async () => {
+    const list = await auditService.list();
+    const seeded = list.find((event) => event.id === "audit_seed_1");
+    expect(seeded?.changes?.[0].after).toBe("Demo Nonprofit Alliance");
+
+    // Mutating a returned copy must not reach the append-only store.
+    seeded!.changes![0].after = "Tampered";
+
+    const fresh = await auditService.list();
+    const freshSeeded = fresh.find((event) => event.id === "audit_seed_1");
+    expect(freshSeeded?.changes?.[0].after).toBe("Demo Nonprofit Alliance");
+  });
+
+  it("excludes other organisations' events from the list", async () => {
+    auditEvents.push({
+      id: "audit_foreign",
+      organizationId: "org_other",
+      actor: null,
+      action: "create",
+      entityType: "organization",
+      entityId: "org_other",
+      entityLabel: "Someone Else",
+      createdAt: "2026-03-01T00:00:00.000Z",
+    } satisfies AuditEvent);
+
+    const list = await auditService.list();
+    expect(list.some((event) => event.id === "audit_foreign")).toBe(false);
+    expect(list.every((event) => event.organizationId === "org_demo")).toBe(true);
   });
 
   it("returns this organisation's history newest-first", async () => {
