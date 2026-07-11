@@ -1,5 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, LayoutDashboard, ShieldCheck, Users2 } from "lucide-react";
+import {
+  Building2,
+  LayoutDashboard,
+  ScrollText,
+  ShieldCheck,
+  Users2,
+} from "lucide-react";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
 
 export interface NavItem {
@@ -48,5 +54,11 @@ export const appNav: NavItem[] = [
     href: "/settings/users",
     icon: Users2,
     module: "entityTeam",
+  },
+  {
+    labelKey: "audit",
+    href: "/settings/audit",
+    icon: ScrollText,
+    module: "archiveSharingAudit",
   },
 ];
