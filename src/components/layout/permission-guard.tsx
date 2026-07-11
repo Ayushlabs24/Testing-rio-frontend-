@@ -10,6 +10,15 @@ import type { PermissionAction, PermissionModule } from "@/types/permissions";
 interface PermissionGuardProps {
   module: PermissionModule;
   action?: PermissionAction;
+  /**
+   * Set for pages scoped to a single organization (e.g. Organization
+   * profile, Users). A cross-entity role (System Admin, Center Supervisor)
+   * can still hold read/write on the underlying module — entityTeam, for
+   * instance — but these screens aren't theirs; System Admin has its own
+   * cross-entity "Organizations" screen instead. Without this, direct URL
+   * navigation would let them through even though the nav link is hidden.
+   */
+  entityOnly?: boolean;
   children: ReactNode;
 }
 
@@ -22,10 +31,12 @@ interface PermissionGuardProps {
 export function PermissionGuard({
   module,
   action = "read",
+  entityOnly = false,
   children,
 }: PermissionGuardProps) {
-  const { isLoading } = useAuth();
-  const allowed = usePermission(module, action);
+  const { session, isLoading } = useAuth();
+  const hasPermission = usePermission(module, action);
+  const allowed = hasPermission && !(entityOnly && session?.role.crossEntity);
   const router = useRouter();
 
   useEffect(() => {

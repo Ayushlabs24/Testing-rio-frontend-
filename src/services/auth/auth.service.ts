@@ -1,6 +1,3 @@
-import { organizations } from "@/mocks/data/organizations";
-import { roles } from "@/mocks/data/roles";
-import { users } from "@/mocks/data/users";
 import {
   findUserByEmail,
   findUserById,
@@ -8,7 +5,7 @@ import {
   type AuthedContext,
 } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
-import { generateId, generateMockToken, mockDelay } from "@/mocks/utils";
+import { generateMockToken, mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
 import type {
   ForgotPasswordPayload,
@@ -16,7 +13,6 @@ import type {
   RequestOtpPayload,
   ResetPasswordPayload,
   SessionContext,
-  SignupPayload,
   VerifyOtpPayload,
 } from "@/services/auth/auth.types";
 
@@ -47,6 +43,7 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
       id: context.role.id,
       key: context.role.key,
       name: context.role.name,
+      crossEntity: context.role.crossEntity,
       permissions: context.role.permissions,
     },
   };
@@ -65,60 +62,6 @@ export const authService = {
     if (!user || user.password !== password) {
       throw new ApiError({ message: "Invalid email or password.", status: 401 });
     }
-    const token = generateMockToken();
-    mockSession.save({ token, userId: user.id });
-    return toSessionContext(resolveContext(user), token);
-  },
-
-  async signup({
-    organizationName,
-    name,
-    email,
-    password,
-    consent,
-  }: SignupPayload): Promise<SessionContext> {
-    await mockDelay();
-    if (findUserByEmail(email)) {
-      throw new ApiError({
-        message: "An account with this email already exists.",
-        status: 409,
-      });
-    }
-    if (!consent) {
-      throw new ApiError({
-        message: "You must accept the data-sharing consent to continue.",
-        status: 400,
-      });
-    }
-
-    const organization = {
-      id: generateId("org"),
-      name: organizationName,
-      logoUrl: null,
-      region: "",
-      email: "",
-      sector: null,
-      villages: [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-    organizations.push(organization);
-
-    const orgAdminRole = roles.find((role) => role.key === "org_admin")!;
-    const user = {
-      id: generateId("user"),
-      organizationId: organization.id,
-      roleId: orgAdminRole.id,
-      name,
-      email,
-      password,
-      status: "active" as const,
-      // Self-signup is itself the consent action (gated by the checkbox).
-      consentedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    users.push(user);
-
     const token = generateMockToken();
     mockSession.save({ token, userId: user.id });
     return toSessionContext(resolveContext(user), token);
