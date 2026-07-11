@@ -50,11 +50,11 @@ export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
  * that decides who may act on (and therefore appear in the log for) an entity.
  */
 export const AUDIT_ENTITY_MODULE: Record<AuditEntityType, PermissionModule> = {
-  organization: "organization",
-  user: "usersRoles",
-  study: "needs",
-  survey: "surveys",
-  evidence: "evidence",
-  report: "reports",
-  sharing_request: "sharing",
+  organization: "entityTeam",
+  user: "entityTeam",
+  study: "studySurvey",
+  survey: "studySurvey",
+  evidence: "dataCollection",
+  report: "reportsDashboards",
+  sharing_request: "archiveSharingAudit",
 };

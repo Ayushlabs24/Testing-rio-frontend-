@@ -29,29 +29,7 @@
       "submit": "Sign in",
       "submitting": "Signing in...",
       "genericError": "Something went wrong. Please try again.",
-      "otp": "Sign in with OTP instead",
-      "noAccount": "Don't have a workspace yet?",
-      "createOne": "Create one"
-    },
-    "signup": {
-      "heroTitle": "Set up your organisation's workspace",
-      "heroSubtitle": "Create a workspace, invite your team, and start running need assessments in minutes.",
-      "title": "Create your workspace",
-      "description": "You'll be the first member and Org Admin.",
-      "organizationNameLabel": "Organisation name",
-      "organizationNamePlaceholder": "Demo Nonprofit Alliance",
-      "nameLabel": "Your name",
-      "namePlaceholder": "Jordan Lee",
-      "emailLabel": "Work email",
-      "emailPlaceholder": "you@organisation.org",
-      "passwordLabel": "Password",
-      "passwordPlaceholder": "Create a password",
-      "consentLabel": "I agree to share my organisation's assessment data within Rio and consent to it being processed as described in the data-sharing notice.",
-      "submit": "Create workspace",
-      "submitting": "Creating workspace...",
-      "genericError": "Something went wrong. Please try again.",
-      "haveAccount": "Already have a workspace?",
-      "signIn": "Sign in"
+      "otp": "Sign in with OTP instead"
     },
     "forgotPassword": {
       "heroTitle": "We'll get you back in",
@@ -107,10 +85,8 @@
       "passwordMin": "Password must be at least 8 characters.",
       "passwordsMustMatch": "Passwords must match.",
       "nameRequired": "Please enter a name.",
-      "organizationNameRequired": "Please enter an organisation name.",
       "otpLength": "Enter the 6-digit code.",
-      "roleRequired": "Please select a role.",
-      "consentRequired": "You must accept the data-sharing consent to continue."
+      "roleRequired": "Please select a role."
     }
   },
   "app": {
@@ -129,7 +105,8 @@
       "users": "Users",
       "audit": "Audit Log",
       "collapse": "Collapse sidebar",
-      "expand": "Expand sidebar"
+      "expand": "Expand sidebar",
+      "organizations": "Organizations"
     },
     "topbar": {
       "menu": "Menu",
@@ -146,8 +123,12 @@
         "organizations": "Organization",
         "users": "Users",
         "roles": "Roles",
-        "modules": "Modules"
-      }
+        "modules": "Modules",
+        "activeStudies": "Active Studies",
+        "pendingReviews": "Pending Reviews",
+        "reportsGenerated": "Reports Generated"
+      },
+      "descriptionGlobal": "A platform-wide view across every organization."
     },
     "settings": {
       "organization": {
@@ -189,7 +170,6 @@
         "title": "Roles",
         "description": "Roles are fixed and define what each member can read or write.",
         "viewDetails": "View details",
-        "permissionSummary": "{full} full · {read} read-only · {none} no access",
         "roleColumn": "Role",
         "descriptionColumn": "Description",
         "accessColumn": "Access",
@@ -200,22 +180,29 @@
           "full": "Full access",
           "read": "Read only",
           "none": "No access",
-          "fullShort": "RW",
-          "readShort": "R"
+          "summaryFull": "Full access to all {count} modules",
+          "summaryNone": "No module access",
+          "summaryMixed": "{full} full access, {read} read-only, {none} no access"
         },
         "modules": {
-          "organization": "Organization",
-          "usersRoles": "Users & Roles",
-          "onboarding": "Onboarding",
-          "needs": "Needs",
-          "surveys": "Surveys",
-          "collection": "Collection",
-          "evidence": "Evidence",
-          "aiReview": "AI Review",
-          "reports": "Reports",
-          "sharing": "Sharing",
-          "supervisorOversight": "Supervisor Oversight",
-          "audit": "Audit"
+          "entityTeam": "Entity & Team Management",
+          "rolesPermissions": "Roles & Permissions",
+          "onboardingConsent": "Onboarding & Consent",
+          "methodologyQuestionBank": "Methodology & Question Bank",
+          "studySurvey": "Study & Survey Management",
+          "dataCollection": "Data Collection",
+          "dataImport": "Data Import",
+          "citizenChannel": "Citizen Input Channel",
+          "aiReview": "AI & Human Review",
+          "priorityScoring": "Priority Scoring",
+          "reportsDashboards": "Reports & Dashboards",
+          "archiveSharingAudit": "Archive, Sharing & Audit"
+        },
+        "crossEntityBadge": "Cross-entity",
+        "actions": {
+          "approve": "Approve",
+          "export": "Export",
+          "share": "Share"
         }
       },
       "users": {
@@ -251,7 +238,51 @@
         "status": {
           "active": "Active",
           "invited": "Invited"
-        }
+        },
+        "permissionsHeading": "Module access",
+        "pagination": {
+          "previous": "Previous",
+          "next": "Next",
+          "label": "Page {page} of {count}"
+        },
+        "organizationLabel": "Organization"
+      },
+      "organizations": {
+        "title": "Organizations",
+        "description": "Every organization on the platform.",
+        "newOrganization": "New organization",
+        "nameColumn": "Organization",
+        "regionColumn": "Region",
+        "sectorColumn": "Sector",
+        "membersColumn": "Members",
+        "statusColumn": "Status",
+        "statusActive": "Active",
+        "statusInactive": "Inactive",
+        "noResults": "No organizations yet.",
+        "createTitle": "Create an organization",
+        "nameLabel": "Organization name",
+        "regionLabel": "Region",
+        "regionRequired": "Please enter a region.",
+        "sectorLabel": "Sector",
+        "sectorPlaceholder": "Select a sector",
+        "sectorRequired": "Please select a sector.",
+        "emailLabel": "Contact email",
+        "firstAdminHeading": "This organization's first NGO Admin",
+        "adminNameLabel": "Name",
+        "adminEmailLabel": "Email",
+        "creating": "Creating...",
+        "create": "Create organization",
+        "genericError": "Something went wrong. Please try again.",
+        "viewOrganization": "View organization",
+        "membersCount": "{count} members",
+        "membersHeading": "Members",
+        "membersRoleColumn": "Role",
+        "noMembers": "No members yet.",
+        "formInvalid": "Please fix the highlighted fields.",
+        "manageInUsers": "Manage in Users",
+        "organizationRequired": "Please select an organization.",
+        "organizationPlaceholder": "Select an organization",
+        "usersDescriptionGlobal": "Every user across every organization."
       },
       "audit": {
         "title": "Audit Log",

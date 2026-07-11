@@ -6,11 +6,12 @@ import type { RoleSummary } from "@/services/roles/roles.types";
 export const rolesService = {
   async list(): Promise<RoleSummary[]> {
     await mockDelay();
-    return roles.map(({ id, key, name, description, permissions }) => ({
+    return roles.map(({ id, key, name, description, crossEntity, permissions }) => ({
       id,
       key,
       name,
       description,
+      crossEntity,
       permissions,
     }));
   },

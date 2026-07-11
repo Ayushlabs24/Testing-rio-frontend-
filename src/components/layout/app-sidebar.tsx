@@ -1,9 +1,8 @@
 "use client";
 
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -11,15 +10,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { appNav } from "@/config/navigation";
+import { siteConfig } from "@/config/site";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
   collapsed: boolean;
-  onToggleCollapsed: () => void;
 }
 
-export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
+export function AppSidebar({ collapsed }: AppSidebarProps) {
   const { session } = useAuth();
   const t = useTranslations("app.sidebar");
   const pathname = usePathname();
@@ -29,9 +28,13 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
   const { organization, role } = session;
 
   const visibleNav = appNav.filter((item) => {
+    if (item.scope === "entity" && role.crossEntity) return false;
+    if (item.scope === "crossEntity" && !role.crossEntity) return false;
     if (!item.module) return true;
     const permission = role.permissions.find((entry) => entry.module === item.module);
-    return permission?.read ?? false;
+    return item.action === "write"
+      ? (permission?.write ?? false)
+      : (permission?.read ?? false);
   });
 
   return (
@@ -42,16 +45,32 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
           collapsed ? "w-16" : "w-64",
         )}
       >
-        <div className="border-sidebar-border flex h-16 items-center gap-2.5 border-b px-4">
-          <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold">
-            {organization.name.charAt(0)}
-          </span>
-          {!collapsed ? (
-            <span className="text-sidebar-foreground truncate text-sm font-semibold">
-              {organization.name}
-            </span>
-          ) : null}
-        </div>
+        {!collapsed ? (
+          <div className="border-sidebar-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4">
+            {role.crossEntity ? (
+              <>
+                <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
+                  <ShieldCheck className="size-4" />
+                </span>
+                <span className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold">
+                  {siteConfig.name}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold">
+                  {organization.name.charAt(0)}
+                </span>
+                <span
+                  className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold break-words"
+                  title={organization.name}
+                >
+                  {organization.name}
+                </span>
+              </>
+            )}
+          </div>
+        ) : null}
 
         <nav className="flex flex-1 flex-col gap-1 p-3">
           {visibleNav.map((item) => {
@@ -88,25 +107,6 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
             );
           })}
         </nav>
-
-        <div className="border-sidebar-border border-t p-3">
-          {!collapsed ? (
-            <p className="text-sidebar-foreground/60 mb-2 px-1 text-xs">{role.name}</p>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-sidebar-foreground/70 w-full"
-            aria-label={t(collapsed ? "expand" : "collapse")}
-            onClick={onToggleCollapsed}
-          >
-            {collapsed ? (
-              <ChevronsRight className="size-4" />
-            ) : (
-              <ChevronsLeft className="size-4" />
-            )}
-          </Button>
-        </div>
       </aside>
     </TooltipProvider>
   );

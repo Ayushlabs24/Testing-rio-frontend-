@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu } from "lucide-react";
+import { LogOut, Menu, PanelLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,6 +14,7 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { appNav } from "@/config/navigation";
+import { siteConfig } from "@/config/site";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +68,12 @@ function MobileNav() {
   );
 }
 
-export function AppTopbar() {
+interface AppTopbarProps {
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+}
+
+export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   const { session, logout } = useAuth();
   const t = useTranslations("app.topbar");
   const tSidebar = useTranslations("app.sidebar");
@@ -86,8 +92,18 @@ export function AppTopbar() {
   );
 
   return (
-    <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6">
+    <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6 lg:px-8">
       <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden md:inline-flex"
+          aria-label={tSidebar(collapsed ? "expand" : "collapse")}
+          onClick={onToggleCollapsed}
+        >
+          <PanelLeft className="size-4" />
+        </Button>
+
         <Sheet>
           <SheetTrigger asChild>
             <Button
@@ -102,14 +118,14 @@ export function AppTopbar() {
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">{t("menu")}</SheetTitle>
             <div className="border-border flex h-16 items-center border-b px-4 text-sm font-semibold">
-              {session.organization.name}
+              {session.role.crossEntity ? siteConfig.name : session.organization.name}
             </div>
             <MobileNav />
           </SheetContent>
         </Sheet>
 
         {currentNavItem ? (
-          <h1 className="text-foreground text-base font-semibold">
+          <h1 className="text-foreground truncate text-base font-semibold">
             {tSidebar(currentNavItem.labelKey)}
           </h1>
         ) : null}

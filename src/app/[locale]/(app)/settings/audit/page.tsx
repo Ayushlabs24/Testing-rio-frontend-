@@ -87,7 +87,7 @@ export default function AuditSettingsPage() {
   }, [events, query, action]);
 
   return (
-    <PermissionGuard module="audit" action="read">
+    <PermissionGuard module="archiveSharingAudit" action="read">
       <PageContainer>
         <PageHeader title={t("title")} description={t("description")} />
 

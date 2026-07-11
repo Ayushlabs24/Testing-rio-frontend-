@@ -1,13 +1,15 @@
 import { users } from "@/mocks/data/users";
-import { findRoleById, findUserById } from "@/mocks/db";
+import { findOrganizationById, findRoleById, findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId, mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
 import { diffChanges } from "@/services/audit/audit.diff";
 import { auditService } from "@/services/audit/audit.service";
 import type {
+  CreateUserForOrganizationPayload,
   CreateUserPayload,
   OrgUser,
+  PlatformUser,
   UpdateUserPayload,
 } from "@/services/users/users.types";
 
@@ -22,6 +24,14 @@ function requireCurrentUser() {
 
 function requireOrgUser(id: string, organizationId: string) {
   const user = users.find((u) => u.id === id && u.organizationId === organizationId);
+  if (!user) {
+    throw new ApiError({ message: "User not found.", status: 404 });
+  }
+  return user;
+}
+
+function requireAnyUser(id: string) {
+  const user = users.find((u) => u.id === id);
   if (!user) {
     throw new ApiError({ message: "User not found.", status: 404 });
   }
@@ -43,6 +53,15 @@ function toOrgUser(user: (typeof users)[number]): OrgUser {
   };
 }
 
+function toPlatformUser(user: (typeof users)[number]): PlatformUser {
+  const organization = findOrganizationById(user.organizationId);
+  return {
+    ...toOrgUser(user),
+    organizationId: user.organizationId,
+    organizationName: organization?.name ?? "—",
+  };
+}
+
 export const usersService = {
   async listByOrganization(): Promise<OrgUser[]> {
     await mockDelay();
@@ -52,7 +71,46 @@ export const usersService = {
       .map(toOrgUser);
   },
 
-  async create({ name, email, roleId }: CreateUserPayload): Promise<OrgUser> {
+  /** Cross-entity — System Admin viewing any organization's members, not just their own. */
+  async listByOrganizationId(organizationId: string): Promise<OrgUser[]> {
+    await mockDelay();
+    return users.filter((user) => user.organizationId === organizationId).map(toOrgUser);
+  },
+
+  /** Cross-entity — System Admin adding a member to an organization that isn't their own. */
+  async createForOrganization({
+    organizationId,
+    name,
+    email,
+    roleId,
+  }: CreateUserForOrganizationPayload): Promise<PlatformUser> {
+    await mockDelay();
+    if (users.some((user) => user.email.toLowerCase() === email.toLowerCase())) {
+      throw new ApiError({
+        message: "An account with this email already exists.",
+        status: 409,
+      });
+    }
+    if (!findRoleById(roleId)) {
+      throw new ApiError({ message: "Unknown role.", status: 400 });
+    }
+
+    const newUser = {
+      id: generateId("user"),
+      organizationId,
+      roleId,
+      name,
+      email,
+      password: "password123",
+      status: "invited" as const,
+      consentedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    users.push(newUser);
+    return toPlatformUser(newUser);
+  },
+
+  async create({ name, email, roleId }: CreateUserPayload): Promise<PlatformUser> {
     await mockDelay();
     const currentUser = requireCurrentUser();
 
@@ -95,7 +153,7 @@ export const usersService = {
       ],
       metadata: { email: newUser.email, roleId: newUser.roleId },
     });
-    return toOrgUser(newUser);
+    return toPlatformUser(newUser);
   },
 
   async update(id: string, payload: UpdateUserPayload): Promise<OrgUser> {
@@ -162,5 +220,38 @@ export const usersService = {
       entityLabel: removedName,
       changes: removedChanges,
     });
+  },
+
+  /** Cross-entity — System Admin sees every user, across every organization. */
+  async listAll(): Promise<PlatformUser[]> {
+    await mockDelay();
+    return users.map(toPlatformUser);
+  },
+
+  /** Cross-entity — System Admin editing a user in any organization, not just their own. */
+  async updateAny(id: string, payload: UpdateUserPayload): Promise<PlatformUser> {
+    await mockDelay();
+    const user = requireAnyUser(id);
+
+    if (payload.roleId && !findRoleById(payload.roleId)) {
+      throw new ApiError({ message: "Unknown role.", status: 400 });
+    }
+
+    if (payload.name !== undefined) user.name = payload.name;
+    if (payload.roleId !== undefined) user.roleId = payload.roleId;
+    if (payload.status !== undefined) user.status = payload.status;
+    return toPlatformUser(user);
+  },
+
+  /** Cross-entity — System Admin removing a user from any organization. */
+  async removeAny(id: string): Promise<void> {
+    await mockDelay();
+    const currentUser = requireCurrentUser();
+    if (id === currentUser.id) {
+      throw new ApiError({ message: "You can't remove your own account.", status: 400 });
+    }
+    const user = requireAnyUser(id);
+    const index = users.indexOf(user);
+    users.splice(index, 1);
   },
 };

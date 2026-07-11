@@ -24,6 +24,7 @@ export interface AuthRole {
   id: string;
   key: string;
   name: string;
+  crossEntity: boolean;
   permissions: ModulePermission[];
 }
 
@@ -38,15 +39,6 @@ export interface SessionContext {
 export interface LoginPayload {
   email: string;
   password: string;
-}
-
-export interface SignupPayload {
-  organizationName: string;
-  name: string;
-  email: string;
-  password: string;
-  /** Must be `true` — the signup form requires the checkbox to be checked. */
-  consent: boolean;
 }
 
 export interface ForgotPasswordPayload {

@@ -63,7 +63,7 @@ function StatCard({ icon, label, value, tone = "muted" }: StatCardProps) {
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             {label}
           </p>
           <div className="text-foreground truncate text-lg font-semibold">{value}</div>
@@ -166,7 +166,7 @@ export default function OrganizationSettingsPage() {
   const tSectors = useTranslations("app.settings.organization.sectors");
   const locale = useLocale();
   const { session, setSession } = useAuth();
-  const canWrite = usePermission("organization", "write");
+  const canWrite = usePermission("entityTeam", "write");
   const [editing, setEditing] = useState(false);
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,14 +245,18 @@ export default function OrganizationSettingsPage() {
   const logoInitial = organization.name.charAt(0).toUpperCase();
 
   return (
-    <PermissionGuard module="organization" action="read">
+    <PermissionGuard module="entityTeam" action="read" entityOnly>
       <PageContainer>
         <PageHeader
           title={t("title")}
           description={t("description")}
           actions={
             canWrite && !editing ? (
-              <Button variant="outline" className="gap-2" onClick={() => setEditing(true)}>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setEditing(true)}
+              >
                 <Pencil className="size-4" />
                 {t("edit")}
               </Button>
