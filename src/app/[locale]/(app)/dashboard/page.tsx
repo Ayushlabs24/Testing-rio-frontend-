@@ -21,6 +21,7 @@ import { studiesService } from "@/services/studies/studies.service";
 import { usersService } from "@/services/users/users.service";
 import type { PlatformStudyStats } from "@/services/studies/studies.types";
 import { PERMISSION_MODULES } from "@/types/permissions";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const t = useTranslations("app.dashboard");
@@ -53,7 +54,12 @@ export default function DashboardPage() {
         title={t("title", { name: session?.user.name ?? "" })}
         description={t(isCrossEntity ? "descriptionGlobal" : "description")}
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4 sm:grid-cols-2",
+          isCrossEntity ? "lg:grid-cols-5" : "lg:grid-cols-3",
+        )}
+      >
         {isCrossEntity ? (
           <>
             <StatCard

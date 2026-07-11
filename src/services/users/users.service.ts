@@ -108,7 +108,7 @@ export const usersService = {
     return toPlatformUser(newUser);
   },
 
-  async create({ name, email, roleId }: CreateUserPayload): Promise<OrgUser> {
+  async create({ name, email, roleId }: CreateUserPayload): Promise<PlatformUser> {
     await mockDelay();
     const currentUser = requireCurrentUser();
 
@@ -137,7 +137,7 @@ export const usersService = {
       createdAt: new Date().toISOString(),
     };
     users.push(newUser);
-    return toOrgUser(newUser);
+    return toPlatformUser(newUser);
   },
 
   async update(id: string, payload: UpdateUserPayload): Promise<OrgUser> {

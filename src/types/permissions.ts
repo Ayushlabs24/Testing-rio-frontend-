@@ -39,5 +39,3 @@ export interface ModulePermission {
 }
 
 export type PermissionAction = "read" | "write";
-export type FullPermissionAction =
-  "read" | "create" | "write" | "approve" | "export" | "share";

@@ -191,11 +191,9 @@ function UserDialog({
           roleId: values.roleId,
         });
       } else {
-        saved = await usersService.create(values).then((created) => ({
-          ...created,
-          organizationId: "",
-          organizationName: "",
-        }));
+        // Entity admin: the service resolves the caller's own organization,
+        // so the returned PlatformUser already carries its org id/name.
+        saved = await usersService.create(values);
       }
       onSaved(saved);
       reset();
