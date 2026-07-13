@@ -32,6 +32,17 @@ export function findRoleById(id: string): Role | undefined {
   return roles.find((r) => r.id === id);
 }
 
+/**
+ * Only 4 of the 9 seeded roles are `enabled` for the current demo phase
+ * (see roles.ts) — the other 5 have seed users (`users.ts`) purely so every
+ * role can still be inspected/logged-in-as during development, but they
+ * aren't real accounts for this phase and shouldn't appear in any
+ * user-facing list or count (Users table, dashboard stats, member counts).
+ */
+export function isUserRoleEnabled(user: MockUser): boolean {
+  return roles.find((r) => r.id === user.roleId)?.enabled ?? false;
+}
+
 export function findOrganizationById(id: string): MockOrganization | undefined {
   return organizations.find((o) => o.id === id);
 }

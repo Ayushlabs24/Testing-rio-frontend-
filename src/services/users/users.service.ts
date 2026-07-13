@@ -1,5 +1,10 @@
 import { users } from "@/mocks/data/users";
-import { findOrganizationById, findRoleById, findUserById } from "@/mocks/db";
+import {
+  findOrganizationById,
+  findRoleById,
+  findUserById,
+  isUserRoleEnabled,
+} from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId, mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
@@ -67,14 +72,19 @@ export const usersService = {
     await mockDelay();
     const currentUser = requireCurrentUser();
     return users
-      .filter((user) => user.organizationId === currentUser.organizationId)
+      .filter(
+        (user) =>
+          user.organizationId === currentUser.organizationId && isUserRoleEnabled(user),
+      )
       .map(toOrgUser);
   },
 
   /** Cross-entity — System Admin viewing any organization's members, not just their own. */
   async listByOrganizationId(organizationId: string): Promise<OrgUser[]> {
     await mockDelay();
-    return users.filter((user) => user.organizationId === organizationId).map(toOrgUser);
+    return users
+      .filter((user) => user.organizationId === organizationId && isUserRoleEnabled(user))
+      .map(toOrgUser);
   },
 
   /** Cross-entity — System Admin adding a member to an organization that isn't their own. */
@@ -225,7 +235,7 @@ export const usersService = {
   /** Cross-entity — System Admin sees every user, across every organization. */
   async listAll(): Promise<PlatformUser[]> {
     await mockDelay();
-    return users.map(toPlatformUser);
+    return users.filter(isUserRoleEnabled).map(toPlatformUser);
   },
 
   /** Cross-entity — System Admin editing a user in any organization, not just their own. */

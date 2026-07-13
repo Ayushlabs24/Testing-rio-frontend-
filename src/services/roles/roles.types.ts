@@ -6,5 +6,7 @@ export interface RoleSummary {
   name: string;
   description: string;
   crossEntity: boolean;
+  /** Whether this role is assignable/visible/loginable right now — see roles.ts. */
+  enabled: boolean;
   permissions: ModulePermission[];
 }

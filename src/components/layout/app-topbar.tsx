@@ -36,6 +36,9 @@ function MobileNav() {
 
   const visibleNav = appNav.filter((item) => {
     if (!item.module) return true;
+    // A disabled role (see roles.ts) can still sign in — `enabled` hides
+    // module-scoped nav items, it doesn't block login itself.
+    if (!session.role.enabled) return false;
     const permission = session.role.permissions.find(
       (entry) => entry.module === item.module,
     );

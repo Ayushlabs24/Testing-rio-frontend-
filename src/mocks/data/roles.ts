@@ -20,6 +20,21 @@ export interface Role {
   description: string;
   /** Entity-scoped roles see only their own organization's data; these two don't. */
   crossEntity: boolean;
+  /**
+   * Whether this role is assignable/visible right now. All 9 roles from
+   * `new scope.md` stay fully defined here regardless — nothing is
+   * commented out or deleted — this just gates which ones are live for the
+   * current demo phase. This is deliberately a UI-only gate, not an
+   * authentication one: a disabled role can still log in (session/JWT
+   * issued normally), but every module-scoped page/action is hidden
+   * (`usePermission`, `PermissionGuard`, nav filtering — see
+   * hooks/use-permission.ts) so there's nothing reachable once in. Mixing
+   * "is this role live" into login itself would make feature rollout look
+   * like an auth failure, and would need undoing the moment a role comes
+   * back. Flip to `true` to bring a role back — no other code changes
+   * needed.
+   */
+  enabled: boolean;
   permissions: ModulePermission[];
 }
 
@@ -72,20 +87,31 @@ const READ_ONLY: AccessGrant = { read: true };
  * System Admin — both `new scope.md` and the earlier vendor PRD agree the
  * role set is fixed, with no in-app role-authoring capability this phase.
  *
- * NGO Admin is an entity's account-owner role, but there's no public
- * self-signup in this phase — confirmed by the team lead, System Admin is
- * seeded directly (not created through any UI) and is the only path to a
- * new organization: creating one also creates that org's first NGO Admin
- * in the same action (see `organizationsService.createWithAdmin`).
+ * PIVOT (per team lead, superseding the System-Admin-onboards-NGOs model
+ * below): nobody has finalized how most of the 9 roles actually behave yet,
+ * so only 4 are `enabled` for the current demo — NGO Admin, Research
+ * Officer, Reviewer / Approver, and Program Supervisor. The other 5 (System
+ * Admin, Field Researcher, Data Analyst, Read-only Viewer, Citizen Guest) stay fully
+ * defined below with `enabled: false` — permissions exist, workflow
+ * doesn't, so there's nothing to build for them yet, but nothing is
+ * deleted either. There is now a public NGO signup (see
+ * `authService.signup()`) that creates an organization and its first NGO
+ * Admin together — this replaces the System-Admin-only
+ * `organizationsService.createWithAdmin` path described below, which
+ * stays in the codebase, gated off (System Admin can't currently log in;
+ * see `enabled`), for whenever System Admin's flow comes back.
  *
- * System Admin and Center Supervisor are not scoped to a single
- * organization (System Admin sees every entity's data — also confirmed by
- * the team lead — but its write access stays limited to accounts/orgs/
- * config, not study content; Center Supervisor has cross-entity
- * read/follow). Citizen/Beneficiary Guest is a public,
- * unauthenticated data source, not an account — it's modeled here for
- * completeness of the permission matrix, but isn't wired into the normal
- * login flow or the Users CRUD screen (see users.ts).
+ * The rest of this comment describes the original (pre-pivot) design,
+ * which the `enabled` flag above supersedes for now:
+ *
+ * NGO Admin is an entity's account-owner role. System Admin and Center
+ * Supervisor are not scoped to a single organization (System Admin sees
+ * every entity's data — confirmed by the team lead — but its write access
+ * stays limited to accounts/orgs/config, not study content; Center
+ * Supervisor has cross-entity read/follow). Citizen/Beneficiary Guest is a
+ * public, unauthenticated data source, not an account — it's modeled here
+ * for completeness of the permission matrix, but isn't wired into the
+ * normal login flow or the Users CRUD screen (see users.ts).
  */
 export const roles: Role[] = [
   {
@@ -94,14 +120,16 @@ export const roles: Role[] = [
     name: "NGO Admin",
     description: "Account owner. Full access to every module within its own entity.",
     crossEntity: false,
+    enabled: true,
     permissions: fullAccess(),
   },
   {
     id: "role_ngo_research_officer",
     key: "ngo_research_officer",
-    name: "NGO Research Officer",
+    name: "Research Officer",
     description: "Creates studies and surveys from the question bank and enters data.",
     crossEntity: false,
+    enabled: true,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -123,6 +151,7 @@ export const roles: Role[] = [
     name: "Field Researcher",
     description: "Enters needs and documents the source and field notes.",
     crossEntity: false,
+    enabled: false,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -141,10 +170,11 @@ export const roles: Role[] = [
   {
     id: "role_human_reviewer",
     key: "human_reviewer",
-    name: "Human Reviewer",
+    name: "Reviewer / Approver",
     description:
       "Approves or modifies AI classification, priority, and duplicates before publishing.",
     crossEntity: false,
+    enabled: true,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -166,6 +196,7 @@ export const roles: Role[] = [
     name: "Data Analyst",
     description: "Processes data, reviews quality, and prepares reports and dashboards.",
     crossEntity: false,
+    enabled: false,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -194,6 +225,7 @@ export const roles: Role[] = [
     description:
       "Manages accounts, roles, permissions, audit log, and configuration settings.",
     crossEntity: true,
+    enabled: false,
     permissions: [
       // Write is deliberately narrow — confirmed directly by the team lead:
       // System Admin can create a user and create a new organization, full
@@ -224,6 +256,7 @@ export const roles: Role[] = [
     name: "Read-only Viewer",
     description: "Views authorized outputs without editing.",
     crossEntity: false,
+    enabled: false,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -243,16 +276,20 @@ export const roles: Role[] = [
   {
     id: "role_center_supervisor",
     key: "center_supervisor",
-    name: "Center Supervisor",
+    name: "Program Supervisor",
     description:
       "Cross-entity supervisory authority to follow studies, data, and reports for quality.",
     crossEntity: true,
+    enabled: true,
     permissions: [
       perm("entityTeam", READ_ONLY),
       perm("rolesPermissions"),
       perm("onboardingConsent"),
       perm("methodologyQuestionBank", READ_ONLY),
-      perm("studySurvey", READ_ONLY),
+      // "Edit — Per approved permission only" per new scope.md §3: not full
+      // CRUD (no create), but a real, limited edit capability — modeled as
+      // write without create, same as the Reviewer's aiReview permission.
+      perm("studySurvey", { read: true, write: true, export: true }),
       perm("dataCollection", READ_ONLY),
       perm("dataImport", READ_ONLY),
       perm("citizenChannel"),
@@ -269,6 +306,7 @@ export const roles: Role[] = [
     description:
       "Submits a need as a data source via OTP; not added before human review.",
     crossEntity: false,
+    enabled: false,
     permissions: PERMISSION_MODULES.map((module) =>
       module === "citizenChannel" ? perm(module, { create: true }) : perm(module),
     ),

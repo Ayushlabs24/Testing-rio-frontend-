@@ -111,6 +111,16 @@ export function LoginForm() {
       >
         {t("otp")}
       </Link>
+
+      <p className="text-muted-foreground mt-5 text-center text-sm">
+        {t("noAccount")}{" "}
+        <Link
+          href="/signup"
+          className="text-foreground font-medium underline-offset-4 hover:underline"
+        >
+          {t("signUp")}
+        </Link>
+      </p>
     </div>
   );
 }

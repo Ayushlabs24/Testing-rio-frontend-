@@ -1,7 +1,12 @@
 import { organizations } from "@/mocks/data/organizations";
 import { roles } from "@/mocks/data/roles";
 import { users } from "@/mocks/data/users";
-import { findOrganizationById, findUserByEmail, findUserById } from "@/mocks/db";
+import {
+  findOrganizationById,
+  findUserByEmail,
+  findUserById,
+  isUserRoleEnabled,
+} from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId, mockDelay } from "@/mocks/utils";
 import { ApiError } from "@/services/api/types";
@@ -80,7 +85,9 @@ export const organizationsService = {
     await mockDelay();
     return organizations.map((organization) => ({
       ...organization,
-      memberCount: users.filter((user) => user.organizationId === organization.id).length,
+      memberCount: users.filter(
+        (user) => user.organizationId === organization.id && isUserRoleEnabled(user),
+      ).length,
     }));
   },
 
@@ -93,7 +100,9 @@ export const organizationsService = {
     }
     return {
       ...organization,
-      memberCount: users.filter((user) => user.organizationId === organization.id).length,
+      memberCount: users.filter(
+        (user) => user.organizationId === organization.id && isUserRoleEnabled(user),
+      ).length,
     };
   },
 
@@ -116,7 +125,9 @@ export const organizationsService = {
     if (payload.isActive !== undefined) organization.isActive = payload.isActive;
     return {
       ...organization,
-      memberCount: users.filter((user) => user.organizationId === organization.id).length,
+      memberCount: users.filter(
+        (user) => user.organizationId === organization.id && isUserRoleEnabled(user),
+      ).length,
     };
   },
 
@@ -138,6 +149,8 @@ export const organizationsService = {
     const organization = {
       id: generateId("org"),
       name: payload.name,
+      purpose: payload.purpose,
+      registrationNumber: payload.registrationNumber,
       logoUrl: null,
       region: payload.region,
       email: payload.email,
