@@ -31,6 +31,9 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
     if (item.scope === "entity" && role.crossEntity) return false;
     if (item.scope === "crossEntity" && !role.crossEntity) return false;
     if (!item.module) return true;
+    // A disabled role (see roles.ts) can still sign in — `enabled` hides
+    // module-scoped nav items, it doesn't block login itself.
+    if (!role.enabled) return false;
     const permission = role.permissions.find((entry) => entry.module === item.module);
     return item.action === "write"
       ? (permission?.write ?? false)

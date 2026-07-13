@@ -6,35 +6,75 @@ import type { ModulePermission } from "@/types/permissions";
 
 const EXTRA_ACTIONS = ["approve", "export", "share"] as const;
 
-function levelKey(permission: ModulePermission): "full" | "read" | "none" {
-  if (permission.read && permission.write) return "full";
-  if (permission.read) return "read";
-  return "none";
+/**
+ * Three access tiers, not a binary full/read-only — a role with, say, view +
+ * edit + approve but no create isn't "Full Access" (it plainly can't
+ * create), and calling it that would misrepresent what the role can
+ * actually do. So:
+ * - `full`: view + create + edit — the only combination "Full Access"
+ *   honestly describes.
+ * - `read`: view only, nothing else.
+ * - `custom`: anything in between (e.g. view + edit + approve but no
+ *   create, or view + edit + export but no create) — shown with its full
+ *   capability list underneath rather than a name that overstates or
+ *   understates it.
+ */
+function levelKey(permission: ModulePermission): "full" | "read" | "custom" | "none" {
+  if (!permission.read) return "none";
+  if (permission.create && permission.write) return "full";
+  if (!permission.create && !permission.write) return "read";
+  return "custom";
 }
 
+// `none`-level permissions are filtered out before this is ever indexed
+// (see `accessible` below) — included here only so `level`'s full return
+// type indexes cleanly without a cast.
 const LEVEL_STYLE: Record<ReturnType<typeof levelKey>, string> = {
   full: "bg-primary/10 text-primary border-transparent",
   read: "bg-secondary text-secondary-foreground border-transparent",
-  none: "text-muted-foreground",
+  custom: "bg-warning/10 text-warning border-transparent",
+  none: "",
 };
 
 /**
- * Full per-module breakdown for a role's permission set — used in both the
- * Roles and Users detail panels. One access-level badge per module (Full /
- * Read only / No access, the same wording as the card-level summary), with
- * elevated actions (Approve/Export/Share) called out only where they
- * actually apply. Deliberately not a module × action grid of repeated
- * checkmarks — that reads as noise once there are 12 rows.
+ * Per-module breakdown for a role's permission set — used in both the
+ * Roles and Users detail panels. Modules with no access at all are omitted
+ * entirely (per the team lead: only show what a role *can* reach), leaving
+ * one access-level badge per remaining module (Full Access / Read Only /
+ * Custom Access).
+ *
+ * `full`/`read` already state the whole story in their name, so only the
+ * elevated extras (Approve/Export/Share) are called out beneath them.
+ * `custom` doesn't imply anything on its own, so its full capability list
+ * (View, and whichever of Create/Edit/Approve/Export/Share actually apply)
+ * is spelled out instead — the client specifically asked to see what
+ * access a role currently has, not a label that papers over the gaps.
  */
 export function ModuleAccessList({ permissions }: { permissions: ModulePermission[] }) {
   const t = useTranslations("app.settings.roles");
   const tModules = useTranslations("app.settings.roles.modules");
+  const accessible = permissions.filter((permission) => levelKey(permission) !== "none");
+
+  if (accessible.length === 0) {
+    return (
+      <p className="text-muted-foreground py-2.5 text-sm">{t("access.summaryNone")}</p>
+    );
+  }
 
   return (
     <div className="divide-border/70 divide-y">
-      {permissions.map((permission) => {
+      {accessible.map((permission) => {
         const level = levelKey(permission);
         const extras = EXTRA_ACTIONS.filter((action) => permission[action]);
+        const capabilities =
+          level === "custom"
+            ? [
+                t("actions.view"),
+                ...(permission.create ? [t("actions.create")] : []),
+                ...(permission.write ? [t("actions.edit")] : []),
+                ...extras.map((action) => t(`actions.${action}`)),
+              ]
+            : extras.map((action) => t(`actions.${action}`));
 
         return (
           <div
@@ -45,9 +85,9 @@ export function ModuleAccessList({ permissions }: { permissions: ModulePermissio
               <p className="text-foreground truncate text-sm">
                 {tModules(permission.module)}
               </p>
-              {extras.length > 0 ? (
+              {capabilities.length > 0 ? (
                 <p className="text-muted-foreground text-xs">
-                  {extras.map((action) => t(`actions.${action}`)).join(" · ")}
+                  {capabilities.join(" · ")}
                 </p>
               ) : null}
             </div>

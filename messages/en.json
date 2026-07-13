@@ -29,7 +29,35 @@
       "submit": "Sign in",
       "submitting": "Signing in...",
       "genericError": "Something went wrong. Please try again.",
-      "otp": "Sign in with OTP instead"
+      "otp": "Sign in with OTP instead",
+      "noAccount": "Don't have an organization yet?",
+      "signUp": "Sign up"
+    },
+    "signup": {
+      "heroTitle": "Register your organization",
+      "heroSubtitle": "Create your organization's workspace in one step. The email you sign up with becomes your NGO Admin account.",
+      "title": "Create your organization",
+      "description": "Sign up your NGO to get started with Rio",
+      "organizationNameLabel": "Organization name",
+      "organizationNamePlaceholder": "Your organization's name",
+      "purposeLabel": "Area of work",
+      "purposePlaceholder": "e.g. Community Health",
+      "registrationNumberLabel": "Registration number",
+      "registrationNumberPlaceholder": "e.g. NGO123456",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@organisation.org",
+      "submit": "Create organization",
+      "submitting": "Creating...",
+      "genericError": "Something went wrong. Please try again.",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "temporaryPasswordTitle": "Your account is ready",
+      "temporaryPasswordDescription": "Save this temporary password — you'll need it to sign in. This is shown only once.",
+      "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
+      "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
+      "temporaryPasswordLabel": "Temporary password",
+      "copyButton": "Copy",
+      "goToSignInButton": "Go to sign in"
     },
     "forgotPassword": {
       "heroTitle": "We'll get you back in",
@@ -86,7 +114,10 @@
       "passwordsMustMatch": "Passwords must match.",
       "nameRequired": "Please enter a name.",
       "otpLength": "Enter the 6-digit code.",
-      "roleRequired": "Please select a role."
+      "roleRequired": "Please select a role.",
+      "organizationNameRequired": "Please enter your organization's name.",
+      "purposeRequired": "Please describe your organization's area of work.",
+      "registrationNumberRequired": "Please enter your registration number."
     }
   },
   "app": {
@@ -97,6 +128,22 @@
       "accept": "I agree, continue",
       "accepting": "Saving...",
       "genericError": "Something went wrong. Please try again."
+    },
+    "passwordChange": {
+      "heroTitle": "Choose a new password",
+      "heroSubtitle": "Make it something you haven't used before.",
+      "title": "Set a new password",
+      "description": "Enter the temporary password you were sent, then choose a new password to sign in with from now on.",
+      "currentPasswordLabel": "Temporary password",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "genericError": "Something went wrong. Please try again.",
+      "verifiedTitle": "Password updated",
+      "verifiedDescription": "Your password has been updated successfully. You can now sign in using your new password.",
+      "goToSignInButton": "Go to sign in",
+      "redirecting": "Redirecting..."
     },
     "sidebar": {
       "dashboard": "Dashboard",
@@ -177,12 +224,13 @@
         "read": "Read",
         "write": "Write",
         "access": {
-          "full": "Full access",
-          "read": "Read only",
+          "full": "Full Access",
+          "read": "Read Only",
+          "custom": "Custom Access",
           "none": "No access",
           "summaryFull": "Full access to all {count} modules",
           "summaryNone": "No module access",
-          "summaryMixed": "{full} full access, {read} read-only, {none} no access"
+          "summaryMixed": "{full} full access, {custom} custom, {read} read-only, {none} no access"
         },
         "modules": {
           "entityTeam": "Entity & Team Management",
@@ -200,6 +248,9 @@
         },
         "crossEntityBadge": "Cross-entity",
         "actions": {
+          "view": "View",
+          "create": "Create",
+          "edit": "Edit",
           "approve": "Approve",
           "export": "Export",
           "share": "Share"

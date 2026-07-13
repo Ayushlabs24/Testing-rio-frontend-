@@ -34,16 +34,23 @@ async function request<TResponse>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: options.signal ?? controller.signal,
       cache: options.cache,
+      // The backend's session lives in an httpOnly cookie (see
+      // auth.service.ts) — required for it to be sent/stored cross-origin
+      // (frontend :3000, backend :4000). Harmless for same-origin calls.
+      credentials: "include",
     });
 
     const isJson = response.headers.get("content-type")?.includes("application/json");
     const payload = isJson ? await response.json() : undefined;
 
     if (!response.ok) {
+      // The backend's error responses are enveloped as { error: { code,
+      // message, details? } } (see AllExceptionsFilter); fall back to a
+      // flatter { message } shape for anything that doesn't follow that.
       throw new ApiError({
-        message: payload?.message ?? response.statusText,
+        message: payload?.error?.message ?? payload?.message ?? response.statusText,
         status: response.status,
-        details: payload,
+        details: payload?.error?.details ?? payload,
       });
     }
 

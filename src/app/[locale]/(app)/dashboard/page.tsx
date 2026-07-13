@@ -43,7 +43,9 @@ export default function DashboardPage() {
       });
       studiesService.getPlatformStats().then(setStudyStats);
     } else {
-      rolesService.list().then((roles) => setRoleCount(roles.length));
+      rolesService
+        .list()
+        .then((roles) => setRoleCount(roles.filter((role) => role.enabled).length));
       usersService.listByOrganization().then((users) => setUserCount(users.length));
     }
   }, [isCrossEntity]);

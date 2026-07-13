@@ -104,6 +104,13 @@ function CreateOrganizationDialog({
     try {
       const organization = await organizationsService.createWithAdmin({
         name: values.name,
+        // This flow is dormant while System Admin is disabled (see
+        // roles.ts) — public signup is the only reachable path to a new
+        // organization right now, and it's the one that actually collects
+        // purpose/registration number. Placeholder values here just keep
+        // this unreachable dialog type-consistent with `Organization`.
+        purpose: "",
+        registrationNumber: "",
         region: values.region,
         email: values.email,
         sector: values.sector,

@@ -24,22 +24,31 @@ import type { ModulePermission } from "@/types/permissions";
 interface PermissionCounts {
   full: number;
   read: number;
+  custom: number;
   none: number;
 }
 
+/**
+ * Mirrors `ModuleAccessList`'s three-tier `levelKey` (see that file) at the
+ * card-summary level: `full` requires create + edit, not just edit, so a
+ * role can't read as "Full Access to N modules" when it's actually missing
+ * create rights on some of them.
+ */
 function countPermissions(permissions: ModulePermission[]): PermissionCounts {
   return permissions.reduce(
     (acc, permission) => {
-      if (permission.read && permission.write) {
+      if (!permission.read) {
+        acc.none += 1;
+      } else if (permission.create && permission.write) {
         acc.full += 1;
-      } else if (permission.read) {
+      } else if (!permission.write && !permission.create) {
         acc.read += 1;
       } else {
-        acc.none += 1;
+        acc.custom += 1;
       }
       return acc;
     },
-    { full: 0, read: 0, none: 0 },
+    { full: 0, read: 0, custom: 0, none: 0 },
   );
 }
 
@@ -56,6 +65,7 @@ function AccessSummary({ role }: { role: RoleSummary }) {
   } else {
     summary = t("access.summaryMixed", {
       full: counts.full,
+      custom: counts.custom,
       read: counts.read,
       none: counts.none,
     });
@@ -133,7 +143,13 @@ export default function RolesSettingsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
-    rolesService.list().then(setRoles);
+    // Only enabled roles are shown — the team lead's current demo scope is
+    // NGO Admin/Researcher/Approver/Supervisor; the rest stay fully defined
+    // in roles.ts but aren't live yet. Nothing here changes when they return
+    // beyond flipping `enabled` back on.
+    rolesService
+      .list()
+      .then((allRoles) => setRoles(allRoles.filter((role) => role.enabled)));
   }, []);
 
   return (
@@ -143,7 +159,7 @@ export default function RolesSettingsPage() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {roles === null
-            ? Array.from({ length: 9 }).map((_, index) => (
+            ? Array.from({ length: 4 }).map((_, index) => (
                 <RoleCardSkeleton key={index} />
               ))
             : roles.map((role) => (

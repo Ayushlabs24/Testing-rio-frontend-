@@ -11,6 +11,8 @@ export interface AuthUser {
 export interface AuthOrganization {
   id: string;
   name: string;
+  purpose: string;
+  registrationNumber: string;
   logoUrl: string | null;
   region: string;
   email: string;
@@ -25,6 +27,14 @@ export interface AuthRole {
   key: string;
   name: string;
   crossEntity: boolean;
+  /**
+   * Whether this role is live for the current phase (see roles.ts). A
+   * disabled role can still authenticate — `enabled` gates the UI (nav
+   * visibility, route guards via `usePermission`), never login itself, so
+   * flipping a role back on is a pure UI change with no session/auth-layer
+   * side effects.
+   */
+  enabled: boolean;
   permissions: ModulePermission[];
 }
 
@@ -34,11 +44,50 @@ export interface SessionContext {
   user: AuthUser;
   organization: AuthOrganization;
   role: AuthRole;
+  /**
+   * True until this user sets their own password via
+   * `authService.changePassword()` — every signup-issued account starts
+   * here with a system-generated temp password, never one they chose. See
+   * `PasswordChangeGuard`, which blocks the app until this clears.
+   */
+  mustChangePassword: boolean;
 }
 
 export interface LoginPayload {
   email: string;
   password: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/**
+ * Public signup: creates a new organization and its first NGO Admin
+ * together. No `adminName`/`password` fields — the email itself *is* the
+ * NGO Admin account, and the backend issues a temporary password (see
+ * `SignupResult`) rather than taking one from the form.
+ */
+export interface SignupPayload {
+  organizationName: string;
+  purpose: string;
+  registrationNumber: string;
+  email: string;
+}
+
+/**
+ * `authService.signup()`'s return value. `temporaryPasswordEmailed: true`
+ * means the backend actually emailed the new admin their temporary
+ * password (see the backend's `MailerService`) — nothing further to show.
+ * When `false`, the mailer isn't configured yet (or the send failed), so
+ * `temporaryPassword` carries a one-time in-app reveal instead — only
+ * present outside production (see the backend's `AuthService.signup()`).
+ */
+export interface SignupResult {
+  session: SessionContext;
+  temporaryPasswordEmailed: boolean;
+  temporaryPassword?: string;
 }
 
 export interface ForgotPasswordPayload {

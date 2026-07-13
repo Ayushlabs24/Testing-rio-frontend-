@@ -9,6 +9,8 @@
 export const endpoints = {
   auth: {
     login: "/auth/login",
+    signup: "/auth/signup",
+    changePassword: "/auth/change-password",
     forgotPassword: "/auth/forgot-password",
     resetPassword: "/auth/reset-password",
     requestOtp: "/auth/otp/request",

@@ -3,6 +3,8 @@ import type { Sector } from "@/config/sectors";
 export interface MockOrganization {
   id: string;
   name: string;
+  purpose: string;
+  registrationNumber: string;
   logoUrl: string | null;
   region: string;
   email: string;
@@ -27,6 +29,8 @@ export const organizations: MockOrganization[] = [
   {
     id: "org_demo",
     name: "Demo Nonprofit Alliance",
+    purpose: "Livelihoods and economic development across rural communities.",
+    registrationNumber: "REG-DEMO-0001",
     logoUrl: null,
     region: "Yorkshire, United Kingdom",
     email: "contact@demo-nonprofit-alliance.org",
@@ -38,6 +42,8 @@ export const organizations: MockOrganization[] = [
   {
     id: "org_second",
     name: "Riverside Community Trust",
+    purpose: "Water, sanitation, and hygiene access for riverside villages.",
+    registrationNumber: "REG-DEMO-0002",
     logoUrl: null,
     region: "Kerala, India",
     email: "contact@riverside-community-trust.org",

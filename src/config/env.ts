@@ -5,8 +5,10 @@ import { z } from "zod";
  * Add new variables here — never read `process.env` directly elsewhere.
  */
 const envSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://localhost:4000/api"),
+  // Backend keeps its own default port (3000); the frontend dev server runs
+  // on 3001 instead of contesting it.
+  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3001"),
+  NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://localhost:3000/api"),
   NEXT_PUBLIC_API_TIMEOUT_MS: z.coerce.number().positive().default(15000),
 });
 
