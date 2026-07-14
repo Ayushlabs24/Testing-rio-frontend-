@@ -15,3 +15,16 @@ export const SECTORS = [
 ] as const;
 
 export type Sector = (typeof SECTORS)[number];
+
+/**
+ * Narrow an arbitrary backend `sector` value to the frontend's known set.
+ * The API models sector as a free `string | null`, so a value the UI has no
+ * label for (outside SECTORS) is treated as "not set" — this keeps unknown
+ * values from ever reaching `tSectors(...)`, which would throw on a missing
+ * translation key.
+ */
+export function toSector(value: string | null | undefined): Sector | null {
+  return value && (SECTORS as readonly string[]).includes(value)
+    ? (value as Sector)
+    : null;
+}

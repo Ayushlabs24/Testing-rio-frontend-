@@ -172,12 +172,17 @@ function UserDialog({
       } else {
         // The backend scopes creation to the caller's own organization but
         // returns a plain `OrgUser` (no org id/name) — attach it from what
-        // we already know, same as the update path above.
-        saved = await usersService.create(values).then((created) => ({
-          ...created,
-          organizationId: currentOrganization.id,
-          organizationName: currentOrganization.name,
-        }));
+        // we already know, same as the update path above. Only the declared
+        // CreateUserPayload fields are sent; `status` isn't part of create
+        // (new users are always active) and would otherwise leak into the
+        // request body since `values` is a superset.
+        saved = await usersService
+          .create({ name: values.name, email: values.email, roleId: values.roleId })
+          .then((created) => ({
+            ...created,
+            organizationId: currentOrganization.id,
+            organizationName: currentOrganization.name,
+          }));
       }
       onSaved(saved);
       reset();
@@ -437,7 +442,13 @@ export default function UsersSettingsPage() {
   useEffect(() => {
     if (isCrossEntity) {
       // Center Supervisor: every user, across every organization (read-only).
-      usersService.listAll().then(setUsers);
+      // Mirror the entity path's guard: a failed fetch resolves to an empty
+      // list instead of leaving the table stuck at `null` with an unhandled
+      // rejection (listAll fans out per-org, so any one org failing rejects).
+      usersService
+        .listAll()
+        .then(setUsers)
+        .catch(() => setUsers([]));
     } else if (session) {
       // NGO Admin etc: only this organization's own team.
       usersService
