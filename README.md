@@ -20,6 +20,32 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Browser support (RIO-NFR-009)
+
+The app targets modern evergreen browsers. The supported matrix is declared in
+`package.json` (`browserslist`) and consumed by the build toolchain:
+
+- **Chrome / Edge** (Chromium) — last 2 versions
+- **Firefox** (Gecko) — last 2 versions
+- **Safari** (WebKit, macOS/iOS) — last 2 versions
+
+Cross-browser rendering is verified with Playwright across all three engines plus
+mobile viewports (see `playwright.config.ts`):
+
+```bash
+npx playwright install chromium firefox webkit   # one-time
+npm run test:e2e                                  # render specs on every engine
+```
+
+`e2e/browser-compat.spec.ts` loads each public page (login, OTP, forgot/reset
+password, signup) on Chromium, Firefox, WebKit, Mobile Chrome (Pixel 7) and
+Mobile Safari (iPhone 14) and asserts every page renders its heading and form
+controls with no uncaught errors — satisfying the NFR-009 acceptance criterion
+"no major rendering errors." These specs are backend-independent.
+
+Full app-flow e2e (`auth-flows.spec.ts`) needs a running API with seeded
+accounts; opt in with `E2E_BACKEND=1 npm run test:e2e`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
