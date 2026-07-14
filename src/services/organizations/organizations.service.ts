@@ -1,181 +1,80 @@
-import { organizations } from "@/mocks/data/organizations";
-import { roles } from "@/mocks/data/roles";
-import { users } from "@/mocks/data/users";
-import {
-  findOrganizationById,
-  findUserByEmail,
-  findUserById,
-  isUserRoleEnabled,
-} from "@/mocks/db";
-import { mockSession } from "@/mocks/session";
-import { generateId, mockDelay } from "@/mocks/utils";
-import { ApiError } from "@/services/api/types";
-import { diffChanges } from "@/services/audit/audit.diff";
-import { auditService } from "@/services/audit/audit.service";
+import { toSector } from "@/config/sectors";
+import { apiClient } from "@/services/api/client";
+import { endpoints } from "@/services/api/endpoints";
 import type {
-  CreateOrganizationPayload,
   Organization,
   OrganizationSummary,
   UpdateOrganizationPayload,
 } from "@/services/organizations/organizations.types";
 
-/** Payload keys that carry an audited value → label shown in the audit trail. */
-const ORGANIZATION_AUDIT_FIELDS: Record<string, string> = {
-  name: "Name",
-  region: "Region",
-  email: "Email",
-  sector: "Sector",
-  villages: "Villages",
-  isActive: "Active",
-  logoUrl: "Logo",
-};
-
-function requireCurrentOrganizationId(): string {
-  const session = mockSession.read();
-  const user = session ? findUserById(session.userId) : undefined;
-  if (!user) {
-    throw new ApiError({ message: "Not authenticated.", status: 401 });
-  }
-  return user.organizationId;
+/** Shape returned by the real backend's /organizations* endpoints (see organizations.types.ts on the backend). */
+interface ApiOrganization {
+  id: string;
+  name: string;
+  purpose: string;
+  registrationNumber: string;
+  logoUrl: string | null;
+  region: string | null;
+  email: string | null;
+  sector: string | null;
+  villages: string[];
+  isActive: boolean;
+  createdAt: string;
 }
 
+interface ApiOrganizationSummary extends ApiOrganization {
+  memberCount: number;
+}
+
+/**
+ * The backend models region/email as nullable; the frontend treats "not set"
+ * as "". `sector` is normalized against the known set rather than blindly
+ * cast — an unrecognized value would otherwise break `tSectors(...)` in the UI.
+ */
+function toOrganization(api: ApiOrganization): Organization {
+  return {
+    ...api,
+    region: api.region ?? "",
+    email: api.email ?? "",
+    sector: toSector(api.sector),
+  };
+}
+
+function toOrganizationSummary(api: ApiOrganizationSummary): OrganizationSummary {
+  return { ...toOrganization(api), memberCount: api.memberCount };
+}
+
+// listAll/getById are cross-entity, read-only (Center Supervisor viewing
+// organizations other than its own). No cross-org write path exists:
+// System Admin (the only role that ever had one) is disabled, and the
+// backend only exposes PATCH /organizations/current (the caller's own org).
 export const organizationsService = {
   async getCurrent(): Promise<Organization> {
-    await mockDelay();
-    const organization = findOrganizationById(requireCurrentOrganizationId());
-    if (!organization) {
-      throw new ApiError({ message: "Organization not found.", status: 404 });
-    }
-    return organization;
+    const api = await apiClient.get<ApiOrganization>(endpoints.organizations.current);
+    return toOrganization(api);
   },
 
   async update(payload: UpdateOrganizationPayload): Promise<Organization> {
-    await mockDelay();
-    const organization = findOrganizationById(requireCurrentOrganizationId());
-    if (!organization) {
-      throw new ApiError({ message: "Organization not found.", status: 404 });
-    }
-    // Snapshot the audited fields before applying the payload so we can record
-    // exact before/after values, not just which keys changed.
-    const before = { ...organization };
-    if (payload.name !== undefined) organization.name = payload.name;
-    if (payload.logoUrl !== undefined) organization.logoUrl = payload.logoUrl;
-    if (payload.region !== undefined) organization.region = payload.region;
-    if (payload.email !== undefined) organization.email = payload.email;
-    if (payload.sector !== undefined) organization.sector = payload.sector;
-    if (payload.villages !== undefined) organization.villages = payload.villages;
-    if (payload.isActive !== undefined) organization.isActive = payload.isActive;
-    auditService.record({
-      action: "edit",
-      entityType: "organization",
-      entityId: organization.id,
-      entityLabel: organization.name,
-      changes: diffChanges(
-        before as unknown as Record<string, unknown>,
-        organization as unknown as Record<string, unknown>,
-        ORGANIZATION_AUDIT_FIELDS,
-      ),
-      metadata: { changed: Object.keys(payload) },
-    });
-    return organization;
+    const api = await apiClient.patch<ApiOrganization>(
+      endpoints.organizations.current,
+      payload,
+    );
+    return toOrganization(api);
   },
 
-  /** Cross-entity — System Admin only. Every org, regardless of the caller's own. */
+  /** Cross-entity, read-only — every org, regardless of the caller's own. */
   async listAll(): Promise<OrganizationSummary[]> {
-    await mockDelay();
-    return organizations.map((organization) => ({
-      ...organization,
-      memberCount: users.filter(
-        (user) => user.organizationId === organization.id && isUserRoleEnabled(user),
-      ).length,
-    }));
+    const api = await apiClient.get<ApiOrganizationSummary[]>(
+      endpoints.organizations.list,
+    );
+    return api.map(toOrganizationSummary);
   },
 
-  /** Cross-entity — System Admin viewing any organization's details, not just their own. */
+  /** Cross-entity, read-only — viewing any organization's details, not just their own. */
   async getById(id: string): Promise<OrganizationSummary> {
-    await mockDelay();
-    const organization = findOrganizationById(id);
-    if (!organization) {
-      throw new ApiError({ message: "Organization not found.", status: 404 });
-    }
-    return {
-      ...organization,
-      memberCount: users.filter(
-        (user) => user.organizationId === organization.id && isUserRoleEnabled(user),
-      ).length,
-    };
-  },
-
-  /** Cross-entity — System Admin editing any organization's details, not just their own. */
-  async updateById(
-    id: string,
-    payload: UpdateOrganizationPayload,
-  ): Promise<OrganizationSummary> {
-    await mockDelay();
-    const organization = findOrganizationById(id);
-    if (!organization) {
-      throw new ApiError({ message: "Organization not found.", status: 404 });
-    }
-    if (payload.name !== undefined) organization.name = payload.name;
-    if (payload.logoUrl !== undefined) organization.logoUrl = payload.logoUrl;
-    if (payload.region !== undefined) organization.region = payload.region;
-    if (payload.email !== undefined) organization.email = payload.email;
-    if (payload.sector !== undefined) organization.sector = payload.sector;
-    if (payload.villages !== undefined) organization.villages = payload.villages;
-    if (payload.isActive !== undefined) organization.isActive = payload.isActive;
-    return {
-      ...organization,
-      memberCount: users.filter(
-        (user) => user.organizationId === organization.id && isUserRoleEnabled(user),
-      ).length,
-    };
-  },
-
-  /**
-   * System Admin creates a brand-new entity and its first NGO Admin together —
-   * there's no other path to a new organization in this phase (see roles.ts).
-   */
-  async createWithAdmin(
-    payload: CreateOrganizationPayload,
-  ): Promise<OrganizationSummary> {
-    await mockDelay();
-    if (findUserByEmail(payload.adminEmail)) {
-      throw new ApiError({
-        message: "An account with this email already exists.",
-        status: 409,
-      });
-    }
-
-    const organization = {
-      id: generateId("org"),
-      name: payload.name,
-      purpose: payload.purpose,
-      registrationNumber: payload.registrationNumber,
-      logoUrl: null,
-      region: payload.region,
-      email: payload.email,
-      sector: payload.sector,
-      villages: payload.villages,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-    organizations.push(organization);
-
-    const ngoAdminRole = roles.find((role) => role.key === "ngo_admin")!;
-    const admin = {
-      id: generateId("user"),
-      organizationId: organization.id,
-      roleId: ngoAdminRole.id,
-      name: payload.adminName,
-      email: payload.adminEmail,
-      // Mock-only: a real invite flow would email a set-password link instead.
-      password: "password123",
-      status: "invited" as const,
-      consentedAt: null,
-      createdAt: new Date().toISOString(),
-    };
-    users.push(admin);
-
-    return { ...organization, memberCount: 1 };
+    const api = await apiClient.get<ApiOrganizationSummary>(
+      endpoints.organizations.byId(id),
+    );
+    return toOrganizationSummary(api);
   },
 };

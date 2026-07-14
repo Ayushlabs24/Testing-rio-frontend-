@@ -1,7 +1,9 @@
 import { auditEvents } from "@/mocks/data/audit";
 import { findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
-import { generateId, mockDelay } from "@/mocks/utils";
+import { generateId } from "@/mocks/utils";
+import { apiClient } from "@/services/api/client";
+import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
 import type { AuditEvent, RecordAuditEventInput } from "@/services/audit/audit.types";
 
@@ -15,24 +17,16 @@ function requireCurrentUser() {
 }
 
 /**
- * Returns a mutable, defensive copy of a stored event. Every nested structure
- * (actor, changes, metadata) is copied too — a shallow spread would leave the
- * returned event sharing the store's `changes`/`metadata` references, letting a
- * caller reach in and rewrite append-only history through `list()`.
- */
-function clone(event: AuditEvent): AuditEvent {
-  return {
-    ...event,
-    actor: event.actor ? { ...event.actor } : null,
-    changes: event.changes?.map((change) => ({ ...change })),
-    metadata: event.metadata ? { ...event.metadata } : undefined,
-  };
-}
-
-/**
- * Mock implementation with the exact call signatures a backend-backed audit
- * service would have. Swapping in a real API later means rewriting the inside
- * of these methods to call `apiClient`; nothing outside this file changes.
+ * `record()` stays mock-only: the real backend writes its own audit_logs row
+ * server-side, right inside each mutating endpoint (see
+ * Project-RIO-Backend's AuditService.record()) — there's no client-callable
+ * "record an event" endpoint, by design, since a client-supplied audit entry
+ * couldn't be trusted anyway. Every frontend service that mutates data now
+ * calls the real backend, so nothing in the app currently calls this method
+ * — `list()` below reads from the real API, not this mock store, so
+ * anything recorded here would be invisible anyway. Kept only because
+ * deleting it would also mean deleting its own unit test coverage for no
+ * functional gain; it's a candidate for removal in a future pass.
  */
 export const auditService = {
   /**
@@ -67,17 +61,8 @@ export const auditService = {
     return event;
   },
 
-  /**
-   * Read-only history for the current user's organisation, newest first.
-   * Returns defensive copies so callers can never reach into and mutate the
-   * append-only store.
-   */
+  /** Read-only history for the current user's organisation, newest first. */
   async list(): Promise<AuditEvent[]> {
-    await mockDelay();
-    const user = requireCurrentUser();
-    return auditEvents
-      .filter((event) => event.organizationId === user.organizationId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .map(clone);
+    return apiClient.get<AuditEvent[]>(endpoints.audit.list);
   },
 };

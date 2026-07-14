@@ -19,12 +19,19 @@ vi.mock("@/services/api/client", () => ({
 
 const apiSession = {
   token: "jwt-token",
-  user: { id: "user_1", name: "Priya Nair", email: "priya@demo.org" },
+  user: { id: "user_1", name: "Priya Nair", email: "priya@demo.org", consentedAt: null },
   organization: {
     id: "org_1",
     name: "Demo NGO",
     purpose: "Community Health",
     registrationNumber: "REG-1",
+    logoUrl: null,
+    region: null,
+    email: null,
+    sector: null,
+    villages: [],
+    isActive: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
   },
   role: { key: "ngo_admin" },
   mustChangePassword: false,
@@ -162,6 +169,31 @@ describe("authService", () => {
     await authService.logout();
 
     expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.logout);
+  });
+
+  it("giveConsent() posts to /auth/consent, then re-fetches me() for the updated session", async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      consentedAt: "2026-01-02T00:00:00.000Z",
+      policyVersion: "v1",
+    });
+    vi.mocked(apiClient.get).mockResolvedValue({
+      ...apiSession,
+      user: { ...apiSession.user, consentedAt: "2026-01-02T00:00:00.000Z" },
+    });
+
+    const session = await authService.giveConsent();
+
+    expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.consent);
+    expect(apiClient.get).toHaveBeenCalledWith(endpoints.auth.me);
+    expect(session.user.consentedAt).toBe("2026-01-02T00:00:00.000Z");
+  });
+
+  it("me() carries a null consentedAt through as-is (not yet consented)", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(apiSession);
+
+    const session = await authService.me();
+
+    expect(session.user.consentedAt).toBeNull();
   });
 
   it("rejects with a 500 if the server returns a role key the frontend doesn't recognise", async () => {

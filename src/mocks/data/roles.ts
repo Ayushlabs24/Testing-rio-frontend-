@@ -97,9 +97,14 @@ const READ_ONLY: AccessGrant = { read: true };
  * deleted either. There is now a public NGO signup (see
  * `authService.signup()`) that creates an organization and its first NGO
  * Admin together — this replaces the System-Admin-only
- * `organizationsService.createWithAdmin` path described below, which
- * stays in the codebase, gated off (System Admin can't currently log in;
- * see `enabled`), for whenever System Admin's flow comes back.
+ * org-creation path described below. Since System Admin is disabled
+ * (`enabled: false`) and has no other reachable entry point, the write-only
+ * code that path used (`organizationsService.createWithAdmin`/`updateById`,
+ * `usersService.createForOrganization`/`updateAny`/`removeAny`, and the
+ * System Admin-only UI in the Organizations/Users settings pages) has been
+ * removed outright rather than just gated off. Center Supervisor's
+ * cross-entity *read* access (Organizations list/detail, Users platform-wide
+ * list) is unrelated to this and stays fully real and working.
  *
  * The rest of this comment describes the original (pre-pivot) design,
  * which the `enabled` flag above supersedes for now:

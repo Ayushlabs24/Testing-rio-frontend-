@@ -21,12 +21,7 @@ export interface CreateUserPayload {
   roleId: string;
 }
 
-/** System Admin only — adding a member to an organization that isn't their own. */
-export interface CreateUserForOrganizationPayload extends CreateUserPayload {
-  organizationId: string;
-}
-
-/** System Admin's platform-wide Users view — an OrgUser plus which organization it belongs to. */
+/** Center Supervisor's platform-wide Users view — an OrgUser plus which organization it belongs to. */
 export interface PlatformUser extends OrgUser {
   organizationId: string;
   organizationName: string;

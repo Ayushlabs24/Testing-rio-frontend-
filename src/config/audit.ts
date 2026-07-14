@@ -19,9 +19,19 @@ import type { PermissionModule } from "@/types/permissions";
  * The key lifecycle events tracked in the audit log. `create/edit/approve/
  * share` are the governed actions called out in scope.md (approve ↔ the
  * `approvals` table, share ↔ the `sharing_requests` flow); `delete` is
- * included so destructive removals are never silently lost.
+ * included so destructive removals are never silently lost. `login`/
+ * `logout` are recorded server-side on every authentication event (see
+ * the backend's AuthService.login()/logout()).
  */
-export const AUDIT_ACTIONS = ["create", "edit", "approve", "share", "delete"] as const;
+export const AUDIT_ACTIONS = [
+  "create",
+  "edit",
+  "approve",
+  "share",
+  "delete",
+  "login",
+  "logout",
+] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

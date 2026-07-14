@@ -14,7 +14,7 @@ export function usePermission(
   if (!session) return false;
   // A disabled role (see roles.ts) can still sign in — `enabled` gates
   // every module-scoped page/action, not authentication itself. This is
-  // the single choke point: PermissionGuard, SystemAdminGuard, and every
+  // the single choke point: PermissionGuard, CrossEntityGuard, and every
   // in-page action button all route through this hook.
   if (!session.role.enabled) return false;
 
