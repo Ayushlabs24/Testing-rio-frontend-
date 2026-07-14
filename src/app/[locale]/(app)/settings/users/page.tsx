@@ -62,8 +62,6 @@ import { PermissionGuard } from "@/components/layout/permission-guard";
 import { useAuth } from "@/components/providers/auth-provider";
 import { USERS_PAGE_SIZE } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
-import { organizationsService } from "@/services/organizations/organizations.service";
-import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { rolesService } from "@/services/roles/roles.service";
 import type { RoleSummary } from "@/services/roles/roles.types";
 import { usersService } from "@/services/users/users.service";
@@ -95,8 +93,8 @@ function StatusBadge({ status, label }: { status: UserStatus; label: string }) {
 
 interface UserDialogProps {
   roles: RoleSummary[];
-  organizations: OrganizationSummary[];
-  isCrossEntity: boolean;
+  /** The caller's own org — used to enrich a plain `OrgUser` into a `PlatformUser` after creating one (the response itself doesn't carry it). */
+  currentOrganization: { id: string; name: string };
   user?: PlatformUser;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -105,15 +103,13 @@ interface UserDialogProps {
 
 function UserDialog({
   roles,
-  organizations,
-  isCrossEntity,
+  currentOrganization,
   user,
   open,
   onOpenChange,
   onSaved,
 }: UserDialogProps) {
   const t = useTranslations("app.settings.users");
-  const tOrgs = useTranslations("app.settings.organizations");
   const tValidation = useTranslations("auth.validation");
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(user);
@@ -122,9 +118,6 @@ function UserDialog({
     name: z.string().min(1, { message: tValidation("nameRequired") }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
     roleId: z.string().min(1, { message: tValidation("roleRequired") }),
-    organizationId: isCrossEntity
-      ? z.string().min(1, { message: tOrgs("organizationRequired") })
-      : z.string().optional(),
     status: z.enum(["active", "invited"]),
   });
   type Values = z.infer<typeof schema>;
@@ -142,13 +135,11 @@ function UserDialog({
       name: user?.name ?? "",
       email: user?.email ?? "",
       roleId: user?.role.id ?? "",
-      organizationId: user?.organizationId ?? "",
       status: user?.status ?? "active",
     },
   });
 
   const selectedRoleId = useWatch({ control, name: "roleId" });
-  const selectedOrganizationId = useWatch({ control, name: "organizationId" });
   const selectedStatus = useWatch({ control, name: "status" });
   const selectedRole = roles.find((role) => role.id === selectedRoleId);
 
@@ -173,27 +164,20 @@ function UserDialog({
           roleId: values.roleId,
           status: values.status,
         };
-        // Mirror create/delete: cross-entity roles edit any org via the
-        // unscoped path; an entity role stays scoped to its own org so the
-        // mock's tenant-isolation checks (requireOrgUser) still apply.
-        saved = isCrossEntity
-          ? await usersService.updateAny(user!.id, changes)
-          : await usersService.update(user!.id, changes).then((updated) => ({
-              ...updated,
-              organizationId: user!.organizationId,
-              organizationName: user!.organizationName,
-            }));
-      } else if (isCrossEntity) {
-        saved = await usersService.createForOrganization({
-          organizationId: values.organizationId!,
-          name: values.name,
-          email: values.email,
-          roleId: values.roleId,
-        });
+        saved = await usersService.update(user!.id, changes).then((updated) => ({
+          ...updated,
+          organizationId: user!.organizationId,
+          organizationName: user!.organizationName,
+        }));
       } else {
-        // Entity admin: the service resolves the caller's own organization,
-        // so the returned PlatformUser already carries its org id/name.
-        saved = await usersService.create(values);
+        // The backend scopes creation to the caller's own organization but
+        // returns a plain `OrgUser` (no org id/name) — attach it from what
+        // we already know, same as the update path above.
+        saved = await usersService.create(values).then((created) => ({
+          ...created,
+          organizationId: currentOrganization.id,
+          organizationName: currentOrganization.name,
+        }));
       }
       onSaved(saved);
       reset();
@@ -225,33 +209,6 @@ function UserDialog({
                 <p className="text-destructive text-sm">{errors.email.message}</p>
               ) : null}
             </div>
-
-            {isCrossEntity ? (
-              <div className="space-y-2">
-                <Label htmlFor="organizationId">{t("organizationLabel")}</Label>
-                <Select
-                  value={selectedOrganizationId || undefined}
-                  disabled={isEdit}
-                  onValueChange={(value) => setValue("organizationId", value)}
-                >
-                  <SelectTrigger id="organizationId" className="w-full">
-                    <SelectValue placeholder={tOrgs("organizationPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizations.map((organization) => (
-                      <SelectItem key={organization.id} value={organization.id}>
-                        {organization.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.organizationId ? (
-                  <p className="text-destructive text-sm">
-                    {errors.organizationId.message}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="roleId">{t("roleLabel")}</Label>
@@ -330,12 +287,10 @@ function UserDialog({
 
 function DeleteUserAlert({
   user,
-  isCrossEntity,
   onDeleted,
   trigger,
 }: {
   user: PlatformUser;
-  isCrossEntity: boolean;
   onDeleted: (id: string) => void;
   trigger: React.ReactNode;
 }) {
@@ -346,9 +301,7 @@ function DeleteUserAlert({
   const handleDelete = async () => {
     setError(null);
     try {
-      await (isCrossEntity
-        ? usersService.removeAny(user.id)
-        : usersService.remove(user.id));
+      await usersService.remove(user.id);
       onDeleted(user.id);
       setOpen(false);
     } catch (err) {
@@ -439,7 +392,6 @@ function UserDetailSheet({
               <SheetFooter className="flex-row justify-end gap-2 border-t">
                 <DeleteUserAlert
                   user={user}
-                  isCrossEntity={isCrossEntity}
                   trigger={
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" className="text-destructive gap-2">
@@ -474,7 +426,6 @@ export default function UsersSettingsPage() {
   const canWrite = usePermission("entityTeam", "write");
   const [users, setUsers] = useState<PlatformUser[] | null>(null);
   const [roles, setRoles] = useState<RoleSummary[]>([]);
-  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
@@ -485,25 +436,27 @@ export default function UsersSettingsPage() {
 
   useEffect(() => {
     if (isCrossEntity) {
-      // System Admin: every user, across every organization.
+      // Center Supervisor: every user, across every organization (read-only).
       usersService.listAll().then(setUsers);
-      organizationsService.listAll().then(setOrganizations);
     } else if (session) {
       // NGO Admin etc: only this organization's own team.
-      usersService.listByOrganization().then((orgUsers) =>
-        setUsers(
-          orgUsers.map((u) => ({
-            ...u,
-            organizationId: session.organization.id,
-            organizationName: session.organization.name,
-          })),
-        ),
-      );
+      usersService
+        .listByOrganization()
+        .then((orgUsers) =>
+          setUsers(
+            orgUsers.map((u) => ({
+              ...u,
+              organizationId: session.organization.id,
+              organizationName: session.organization.name,
+            })),
+          ),
+        )
+        .catch(() => setUsers([]));
     }
     // Keep the full role set: it resolves the permissions shown in any
-    // user's detail sheet — including cross-entity users (System Admin,
-    // Center Supervisor) who appear in the platform-wide list. Which roles
-    // are *assignable* is a separate, narrower concern (see assignableRoles).
+    // user's detail sheet — including cross-entity users (Center Supervisor)
+    // who appear in the platform-wide list. Which roles are *assignable* is
+    // a separate, narrower concern (see assignableRoles).
     rolesService.list().then(setRoles);
   }, [isCrossEntity, session]);
 
@@ -688,8 +641,10 @@ export default function UsersSettingsPage() {
 
         <UserDialog
           roles={assignableRoles}
-          organizations={organizations}
-          isCrossEntity={isCrossEntity}
+          currentOrganization={{
+            id: session?.organization.id ?? "",
+            name: session?.organization.name ?? "",
+          }}
           open={createOpen}
           onOpenChange={setCreateOpen}
           onSaved={(user) => setUsers((prev) => [...(prev ?? []), user])}
@@ -697,8 +652,10 @@ export default function UsersSettingsPage() {
 
         <UserDialog
           roles={assignableRoles}
-          organizations={organizations}
-          isCrossEntity={isCrossEntity}
+          currentOrganization={{
+            id: session?.organization.id ?? "",
+            name: session?.organization.name ?? "",
+          }}
           user={editingUser ?? undefined}
           open={editingUser !== null}
           onOpenChange={(open) => {

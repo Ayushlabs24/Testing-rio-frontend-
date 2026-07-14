@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   Pencil,
+  Target,
   Trees,
   Users,
   X,
@@ -173,6 +174,21 @@ export default function OrganizationSettingsPage() {
 
   useEffect(() => {
     usersService.listByOrganization().then((users) => setMemberCount(users.length));
+  }, []);
+
+  // The session's `organization` snapshot is only as fresh as the last
+  // login/signup/me call — this page is the org's actual profile screen,
+  // so it should show what GET /organizations/current returns right now,
+  // not a stale cached copy (e.g. from before another admin's edit).
+  useEffect(() => {
+    if (!session) return;
+    organizationsService.getCurrent().then((current) => {
+      setSession({ ...session, organization: { ...session.organization, ...current } });
+    });
+    // Runs once on mount only — `session` is read from closure at that
+    // point (already populated, since AuthGuard guarantees one exists
+    // before this page ever renders).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const schema = z.object({
@@ -437,6 +453,11 @@ export default function OrganizationSettingsPage() {
                 </div>
               ) : (
                 <div className="divide-border divide-y">
+                  <DetailRow
+                    icon={<Target className="size-4" />}
+                    label={t("purposeLabel")}
+                    value={organization.purpose || "—"}
+                  />
                   <DetailRow
                     icon={<MapPin className="size-4" />}
                     label={t("regionLabel")}

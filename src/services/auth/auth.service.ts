@@ -1,10 +1,5 @@
 import { roles } from "@/mocks/data/roles";
-import {
-  findUserByEmail,
-  findUserById,
-  resolveContext,
-  type AuthedContext,
-} from "@/mocks/db";
+import { findUserByEmail, resolveContext, type AuthedContext } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateMockToken, mockDelay } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
@@ -28,8 +23,20 @@ const MOCK_OTP_CODE = "123456";
 /** Shape returned by the real backend's /auth/login, /auth/me, /auth/change-password. */
 interface ApiSessionView {
   token: string;
-  user: { id: string; name: string; email: string };
-  organization: { id: string; name: string; purpose: string; registrationNumber: string };
+  user: { id: string; name: string; email: string; consentedAt: string | null };
+  organization: {
+    id: string;
+    name: string;
+    purpose: string;
+    registrationNumber: string;
+    logoUrl: string | null;
+    region: string | null;
+    email: string | null;
+    sector: string | null;
+    villages: string[];
+    isActive: boolean;
+    createdAt: string;
+  };
   role: { key: string };
   mustChangePassword: boolean;
 }
@@ -78,14 +85,13 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
 }
 
 /**
- * Builds a full `SessionContext` from the real backend's (currently minimal)
- * session response. The backend has no roles/permissions or full
- * organization-profile API yet — this resolves the role's permission
- * matrix from the same local `roles.ts` the rest of the still-mocked app
- * already treats as the source of truth for that, and fills the
- * organization/consent fields the backend doesn't return yet with honest
- * defaults (not a lookup into mock org/user data — there may be no matching
- * mock entry at all for a real account).
+ * Builds a full `SessionContext` from the real backend's session response.
+ * The backend has no roles/permissions API yet — this resolves the role's
+ * permission matrix from the same local `roles.ts` the rest of the app
+ * treats as the source of truth for that (see rolesService.list(), which
+ * does the same lookup-by-key for the one field the backend doesn't carry:
+ * `enabled`). Everything else (user, organization, mustChangePassword)
+ * comes straight from the backend now.
  */
 function toSessionContextFromApi(view: ApiSessionView): SessionContext {
   const role = roles.find((r) => r.key === view.role.key);
@@ -101,24 +107,20 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
       id: view.user.id,
       name: view.user.name,
       email: view.user.email,
-      // The backend doesn't track consent yet — the only account it can
-      // currently create (self-signup, NGO Admin) is self-consenting.
-      consentedAt: new Date().toISOString(),
+      consentedAt: view.user.consentedAt,
     },
     organization: {
       id: view.organization.id,
       name: view.organization.name,
       purpose: view.organization.purpose,
       registrationNumber: view.organization.registrationNumber,
-      // Not yet returned by the backend (its Organisation model doesn't
-      // carry these fields yet) — honest empty defaults, not a mock lookup.
-      logoUrl: null,
-      region: "",
-      email: "",
-      sector: null,
-      villages: [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
+      logoUrl: view.organization.logoUrl,
+      region: view.organization.region ?? "",
+      email: view.organization.email ?? "",
+      sector: view.organization.sector as SessionContext["organization"]["sector"],
+      villages: view.organization.villages,
+      isActive: view.organization.isActive,
+      createdAt: view.organization.createdAt,
     },
     role: {
       id: role.id,
@@ -133,10 +135,10 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
 }
 
 /**
- * `login`/`signup`/`me`/`logout` call the real backend — the session lives
- * in an httpOnly cookie the server sets/reads (see
- * Project-RIO-Backend's auth.controller.ts), not in `mockSession`.
- * `forgotPassword`/`requestOtp`/`verifyOtp`/`giveConsent` have no backend
+ * `login`/`signup`/`me`/`logout`/`changePassword`/`giveConsent` call the
+ * real backend — the session lives in an httpOnly cookie the server
+ * sets/reads (see Project-RIO-Backend's auth.controller.ts), not in
+ * `mockSession`. `forgotPassword`/`requestOtp`/`verifyOtp` have no backend
  * counterpart yet and stay on the mock layer until one exists — each gets
  * swapped independently as its own endpoint lands, per the project's
  * incremental-swap convention.
@@ -225,15 +227,15 @@ export const authService = {
     return toSessionContext(context, token);
   },
 
-  /** Records consent for the current session's user (e.g. an admin-invited user's first login). */
+  /**
+   * Records consent for the current session's user (e.g. an admin-invited
+   * user's first login). The backend's response is just `{ consentedAt,
+   * policyVersion }` (see AuthService.consent()), not a full session — so
+   * this re-fetches `me()` afterward rather than trying to hand-merge a
+   * partial response into the existing session.
+   */
   async giveConsent(): Promise<SessionContext> {
-    await mockDelay(200);
-    const session = mockSession.read();
-    const user = session ? findUserById(session.userId) : undefined;
-    if (!session || !user) {
-      throw new ApiError({ message: "Not authenticated.", status: 401 });
-    }
-    user.consentedAt = new Date().toISOString();
-    return toSessionContext(resolveContext(user), session.token);
+    await apiClient.post(endpoints.auth.consent);
+    return authService.me();
   },
 };

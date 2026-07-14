@@ -1,12 +1,26 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { auditEvents } from "@/mocks/data/audit";
 import { mockSession } from "@/mocks/session";
+import { apiClient } from "@/services/api/client";
+import { endpoints } from "@/services/api/endpoints";
 import { auditService } from "@/services/audit/audit.service";
 import type { AuditEvent } from "@/services/audit/audit.types";
+
+/**
+ * `record()` stays mock-only (see audit.service.ts) — those tests exercise
+ * it directly. `list()` calls the real backend now; its filtering/sort-
+ * order/immutability guarantees live server-side (see
+ * Project-RIO-Backend's audit.service.spec.ts / audit.e2e.spec.ts), so
+ * here it's just a thin passthrough over a mocked `apiClient`.
+ */
+vi.mock("@/services/api/client", () => ({
+  apiClient: { get: vi.fn() },
+}));
 
 describe("auditService", () => {
   beforeEach(() => {
     mockSession.save({ token: "test-token", userId: "user_admin" });
+    vi.mocked(apiClient.get).mockReset();
   });
 
   it("records an event with the current actor and a timestamp", () => {
@@ -60,62 +74,25 @@ describe("auditService", () => {
     expect(event.action).toBe("edit");
   });
 
-  it("never exposes the underlying store through list()", async () => {
-    auditService.record({
-      action: "share",
-      entityType: "report",
-      entityId: "report_1",
-      entityLabel: "Q1 Needs Report",
-    });
+  it("list() calls GET /audit and returns the response as-is", async () => {
+    const events: AuditEvent[] = [
+      {
+        id: "audit_1",
+        organizationId: "org_demo",
+        actor: { id: "user_admin", name: "Alex Morgan", email: "admin@demo.org" },
+        action: "edit",
+        entityType: "organization",
+        entityId: "org_demo",
+        entityLabel: "Demo Nonprofit Alliance",
+        createdAt: "2026-03-01T00:00:00.000Z",
+      },
+    ];
+    vi.mocked(apiClient.get).mockResolvedValue(events);
 
     const list = await auditService.list();
-    const storedLength = auditEvents.length;
 
-    // Pushing to / mutating the returned array must not affect the store.
-    list.push(list[0]);
-    if (list[0].actor) list[0].actor.name = "Tampered";
-
-    const fresh = await auditService.list();
-    expect(auditEvents.length).toBe(storedLength);
-    expect(fresh.every((event) => event.actor?.name !== "Tampered")).toBe(true);
-  });
-
-  it("copies nested changes so the store can't be rewritten through list()", async () => {
-    const list = await auditService.list();
-    const seeded = list.find((event) => event.id === "audit_seed_1");
-    expect(seeded?.changes?.[0].after).toBe("Demo Nonprofit Alliance");
-
-    // Mutating a returned copy must not reach the append-only store.
-    seeded!.changes![0].after = "Tampered";
-
-    const fresh = await auditService.list();
-    const freshSeeded = fresh.find((event) => event.id === "audit_seed_1");
-    expect(freshSeeded?.changes?.[0].after).toBe("Demo Nonprofit Alliance");
-  });
-
-  it("excludes other organisations' events from the list", async () => {
-    auditEvents.push({
-      id: "audit_foreign",
-      organizationId: "org_other",
-      actor: null,
-      action: "create",
-      entityType: "organization",
-      entityId: "org_other",
-      entityLabel: "Someone Else",
-      createdAt: "2026-03-01T00:00:00.000Z",
-    } satisfies AuditEvent);
-
-    const list = await auditService.list();
-    expect(list.some((event) => event.id === "audit_foreign")).toBe(false);
-    expect(list.every((event) => event.organizationId === "org_demo")).toBe(true);
-  });
-
-  it("returns this organisation's history newest-first", async () => {
-    const list = await auditService.list();
-    expect(list.length).toBeGreaterThan(0);
-    for (let i = 1; i < list.length; i += 1) {
-      expect(list[i - 1].createdAt >= list[i].createdAt).toBe(true);
-    }
+    expect(apiClient.get).toHaveBeenCalledWith(endpoints.audit.list);
+    expect(list).toEqual(events);
   });
 
   it("requires an authenticated actor to record", () => {

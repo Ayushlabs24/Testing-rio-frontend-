@@ -34,22 +34,3 @@ export interface UpdateOrganizationPayload {
 export interface OrganizationSummary extends Organization {
   memberCount: number;
 }
-
-/**
- * System Admin creates an org and its first NGO Admin together, in one
- * action. Dormant while System Admin is disabled (see roles.ts) — public
- * signup (`authService.signup()`) is the only reachable path to a new
- * organization right now, but this type still needs `purpose`/
- * `registrationNumber` so `Organization` stays consistently required.
- */
-export interface CreateOrganizationPayload {
-  name: string;
-  purpose: string;
-  registrationNumber: string;
-  region: string;
-  email: string;
-  sector: Sector | null;
-  villages: string[];
-  adminName: string;
-  adminEmail: string;
-}

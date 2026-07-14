@@ -40,6 +40,8 @@ const ACTION_VARIANT: Record<
   approve: "default",
   share: "default",
   delete: "destructive",
+  login: "outline",
+  logout: "outline",
 };
 
 const ALL = "all";

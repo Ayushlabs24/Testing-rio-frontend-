@@ -127,6 +127,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
                 id="currentPassword"
                 type="password"
                 autoComplete="current-password"
+                placeholder={t("currentPasswordPlaceholder")}
                 className="h-11 pr-4 pl-10 text-base"
                 {...register("currentPassword")}
               />
@@ -144,6 +145,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
                 id="newPassword"
                 type="password"
                 autoComplete="new-password"
+                placeholder={t("newPasswordPlaceholder")}
                 className="h-11 pr-4 pl-10 text-base"
                 {...register("newPassword")}
               />
@@ -161,6 +163,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
+                placeholder={t("confirmPasswordPlaceholder")}
                 className="h-11 pr-4 pl-10 text-base"
                 {...register("confirmPassword")}
               />
