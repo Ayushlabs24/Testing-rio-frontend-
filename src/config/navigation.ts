@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  ClipboardList,
   LayoutDashboard,
   ScrollText,
   ShieldCheck,
@@ -28,6 +29,9 @@ export interface NavItem {
 
 export const appNav: NavItem[] = [
   { labelKey: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  // No `scope`: cross-entity roles read studies too — the Center Supervisor's
+  // oversight view (FR-11) is the same list, widened to every organisation.
+  { labelKey: "studies", href: "/studies", icon: ClipboardList, module: "studySurvey" },
   {
     labelKey: "organization",
     href: "/settings/organization",

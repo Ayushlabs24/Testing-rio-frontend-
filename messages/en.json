@@ -156,7 +156,8 @@
       "audit": "Audit Log",
       "collapse": "Collapse sidebar",
       "expand": "Expand sidebar",
-      "organizations": "Organizations"
+      "organizations": "Organizations",
+      "studies": "Studies"
     },
     "topbar": {
       "menu": "Menu",
@@ -362,6 +363,100 @@
           "report": "Report",
           "sharing_request": "Sharing request"
         }
+      }
+    },
+    "studies": {
+      "title": "Studies",
+      "description": "Community needs assessments run by your organisation.",
+      "newStudy": "New study",
+      "searchPlaceholder": "Search studies by title...",
+      "filterStatusLabel": "Filter by status",
+      "filterStatusAll": "All statuses",
+      "filterVillageLabel": "Filter by village",
+      "filterVillageAll": "All villages",
+      "noResults": "No studies found.",
+      "noResultsHint": "Create your first study to get started.",
+      "loadError": "Couldn't load studies. Try again.",
+      "titleColumn": "Study",
+      "villagesColumn": "Villages",
+      "statusColumn": "Status",
+      "reviewColumn": "Review",
+      "updatedColumn": "Last updated",
+      "organizationColumn": "Organisation",
+      "actionsColumn": "Actions",
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "completed": "Completed",
+        "archived": "Archived"
+      },
+      "review": {
+        "none": "Not submitted",
+        "pending": "In review",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "form": {
+        "createTitle": "New study",
+        "createDescription": "Define the need you want to assess. You can add villages and detail later.",
+        "editTitle": "Edit study",
+        "editDescription": "Update this study’s details.",
+        "titleLabel": "Title",
+        "titlePlaceholder": "e.g. Kofi Ridge water access",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "A short summary of what this study covers.",
+        "needStatementLabel": "Need statement",
+        "needStatementHelp": "Describe the problem in your own words. This is what the assistant will classify.",
+        "needStatementPlaceholder": "Households in this village walk over an hour to collect drinking water since the borehole failed...",
+        "villagesLabel": "Villages",
+        "villagesHelp": "Only villages configured for your organisation can be selected.",
+        "villagesEmpty": "No villages are configured for your organisation yet.",
+        "statusLabel": "Status",
+        "statusHelp": "A study moves forward only: draft to active to completed.",
+        "save": "Save study",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "createSuccess": "Study created.",
+        "updateSuccess": "Study updated."
+      },
+      "validation": {
+        "titleRequired": "Enter a title.",
+        "titleTooLong": "Keep the title to 200 characters or fewer.",
+        "descriptionTooLong": "Keep the description to 2000 characters or fewer."
+      },
+      "detail": {
+        "backToList": "Back to studies",
+        "needStatementHeading": "Need statement",
+        "needStatementEmpty": "No need statement recorded yet.",
+        "classificationHeading": "Classification",
+        "classificationEmpty": "Not classified yet.",
+        "aiSuggested": "Assistant suggested",
+        "humanDecided": "Confirmed by a reviewer",
+        "confidence": "Confidence",
+        "overrideReason": "Reason for the change",
+        "detailsHeading": "Details",
+        "methodologyVersion": "Methodology version",
+        "cycleNumber": "Assessment cycle",
+        "cycleOneCaveat": "Cycle 1 — trend pending",
+        "createdAt": "Created",
+        "updatedAt": "Last updated",
+        "villagesEmpty": "No villages linked.",
+        "edit": "Edit"
+      },
+      "delete": {
+        "action": "Delete",
+        "title": "Delete this study?",
+        "description": "The study will be archived and removed from your list. It stays in the audit trail and can be restored by an administrator.",
+        "confirm": "Delete study",
+        "cancel": "Cancel",
+        "deleting": "Deleting...",
+        "success": "Study deleted.",
+        "approvedBlocked": "An approved study cannot be deleted."
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
       }
     }
   },
