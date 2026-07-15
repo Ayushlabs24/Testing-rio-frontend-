@@ -1,7 +1,7 @@
 "use client";
 
-import { Building2, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { OrgBrandMark } from "@/components/common/org-brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
   Tooltip,
@@ -16,39 +16,6 @@ import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
   collapsed: boolean;
-}
-
-/**
- * The org's own uploaded logo (set from Settings > Organization) — this is a
- * multi-tenant app, so the sidebar identifies the signed-in org, not the
- * platform vendor. Falls back to a generic icon until the org uploads one;
- * cross-entity roles (no single org) get a generic platform icon instead.
- */
-function BrandIcon({
-  logoUrl,
-  crossEntity,
-}: {
-  logoUrl: string | null;
-  crossEntity: boolean;
-}) {
-  if (crossEntity) {
-    return (
-      <span className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
-        <ShieldCheck className="size-4" />
-      </span>
-    );
-  }
-  if (logoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- org-supplied image, not a static asset
-      <img src={logoUrl} alt="" className="size-8 shrink-0 rounded-md object-cover" />
-    );
-  }
-  return (
-    <span className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
-      <Building2 className="size-4" />
-    </span>
-  );
 }
 
 export function AppSidebar({ collapsed }: AppSidebarProps) {
@@ -83,7 +50,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
       >
         {!collapsed ? (
           <div className="border-sidebar-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4">
-            <BrandIcon logoUrl={organization.logoUrl} crossEntity={role.crossEntity} />
+            <OrgBrandMark logoUrl={organization.logoUrl} crossEntity={role.crossEntity} />
             {role.crossEntity ? (
               <span className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold">
                 {siteConfig.name}

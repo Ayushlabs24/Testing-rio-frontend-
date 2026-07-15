@@ -75,6 +75,7 @@ describe("authService", () => {
       purpose: "Community Health",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
+      consentAccepted: true as const,
     };
     const result = await authService.signup(payload);
 
@@ -96,6 +97,7 @@ describe("authService", () => {
       purpose: "Community Health",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
+      consentAccepted: true,
     });
 
     expect(result.temporaryPasswordEmailed).toBe(true);
@@ -113,6 +115,7 @@ describe("authService", () => {
       purpose: "Community Health",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
+      consentAccepted: true,
     });
 
     expect(result.temporaryPasswordEmailed).toBe(false);

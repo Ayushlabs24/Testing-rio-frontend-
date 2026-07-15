@@ -74,6 +74,16 @@ export interface SignupPayload {
   purpose: string;
   registrationNumber: string;
   email: string;
+  /**
+   * RIO-FR-Add-02: the backend's `SignupBody` rejects anything but the
+   * literal `true` — consent is structurally mandatory, not just a value
+   * the form happens to send. The active policy version itself isn't part
+   * of this payload: the backend looks up whichever policy is active at
+   * signup time itself (see AuthRepository.createOrganisationAndAdmin) and
+   * records that version's acceptance, rather than trusting a
+   * client-supplied version.
+   */
+  consentAccepted: true;
 }
 
 /**

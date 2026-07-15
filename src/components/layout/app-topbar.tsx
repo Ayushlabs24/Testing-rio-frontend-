@@ -2,6 +2,7 @@
 
 import { LogOut, Menu, PanelLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { OrgBrandMark } from "@/components/common/org-brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -120,12 +121,26 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">{t("menu")}</SheetTitle>
-            <div className="border-border flex h-16 items-center border-b px-4 text-sm font-semibold">
-              {session.role.crossEntity ? siteConfig.name : session.organization.name}
+            <div className="border-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4 text-sm font-semibold">
+              <OrgBrandMark
+                logoUrl={session.organization.logoUrl}
+                crossEntity={session.role.crossEntity}
+              />
+              <span className="min-w-0 flex-1 truncate">
+                {session.role.crossEntity ? siteConfig.name : session.organization.name}
+              </span>
             </div>
             <MobileNav />
           </SheetContent>
         </Sheet>
+
+        {collapsed ? (
+          <OrgBrandMark
+            logoUrl={session.organization.logoUrl}
+            crossEntity={session.role.crossEntity}
+            className="hidden md:flex"
+          />
+        ) : null}
 
         {currentNavItem ? (
           <h1 className="text-foreground truncate text-base font-semibold">

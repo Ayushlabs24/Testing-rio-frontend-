@@ -1,21 +1,50 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Copy, MailCheck } from "lucide-react";
+import { ArrowRight, Check, Copy, ImageUp, Loader2, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
+import { consentService } from "@/services/consent/consent.service";
+import type { ActiveConsentPolicy } from "@/services/consent/consent.types";
+import { organizationsService } from "@/services/organizations/organizations.service";
 
 interface PendingConfirmation {
   temporaryPasswordEmailed: boolean;
   temporaryPassword?: string;
+}
+
+// Client-side allowlist for the organization logo — mirrors the backend's
+// evidence-upload allowlist pattern (extension check before anything is
+// sent), just for images instead of documents.
+const ALLOWED_LOGO_EXTENSIONS = [".png", ".jpg", ".jpeg", ".svg"];
+
+// The logo is stored as a base64 data URI (no object storage yet — see
+// organizations.contract.ts on the backend), so this cap isn't arbitrary:
+// 2MB raw expands to ~2.7M base64 chars, just under the backend's 2.8M-char
+// limit on `logoUrl`. Raising this requires raising that backend limit too.
+const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+
+function hasAllowedExtension(fileName: string, allowed: string[]): boolean {
+  const lower = fileName.toLowerCase();
+  return allowed.some((ext) => lower.endsWith(ext));
 }
 
 /**
@@ -99,6 +128,51 @@ function SignupConfirmation({
   );
 }
 
+/** The policy text/version, shown on demand rather than inline in the form — the checkbox + link pattern most signup flows use. */
+function ConsentPolicyDialog({
+  open,
+  onOpenChange,
+  policy,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  policy: ActiveConsentPolicy | null;
+}) {
+  const t = useTranslations("auth.signup");
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("consentTitle")}</DialogTitle>
+          {policy ? (
+            <DialogDescription>
+              {t("consentVersionLabel")}: {policy.version}
+            </DialogDescription>
+          ) : null}
+        </DialogHeader>
+
+        <ol className="text-foreground list-decimal space-y-2 pl-5 text-sm">
+          <li>{t("consentPoint1")}</li>
+          <li>{t("consentPoint2")}</li>
+          <li>{t("consentPoint3")}</li>
+          <li>{t("consentPoint4")}</li>
+        </ol>
+
+        <div className="border-border bg-muted/30 text-muted-foreground max-h-40 overflow-y-auto rounded-md border p-3 text-xs whitespace-pre-wrap">
+          {policy?.text}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            {t("close")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
@@ -106,6 +180,39 @@ export function SignupForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] =
     useState<PendingConfirmation | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  const [policy, setPolicy] = useState<ActiveConsentPolicy | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(true);
+  const [policyError, setPolicyError] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    consentService
+      .getActive()
+      .then((active) => {
+        if (!cancelled) setPolicy(active);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setPolicyError(
+          error instanceof ApiError ? error.message : t("consentUnavailable"),
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setPolicyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signupSchema = z.object({
     organizationName: z
@@ -126,11 +233,49 @@ export function SignupForm() {
     formState: { errors, isSubmitting },
   } = useForm<SignupValues>({ resolver: zodResolver(signupSchema) });
 
+  const onLogoSelected = (file: File) => {
+    setLogoError(null);
+    if (!hasAllowedExtension(file.name, ALLOWED_LOGO_EXTENSIONS)) {
+      setLogoError(t("logoInvalidType"));
+      setLogoPreview(null);
+      setLogoFileName(null);
+      return;
+    }
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      setLogoError(t("logoTooLarge"));
+      setLogoPreview(null);
+      setLogoFileName(null);
+      return;
+    }
+    setLogoFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const canSubmit = !policyLoading && !policyError && Boolean(policy) && consentChecked;
+
   const onSubmit = async (values: SignupValues) => {
+    if (!canSubmit) return;
     setFormError(null);
     try {
-      const { temporaryPasswordEmailed, temporaryPassword } =
-        await authService.signup(values);
+      const { temporaryPasswordEmailed, temporaryPassword } = await authService.signup({
+        ...values,
+        consentAccepted: true,
+      });
+      // The signup response already carries a live session (the backend
+      // sets the session cookie on signup) — used only to attach the logo,
+      // right here, before the admin has actually "signed in" from the
+      // app's point of view. A failed logo upload doesn't fail the whole
+      // signup: the organization/account already exist at this point.
+      if (logoPreview) {
+        try {
+          await organizationsService.update({ logoUrl: logoPreview });
+        } catch {
+          // Non-fatal — the admin can still upload a logo later from
+          // Settings > Organization.
+        }
+      }
       // Signup doesn't sign the admin in automatically — they confirm
       // either how they got their password (emailed) or the password
       // itself (fallback), then sign in explicitly with it, same as any
@@ -153,12 +298,12 @@ export function SignupForm() {
 
   return (
     <div className="w-full max-w-lg">
-      <div className="mb-8 space-y-1.5">
+      <div className="mb-6 space-y-1.5">
         <h1 className="text-foreground text-2xl font-semibold">{t("title")}</h1>
         <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="organizationName">{t("organizationNameLabel")}</Label>
           <Input
@@ -211,9 +356,75 @@ export function SignupForm() {
           ) : null}
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="logoUpload">{t("logoLabel")}</Label>
+          <button
+            id="logoUpload"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="border-input hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none focus-visible:ring-3"
+          >
+            <ImageUp className="text-muted-foreground size-4 shrink-0" />
+            {logoPreview ? (
+              <Avatar size="sm" className="shrink-0">
+                <AvatarImage src={logoPreview} alt="" />
+              </Avatar>
+            ) : null}
+            <span className="text-muted-foreground min-w-0 flex-1 truncate text-left">
+              {logoFileName ?? t("logoPlaceholder")}
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onLogoSelected(file);
+              event.target.value = "";
+            }}
+          />
+          {logoError ? <p className="text-destructive text-sm">{logoError}</p> : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2">
+            {policyLoading ? (
+              <Loader2 className="text-muted-foreground mt-0.5 size-4 shrink-0 animate-spin" />
+            ) : (
+              <Checkbox
+                id="consentAccepted"
+                checked={consentChecked}
+                disabled={!policy}
+                onCheckedChange={(checked) => setConsentChecked(checked === true)}
+              />
+            )}
+            <Label
+              htmlFor="consentAccepted"
+              className="text-muted-foreground text-sm leading-snug font-normal"
+            >
+              {t("consentCheckboxPrefix")}{" "}
+              <button
+                type="button"
+                onClick={() => setPolicyDialogOpen(true)}
+                className="text-primary cursor-pointer font-medium hover:underline"
+              >
+                {t("consentPolicyLink")}
+              </button>
+              .
+            </Label>
+          </div>
+          {policyError ? <p className="text-destructive text-sm">{policyError}</p> : null}
+        </div>
+
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-        <Button type="submit" className="h-11 w-full gap-2 px-6" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="h-11 w-full gap-2 px-6"
+          disabled={isSubmitting || !canSubmit}
+        >
           {isSubmitting ? t("submitting") : t("submit")}
           {!isSubmitting && <ArrowRight className="size-4" />}
         </Button>
@@ -228,6 +439,12 @@ export function SignupForm() {
           {t("signIn")}
         </Link>
       </p>
+
+      <ConsentPolicyDialog
+        open={policyDialogOpen}
+        onOpenChange={setPolicyDialogOpen}
+        policy={policy}
+      />
     </div>
   );
 }

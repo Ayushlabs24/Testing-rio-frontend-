@@ -36,4 +36,24 @@ export const endpoints = {
   audit: {
     list: "/audit",
   },
+  consentPolicy: {
+    active: "/consent-policy/active",
+  },
+  evidence: {
+    // POST (create) and GET (list) both hit the study-scoped collection;
+    // delete is the one flat, non-nested route (see the backend's
+    // EvidenceDeleteController).
+    forStudy: (studyId: string) => `/studies/${studyId}/evidence`,
+    byId: (id: string) => `/evidence/${id}`,
+  },
+  needs: {
+    // One Need per study (create/read/update all hit the same URL) — owned
+    // by Karthik's Need Entry screen; this app only reads it (see
+    // needs.service.ts) to gate AI Classification eligibility.
+    forStudy: (studyId: string) => `/studies/${studyId}/need`,
+  },
+  aiDecisions: {
+    classify: (studyId: string) => `/studies/${studyId}/ai-decisions/classify`,
+    forStudy: (studyId: string) => `/studies/${studyId}/ai-decisions`,
+  },
 } as const;
