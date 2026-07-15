@@ -16,14 +16,23 @@ interface ApiRole {
 
 /**
  * Roles are fixed and non-editable in this phase — read-only listing.
- * The backend's role matrix is the source of truth for the actual
- * authorization data (`id`, `crossEntity`, `permissions`). `name`/
- * `description` are product-owned display copy — the frontend's local
- * matrix has this session's renames (e.g. "Reviewer / Approver" instead
- * of the backend's "Human Reviewer") that the backend doesn't track, so
- * those two fields come from there instead. `enabled` (is this role live
- * for the current demo phase) is a UI-only gate that doesn't exist
- * server-side at all — same local-matrix lookup by key.
+ * The backend's role matrix supplies the authorization data displayed on the
+ * Roles page (`id`, `crossEntity`, `permissions`). `name`/`description` are
+ * product-owned display copy — the frontend's local matrix has this session's
+ * renames (e.g. "Reviewer / Approver" instead of the backend's "Human
+ * Reviewer") that the backend doesn't track, so those two fields come from
+ * there instead. `enabled` (is this role live for the current demo phase) is a
+ * UI-only gate that doesn't exist server-side at all — same local-matrix
+ * lookup by key.
+ *
+ * NOTE: this is the *display* source only. What's actually *enforced* at
+ * runtime is the session role's `permissions`, which `authService` still
+ * resolves from the local `roles.ts` matrix (the /auth/login|me response
+ * carries only the role key, not its permissions). The two matrices are
+ * expected to stay in sync; if they diverge, this page can show permissions
+ * that differ from what `usePermission` enforces. Collapsing them onto a
+ * single source (e.g. carrying permissions in the session payload) is the
+ * proper long-term fix — tracked separately.
  */
 export const rolesService = {
   async list(): Promise<RoleSummary[]> {
