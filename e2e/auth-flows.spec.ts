@@ -112,7 +112,7 @@ test.skip("an admin-invited user is prompted for consent on first login, not the
   await expect(page.getByText("Before you continue")).toHaveCount(0);
 
   // Log out, log in as the newly created user.
-  await page.getByRole("button", { name: "Demo Admin" }).click();
+  await page.getByRole("button", { name: "Sarah" }).click();
   await page.getByRole("menuitem", { name: "Log out" }).click();
   await expect(page).toHaveURL("/");
 
@@ -150,8 +150,8 @@ test("cross-entity access is prevented between organizations", async ({ page }) 
   const main = page.getByRole("main");
   await expect(main.getByText("Riverside Admin")).toBeVisible();
   // None of Demo NGO's seeded users should leak into Riverside's list.
-  await expect(main.getByText("Demo Admin")).toHaveCount(0);
-  await expect(main.getByText("Demo Research Officer")).toHaveCount(0);
+  await expect(main.getByText("Sarah")).toHaveCount(0);
+  await expect(main.getByText("Amira")).toHaveCount(0);
 });
 
 test("roles page shows a card per role and a per-module access table on view", async ({
@@ -210,13 +210,11 @@ test("clicking a user row opens a detail sheet with role, status and module acce
   await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.goto("/settings/users");
-  await page.getByRole("row", { name: /Demo Research Officer/ }).click();
+  await page.getByRole("row", { name: /Amira/ }).click();
 
   // Scoped to the sheet — the table row behind it repeats the same name/email text.
   const sheet = page.getByRole("dialog");
-  await expect(
-    sheet.getByRole("heading", { name: "Demo Research Officer" }),
-  ).toBeVisible();
+  await expect(sheet.getByRole("heading", { name: "Amira" })).toBeVisible();
   await expect(sheet.getByText("officer@demo-ngo.org")).toBeVisible();
   await expect(sheet.getByText("Module access")).toBeVisible();
   await expect(sheet.getByText("Data Collection")).toBeVisible();
@@ -224,7 +222,7 @@ test("clicking a user row opens a detail sheet with role, status and module acce
   // Edit from inside the sheet opens the same dialog used for creating a user.
   await sheet.getByRole("button", { name: "Edit user" }).click();
   await expect(page.getByRole("heading", { name: "Edit user" })).toBeVisible();
-  await expect(page.getByLabel("Name")).toHaveValue("Demo Research Officer");
+  await expect(page.getByLabel("Name")).toHaveValue("Amira");
 });
 
 test("users table paginates once results exceed the page size", async ({ page }) => {

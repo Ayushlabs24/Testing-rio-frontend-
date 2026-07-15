@@ -25,6 +25,16 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-badge-secondary: var(--badge-secondary);
+  --color-badge-secondary-foreground: var(--badge-secondary-foreground);
+  --color-badge-primary: var(--badge-primary);
+  --color-badge-primary-foreground: var(--badge-primary-foreground);
+  --color-badge-warning: var(--badge-warning);
+  --color-badge-warning-foreground: var(--badge-warning-foreground);
+  --color-badge-success: var(--badge-success);
+  --color-badge-success-foreground: var(--badge-success-foreground);
+  --color-button: var(--button);
+  --color-button-foreground: var(--button-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -53,6 +63,8 @@
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-hover-foreground: var(--sidebar-hover-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
@@ -97,4 +109,13 @@
     var(--gradient-hero-via),
     var(--gradient-hero-to)
   );
+}
+
+/** Keeps native scrolling but hides the visible scrollbar track/thumb (e.g. long select/dropdown lists). */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

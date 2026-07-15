@@ -177,7 +177,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
 
           <Button
             type="submit"
-            className="h-11 w-full gap-2 px-6 text-base"
+            className="h-11 w-full gap-2 px-6"
             disabled={isSubmitting}
           >
             {isSubmitting ? t("submitting") : t("submit")}

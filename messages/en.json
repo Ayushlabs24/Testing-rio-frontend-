@@ -339,6 +339,11 @@
         "fieldColumn": "Field",
         "beforeColumn": "Before",
         "afterColumn": "After",
+        "pagination": {
+          "previous": "Previous",
+          "next": "Next",
+          "label": "Page {page} of {count}"
+        },
         "actions": {
           "create": "Created",
           "edit": "Edited",

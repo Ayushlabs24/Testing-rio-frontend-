@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AUDIT_ACTIONS, type AuditAction } from "@/config/audit";
+import { AUDIT_PAGE_SIZE } from "@/config/pagination";
 import { auditService } from "@/services/audit/audit.service";
 import type { AuditEvent } from "@/services/audit/audit.types";
 import { ChangeDetailsDialog } from "./change-details-dialog";
@@ -70,6 +72,7 @@ export default function AuditSettingsPage() {
   const [events, setEvents] = useState<AuditEvent[] | null>(null);
   const [query, setQuery] = useState("");
   const [action, setAction] = useState<AuditAction | typeof ALL>(ALL);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     auditService.list().then(setEvents);
@@ -88,6 +91,13 @@ export default function AuditSettingsPage() {
     });
   }, [events, query, action]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / AUDIT_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedEvents = filteredEvents.slice(
+    (currentPage - 1) * AUDIT_PAGE_SIZE,
+    currentPage * AUDIT_PAGE_SIZE,
+  );
+
   return (
     <PermissionGuard module="archiveSharingAudit" action="read">
       <PageContainer>
@@ -101,7 +111,10 @@ export default function AuditSettingsPage() {
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setPage(1);
+                  }}
                   className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
@@ -129,29 +142,29 @@ export default function AuditSettingsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-56">{t("dateColumn")}</TableHead>
-                  <TableHead>{t("actorColumn")}</TableHead>
-                  <TableHead className="w-32">{t("actionColumn")}</TableHead>
-                  <TableHead>{t("targetColumn")}</TableHead>
+                  <TableHead className="w-56 py-3">{t("dateColumn")}</TableHead>
+                  <TableHead className="py-3">{t("actorColumn")}</TableHead>
+                  <TableHead className="w-32 py-3">{t("actionColumn")}</TableHead>
+                  <TableHead className="py-3">{t("targetColumn")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {events === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="bg-muted h-4 w-40 rounded" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="flex items-center gap-3">
                           <div className="bg-muted size-8 rounded-full" />
                           <div className="bg-muted h-4 w-28 rounded" />
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="bg-muted h-5 w-16 rounded" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="bg-muted h-4 w-36 rounded" />
                       </TableCell>
                     </TableRow>
@@ -162,7 +175,7 @@ export default function AuditSettingsPage() {
                       colSpan={4}
                       className="text-muted-foreground h-32 text-center"
                     >
-                      <div className="flex flex-col items-center gap-2">
+                      <div className="flex flex-col items-center gap-2.5">
                         <div className="bg-muted flex size-10 items-center justify-center rounded-full">
                           <History className="size-5" />
                         </div>
@@ -171,19 +184,19 @@ export default function AuditSettingsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredEvents.map((event) => (
+                  pagedEvents.map((event) => (
                     <TableRow key={event.id}>
-                      <TableCell className="text-muted-foreground align-top text-sm tabular-nums">
+                      <TableCell className="text-muted-foreground py-5 align-top text-sm tabular-nums">
                         {formatTimestamp(event.createdAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="flex items-center gap-3">
-                          <Avatar className="size-8">
+                          <Avatar className="size-9">
                             <AvatarFallback className="text-xs font-medium">
                               {event.actor ? initials(event.actor.name) : "SYS"}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
+                          <div className="space-y-0.5">
                             <p className="text-foreground text-sm font-medium">
                               {event.actor?.name ?? t("systemActor")}
                             </p>
@@ -195,14 +208,14 @@ export default function AuditSettingsPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <Badge variant={ACTION_VARIANT[event.action]}>
                           {tActions(event.action)}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex flex-col">
+                          <div className="flex flex-col space-y-0.5">
                             <span className="text-foreground text-sm">
                               {event.entityLabel}
                             </span>
@@ -223,10 +236,23 @@ export default function AuditSettingsPage() {
                 )}
               </TableBody>
             </Table>
+
+            {filteredEvents.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
-        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <p className="text-muted-foreground flex items-center gap-1.5 p-2 text-xs">
           <Lock className="size-3" />
           {t("immutableNotice")}
         </p>

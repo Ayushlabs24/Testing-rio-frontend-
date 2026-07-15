@@ -82,7 +82,7 @@ function StatusBadge({ status, label }: { status: UserStatus; label: string }) {
       variant={status === "active" ? "default" : "outline"}
       className={
         status === "active"
-          ? "bg-success/10 text-success hover:bg-success/20 border-success/20"
+          ? "bg-badge-success text-badge-success-foreground border-transparent"
           : undefined
       }
     >
