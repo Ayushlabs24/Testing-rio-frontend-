@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { Building2, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
@@ -16,6 +16,39 @@ import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
   collapsed: boolean;
+}
+
+/**
+ * The org's own uploaded logo (set from Settings > Organization) — this is a
+ * multi-tenant app, so the sidebar identifies the signed-in org, not the
+ * platform vendor. Falls back to a generic icon until the org uploads one;
+ * cross-entity roles (no single org) get a generic platform icon instead.
+ */
+function BrandIcon({
+  logoUrl,
+  crossEntity,
+}: {
+  logoUrl: string | null;
+  crossEntity: boolean;
+}) {
+  if (crossEntity) {
+    return (
+      <span className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
+        <ShieldCheck className="size-4" />
+      </span>
+    );
+  }
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- org-supplied image, not a static asset
+      <img src={logoUrl} alt="" className="size-8 shrink-0 rounded-md object-cover" />
+    );
+  }
+  return (
+    <span className="bg-sidebar-accent text-sidebar-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
+      <Building2 className="size-4" />
+    </span>
+  );
 }
 
 export function AppSidebar({ collapsed }: AppSidebarProps) {
@@ -50,27 +83,18 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
       >
         {!collapsed ? (
           <div className="border-sidebar-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4">
+            <BrandIcon logoUrl={organization.logoUrl} crossEntity={role.crossEntity} />
             {role.crossEntity ? (
-              <>
-                <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
-                  <ShieldCheck className="size-4" />
-                </span>
-                <span className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold">
-                  {siteConfig.name}
-                </span>
-              </>
+              <span className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold">
+                {siteConfig.name}
+              </span>
             ) : (
-              <>
-                <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold">
-                  {organization.name.charAt(0)}
-                </span>
-                <span
-                  className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold break-words"
-                  title={organization.name}
-                >
-                  {organization.name}
-                </span>
-              </>
+              <span
+                className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold break-words"
+                title={organization.name}
+              >
+                {organization.name}
+              </span>
             )}
           </div>
         ) : null}
@@ -90,9 +114,10 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
                 href={item.href}
                 aria-label={label}
                 className={cn(
-                  "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "text-sidebar-foreground/70 hover:text-sidebar-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   collapsed && "justify-center px-0",
-                  isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+                  isActive &&
+                    "bg-sidebar-accent text-sidebar-accent-foreground hover:text-sidebar-accent-foreground",
                 )}
               >
                 <Icon className="size-4 shrink-0" />

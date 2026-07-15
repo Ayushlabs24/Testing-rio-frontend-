@@ -213,11 +213,7 @@ export function SignupForm() {
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-        <Button
-          type="submit"
-          className="h-11 w-full gap-2 px-6 text-base"
-          disabled={isSubmitting}
-        >
+        <Button type="submit" className="h-11 w-full gap-2 px-6" disabled={isSubmitting}>
           {isSubmitting ? t("submitting") : t("submit")}
           {!isSubmitting && <ArrowRight className="size-4" />}
         </Button>

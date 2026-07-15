@@ -20,41 +20,47 @@
   /* 1. Primitive palettes                                            */
   /* ---------------------------------------------------------------- */
 
-  /* Primary — brand indigo/violet, anchored on #6059E8 (= oklch(0.554 0.209 279.3)) */
-  --palette-primary-50: oklch(0.97 0.015 279.3);
-  --palette-primary-100: oklch(0.94 0.035 279.3);
-  --palette-primary-200: oklch(0.87 0.07 279.3);
-  --palette-primary-300: oklch(0.78 0.13 279.3);
-  --palette-primary-400: oklch(0.68 0.17 279.3);
-  --palette-primary-500: oklch(0.554 0.209 279.3);
-  --palette-primary-600: oklch(0.5 0.2 279.3);
-  --palette-primary-700: oklch(0.42 0.19 279.3);
-  --palette-primary-800: oklch(0.34 0.16 279.3);
-  --palette-primary-900: oklch(0.27 0.12 279.3);
+  /*
+   * NCNP brand palette (see NCNP-color-guide.pdf's "Primary Colors").
+   * Secondary colors from that guide are deliberately not adopted yet — per
+   * the brand team, only the 3 primary colors are in use for this phase.
+   */
 
-  /* Secondary — teal */
-  --palette-secondary-50: oklch(0.97 0.012 200);
-  --palette-secondary-100: oklch(0.93 0.03 200);
-  --palette-secondary-200: oklch(0.86 0.055 200);
-  --palette-secondary-300: oklch(0.77 0.08 200);
-  --palette-secondary-400: oklch(0.67 0.1 200);
-  --palette-secondary-500: oklch(0.56 0.11 200);
-  --palette-secondary-600: oklch(0.48 0.1 200);
-  --palette-secondary-700: oklch(0.4 0.09 200);
-  --palette-secondary-800: oklch(0.32 0.07 200);
-  --palette-secondary-900: oklch(0.26 0.055 200);
+  /* Primary — NCNP deep teal, anchored on #145463 (= oklch(0.414 0.066 217.3)) */
+  --palette-primary-50: oklch(0.97 0.016 217.3);
+  --palette-primary-100: oklch(0.93 0.02 217.3);
+  --palette-primary-200: oklch(0.86 0.025 217.3);
+  --palette-primary-300: oklch(0.77 0.03 217.3);
+  --palette-primary-400: oklch(0.67 0.036 217.3);
+  --palette-primary-500: oklch(0.58 0.044 217.3);
+  --palette-primary-600: oklch(0.5 0.054 217.3);
+  --palette-primary-700: oklch(0.414 0.066 217.3);
+  --palette-primary-800: oklch(0.34 0.054 217.3);
+  --palette-primary-900: oklch(0.27 0.044 217.3);
 
-  /* Accent — amber */
-  --palette-accent-50: oklch(0.98 0.02 80);
-  --palette-accent-100: oklch(0.95 0.05 80);
-  --palette-accent-200: oklch(0.9 0.09 80);
-  --palette-accent-300: oklch(0.83 0.13 80);
-  --palette-accent-400: oklch(0.76 0.15 75);
-  --palette-accent-500: oklch(0.69 0.16 70);
-  --palette-accent-600: oklch(0.6 0.15 65);
-  --palette-accent-700: oklch(0.5 0.13 60);
-  --palette-accent-800: oklch(0.4 0.1 55);
-  --palette-accent-900: oklch(0.32 0.08 50);
+  /* Secondary — NCNP green, anchored on #85A994 (= oklch(0.702 0.050 159.2)) */
+  --palette-secondary-50: oklch(0.97 0.023 159.2);
+  --palette-secondary-100: oklch(0.93 0.027 159.2);
+  --palette-secondary-200: oklch(0.86 0.034 159.2);
+  --palette-secondary-300: oklch(0.77 0.041 159.2);
+  --palette-secondary-400: oklch(0.702 0.05 159.2);
+  --palette-secondary-500: oklch(0.58 0.041 159.2);
+  --palette-secondary-600: oklch(0.5 0.034 159.2);
+  --palette-secondary-700: oklch(52.568% 0.07074 156.967);
+  --palette-secondary-800: oklch(0.34 0.023 159.2);
+  --palette-secondary-900: oklch(0.27 0.018 159.2);
+
+  /* Accent — NCNP blue, anchored on #4D80A9 (= oklch(0.581 0.084 244.2)) */
+  --palette-accent-50: oklch(0.97 0.031 244.2);
+  --palette-accent-100: oklch(0.93 0.038 244.2);
+  --palette-accent-200: oklch(0.86 0.046 244.2);
+  --palette-accent-300: oklch(0.77 0.056 244.2);
+  --palette-accent-400: oklch(0.67 0.069 244.2);
+  --palette-accent-500: oklch(0.581 0.084 244.2);
+  --palette-accent-600: oklch(0.5 0.069 244.2);
+  --palette-accent-700: oklch(0.42 0.056 244.2);
+  --palette-accent-800: oklch(0.34 0.046 244.2);
+  --palette-accent-900: oklch(0.27 0.038 244.2);
 
   /* Neutral — grayscale used for surfaces/text */
   --palette-neutral-0: oklch(1 0 0);
@@ -71,8 +77,10 @@
   --palette-neutral-950: oklch(0.145 0 0);
 
   /* Status colors */
+  --palette-success-50: oklch(0.96 0.03 150);
   --palette-success-500: oklch(0.6 0.14 150);
   --palette-success-700: oklch(0.44 0.12 150);
+  --palette-warning-50: oklch(0.97 0.04 85);
   --palette-warning-500: oklch(0.75 0.16 85);
   --palette-warning-700: oklch(0.52 0.13 75);
   --palette-danger-500: oklch(0.577 0.245 27.325);
@@ -96,11 +104,45 @@
   --popover: var(--palette-neutral-0);
   --popover-foreground: var(--palette-neutral-950);
 
-  --primary: var(--palette-primary-600);
+  /* 700 is where the exact brand hex (#145463) lives in this ramp (see the
+   * primitive palette above) — referenced directly here so headings/links
+   * render the precise NCNP color, not an adjacent approximation. */
+  --primary: var(--palette-primary-700);
   --primary-foreground: var(--palette-neutral-50);
 
-  --secondary: var(--palette-secondary-100);
-  --secondary-foreground: var(--palette-secondary-900);
+  /*
+   * Its own token, deliberately independent of --primary/--secondary even
+   * though it currently resolves to the same deep-teal brand hex — so the
+   * button color can be retuned later (Button's default variant, see
+   * button.tsx) without touching headings (--primary) or the sidebar/badge
+   * color (--secondary) that reuse those tokens elsewhere.
+   */
+  --button: var(--palette-primary-700);
+  --button-foreground: var(--palette-neutral-50);
+
+  /*
+   * Dark enough to read as text on a white/light card (as solid-fill button
+   * text background). Flips to a lighter step in dark mode below, same as
+   * --primary does.
+   */
+  --secondary: var(--palette-secondary-600);
+  --secondary-foreground: var(--palette-neutral-50);
+
+  /*
+   * Badge/pill backgrounds specifically — a genuinely solid light tint, not
+   * an opacity blend. The client's green (#85A994) is already fairly
+   * desaturated; a low-opacity tint of it (bg-secondary/10-15) reads as
+   * barely-there gray, not a visible badge. Full-opacity 100/700 stays
+   * clearly colored and readable in both themes.
+   */
+  --badge-secondary: var(--palette-secondary-100);
+  --badge-secondary-foreground: var(--palette-secondary-700);
+  --badge-primary: var(--palette-primary-100);
+  --badge-primary-foreground: var(--palette-primary-700);
+  --badge-warning: var(--palette-warning-50);
+  --badge-warning-foreground: var(--palette-warning-700);
+  --badge-success: var(--palette-success-50);
+  --badge-success-foreground: var(--palette-success-700);
 
   --accent: var(--palette-accent-100);
   --accent-foreground: var(--palette-accent-900);
@@ -132,17 +174,31 @@
 
   --sidebar: var(--palette-neutral-50);
   --sidebar-foreground: var(--palette-neutral-950);
-  --sidebar-primary: var(--palette-primary-600);
+  --sidebar-primary: var(--palette-primary-700);
   --sidebar-primary-foreground: var(--palette-neutral-50);
-  --sidebar-accent: var(--palette-neutral-100);
-  --sidebar-accent-foreground: var(--palette-primary-700);
+  /* Active nav item — solid, dark, white text. Distinct from --sidebar-hover
+   * (lighter, for non-active items on mouseover) so the two never look the
+   * same at once. */
+  --sidebar-accent: var(--palette-primary-700);
+  --sidebar-accent-foreground: var(--palette-neutral-50);
+  --sidebar-hover: var(--palette-primary-500);
+  --sidebar-hover-foreground: var(--palette-neutral-50);
   --sidebar-border: var(--palette-neutral-200);
   --sidebar-ring: var(--palette-primary-400);
 
-  /* Brand gradient — used for hero/marketing surfaces (e.g. auth split-screen panel) */
-  --gradient-hero-from: var(--palette-primary-500);
-  --gradient-hero-via: var(--palette-primary-600);
-  --gradient-hero-to: var(--palette-primary-700);
+  /*
+   * Brand gradient — used for hero/marketing surfaces (e.g. auth split-screen
+   * panel). Deliberately NOT the same primary-500/600/700 steps used for
+   * buttons/UI: those are tuned to be restrained and accessible at small
+   * sizes, which read as flat/washed-out across a full-panel gradient. These
+   * three stops are tuned separately for a large surface — wider lightness
+   * range and higher chroma at the same brand hue (teal, tilting toward
+   * NCNP's blue at the dark end) — while keeping every stop well above the
+   * 4.5:1 contrast needed for the white heading/logo on top of it.
+   */
+  --gradient-hero-from: oklch(0.5 0.095 200);
+  --gradient-hero-via: oklch(0.4 0.1 217);
+  --gradient-hero-to: oklch(0.28 0.085 235);
 
   /*
    * Content color for the gradient surface above. Deliberately NOT
@@ -182,8 +238,20 @@
   --primary: var(--palette-primary-400);
   --primary-foreground: var(--palette-neutral-950);
 
-  --secondary: var(--palette-secondary-800);
-  --secondary-foreground: var(--palette-secondary-50);
+  --button: var(--palette-primary-400);
+  --button-foreground: var(--palette-neutral-950);
+
+  --secondary: var(--palette-secondary-400);
+  --secondary-foreground: var(--palette-neutral-950);
+
+  --badge-secondary: var(--palette-secondary-800);
+  --badge-secondary-foreground: var(--palette-secondary-100);
+  --badge-primary: var(--palette-primary-800);
+  --badge-primary-foreground: var(--palette-primary-100);
+  --badge-warning: var(--palette-warning-700);
+  --badge-warning-foreground: var(--palette-neutral-50);
+  --badge-success: var(--palette-success-700);
+  --badge-success-foreground: var(--palette-neutral-50);
 
   --accent: var(--palette-accent-800);
   --accent-foreground: var(--palette-accent-50);
@@ -217,8 +285,10 @@
   --sidebar-foreground: var(--palette-neutral-50);
   --sidebar-primary: var(--palette-primary-400);
   --sidebar-primary-foreground: var(--palette-neutral-950);
-  --sidebar-accent: var(--palette-neutral-800);
-  --sidebar-accent-foreground: var(--palette-primary-200);
+  --sidebar-accent: var(--palette-primary-500);
+  --sidebar-accent-foreground: var(--palette-neutral-50);
+  --sidebar-hover: var(--palette-primary-700);
+  --sidebar-hover-foreground: var(--palette-neutral-50);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--palette-primary-500);
 

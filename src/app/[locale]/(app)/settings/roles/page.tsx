@@ -186,9 +186,7 @@ export default function RolesSettingsPage() {
                     </p>
                     <AccessSummary role={role} />
                     <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
+                      className="w-full gap-2 px-4"
                       onClick={() => {
                         setSelectedRole(role);
                         setSheetOpen(true);

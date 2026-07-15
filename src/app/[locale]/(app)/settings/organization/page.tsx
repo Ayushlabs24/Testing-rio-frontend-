@@ -282,7 +282,7 @@ export default function OrganizationSettingsPage() {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card className="overflow-hidden">
-            <div className="bg-gradient-hero h-28" />
+            <div className="bg-gradient-hero -mx-(--card-spacing) -mt-(--card-spacing) h-28" />
             <CardContent className="relative">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
                 <div className="relative -mt-14 shrink-0">
@@ -356,13 +356,13 @@ export default function OrganizationSettingsPage() {
                   value={memberCount}
                 />
                 <StatCard
-                  tone="secondary"
+                  tone="primary"
                   icon={<CalendarDays className="size-5" />}
                   label={t("createdLabel")}
                   value={formattedCreatedAt}
                 />
                 <StatCard
-                  tone="muted"
+                  tone="primary"
                   icon={<Layers className="size-5" />}
                   label={t("sectorLabel")}
                   value={organization.sector ? tSectors(organization.sector) : "—"}

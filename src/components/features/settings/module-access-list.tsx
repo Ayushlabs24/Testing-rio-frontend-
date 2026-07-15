@@ -29,10 +29,15 @@ function levelKey(permission: ModulePermission): "full" | "read" | "custom" | "n
 // `none`-level permissions are filtered out before this is ever indexed
 // (see `accessible` below) — included here only so `level`'s full return
 // type indexes cleanly without a cast.
+// Same solid-tint treatment everywhere (see badge-secondary/-primary/-warning
+// in tokens.css) — a light, full-opacity background with matching dark
+// text, not an opacity blend (which reads as washed-out gray for the
+// desaturated brand green) and not a solid dark fill (visually a different
+// kind of badge from every other badge in the app).
 const LEVEL_STYLE: Record<ReturnType<typeof levelKey>, string> = {
-  full: "bg-primary/10 text-primary border-transparent",
-  read: "bg-secondary text-secondary-foreground border-transparent",
-  custom: "bg-warning/10 text-warning border-transparent",
+  full: "bg-badge-primary text-badge-primary-foreground border-transparent",
+  read: "bg-badge-secondary text-badge-secondary-foreground border-transparent",
+  custom: "bg-badge-warning text-badge-warning-foreground border-transparent",
   none: "",
 };
 

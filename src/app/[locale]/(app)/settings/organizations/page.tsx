@@ -92,7 +92,7 @@ function OrganizationDetailSheet({
                     variant={organization.isActive ? "default" : "outline"}
                     className={
                       organization.isActive
-                        ? "bg-success/10 text-success hover:bg-success/20 border-success/20"
+                        ? "bg-badge-success text-badge-success-foreground border-transparent"
                         : undefined
                     }
                   >
@@ -244,7 +244,7 @@ export default function OrganizationsSettingsPage() {
                           variant={organization.isActive ? "default" : "outline"}
                           className={
                             organization.isActive
-                              ? "bg-success/10 text-success hover:bg-success/20 border-success/20"
+                              ? "bg-badge-success text-badge-success-foreground border-transparent"
                               : undefined
                           }
                         >
