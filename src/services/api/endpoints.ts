@@ -25,6 +25,11 @@ export const endpoints = {
     list: "/organizations",
     byId: (id: string) => `/organizations/${id}`,
   },
+  studies: {
+    list: "/studies",
+    create: "/studies",
+    byId: (id: string) => `/studies/${id}`,
+  },
   roles: {
     list: "/roles",
   },
