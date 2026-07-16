@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, CheckCircle2, Lock } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -9,9 +9,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AuthShell } from "@/components/layout/auth-shell";
+import { PasswordInput } from "@/components/features/auth/password-input";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
@@ -121,17 +121,12 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2.5">
             <Label htmlFor="currentPassword">{t("currentPasswordLabel")}</Label>
-            <div className="relative">
-              <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-              <Input
-                id="currentPassword"
-                type="password"
-                autoComplete="current-password"
-                placeholder={t("currentPasswordPlaceholder")}
-                className="h-11 pr-4 pl-10 text-base"
-                {...register("currentPassword")}
-              />
-            </div>
+            <PasswordInput
+              id="currentPassword"
+              autoComplete="current-password"
+              placeholder={t("currentPasswordPlaceholder")}
+              {...register("currentPassword")}
+            />
             {errors.currentPassword ? (
               <p className="text-destructive text-sm">{errors.currentPassword.message}</p>
             ) : null}
@@ -139,17 +134,12 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
 
           <div className="space-y-2.5">
             <Label htmlFor="newPassword">{t("newPasswordLabel")}</Label>
-            <div className="relative">
-              <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-              <Input
-                id="newPassword"
-                type="password"
-                autoComplete="new-password"
-                placeholder={t("newPasswordPlaceholder")}
-                className="h-11 pr-4 pl-10 text-base"
-                {...register("newPassword")}
-              />
-            </div>
+            <PasswordInput
+              id="newPassword"
+              autoComplete="new-password"
+              placeholder={t("newPasswordPlaceholder")}
+              {...register("newPassword")}
+            />
             {errors.newPassword ? (
               <p className="text-destructive text-sm">{errors.newPassword.message}</p>
             ) : null}
@@ -157,17 +147,12 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
 
           <div className="space-y-2.5">
             <Label htmlFor="confirmPassword">{t("confirmPasswordLabel")}</Label>
-            <div className="relative">
-              <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                placeholder={t("confirmPasswordPlaceholder")}
-                className="h-11 pr-4 pl-10 text-base"
-                {...register("confirmPassword")}
-              />
-            </div>
+            <PasswordInput
+              id="confirmPassword"
+              autoComplete="new-password"
+              placeholder={t("confirmPasswordPlaceholder")}
+              {...register("confirmPassword")}
+            />
             {errors.confirmPassword ? (
               <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
             ) : null}

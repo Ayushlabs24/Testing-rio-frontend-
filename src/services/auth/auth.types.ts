@@ -14,7 +14,7 @@ export interface AuthOrganization {
   purpose: string;
   registrationNumber: string;
   logoUrl: string | null;
-  region: string;
+  region: string[];
   email: string;
   sector: Sector | null;
   villages: string[];
@@ -71,7 +71,14 @@ export interface ChangePasswordPayload {
  */
 export interface SignupPayload {
   organizationName: string;
-  purpose: string;
+  sector: string;
+  /**
+   * Only meaningful when `sector` is `"other"` — the org's own free-text
+   * description of what that is. Mirrors Settings > Organization's own
+   * sector/"specify other" pattern, so `purpose` is no longer a general
+   * free-text "area of work" field on its own.
+   */
+  purpose?: string;
   registrationNumber: string;
   email: string;
   /**

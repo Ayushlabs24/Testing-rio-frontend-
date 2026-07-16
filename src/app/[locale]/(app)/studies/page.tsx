@@ -6,12 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
-import {
-  StudyReviewBadge,
-  StudyStatusBadge,
-} from "@/components/features/studies/study-status-badge";
+import { StudyStatusBadge } from "@/components/features/studies/study-status-badge";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { useAuth } from "@/components/providers/auth-provider";
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +31,7 @@ import {
 import { STUDIES_PAGE_SIZE } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
 import { Link, useRouter } from "@/i18n/navigation";
+import { needsService } from "@/services/needs/needs.service";
 import { studiesService } from "@/services/studies/studies.service";
 import {
   STUDY_STATUSES,
@@ -53,19 +50,20 @@ function formatDate(iso: string): string {
 export default function StudiesPage() {
   const t = useTranslations("app.studies");
   const router = useRouter();
-  const { session } = useAuth();
   const canCreate = usePermission("studySurvey", "create");
   const canWrite = usePermission("studySurvey", "write");
 
   const [studies, setStudies] = useState<StudySummary[] | null>(null);
+  // Village lives on a study's Need, not the Study itself — resolved per
+  // row, keyed by study id. `undefined` = not fetched yet, `null` = no need
+  // captured, string[] = the need's villages (can be more than one).
+  const [villageByStudy, setVillageByStudy] = useState<Record<string, string[] | null>>(
+    {},
+  );
   const [loadFailed, setLoadFailed] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StudyStatus | typeof ALL>(ALL);
-  const [village, setVillage] = useState<string>(ALL);
   const [page, setPage] = useState(1);
-
-  const isCrossEntity = session?.role.crossEntity === true;
-  const orgVillages = useMemo(() => session?.organization.villages ?? [], [session]);
 
   // No synchronous setState here: doing that inside the effect would trigger a
   // cascading render. Both flags are set from the settled promise instead.
@@ -75,6 +73,14 @@ export default function StudiesPage() {
       .then((rows) => {
         setStudies(rows);
         setLoadFailed(false);
+        Promise.all(
+          rows.map((study) =>
+            needsService
+              .getByStudy(study.id)
+              .then((need) => [study.id, need?.village ?? null] as const)
+              .catch(() => [study.id, null] as const),
+          ),
+        ).then((entries) => setVillageByStudy(Object.fromEntries(entries)));
       })
       .catch(() => {
         setStudies([]);
@@ -93,11 +99,10 @@ export default function StudiesPage() {
     const normalized = query.trim().toLowerCase();
     return (studies ?? []).filter((study) => {
       if (status !== ALL && study.status !== status) return false;
-      if (village !== ALL && !study.villages.includes(village)) return false;
       if (!normalized) return true;
       return study.title.toLowerCase().includes(normalized);
     });
-  }, [studies, query, status, village]);
+  }, [studies, query, status]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / STUDIES_PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -106,7 +111,7 @@ export default function StudiesPage() {
     currentPage * STUDIES_PAGE_SIZE,
   );
 
-  const columnCount = isCrossEntity ? 6 : 5;
+  const columnCount = 5;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -127,8 +132,8 @@ export default function StudiesPage() {
         <Card>
           <CardContent className="p-0">
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
-              <div className="flex flex-1 items-center gap-3">
-                <Search className="text-muted-foreground size-4" />
+              <div className="relative flex-1">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={query}
@@ -136,34 +141,9 @@ export default function StudiesPage() {
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="h-8 pl-9"
                 />
               </div>
-
-              {orgVillages.length > 0 ? (
-                <Select
-                  value={village}
-                  onValueChange={(value) => {
-                    setVillage(value);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger
-                    className="h-8 w-full sm:w-44"
-                    aria-label={t("filterVillageLabel")}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL}>{t("filterVillageAll")}</SelectItem>
-                    {orgVillages.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
 
               <Select
                 value={status}
@@ -173,7 +153,7 @@ export default function StudiesPage() {
                 }}
               >
                 <SelectTrigger
-                  className="h-8 w-full sm:w-44"
+                  className="h-8 w-full sm:w-48"
                   aria-label={t("filterStatusLabel")}
                 >
                   <SelectValue />
@@ -193,13 +173,10 @@ export default function StudiesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-3">{t("titleColumn")}</TableHead>
-                  {isCrossEntity ? (
-                    <TableHead className="py-3">{t("organizationColumn")}</TableHead>
-                  ) : null}
-                  <TableHead className="py-3">{t("villagesColumn")}</TableHead>
-                  <TableHead className="w-32 py-3">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-36 py-3">{t("reviewColumn")}</TableHead>
+                  <TableHead className="py-3">{t("villageColumn")}</TableHead>
+                  <TableHead className="w-40 py-3">{t("statusColumn")}</TableHead>
                   <TableHead className="w-40 py-3">{t("updatedColumn")}</TableHead>
+                  <TableHead className="w-16 py-3" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,56 +211,43 @@ export default function StudiesPage() {
                   paged.map((study) => (
                     <TableRow key={study.id}>
                       <TableCell className="py-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="space-y-0.5">
-                            <Link
-                              href={`/studies/${study.id}`}
-                              className="text-foreground text-sm font-medium hover:underline"
-                            >
-                              {study.title}
-                            </Link>
-                            {study.description ? (
-                              <p className="text-muted-foreground line-clamp-1 text-xs">
-                                {study.description}
-                              </p>
-                            ) : null}
-                          </div>
-                          {canWrite ? (
-                            <DeleteStudyDialog
-                              studyId={study.id}
-                              onDeleted={load}
-                              trigger={
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-muted-foreground hover:text-destructive size-8 shrink-0"
-                                    aria-label={t("delete.action")}
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                              }
-                            />
-                          ) : null}
-                        </div>
+                        <Link
+                          href={`/studies/${study.id}`}
+                          className="text-foreground text-sm font-medium hover:underline"
+                        >
+                          {study.title}
+                        </Link>
                       </TableCell>
-                      {isCrossEntity ? (
-                        <TableCell className="text-muted-foreground py-4 text-sm">
-                          {study.organizationName ?? "—"}
-                        </TableCell>
-                      ) : null}
                       <TableCell className="text-muted-foreground py-4 text-sm">
-                        {study.villages.length > 0 ? study.villages.join(", ") : "—"}
+                        {villageByStudy[study.id]?.length
+                          ? villageByStudy[study.id]!.join(", ")
+                          : t("villageNotDefined")}
                       </TableCell>
                       <TableCell className="py-4">
                         <StudyStatusBadge status={study.status} />
                       </TableCell>
-                      <TableCell className="py-4">
-                        <StudyReviewBadge status={study.reviewStatus} />
-                      </TableCell>
                       <TableCell className="text-muted-foreground py-4 text-sm tabular-nums">
                         {formatDate(study.updatedAt)}
+                      </TableCell>
+                      <TableCell className="py-4 text-right">
+                        {canWrite ? (
+                          <DeleteStudyDialog
+                            studyId={study.id}
+                            onDeleted={load}
+                            trigger={
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-destructive size-8 shrink-0"
+                                  aria-label={t("delete.action")}
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            }
+                          />
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))

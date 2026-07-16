@@ -17,6 +17,7 @@
   --font-mono: var(--font-mono-token);
   --font-heading: var(--font-sans-token);
 
+  --color-auth-surface: var(--auth-surface);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);

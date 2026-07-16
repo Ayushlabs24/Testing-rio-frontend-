@@ -56,7 +56,7 @@ export function AuthShell({
         <div />
       </div>
 
-      <div className="bg-background relative flex items-center justify-center p-6 sm:p-8 lg:p-12">
+      <div className="bg-auth-surface relative flex items-center justify-center p-6 sm:p-8 lg:p-12">
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
           <ThemeToggle />
         </div>

@@ -17,14 +17,16 @@ export default function NewStudyPage() {
   const router = useRouter();
 
   const handleSubmit = async (values: StudyFormValues) => {
-    const study = await studiesService.create({
-      title: values.title,
-      // "" means "not set" in the form; the API models unset as null.
-      description: values.description.trim() || null,
-      needStatement: values.needStatement.trim() || null,
-      villages: values.villages,
-    });
-    router.push(`/studies/${study.id}`);
+    const study = await studiesService.create({ title: values.title });
+    // Village never goes to the backend (Study has no village field — see
+    // studies.types.ts) — carried through as a query param purely to
+    // prefill Define Need once the researcher gets there.
+    const village = values.village.trim();
+    router.push(
+      village
+        ? `/studies/${study.id}?village=${encodeURIComponent(village)}`
+        : `/studies/${study.id}`,
+    );
   };
 
   return (

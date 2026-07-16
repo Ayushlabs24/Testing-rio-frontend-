@@ -31,13 +31,7 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
   }, [id]);
 
   const handleSubmit = async (values: StudyFormValues) => {
-    await studiesService.update(id, {
-      title: values.title,
-      description: values.description.trim() || null,
-      needStatement: values.needStatement.trim() || null,
-      villages: values.villages,
-      status: values.status,
-    });
+    await studiesService.update(id, { title: values.title });
     router.push(`/studies/${id}`);
   };
 

@@ -1,14 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { PasswordInput } from "@/components/features/auth/password-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
@@ -75,16 +75,11 @@ export function ResetPasswordForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-2.5">
           <Label htmlFor="password">{t("passwordLabel")}</Label>
-          <div className="relative">
-            <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-            <Input
-              id="password"
-              type="password"
-              placeholder={t("passwordPlaceholder")}
-              className="h-11 pr-4 pl-10 text-base"
-              {...register("password")}
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            placeholder={t("passwordPlaceholder")}
+            {...register("password")}
+          />
           {errors.password ? (
             <p className="text-destructive text-sm">{errors.password.message}</p>
           ) : null}
@@ -92,16 +87,11 @@ export function ResetPasswordForm() {
 
         <div className="space-y-2.5">
           <Label htmlFor="confirmPassword">{t("confirmPasswordLabel")}</Label>
-          <div className="relative">
-            <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder={t("confirmPasswordPlaceholder")}
-              className="h-11 pr-4 pl-10 text-base"
-              {...register("confirmPassword")}
-            />
-          </div>
+          <PasswordInput
+            id="confirmPassword"
+            placeholder={t("confirmPasswordPlaceholder")}
+            {...register("confirmPassword")}
+          />
           {errors.confirmPassword ? (
             <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
           ) : null}

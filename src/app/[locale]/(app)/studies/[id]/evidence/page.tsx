@@ -1,17 +1,18 @@
 "use client";
 
 import {
+  ArrowLeft,
+  Check,
   FileText,
   Info,
   Loader2,
   RotateCw,
-  Sparkles,
   Trash2,
   UploadCloud,
   X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Fragment, use, useEffect, useMemo, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -36,20 +38,29 @@ import {
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { usePermission } from "@/hooks/use-permission";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
-import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
-import type { AiDecision } from "@/services/ai-decisions/ai-decisions.types";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import type { Evidence } from "@/services/evidence/evidence.types";
-import { needsService } from "@/services/needs/needs.service";
-import { usersService } from "@/services/users/users.service";
+import { studiesService } from "@/services/studies/studies.service";
 
-// RIO-FR-Add-01: mirrors the backend's own allowlist exactly (see
-// EvidenceStorageService.assertAllowedExtension) — rejecting an unsupported
-// file here is just a faster, friendlier version of the same rule.
-const ALLOWED_EXTENSIONS = [".pdf", ".csv", ".xls", ".xlsx", ".doc", ".docx"];
+// RIO-FR-Add-01: mirrors the backend's own allowlist/limits exactly (see
+// EvidenceStorageService) — rejecting client-side is just a faster,
+// friendlier version of the same server-side rule.
+const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".csv",
+  ".xls",
+  ".xlsx",
+  ".doc",
+  ".docx",
+  ".jpg",
+  ".jpeg",
+  ".png",
+];
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FILES_PER_STUDY = 10;
 
 function extensionOf(fileName: string): string {
   const idx = fileName.lastIndexOf(".");
@@ -61,19 +72,62 @@ function fileTypeLabel(fileName: string): string {
   return ext ? ext.toUpperCase() : "—";
 }
 
+// The backend has no endpoint that serves an evidence file's actual bytes
+// back (upload/list/submit/delete only) — a real content thumbnail isn't
+// achievable yet. This is a visual stand-in: a colored file-type badge so
+// the type is scannable at a glance, not a rendered preview of the file.
+const FILE_TYPE_BADGE_CLASS: Record<string, string> = {
+  pdf: "bg-destructive/15 text-destructive",
+  csv: "bg-badge-success text-badge-success-foreground",
+  xls: "bg-badge-success text-badge-success-foreground",
+  xlsx: "bg-badge-success text-badge-success-foreground",
+  doc: "bg-badge-primary text-badge-primary-foreground",
+  docx: "bg-badge-primary text-badge-primary-foreground",
+  jpg: "bg-badge-secondary text-badge-secondary-foreground",
+  jpeg: "bg-badge-secondary text-badge-secondary-foreground",
+  png: "bg-badge-secondary text-badge-secondary-foreground",
+};
+
+function FileTypeBadge({ fileName }: { fileName: string }) {
+  const ext = extensionOf(fileName).replace(".", "");
+  return (
+    <span
+      className={cn(
+        "inline-flex size-9 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tracking-wide",
+        FILE_TYPE_BADGE_CLASS[ext] ?? "bg-muted text-muted-foreground",
+      )}
+    >
+      {ext ? ext.toUpperCase() : <FileText className="size-4" />}
+    </span>
+  );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 interface QueueItem {
   localId: string;
   file: File;
   status: "uploading" | "success" | "error";
   progress: number;
   error?: string;
+  // Client-side validation failures (wrong type, too large, over the
+  // per-study limit) never attempted an upload — retrying them would just
+  // fail the same way again, so only a real upload failure (network/server
+  // error, caught in startUpload's .catch) is retryable.
+  retryable?: boolean;
 }
 
 function DropzoneAndQueue({
   studyId,
+  existingCount,
   onUploaded,
 }: {
   studyId: string;
+  existingCount: number;
   onUploaded: (evidence: Evidence) => void;
 }) {
   const t = useTranslations("app.evidence");
@@ -107,11 +161,15 @@ function DropzoneAndQueue({
         updateItem(item.localId, {
           status: "error",
           error: error instanceof ApiError ? error.message : t("uploadFailed"),
+          retryable: true,
         });
       });
   };
 
   const addFiles = (files: FileList | File[]) => {
+    const pendingCount = queue.filter((q) => q.status !== "error").length;
+    let runningTotal = existingCount + pendingCount;
+
     const newItems: QueueItem[] = [];
     for (const file of Array.from(files)) {
       const localId = crypto.randomUUID();
@@ -122,9 +180,33 @@ function DropzoneAndQueue({
           status: "error",
           progress: 0,
           error: t("invalidType", { name: file.name }),
+          retryable: false,
         });
         continue;
       }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        newItems.push({
+          localId,
+          file,
+          status: "error",
+          progress: 0,
+          error: t("fileTooLarge", { name: file.name }),
+          retryable: false,
+        });
+        continue;
+      }
+      if (runningTotal + 1 > MAX_FILES_PER_STUDY) {
+        newItems.push({
+          localId,
+          file,
+          status: "error",
+          progress: 0,
+          error: t("fileLimitReached", { max: MAX_FILES_PER_STUDY }),
+          retryable: false,
+        });
+        continue;
+      }
+      runningTotal += 1;
       newItems.push({ localId, file, status: "uploading", progress: 0 });
     }
     setQueue((prev) => [...prev, ...newItems]);
@@ -215,7 +297,7 @@ function DropzoneAndQueue({
               {item.status === "uploading" ? (
                 <Loader2 className="text-muted-foreground size-4 shrink-0 animate-spin" />
               ) : null}
-              {item.status === "error" ? (
+              {item.status === "error" && item.retryable ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -295,116 +377,22 @@ function DeleteEvidenceAlert({
   );
 }
 
-// RIO-FR-003: classification reads Need + Evidence, so it can't run until
-// both exist — this mirrors AiDecisionsService.classify's own NEED_NOT_FOUND/
-// EVIDENCE_REQUIRED checks on the backend, just surfaced proactively instead
-// of letting the user hit a 404/409 blind.
-function AiClassificationSection({
-  studyId,
-  hasNeed,
-  evidenceCount,
-}: {
-  studyId: string;
-  hasNeed: boolean;
-  evidenceCount: number;
-}) {
-  const t = useTranslations("app.evidence");
-  const canRun = usePermission("aiReview", "write");
-  const [latest, setLatest] = useState<AiDecision | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    aiDecisionsService
-      .listByStudy(studyId)
-      .then((list) => {
-        if (!cancelled) setLatest(list[0] ?? null);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [studyId]);
-
-  if (!canRun) return null;
-
-  const canClassify = hasNeed && evidenceCount > 0;
-
-  const runClassify = async () => {
-    setError(null);
-    setIsRunning(true);
-    try {
-      const result = await aiDecisionsService.classify(studyId);
-      setLatest(result);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("classifyError"));
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  return (
-    <div className="border-border border-t pt-6">
-      <h2 className="text-foreground mb-1 flex items-center gap-1.5 text-sm font-semibold">
-        <Sparkles className="size-4" />
-        {t("aiClassificationTitle")}
-      </h2>
-      <p className="text-muted-foreground mb-3 text-xs">
-        {canClassify
-          ? t("aiClassificationReady")
-          : !hasNeed
-            ? t("aiClassificationNeedsNeed")
-            : t("aiClassificationNeedsEvidence")}
-      </p>
-
-      <Button type="button" onClick={runClassify} disabled={!canClassify || isRunning}>
-        {isRunning ? t("classifying") : t("runClassification")}
-      </Button>
-
-      {error ? <p className="text-destructive mt-2 text-sm">{error}</p> : null}
-
-      {latest ? (
-        <div className="border-border bg-muted/30 mt-4 space-y-1 rounded-md border p-3 text-xs">
-          <p className="text-muted-foreground mb-1 font-medium">
-            {t("latestSuggestion")}
-          </p>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-            {Object.entries(latest.suggestion).map(([key, value]) => (
-              <Fragment key={key}>
-                <dt className="text-muted-foreground capitalize">{key}</dt>
-                <dd className="text-foreground truncate">{String(value)}</dd>
-              </Fragment>
-            ))}
-            <dt className="text-muted-foreground">{t("confidence")}</dt>
-            <dd className="text-foreground">{Math.round(latest.confidence * 100)}%</dd>
-          </dl>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function EvidenceUploadScreen({ studyId }: { studyId: string }) {
   const t = useTranslations("app.evidence");
   const locale = useLocale();
   const [evidence, setEvidence] = useState<Evidence[] | null>(null);
-  const [userNames, setUserNames] = useState<Record<string, string>>({});
-  const [hasNeed, setHasNeed] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      evidenceService.listByStudy(studyId),
-      usersService.listByOrganization().catch(() => []),
-      needsService.getByStudy(studyId),
-    ])
-      .then(([list, users, need]) => {
+    Promise.all([evidenceService.listByStudy(studyId), studiesService.getById(studyId)])
+      .then(([list, study]) => {
         if (cancelled) return;
         setEvidence(list);
-        setUserNames(Object.fromEntries(users.map((user) => [user.id, user.name])));
-        setHasNeed(need !== null);
+        setIsSubmitted(study.status !== "draft" && study.status !== "need_captured");
       })
       .catch((error) => {
         if (cancelled) return;
@@ -424,8 +412,29 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
     [evidence],
   );
 
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      await evidenceService.submit(studyId);
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(error instanceof ApiError ? error.message : t("submitError"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <PageContainer>
+      <Link
+        href={`/studies/${studyId}`}
+        className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
+      >
+        <ArrowLeft className="size-4" />
+        {t("backToStudy")}
+      </Link>
+
       <PageHeader title={t("title")} description={t("description")} />
 
       <div className="border-info/30 bg-info/10 mb-6 flex items-start gap-3 rounded-lg border p-4">
@@ -439,6 +448,7 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
         <CardContent className="space-y-6">
           <DropzoneAndQueue
             studyId={studyId}
+            existingCount={sortedEvidence.length}
             onUploaded={(created) => setEvidence((prev) => [created, ...(prev ?? [])])}
           />
 
@@ -463,30 +473,45 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-14">{t("previewColumn")}</TableHead>
                     <TableHead>{t("fileNameColumn")}</TableHead>
                     <TableHead>{t("fileTypeColumn")}</TableHead>
+                    <TableHead>{t("fileSizeColumn")}</TableHead>
                     <TableHead>{t("uploadedByColumn")}</TableHead>
                     <TableHead>{t("uploadedAtColumn")}</TableHead>
+                    <TableHead>{t("statusColumn")}</TableHead>
                     <TableHead className="text-right">{t("actionsColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedEvidence.map((item) => (
                     <TableRow key={item.id}>
+                      <TableCell>
+                        <FileTypeBadge fileName={item.fileName} />
+                      </TableCell>
                       <TableCell className="max-w-xs truncate font-medium">
                         {item.fileName}
                       </TableCell>
                       <TableCell>{fileTypeLabel(item.fileName)}</TableCell>
-                      <TableCell>
-                        {item.uploadedByName ??
-                          userNames[item.uploadedBy] ??
-                          item.uploadedBy}
-                      </TableCell>
+                      <TableCell>{formatFileSize(item.fileSize)}</TableCell>
+                      <TableCell>{item.uploadedByName ?? item.uploadedBy}</TableCell>
                       <TableCell>
                         {new Date(item.uploadedAt).toLocaleString(locale, {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={cn(
+                            "border-transparent",
+                            isSubmitted
+                              ? "bg-badge-success text-badge-success-foreground"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {isSubmitted ? t("statusSubmitted") : t("statusUploaded")}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <DeleteEvidenceAlert
@@ -503,11 +528,26 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
             )}
           </div>
 
-          <AiClassificationSection
-            studyId={studyId}
-            hasNeed={hasNeed}
-            evidenceCount={sortedEvidence.length}
-          />
+          {sortedEvidence.length > 0 ? (
+            <div className="border-border flex flex-col items-start gap-2 border-t pt-4">
+              {isSubmitted ? (
+                <p className="text-foreground flex items-center gap-1.5 text-sm">
+                  <Check className="text-success size-4" />
+                  {t("submitted")}
+                </p>
+              ) : (
+                <>
+                  <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+                    {isSubmitting ? t("submitting") : t("submitEvidence")}
+                  </Button>
+                  <p className="text-muted-foreground text-xs">{t("submitHint")}</p>
+                </>
+              )}
+              {submitError ? (
+                <p className="text-destructive text-sm">{submitError}</p>
+              ) : null}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </PageContainer>
@@ -517,9 +557,9 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
 export default function EvidenceUploadPage({
   params,
 }: {
-  params: Promise<{ studyId: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { studyId } = use(params);
+  const { id: studyId } = use(params);
 
   return (
     <PermissionGuard module="dataCollection" action="write">

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Check, Copy, ImageUp, Loader2, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SECTORS } from "@/config/sectors";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
@@ -176,6 +184,9 @@ function ConsentPolicyDialog({
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
+  // Reuses the same sector labels as Settings > Organization — one source
+  // of truth for what a sector is called, not a duplicated copy here.
+  const tSectors = useTranslations("app.settings.organization.sectors");
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] =
@@ -218,7 +229,8 @@ export function SignupForm() {
     organizationName: z
       .string()
       .min(1, { message: tValidation("organizationNameRequired") }),
-    purpose: z.string().min(1, { message: tValidation("purposeRequired") }),
+    sector: z.string().min(1, { message: tValidation("sectorRequired") }),
+    otherSector: z.string(),
     registrationNumber: z
       .string()
       .min(1, { message: tValidation("registrationNumberRequired") }),
@@ -230,8 +242,15 @@ export function SignupForm() {
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors, isSubmitting },
-  } = useForm<SignupValues>({ resolver: zodResolver(signupSchema) });
+  } = useForm<SignupValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { sector: "", otherSector: "" },
+  });
+
+  const selectedSector = useWatch({ control, name: "sector" });
 
   const onLogoSelected = (file: File) => {
     setLogoError(null);
@@ -260,7 +279,11 @@ export function SignupForm() {
     setFormError(null);
     try {
       const { temporaryPasswordEmailed, temporaryPassword } = await authService.signup({
-        ...values,
+        organizationName: values.organizationName,
+        sector: values.sector,
+        purpose: values.sector === "other" ? values.otherSector : undefined,
+        registrationNumber: values.registrationNumber,
+        email: values.email,
         consentAccepted: true,
       });
       // The signup response already carries a live session (the backend
@@ -331,17 +354,40 @@ export function SignupForm() {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="purpose">{t("purposeLabel")}</Label>
-            <Input
-              id="purpose"
-              placeholder={t("purposePlaceholder")}
-              {...register("purpose")}
-            />
-            {errors.purpose ? (
-              <p className="text-destructive text-sm">{errors.purpose.message}</p>
+            <Label htmlFor="sector">{t("sectorLabel")}</Label>
+            <Select
+              value={selectedSector || undefined}
+              onValueChange={(value) =>
+                setValue("sector", value, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger id="sector" className="w-full">
+                <SelectValue placeholder={t("sectorPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {SECTORS.map((sector) => (
+                  <SelectItem key={sector} value={sector}>
+                    {tSectors(sector)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.sector ? (
+              <p className="text-destructive text-sm">{errors.sector.message}</p>
             ) : null}
           </div>
         </div>
+
+        {selectedSector === "other" ? (
+          <div className="space-y-2">
+            <Label htmlFor="otherSector">{t("otherSectorLabel")}</Label>
+            <Input
+              id="otherSector"
+              placeholder={t("otherSectorPlaceholder")}
+              {...register("otherSector")}
+            />
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           <Label htmlFor="email">{t("emailLabel")}</Label>

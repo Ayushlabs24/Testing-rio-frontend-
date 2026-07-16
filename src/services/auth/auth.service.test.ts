@@ -72,7 +72,7 @@ describe("authService", () => {
 
     const payload = {
       organizationName: "Demo NGO",
-      purpose: "Community Health",
+      sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
       consentAccepted: true as const,
@@ -94,7 +94,7 @@ describe("authService", () => {
 
     const result = await authService.signup({
       organizationName: "Demo NGO",
-      purpose: "Community Health",
+      sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
       consentAccepted: true,
@@ -112,7 +112,7 @@ describe("authService", () => {
 
     const result = await authService.signup({
       organizationName: "Demo NGO",
-      purpose: "Community Health",
+      sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
       consentAccepted: true,

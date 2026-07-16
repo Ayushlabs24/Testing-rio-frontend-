@@ -42,14 +42,16 @@ export function DeleteStudyDialog({
       setOpen(false);
       onDeleted(studyId);
     } catch (err) {
-      // 409 STUDY_APPROVED is the expected refusal — an approved study
-      // underpins a released report and cannot be deleted.
+      // 409 STUDY_NOT_DELETABLE is the expected refusal — once a study has
+      // been through AI Classification or Human Review, other people rely
+      // on it and it can no longer be deleted (see the backend's
+      // DELETABLE_STUDY_STATUSES).
       setError(
         err instanceof ApiError && err.status === 409
-          ? t("approvedBlocked")
+          ? t("notDeletableBlocked")
           : err instanceof ApiError
             ? err.message
-            : t("approvedBlocked"),
+            : t("notDeletableBlocked"),
       );
     } finally {
       setDeleting(false);

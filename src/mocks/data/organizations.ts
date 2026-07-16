@@ -6,7 +6,7 @@ export interface MockOrganization {
   purpose: string;
   registrationNumber: string;
   logoUrl: string | null;
-  region: string;
+  region: string[];
   email: string;
   sector: Sector | null;
   villages: string[];
@@ -32,7 +32,7 @@ export const organizations: MockOrganization[] = [
     purpose: "Livelihoods and economic development across rural communities.",
     registrationNumber: "REG-DEMO-0001",
     logoUrl: null,
-    region: "Yorkshire, United Kingdom",
+    region: ["Yorkshire, United Kingdom"],
     email: "contact@demo-nonprofit-alliance.org",
     sector: "livelihoods",
     villages: ["Chipping Norton", "Stow-on-the-Wold", "Bourton-on-the-Water"],
@@ -45,7 +45,7 @@ export const organizations: MockOrganization[] = [
     purpose: "Water, sanitation, and hygiene access for riverside villages.",
     registrationNumber: "REG-DEMO-0002",
     logoUrl: null,
-    region: "Kerala, India",
+    region: ["Kerala, India"],
     email: "contact@riverside-community-trust.org",
     sector: "wash",
     villages: ["Munduthode", "Kalpetta", "Sultan Bathery"],

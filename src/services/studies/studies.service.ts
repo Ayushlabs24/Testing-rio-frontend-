@@ -7,32 +7,43 @@ import type {
   ListStudiesParams,
   PlatformStudyStats,
   Study,
+  StudyDetail,
   StudySummary,
   UpdateStudyPayload,
 } from "@/services/studies/studies.types";
 
 /**
- * CRUD runs against the real backend (its studies module). `getPlatformStats`
- * is still mock-backed — there is no stats endpoint yet, so it stays on
- * `mocks/data/studies` until one exists, per the incremental-swap convention.
+ * CRUD runs against the real backend (its studies module). `update` only
+ * accepts `title` — that's the only Study-level field the backend exposes
+ * for direct edit; status only ever advances through the Need/Evidence/AI
+ * Classification/Human Review workflow. `remove` is status-gated
+ * server-side (409 STUDY_NOT_DELETABLE once ai_classified/human_reviewed).
+ * `getPlatformStats` is still mock-backed — there is no stats endpoint yet,
+ * so it stays on `mocks/data/studies` until one exists, per the
+ * incremental-swap convention.
  */
 export const studiesService = {
   async list(params: ListStudiesParams = {}): Promise<StudySummary[]> {
-    return apiClient.get<StudySummary[]>(endpoints.studies.list, {
-      // buildUrl drops undefined entries, so an unset filter never reaches
-      // the query string.
-      params: {
-        limit: params.limit,
-        offset: params.offset,
-        status: params.status,
-        village: params.village,
-        q: params.q,
+    // The backend wraps this as { items, total, limit, offset } — unwrapped
+    // here so callers still just get an array.
+    const { items } = await apiClient.get<{ items: StudySummary[] }>(
+      endpoints.studies.list,
+      {
+        // buildUrl drops undefined entries, so an unset filter never reaches
+        // the query string.
+        params: {
+          limit: params.limit,
+          offset: params.offset,
+          status: params.status,
+          search: params.search,
+        },
       },
-    });
+    );
+    return items;
   },
 
-  async getById(id: string): Promise<StudySummary> {
-    return apiClient.get<StudySummary>(endpoints.studies.byId(id));
+  async getById(id: string): Promise<StudyDetail> {
+    return apiClient.get<StudyDetail>(endpoints.studies.byId(id));
   },
 
   async create(payload: CreateStudyPayload): Promise<Study> {
@@ -43,7 +54,6 @@ export const studiesService = {
     return apiClient.patch<Study>(endpoints.studies.byId(id), payload);
   },
 
-  /** Soft delete — the backend archives the row rather than removing it. */
   async remove(id: string): Promise<void> {
     await apiClient.delete<void>(endpoints.studies.byId(id));
   },

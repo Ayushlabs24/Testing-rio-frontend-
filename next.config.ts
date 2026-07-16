@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // Pin the workspace root so Turbopack doesn't infer it from a stray
   // lockfile in a parent directory (which breaks relative CSS @imports).
   turbopack: { root: __dirname },
+  // Hides the floating "N" dev-mode indicator/build-activity icon.
+  devIndicators: false,
 };
 
 export default withNextIntl(nextConfig);

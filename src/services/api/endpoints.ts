@@ -46,19 +46,19 @@ export const endpoints = {
   },
   evidence: {
     // POST (create) and GET (list) both hit the study-scoped collection;
-    // delete is the one flat, non-nested route (see the backend's
-    // EvidenceDeleteController).
+    // submit and delete are their own routes (see the backend's
+    // EvidenceController/EvidenceDeleteController).
     forStudy: (studyId: string) => `/studies/${studyId}/evidence`,
+    submit: (studyId: string) => `/studies/${studyId}/evidence/submit`,
     byId: (id: string) => `/evidence/${id}`,
   },
   needs: {
-    // One Need per study (create/read/update all hit the same URL) — owned
-    // by Karthik's Need Entry screen; this app only reads it (see
-    // needs.service.ts) to gate AI Classification eligibility.
+    // One Need per study — create/read/update all hit the same URL.
     forStudy: (studyId: string) => `/studies/${studyId}/need`,
   },
   aiDecisions: {
     classify: (studyId: string) => `/studies/${studyId}/ai-decisions/classify`,
     forStudy: (studyId: string) => `/studies/${studyId}/ai-decisions`,
+    review: (id: string) => `/ai-decisions/${id}/review`,
   },
 } as const;

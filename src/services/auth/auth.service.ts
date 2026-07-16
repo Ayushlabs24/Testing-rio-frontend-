@@ -31,7 +31,7 @@ interface ApiSessionView {
     purpose: string;
     registrationNumber: string;
     logoUrl: string | null;
-    region: string | null;
+    region: string[];
     email: string | null;
     sector: string | null;
     villages: string[];
@@ -116,7 +116,7 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
       purpose: view.organization.purpose,
       registrationNumber: view.organization.registrationNumber,
       logoUrl: view.organization.logoUrl,
-      region: view.organization.region ?? "",
+      region: view.organization.region,
       email: view.organization.email ?? "",
       sector: toSector(view.organization.sector),
       villages: view.organization.villages,

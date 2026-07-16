@@ -47,6 +47,7 @@ const ACTION_VARIANT: Record<
 };
 
 const ALL = "all";
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
 
 function initials(name: string): string {
   return name
@@ -73,6 +74,7 @@ export default function AuditSettingsPage() {
   const [query, setQuery] = useState("");
   const [action, setAction] = useState<AuditAction | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(AUDIT_PAGE_SIZE);
 
   useEffect(() => {
     auditService.list().then(setEvents);
@@ -91,11 +93,11 @@ export default function AuditSettingsPage() {
     });
   }, [events, query, action]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / AUDIT_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedEvents = filteredEvents.slice(
-    (currentPage - 1) * AUDIT_PAGE_SIZE,
-    currentPage * AUDIT_PAGE_SIZE,
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
   );
 
   return (
@@ -106,8 +108,8 @@ export default function AuditSettingsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
-              <div className="flex flex-1 items-center gap-3">
-                <Search className="text-muted-foreground size-4" />
+              <div className="relative flex-1">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={query}
@@ -115,12 +117,15 @@ export default function AuditSettingsPage() {
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="h-8 pl-9"
                 />
               </div>
               <Select
                 value={action}
-                onValueChange={(value) => setAction(value as AuditAction | typeof ALL)}
+                onValueChange={(value) => {
+                  setAction(value as AuditAction | typeof ALL);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger
                   className="h-8 w-full sm:w-44"
@@ -133,6 +138,27 @@ export default function AuditSettingsPage() {
                   {AUDIT_ACTIONS.map((value) => (
                     <SelectItem key={value} value={value}>
                       {tActions(value)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-40"
+                  aria-label={t("rowsPerPageLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROWS_PER_PAGE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {t("rowsPerPageLabel")}: {size}
                     </SelectItem>
                   ))}
                 </SelectContent>
