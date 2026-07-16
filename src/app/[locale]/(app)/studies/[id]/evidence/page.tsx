@@ -8,6 +8,7 @@ import {
   Loader2,
   RotateCw,
   Trash2,
+  TriangleAlert,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -35,6 +36,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -385,6 +392,11 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Names of files the backend flagged as duplicates as they were uploaded.
+  // Advisory only — those uploads succeeded and their rows are in the list.
+  // Held here rather than on the row because the flag exists only on the
+  // upload response; a reload legitimately forgets it.
+  const [duplicateNames, setDuplicateNames] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -449,8 +461,40 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
           <DropzoneAndQueue
             studyId={studyId}
             existingCount={sortedEvidence.length}
-            onUploaded={(created) => setEvidence((prev) => [created, ...(prev ?? [])])}
+            onUploaded={(created) => {
+              setEvidence((prev) => [created, ...(prev ?? [])]);
+              if (created.isDuplicate) {
+                setDuplicateNames((prev) =>
+                  prev.includes(created.fileName) ? prev : [...prev, created.fileName],
+                );
+              }
+            }}
           />
+
+          {duplicateNames.length > 0 ? (
+            <div
+              role="status"
+              className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-lg border p-4"
+            >
+              <TriangleAlert className="text-warning mt-0.5 size-4 shrink-0" />
+              <div className="flex-1 space-y-1">
+                <p className="text-foreground text-sm leading-relaxed">
+                  {t("duplicateNotice", { count: duplicateNames.length })}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {duplicateNames.join(", ")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDuplicateNames([])}
+                aria-label={t("dismissDuplicateNotice")}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : null}
 
           <div>
             <h2 className="text-foreground mb-3 text-sm font-semibold">
@@ -470,61 +514,87 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
                 <p className="text-muted-foreground mt-1 text-xs">{t("emptyHint")}</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-14">{t("previewColumn")}</TableHead>
-                    <TableHead>{t("fileNameColumn")}</TableHead>
-                    <TableHead>{t("fileTypeColumn")}</TableHead>
-                    <TableHead>{t("fileSizeColumn")}</TableHead>
-                    <TableHead>{t("uploadedByColumn")}</TableHead>
-                    <TableHead>{t("uploadedAtColumn")}</TableHead>
-                    <TableHead>{t("statusColumn")}</TableHead>
-                    <TableHead className="text-right">{t("actionsColumn")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedEvidence.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <FileTypeBadge fileName={item.fileName} />
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate font-medium">
-                        {item.fileName}
-                      </TableCell>
-                      <TableCell>{fileTypeLabel(item.fileName)}</TableCell>
-                      <TableCell>{formatFileSize(item.fileSize)}</TableCell>
-                      <TableCell>{item.uploadedByName ?? item.uploadedBy}</TableCell>
-                      <TableCell>
-                        {new Date(item.uploadedAt).toLocaleString(locale, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={cn(
-                            "border-transparent",
-                            isSubmitted
-                              ? "bg-badge-success text-badge-success-foreground"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {isSubmitted ? t("statusSubmitted") : t("statusUploaded")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DeleteEvidenceAlert
-                          item={item}
-                          onDeleted={(id) =>
-                            setEvidence((prev) => (prev ?? []).filter((e) => e.id !== id))
-                          }
-                        />
-                      </TableCell>
+              <TooltipProvider delayDuration={200}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-14">{t("previewColumn")}</TableHead>
+                      <TableHead>{t("fileNameColumn")}</TableHead>
+                      <TableHead>{t("fileTypeColumn")}</TableHead>
+                      <TableHead>{t("fileSizeColumn")}</TableHead>
+                      <TableHead>{t("uploadedByColumn")}</TableHead>
+                      <TableHead>{t("uploadedAtColumn")}</TableHead>
+                      <TableHead>{t("statusColumn")}</TableHead>
+                      <TableHead className="text-right">{t("actionsColumn")}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedEvidence.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <FileTypeBadge fileName={item.fileName} />
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate font-medium">
+                          {item.fileName}
+                        </TableCell>
+                        <TableCell>{fileTypeLabel(item.fileName)}</TableCell>
+                        <TableCell>{formatFileSize(item.fileSize)}</TableCell>
+                        <TableCell>{item.uploadedByName ?? item.uploadedBy}</TableCell>
+                        <TableCell>
+                          {new Date(item.uploadedAt).toLocaleString(locale, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={cn(
+                              "border-transparent",
+                              isSubmitted
+                                ? "bg-badge-success text-badge-success-foreground"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {isSubmitted ? t("statusSubmitted") : t("statusUploaded")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isSubmitted ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {/* Wrapper span: a disabled button emits no
+                                  pointer events, so the tooltip would never
+                                  open if it were the trigger itself. */}
+                                <span className="inline-flex">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    disabled
+                                    aria-label={t("deleteLockedHint")}
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{t("deleteLockedHint")}</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <DeleteEvidenceAlert
+                              item={item}
+                              onDeleted={(id) =>
+                                setEvidence((prev) =>
+                                  (prev ?? []).filter((e) => e.id !== id),
+                                )
+                              }
+                            />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TooltipProvider>
             )}
           </div>
 
