@@ -10,6 +10,7 @@ import {
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
+import { parseVillageInput } from "@/lib/villages";
 import { studiesService } from "@/services/studies/studies.service";
 
 export default function NewStudyPage() {
@@ -17,16 +18,13 @@ export default function NewStudyPage() {
   const router = useRouter();
 
   const handleSubmit = async (values: StudyFormValues) => {
-    const study = await studiesService.create({ title: values.title });
-    // Village never goes to the backend (Study has no village field — see
-    // studies.types.ts) — carried through as a query param purely to
-    // prefill Define Need once the researcher gets there.
-    const village = values.village.trim();
-    router.push(
-      village
-        ? `/studies/${study.id}?village=${encodeURIComponent(village)}`
-        : `/studies/${study.id}`,
-    );
+    const study = await studiesService.create({
+      title: values.title,
+      villages: parseVillageInput(values.village),
+    });
+    // Capturing the Need is the next step of the workflow, so go straight
+    // there rather than via the Study detail page.
+    router.push(`/studies/${study.id}/need`);
   };
 
   return (

@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, MapPin, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -16,24 +15,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
+import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
+import type { Study } from "@/services/studies/studies.types";
 
 interface NeedFormValues {
   statement: string;
   village: string[];
   source: string;
-}
-
-/** Splits on commas so pasting/typing "Al Wathba, Al Falah, Bani Yas" adds
- * three separate villages, not one literal string — same behavior as Enter. */
-function parseVillageInput(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
 }
 
 function VillageEditor({
@@ -112,9 +104,8 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
   const t = useTranslations("app.studies.need");
   const tValidation = useTranslations("app.studies.validation");
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const prefillVillage = searchParams.get("village") ?? "";
 
+  const [study, setStudy] = useState<Study | null>(null);
   const [need, setNeed] = useState<Need | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -137,8 +128,10 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
       }),
       needsService.getByStudy(studyId),
     ])
-      .then(([, needResult]) => {
-        if (!cancelled) setNeed(needResult);
+      .then(([studyResult, needResult]) => {
+        if (cancelled) return;
+        setStudy(studyResult);
+        setNeed(needResult);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -165,7 +158,9 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
     resolver: zodResolver(schema),
     values: {
       statement: need?.statement ?? "",
-      village: need?.village ?? parseVillageInput(prefillVillage),
+      // A new Need starts from the villages configured on its Study; once the
+      // Need exists it owns its own list and the Study's is no longer imposed.
+      village: need?.village ?? study?.villages ?? [],
       source: need?.source ?? "",
     },
   });
