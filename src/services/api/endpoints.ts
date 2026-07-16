@@ -44,6 +44,11 @@ export const endpoints = {
   consentPolicy: {
     active: "/consent-policy/active",
   },
+  contact: {
+    // Public enquiry form on the auth pages — unauthenticated on the backend.
+    organizations: "/contact/organizations",
+    submit: "/contact",
+  },
   evidence: {
     // POST (create) and GET (list) both hit the study-scoped collection;
     // submit and delete are their own routes (see the backend's

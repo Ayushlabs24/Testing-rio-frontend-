@@ -19,6 +19,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { studiesService } from "@/services/studies/studies.service";
 
 interface NeedFormValues {
   statement: string;
@@ -116,13 +117,36 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
 
   const [need, setNeed] = useState<Need | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    needsService
-      .getByStudy(studyId)
-      .then(setNeed)
-      .finally(() => setLoaded(true));
+    // Verify the study exists before offering its need form. getByStudy swallows
+    // a 404 as "no need captured yet" (an empty form is correct there), but that
+    // same 404 fires for a study that doesn't exist at all — e.g. a stale link
+    // to a study that was since removed. Loading the study distinguishes the two
+    // so a dead link shows "not found" instead of a form for a phantom study.
+    let cancelled = false;
+    Promise.all([
+      studiesService.getById(studyId).catch((error) => {
+        if (error instanceof ApiError && error.status === 404) {
+          if (!cancelled) setNotFound(true);
+          return null;
+        }
+        throw error;
+      }),
+      needsService.getByStudy(studyId),
+    ])
+      .then(([, needResult]) => {
+        if (!cancelled) setNeed(needResult);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [studyId]);
 
   const schema = z.object({
@@ -186,6 +210,8 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
                 <div className="bg-muted h-10 w-full rounded" />
                 <div className="bg-muted h-10 w-full rounded" />
               </div>
+            ) : notFound ? (
+              <p className="text-muted-foreground text-sm">{t("studyNotFound")}</p>
             ) : (
               <form onSubmit={submit} className="space-y-5">
                 <div className="space-y-2">

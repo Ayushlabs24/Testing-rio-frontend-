@@ -129,6 +129,30 @@
       "verifying": "Verifying...",
       "useDifferentEmail": "Use a different email"
     },
+    "contact": {
+      "triggerLabel": "Contact us",
+      "title": "Contact us",
+      "description": "Having trouble signing in, or have a question? Send us a message and we'll get back to you by email.",
+      "organizationLabel": "Organisation",
+      "organizationPlaceholder": "Select an organisation",
+      "organizationLoading": "Loading organisations...",
+      "organizationsError": "We couldn't load the organisation list. Please try again later.",
+      "nameLabel": "Your name",
+      "namePlaceholder": "Jane Doe",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@organisation.org",
+      "regionLabel": "Village/Region",
+      "regionPlaceholder": "Where are you based?",
+      "purposeLabel": "Key Purpose",
+      "purposePlaceholder": "Tell us how we can help...",
+      "submit": "Send message",
+      "submitting": "Sending...",
+      "cancel": "Cancel",
+      "successTitle": "Message sent",
+      "successBody": "Thanks for reaching out. We'll reply to {email} as soon as we can.",
+      "successClose": "Done",
+      "genericError": "Something went wrong. Please try again."
+    },
     "validation": {
       "emailInvalid": "Please enter a valid email address.",
       "passwordMin": "Password must be at least 8 characters.",
@@ -138,7 +162,10 @@
       "roleRequired": "Please select a role.",
       "organizationNameRequired": "Please enter your organization's name.",
       "sectorRequired": "Please select a sector.",
-      "registrationNumberRequired": "Please enter your registration number."
+      "registrationNumberRequired": "Please enter your registration number.",
+      "organizationRequired": "Please select an organisation.",
+      "regionRequired": "Please enter your village or region.",
+      "purposeMin": "Please give us a little more detail (at least 10 characters)."
     }
   },
   "app": {
@@ -500,7 +527,8 @@
         "save": "Save need",
         "saving": "Saving...",
         "cancel": "Cancel",
-        "genericError": "Couldn't save the need. Please try again."
+        "genericError": "Couldn't save the need. Please try again.",
+        "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue."
       },
       "classification": {
         "heading": "AI Classification",
