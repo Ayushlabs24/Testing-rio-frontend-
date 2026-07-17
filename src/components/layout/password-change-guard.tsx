@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -29,20 +29,18 @@ import { authService } from "@/services/auth/auth.service";
  * authentication step, not an in-app settings screen, so it should look
  * like one, not like a modal dropped on top of the dashboard.
  *
- * On success this does *not* carry the caller straight into the dashboard
- * on the old session — it shows a confirmation and sends them back to sign
- * in explicitly with the new password, same reasoning as signup: the old
- * (temporary) credential is now dead, so proving the new one actually
- * works, via a real sign-in, is worth the one extra click.
+ * On success, the response's fresh `SessionContext` (with
+ * `mustChangePassword: false`) is applied via `setSession` and the caller is
+ * sent straight into the dashboard on that same session — no forced
+ * re-login, since the session itself is still valid and now reflects the
+ * new password.
  */
 export function PasswordChangeGuard({ children }: { children: ReactNode }) {
-  const { session, logout } = useAuth();
+  const { session, setSession } = useAuth();
   const router = useRouter();
   const t = useTranslations("app.passwordChange");
   const tValidation = useTranslations("auth.validation");
   const [formError, setFormError] = useState<string | null>(null);
-  const [succeeded, setSucceeded] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const schema = z
     .object({
@@ -66,45 +64,15 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
   if (!session) return null;
   if (!session.mustChangePassword) return <>{children}</>;
 
-  if (succeeded) {
-    const handleGoToSignIn = async () => {
-      setIsRedirecting(true);
-      // The temp password is dead now — clear the still-live session
-      // (issued at the temp-password login) rather than carrying it
-      // forward, so the next sign-in is a real one, on the new password.
-      await logout();
-      router.push("/");
-    };
-
-    return (
-      <AuthShell heroTitle={t("heroTitle")} heroSubtitle={t("heroSubtitle")}>
-        <div className="w-full max-w-sm text-center">
-          <div className="bg-primary/10 text-primary mx-auto mb-6 flex size-12 items-center justify-center rounded-full">
-            <CheckCircle2 className="size-6" />
-          </div>
-          <h1 className="text-foreground text-2xl font-semibold">{t("verifiedTitle")}</h1>
-          <p className="text-muted-foreground mt-2 text-sm">{t("verifiedDescription")}</p>
-          <Button
-            onClick={handleGoToSignIn}
-            disabled={isRedirecting}
-            className="mt-8 h-11 w-full gap-2 text-base"
-          >
-            {isRedirecting ? t("redirecting") : t("goToSignInButton")}
-            {!isRedirecting && <ArrowRight className="size-4" />}
-          </Button>
-        </div>
-      </AuthShell>
-    );
-  }
-
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
     try {
-      await authService.changePassword({
+      const updated = await authService.changePassword({
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
-      setSucceeded(true);
+      setSession(updated);
+      router.push("/dashboard");
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : t("genericError"));
     }

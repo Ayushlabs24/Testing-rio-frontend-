@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
 import { PasswordInput } from "@/components/features/auth/password-input";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -91,14 +91,13 @@ export function LoginForm() {
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-        <Button
+        <LoadingButton
           type="submit"
           className="h-11 w-full gap-2 px-6 text-base"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? t("submitting") : t("submit")}
-          {!isSubmitting && <ArrowRight className="size-4" />}
-        </Button>
+          isLoading={isSubmitting}
+          text={isSubmitting ? t("submitting") : t("submit")}
+          endIcon={<ArrowRight className="size-4" />}
+        />
       </form>
 
       <Link

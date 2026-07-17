@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -607,9 +608,12 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
                 </p>
               ) : (
                 <>
-                  <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
-                    {isSubmitting ? t("submitting") : t("submitEvidence")}
-                  </Button>
+                  <LoadingButton
+                    type="button"
+                    onClick={handleSubmit}
+                    isLoading={isSubmitting}
+                    text={isSubmitting ? t("submitting") : t("submitEvidence")}
+                  />
                   <p className="text-muted-foreground text-xs">{t("submitHint")}</p>
                 </>
               )}

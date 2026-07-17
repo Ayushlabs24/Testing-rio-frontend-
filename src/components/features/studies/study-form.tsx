@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/services/api/types";
@@ -96,9 +97,11 @@ export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
       ) : null}
 
       <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? t("saving") : t("save")}
-        </Button>
+        <LoadingButton
+          type="submit"
+          isLoading={isSubmitting}
+          text={isSubmitting ? t("saving") : t("save")}
+        />
         <Button
           type="button"
           variant="outline"

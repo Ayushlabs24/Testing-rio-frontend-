@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import {
   Dialog,
   DialogClose,
@@ -269,10 +270,13 @@ export function ContactDialog() {
                   {t("cancel")}
                 </Button>
               </DialogClose>
-              <Button type="submit" className="gap-2" disabled={isSubmitting}>
-                {isSubmitting ? t("submitting") : t("submit")}
-                {!isSubmitting && <Send className="size-4" />}
-              </Button>
+              <LoadingButton
+                type="submit"
+                className="gap-2"
+                isLoading={isSubmitting}
+                text={isSubmitting ? t("submitting") : t("submit")}
+                endIcon={<Send className="size-4" />}
+              />
             </DialogFooter>
           </form>
         )}

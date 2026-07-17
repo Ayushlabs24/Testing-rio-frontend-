@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, Loader2, Sparkles, UserCheck, X } from "lucide-react";
+import { CheckCircle2, Sparkles, UserCheck, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -349,19 +350,14 @@ export function AiClassificationSection({
               </p>
               <p className="text-muted-foreground text-sm">{t("readyToClassifyHint")}</p>
             </div>
-            <Button
+            <LoadingButton
               type="button"
               onClick={runClassify}
-              disabled={isRunning}
+              isLoading={isRunning}
               className="gap-2"
-            >
-              {isRunning ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Sparkles className="size-4" />
-              )}
-              {isRunning ? t("classifying") : t("runClassification")}
-            </Button>
+              text={isRunning ? t("classifying") : t("runClassification")}
+              startIcon={<Sparkles className="size-4" />}
+            />
           </div>
         ) : null}
 
@@ -434,20 +430,15 @@ export function AiClassificationSection({
                   </p>
 
                   <div className="flex justify-end gap-2">
-                    <Button
+                    <LoadingButton
                       type="button"
                       size="lg"
                       onClick={() => submitReview("approved")}
-                      disabled={isReviewing}
+                      isLoading={isReviewing}
                       className="gap-1.5"
-                    >
-                      {isReviewing ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="size-4" />
-                      )}
-                      {isReviewing ? t("approving") : t("approve")}
-                    </Button>
+                      text={isReviewing ? t("approving") : t("approve")}
+                      startIcon={<CheckCircle2 className="size-4" />}
+                    />
                     <Button
                       type="button"
                       size="lg"
@@ -593,15 +584,14 @@ export function AiClassificationSection({
             >
               {t("cancel")}
             </Button>
-            <Button
+            <LoadingButton
               type="button"
               onClick={() => submitReview("modified")}
-              disabled={isReviewing || overrideReason.trim().length === 0}
+              disabled={overrideReason.trim().length === 0}
+              isLoading={isReviewing}
               className="gap-1.5"
-            >
-              {isReviewing ? <Loader2 className="size-4 animate-spin" /> : null}
-              {isReviewing ? t("savingOverride") : t("saveOverride")}
-            </Button>
+              text={isReviewing ? t("savingOverride") : t("saveOverride")}
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>

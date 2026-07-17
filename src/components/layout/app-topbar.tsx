@@ -167,14 +167,6 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
           </SheetContent>
         </Sheet>
 
-        {collapsed ? (
-          <OrgBrandMark
-            logoUrl={session.organization.logoUrl}
-            crossEntity={session.role.crossEntity}
-            className="hidden md:flex"
-          />
-        ) : null}
-
         {currentNavItem ? (
           <h1 className="text-foreground truncate text-base font-semibold">
             {tSidebar(currentNavItem.labelKey)}

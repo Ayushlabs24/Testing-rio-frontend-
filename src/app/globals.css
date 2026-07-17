@@ -88,9 +88,20 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* `::-webkit-scrollbar` is a pseudo-element, not inherited, so it needs
+       its own rule per element rather than riding on body's `scrollbar-width`
+       below. */
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
   body {
     @apply bg-background text-foreground;
+    /* App-wide: keep native scrolling everywhere, just never render the
+       scrollbar track/thumb. `scrollbar-width` is an inherited property, so
+       setting it here covers every scrollable descendant, not just body/html. */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   html {
     @apply font-sans;

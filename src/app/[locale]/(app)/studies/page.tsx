@@ -219,9 +219,7 @@ export default function StudiesPage() {
                         </Link>
                       </TableCell>
                       <TableCell className="text-muted-foreground py-4 text-sm">
-                        {villageByStudy[study.id]?.length
-                          ? villageByStudy[study.id]!.join(", ")
-                          : t("villageNotDefined")}
+                        {villageByStudy[study.id]?.join(", ") || t("villageNotDefined")}
                       </TableCell>
                       <TableCell className="py-4">
                         <StudyStatusBadge status={study.status} />

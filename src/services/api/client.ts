@@ -22,7 +22,10 @@ async function request<TResponse>(
   options: RequestOptions = {},
 ): Promise<TResponse> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), apiConfig.timeoutMs);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? apiConfig.timeoutMs,
+  );
 
   try {
     const response = await fetch(buildUrl(path, options.params), {
