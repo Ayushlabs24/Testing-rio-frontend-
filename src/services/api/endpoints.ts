@@ -29,6 +29,22 @@ export const endpoints = {
     list: "/studies",
     create: "/studies",
     byId: (id: string) => `/studies/${id}`,
+    suggestDomain: (id: string) => `/studies/${id}/suggest-domain`,
+    approveDomain: (id: string) => `/studies/${id}/approve-domain`,
+    regenerateDomain: (id: string) => `/studies/${id}/regenerate-domain`,
+  },
+  questionBank: {
+    domainOptions: "/question-bank/domain-options",
+    questions: "/question-bank/questions",
+  },
+  surveys: {
+    forStudy: (studyId: string) => `/studies/${studyId}/survey`,
+    recommendQuestions: (studyId: string) => `/studies/${studyId}/recommend-questions`,
+    updateQuestions: (id: string) => `/surveys/${id}/questions`,
+    saveDraft: (id: string) => `/surveys/${id}/save-draft`,
+    public: (id: string) => `/surveys/public/${id}`,
+    submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
+    responses: (id: string) => `/surveys/${id}/responses`,
   },
   roles: {
     list: "/roles",

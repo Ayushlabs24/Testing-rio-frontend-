@@ -13,6 +13,7 @@ import type { Study } from "@/services/studies/studies.types";
 
 export interface StudyFormValues {
   title: string;
+  problemStatement: string;
   /**
    * Create-only. Free text, comma-separated — the caller splits it into
    * Study.villages before sending (see parseVillageInput).
@@ -41,6 +42,9 @@ export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
       .trim()
       .min(1, tValidation("titleRequired"))
       .max(300, tValidation("titleTooLong")),
+    problemStatement: isCreate
+      ? z.string().trim().min(1, "Problem statement is required")
+      : z.string().optional(),
     village: z.string(),
   });
 
@@ -50,7 +54,7 @@ export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<StudyFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { title: study?.title ?? "", village: "" },
+    defaultValues: { title: study?.title ?? "", problemStatement: "", village: "" },
   });
 
   const submit = handleSubmit(async (values) => {
@@ -76,6 +80,20 @@ export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
 
       {isCreate ? (
         <>
+          <div className="space-y-2">
+            <Label htmlFor="problemStatement">Problem Statement / Study About</Label>
+            <textarea
+              id="problemStatement"
+              rows={4}
+              placeholder="Provide a detailed problem statement..."
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              {...register("problemStatement")}
+            />
+            {errors.problemStatement ? (
+              <p className="text-destructive text-sm">{(errors.problemStatement as any).message}</p>
+            ) : null}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="village">{t("villageLabel")}</Label>
             <Input

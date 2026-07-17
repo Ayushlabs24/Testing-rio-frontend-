@@ -58,6 +58,21 @@ export const studiesService = {
     await apiClient.delete<void>(endpoints.studies.byId(id));
   },
 
+  async suggestDomain(id: string): Promise<any> {
+    return apiClient.post<any>(endpoints.studies.suggestDomain(id));
+  },
+
+  async approveDomain(
+    id: string,
+    payload: { domain: string; subDomain: string; aiSuggestionId?: string; reason?: string },
+  ): Promise<Study> {
+    return apiClient.post<Study>(endpoints.studies.approveDomain(id), payload);
+  },
+
+  async regenerateDomain(id: string): Promise<any> {
+    return apiClient.post<any>(endpoints.studies.regenerateDomain(id));
+  },
+
   /** Cross-entity — every organization's studies, not just the caller's own. */
   async getPlatformStats(): Promise<PlatformStudyStats> {
     await mockDelay();

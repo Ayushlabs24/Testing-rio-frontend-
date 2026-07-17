@@ -22,6 +22,9 @@ export type StudyStatus = (typeof STUDY_STATUSES)[number];
 export interface Study {
   id: string;
   title: string;
+  problemStatement?: string | null;
+  domain?: string | null;
+  subDomain?: string | null;
   villages: string[];
   status: StudyStatus;
   createdBy: string;
@@ -44,6 +47,7 @@ export type StudySummary = Study;
 
 export interface CreateStudyPayload {
   title: string;
+  problemStatement?: string;
   villages?: string[];
 }
 
