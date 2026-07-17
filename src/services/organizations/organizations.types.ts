@@ -1,5 +1,3 @@
-import type { Sector } from "@/config/sectors";
-
 export interface Organization {
   id: string;
   name: string;
@@ -16,7 +14,9 @@ export interface Organization {
   logoUrl: string | null;
   region: string[];
   email: string;
-  sector: Sector | null;
+  /** A live Methodology Configuration domain name (e.g. "Health"), or
+   * "other" (paired with `purpose` for free text) — never a fixed enum. */
+  sector: string | null;
   villages: string[];
   isActive: boolean;
   createdAt: string;
@@ -27,7 +27,7 @@ export interface UpdateOrganizationPayload {
   logoUrl?: string | null;
   region?: string[];
   email?: string;
-  sector?: Sector | null;
+  sector?: string | null;
   purpose?: string | null;
   villages?: string[];
   isActive?: boolean;

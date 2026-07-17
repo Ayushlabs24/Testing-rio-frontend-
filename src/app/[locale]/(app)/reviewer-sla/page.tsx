@@ -174,7 +174,7 @@ export default function ReviewerSlaPage() {
                       <TableRow key={alert.aiDecisionId}>
                         <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
                           <Link
-                            href={`/studies/${alert.studyId}`}
+                            href={`/studies/${alert.studyId}/needs/${alert.needId}`}
                             className="hover:underline"
                           >
                             {alert.studyTitle}
@@ -209,7 +209,7 @@ export default function ReviewerSlaPage() {
                         </TableCell>
                         <TableCell className="py-4 align-top">
                           <Button asChild size="sm" variant="outline">
-                            <Link href={`/studies/${alert.studyId}`}>
+                            <Link href={`/studies/${alert.studyId}/needs/${alert.needId}`}>
                               {t("reviewNow")}
                             </Link>
                           </Button>

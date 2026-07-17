@@ -6,12 +6,12 @@ import type {
 } from "@/services/ai-decisions/ai-decisions.types";
 
 export const aiDecisionsService = {
-  async classify(studyId: string): Promise<AiDecision> {
-    return apiClient.post<AiDecision>(endpoints.aiDecisions.classify(studyId));
+  async classify(needId: string): Promise<AiDecision> {
+    return apiClient.post<AiDecision>(endpoints.aiDecisions.classify(needId));
   },
 
-  async listByStudy(studyId: string): Promise<AiDecision[]> {
-    return apiClient.get<AiDecision[]>(endpoints.aiDecisions.forStudy(studyId));
+  async listByNeed(needId: string): Promise<AiDecision[]> {
+    return apiClient.get<AiDecision[]>(endpoints.aiDecisions.forNeed(needId));
   },
 
   async review(id: string, payload: ReviewDecisionPayload): Promise<AiDecision> {

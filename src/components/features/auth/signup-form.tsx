@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SECTORS } from "@/config/sectors";
+import { useSectorOptions } from "@/hooks/use-sector-options";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
@@ -128,9 +128,11 @@ function SignupConfirmation({
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
-  // Reuses the same sector labels as Settings > Organization — one source
-  // of truth for what a sector is called, not a duplicated copy here.
+  // "Other" is the one fixed label left — every other option is a live
+  // Methodology Configuration domain name, displayed as-is (see
+  // useSectorOptions).
   const tSectors = useTranslations("app.settings.organization.sectors");
+  const sectorOptions = useSectorOptions(false);
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] =
@@ -268,7 +270,7 @@ export function SignupForm() {
           <div className="space-y-2">
             <Label htmlFor="sector">{t("sectorLabel")}</Label>
             <Select
-              value={selectedSector || undefined}
+              value={selectedSector}
               onValueChange={(value) =>
                 setValue("sector", value, { shouldValidate: true })
               }
@@ -277,11 +279,12 @@ export function SignupForm() {
                 <SelectValue placeholder={t("sectorPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {SECTORS.map((sector) => (
+                {sectorOptions.map((sector) => (
                   <SelectItem key={sector} value={sector}>
-                    {tSectors(sector)}
+                    {sector}
                   </SelectItem>
                 ))}
+                <SelectItem value="other">{tSectors("other")}</SelectItem>
               </SelectContent>
             </Select>
             {errors.sector ? (

@@ -35,8 +35,10 @@ export const endpoints = {
     questions: "/question-bank/questions",
   },
   surveys: {
-    forStudy: (studyId: string) => `/studies/${studyId}/survey`,
-    recommendQuestions: (studyId: string) => `/studies/${studyId}/recommend-questions`,
+    // Each Need runs its own independent survey now — routes are
+    // needId-scoped, not studyId-scoped.
+    forNeed: (needId: string) => `/needs/${needId}/survey`,
+    recommendQuestions: (needId: string) => `/needs/${needId}/recommend-questions`,
     updateQuestions: (id: string) => `/surveys/${id}/questions`,
     saveDraft: (id: string) => `/surveys/${id}/save-draft`,
     public: (id: string) => `/surveys/public/${id}`,
@@ -65,23 +67,27 @@ export const endpoints = {
     submit: "/contact",
   },
   evidence: {
-    // POST (create) and GET (list) both hit the study-scoped collection;
+    // POST (create) and GET (list) both hit the need-scoped collection;
     // submit and delete are their own routes (see the backend's
     // EvidenceController/EvidenceDeleteController).
-    forStudy: (studyId: string) => `/studies/${studyId}/evidence`,
-    submit: (studyId: string) => `/studies/${studyId}/evidence/submit`,
+    forNeed: (needId: string) => `/needs/${needId}/evidence`,
+    submit: (needId: string) => `/needs/${needId}/evidence/submit`,
     byId: (id: string) => `/evidence/${id}`,
   },
   needs: {
-    // One Need per study — create/read/update all hit the same URL.
-    forStudy: (studyId: string) => `/studies/${studyId}/need`,
+    // A Study can hold many Needs — create/list hit the study-scoped
+    // collection, get/update hit the Need directly by its own id.
+    forStudy: (studyId: string) => `/studies/${studyId}/needs`,
+    import: (studyId: string) => `/studies/${studyId}/needs/import`,
+    byId: (needId: string) => `/needs/${needId}`,
   },
   aiDecisions: {
-    classify: (studyId: string) => `/studies/${studyId}/ai-decisions/classify`,
-    forStudy: (studyId: string) => `/studies/${studyId}/ai-decisions`,
+    classify: (needId: string) => `/needs/${needId}/ai-decisions/classify`,
+    forNeed: (needId: string) => `/needs/${needId}/ai-decisions`,
     review: (id: string) => `/ai-decisions/${id}/review`,
   },
   domains: {
+    public: "/domains/public",
     list: "/domains",
     tree: "/domains/tree",
     create: "/domains",
@@ -97,10 +103,11 @@ export const endpoints = {
       `/domains/${domainId}/subdomains/${subId}/deactivate`,
   },
   publicSurveys: {
-    // Admin/authenticated side (Publish Survey + Generate QR).
-    links: (studyId: string) => `/studies/${studyId}/survey-links`,
-    deactivateLink: (studyId: string, linkId: string) =>
-      `/studies/${studyId}/survey-links/${linkId}/deactivate`,
+    // Admin/authenticated side (Publish Survey + Generate QR) — each Need
+    // runs its own independent set of survey links now.
+    links: (needId: string) => `/needs/${needId}/survey-links`,
+    deactivateLink: (needId: string, linkId: string) =>
+      `/needs/${needId}/survey-links/${linkId}/deactivate`,
   },
   citizen: {
     // Fully unauthenticated (Citizen public flow) — token identifies the
@@ -112,14 +119,15 @@ export const endpoints = {
     submitResponse: (token: string) => `/public/surveys/${token}/responses`,
   },
   responseQuality: {
-    assess: (studyId: string) => `/studies/${studyId}/response-quality/assess`,
-    list: (studyId: string) => `/studies/${studyId}/response-quality`,
-    generateSummary: (studyId: string) => `/studies/${studyId}/ai-summary/generate`,
-    getSummary: (studyId: string) => `/studies/${studyId}/ai-summary`,
+    assess: (needId: string) => `/needs/${needId}/response-quality/assess`,
+    list: (needId: string) => `/needs/${needId}/response-quality`,
+    generateSummary: (needId: string) => `/needs/${needId}/ai-summary/generate`,
+    getSummary: (needId: string) => `/needs/${needId}/ai-summary`,
   },
   priority: {
-    score: (studyId: string) => `/studies/${studyId}/priority-score`,
+    score: (needId: string) => `/needs/${needId}/priority-score`,
     dashboard: "/priority-scores",
+    approve: (id: string) => `/priority-scores/${id}/approve`,
   },
   reports: {
     list: "/reports",

@@ -140,7 +140,6 @@ export default function PriorityDashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("studyColumn")}</TableHead>
-                  <TableHead className="w-32">{t("statusColumn")}</TableHead>
                   <TableHead className="w-28">{t("scoreColumn")}</TableHead>
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
                   <TableHead className="w-32">{t("gapTypeColumn")}</TableHead>
@@ -151,7 +150,7 @@ export default function PriorityDashboardPage() {
                 {entries === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 6 }).map((__, cell) => (
+                      {Array.from({ length: 5 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -161,7 +160,7 @@ export default function PriorityDashboardPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={5}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -174,17 +173,14 @@ export default function PriorityDashboardPage() {
                   </TableRow>
                 ) : (
                   filtered.map((entry) => (
-                    <TableRow key={entry.studyId}>
+                    <TableRow key={entry.needId}>
                       <TableCell className="py-4 text-sm font-medium">
                         <Link
-                          href={`/public-surveys/${entry.studyId}/insights`}
+                          href={`/public-surveys/${entry.needId}/insights`}
                           className="hover:underline"
                         >
                           {entry.studyTitle}
                         </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {entry.studyStatus}
                       </TableCell>
                       <TableCell className="text-sm tabular-nums">
                         {entry.score?.overallScore ?? "—"}

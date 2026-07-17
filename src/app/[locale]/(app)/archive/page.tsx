@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRouter } from "@/i18n/navigation";
-import { SECTORS } from "@/config/sectors";
+import { useSectorOptions } from "@/hooks/use-sector-options";
 import { archiveService } from "@/services/archive/archive.service";
 import type { ArchiveEntry, ArchiveEntryKind } from "@/services/archive/archive.types";
 
@@ -41,6 +41,7 @@ function formatDate(iso: string): string {
 export default function ArchivePage() {
   const t = useTranslations("app.archive");
   const tSectors = useTranslations("app.settings.organization.sectors");
+  const sectorOptions = useSectorOptions();
   const router = useRouter();
   const { session } = useAuth();
   const isCrossEntity = session?.role.crossEntity ?? false;
@@ -205,11 +206,12 @@ export default function ArchivePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ALL}>{t("filterSectorAll")}</SelectItem>
-                    {SECTORS.map((s) => (
+                    {sectorOptions.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {tSectors(s)}
+                        {s}
                       </SelectItem>
                     ))}
+                    <SelectItem value="other">{tSectors("other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -26,7 +26,7 @@ import { domainsService } from "@/services/domains/domains.service";
 import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
 import type { AiDecision } from "@/services/ai-decisions/ai-decisions.types";
 import { ApiError } from "@/services/api/types";
-import type { StudyStatus } from "@/services/studies/studies.types";
+import type { NeedStatus } from "@/services/needs/needs.types";
 
 /**
  * Editable chip list for the reviewer's domain/sub-domain override. `options`
@@ -141,18 +141,16 @@ export function DomainChips({
 }
 
 export function AiClassificationSection({
-  studyId,
-  studyStatus,
-  hasNeed,
+  needId,
+  needStatus,
   evidenceCount,
   onReviewed,
 }: {
-  studyId: string;
-  studyStatus: StudyStatus;
-  hasNeed: boolean;
+  needId: string;
+  needStatus: NeedStatus;
   evidenceCount: number;
-  /** Fires after an approved/modified review — Study.domain/subDomain just
-   * changed server-side, so the parent should refetch the Study. */
+  /** Fires after an approved/modified review — Need.domain/subDomain just
+   * changed server-side, so the parent should refetch the Need. */
   onReviewed?: () => void;
 }) {
   const t = useTranslations("app.studies.classification");
@@ -179,7 +177,7 @@ export function AiClassificationSection({
   useEffect(() => {
     let cancelled = false;
     aiDecisionsService
-      .listByStudy(studyId)
+      .listByNeed(needId)
       .then((list) => {
         if (!cancelled) setLatest(list[0] ?? null);
       })
@@ -187,7 +185,7 @@ export function AiClassificationSection({
     return () => {
       cancelled = true;
     };
-  }, [studyId]);
+  }, [needId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -232,16 +230,15 @@ export function AiClassificationSection({
 
   if (!canRun) return null;
 
-  // evidence_submitted or further (ai_classified/human_reviewed) means
-  // evidence has been through the explicit Submit step at least once.
-  const isEligible =
-    hasNeed && studyStatus !== "draft" && studyStatus !== "need_captured";
+  // evidence_submitted or further means evidence has been through the
+  // explicit Submit step at least once.
+  const isEligible = needStatus !== "draft";
 
   const runClassify = async () => {
     setError(null);
     setIsRunning(true);
     try {
-      const result = await aiDecisionsService.classify(studyId);
+      const result = await aiDecisionsService.classify(needId);
       setLatest(result);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("classifyError"));
@@ -333,11 +330,7 @@ export function AiClassificationSection({
       <div className="space-y-5 p-5">
         {!isEligible ? (
           <p className="text-muted-foreground text-sm">
-            {!hasNeed
-              ? t("waitingForNeed")
-              : evidenceCount === 0
-                ? t("waitingForEvidence")
-                : t("waitingForSubmit")}
+            {evidenceCount === 0 ? t("waitingForEvidence") : t("waitingForSubmit")}
           </p>
         ) : null}
 

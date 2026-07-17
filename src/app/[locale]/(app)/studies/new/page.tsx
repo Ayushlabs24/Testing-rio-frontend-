@@ -22,9 +22,9 @@ export default function NewStudyPage() {
       title: values.title,
       villages: parseVillageInput(values.village),
     });
-    // Capturing the Need is the next step of the workflow, so go straight
-    // there rather than via the Study detail page.
-    router.push(`/studies/${study.id}/need`);
+    // Capturing the first Need is the next step of the workflow, so go
+    // straight there rather than via the Study detail page.
+    router.push(`/studies/${study.id}/needs/new`);
   };
 
   return (

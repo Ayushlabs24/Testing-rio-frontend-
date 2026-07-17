@@ -34,7 +34,6 @@ export const studiesService = {
         params: {
           limit: params.limit,
           offset: params.offset,
-          status: params.status,
           search: params.search,
         },
       },

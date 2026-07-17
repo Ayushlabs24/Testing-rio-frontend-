@@ -18,15 +18,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
+import { needsService } from "@/services/needs/needs.service";
+import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
-import type { Study } from "@/services/studies/studies.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
 
 interface Row {
-  study: Study;
+  need: Need;
+  studyTitle: string;
   survey: Survey | null;
 }
 
+/** One row per Need, not per Study — a Study can hold many Needs now, each
+ * running its own independent survey. */
 export default function SurveyBuilderPage() {
   const t = useTranslations("app.surveyBuilder");
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -36,12 +40,18 @@ export default function SurveyBuilderPage() {
     studiesService
       .list()
       .then(async (studies) => {
+        const needsByStudy = await Promise.all(
+          studies.map((study) => needsService.listByStudy(study.id).catch(() => [])),
+        );
+        const needs = studies.flatMap((study, index) =>
+          needsByStudy[index].map((need) => ({ need, studyTitle: study.title })),
+        );
         const surveys = await Promise.all(
-          studies.map((study) =>
-            surveysService.getSurveyByStudyId(study.id).catch(() => null),
+          needs.map(({ need }) =>
+            surveysService.getSurveyByNeedId(need.id).catch(() => null),
           ),
         );
-        setRows(studies.map((study, index) => ({ study, survey: surveys[index] })));
+        setRows(needs.map(({ need, studyTitle }, index) => ({ need, studyTitle, survey: surveys[index] })));
         setLoadFailed(false);
       })
       .catch(() => {
@@ -61,6 +71,7 @@ export default function SurveyBuilderPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("studyColumn")}</TableHead>
+                  <TableHead>{t("needColumn")}</TableHead>
                   <TableHead>{t("domainColumn")}</TableHead>
                   <TableHead className="w-36">{t("statusColumn")}</TableHead>
                   <TableHead className="w-24" />
@@ -70,7 +81,7 @@ export default function SurveyBuilderPage() {
                 {rows === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 4 }).map((__, cell) => (
+                      {Array.from({ length: 5 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -80,7 +91,7 @@ export default function SurveyBuilderPage() {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -92,15 +103,16 @@ export default function SurveyBuilderPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map(({ study, survey }) => (
-                    <TableRow key={study.id}>
+                  rows.map(({ need, studyTitle, survey }) => (
+                    <TableRow key={need.id}>
                       <TableCell className="py-4 text-sm font-medium">
-                        {study.title}
+                        {studyTitle}
                       </TableCell>
+                      <TableCell className="text-sm">{need.title}</TableCell>
                       <TableCell className="text-sm">
-                        {study.domain && study.subDomain ? (
+                        {need.domain && need.subDomain ? (
                           <span className="text-muted-foreground">
-                            {study.domain} / {study.subDomain}
+                            {need.domain} / {need.subDomain}
                           </span>
                         ) : (
                           <Badge variant="outline">{t("noDomain")}</Badge>
@@ -126,7 +138,7 @@ export default function SurveyBuilderPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild size="sm" variant="outline">
-                          <Link href={`/survey-builder/${study.id}`}>{t("open")}</Link>
+                          <Link href={`/survey-builder/${need.id}`}>{t("open")}</Link>
                         </Button>
                       </TableCell>
                     </TableRow>

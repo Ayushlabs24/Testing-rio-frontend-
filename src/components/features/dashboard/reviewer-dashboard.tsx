@@ -45,7 +45,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
       .then(setAlerts)
       .catch(() => setAlerts([]));
     studiesService
-      .list({ status: "human_reviewed", limit: 20 })
+      .list({ limit: 20 })
       .then((rows) => {
         const sorted = [...rows].sort(
           (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -58,8 +58,8 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
   const pendingCount = alerts?.length ?? 0;
   const atRiskCount = alerts?.filter((a) => a.status === "at_risk").length ?? 0;
   const breachedCount = alerts?.filter((a) => a.status === "breached").length ?? 0;
-  const studiesAwaitingReview = alerts
-    ? Array.from(new Map(alerts.map((a) => [a.studyId, a])).values())
+  const needsAwaitingReview = alerts
+    ? Array.from(new Map(alerts.map((a) => [a.needId, a])).values())
     : null;
 
   return (
@@ -82,22 +82,22 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
             <h2 className="text-foreground text-sm font-semibold">
               {t("awaitingReviewHeading")}
             </h2>
-            {studiesAwaitingReview === null ? (
+            {needsAwaitingReview === null ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="bg-muted h-9 w-full rounded" />
                 ))}
               </div>
-            ) : studiesAwaitingReview.length === 0 ? (
+            ) : needsAwaitingReview.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 {t("noStudiesAwaitingReview")}
               </p>
             ) : (
               <div className="divide-border divide-y rounded-md border">
-                {studiesAwaitingReview.map((alert) => (
+                {needsAwaitingReview.map((alert) => (
                   <Link
                     key={alert.aiDecisionId}
-                    href={`/studies/${alert.studyId}`}
+                    href={`/studies/${alert.studyId}/needs/${alert.needId}`}
                     className="hover:bg-muted/50 flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
                   >
                     <span className="truncate font-medium">{alert.studyTitle}</span>
@@ -181,7 +181,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                     <TableRow key={alert.aiDecisionId}>
                       <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
                         <Link
-                          href={`/studies/${alert.studyId}`}
+                          href={`/studies/${alert.studyId}/needs/${alert.needId}`}
                           className="hover:underline"
                         >
                           {alert.studyTitle}

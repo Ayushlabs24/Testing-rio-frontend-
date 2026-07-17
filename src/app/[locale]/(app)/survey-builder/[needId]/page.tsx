@@ -40,8 +40,9 @@ import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
-import { studiesService } from "@/services/studies/studies.service";
-import type { Study } from "@/services/studies/studies.types";
+import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
+import { needsService } from "@/services/needs/needs.service";
+import type { Need } from "@/services/needs/needs.types";
 import {
   ADDITIONAL_QUESTION_ANSWER_TYPES,
   surveysService,
@@ -66,16 +67,22 @@ const OPTIONS_ANSWER_TYPES = new Set<AdditionalQuestionAnswerType>([
 export default function SurveyBuilderDetailPage({
   params,
 }: {
-  params: Promise<{ studyId: string }>;
+  params: Promise<{ needId: string }>;
 }) {
-  const { studyId } = use(params);
+  const { needId } = use(params);
   const t = useTranslations("app.surveyBuilder.detail");
   const canWrite = usePermission("surveyBuilder", "write");
 
-  const [study, setStudy] = useState<Study | null>(null);
+  const [need, setNeed] = useState<Need | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [eligibleQuestions, setEligibleQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // The currently active Methodology Version — read-only here (Settings >
+  // Methodology is the only place it's edited). Shown before publish so a
+  // Research Officer knows what will be stamped onto the Survey; once
+  // published, `survey.methodologyVersion` (a frozen snapshot) is shown
+  // instead, since that's what the Survey actually recorded.
+  const [activeMethodologyVersion, setActiveMethodologyVersion] = useState<string | null>(null);
 
   // Draft — the two sections editable locally, only persisted on Save. Kept
   // apart (rather than one array) since the UI, save-validation, and
@@ -108,16 +115,16 @@ export default function SurveyBuilderDetailPage({
 
   function load() {
     Promise.all([
-      studiesService.getById(studyId),
-      surveysService.getSurveyByStudyId(studyId),
+      needsService.getById(needId),
+      surveysService.getSurveyByNeedId(needId),
     ])
-      .then(([studyResult, surveyResult]) => {
-        setStudy(studyResult);
+      .then(([needResult, surveyResult]) => {
+        setNeed(needResult);
         setSurvey(surveyResult);
         loadDraftFromSurvey(surveyResult);
-        if (studyResult.domain && studyResult.subDomain) {
+        if (needResult.domain && needResult.subDomain) {
           surveysService
-            .getQuestions(studyResult.domain, studyResult.subDomain)
+            .getQuestions(needResult.domain, needResult.subDomain)
             .then(setEligibleQuestions)
             .catch(() => setEligibleQuestions([]));
         }
@@ -129,7 +136,14 @@ export default function SurveyBuilderDetailPage({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studyId]);
+  }, [needId]);
+
+  useEffect(() => {
+    methodologyConfigService
+      .get()
+      .then((config) => setActiveMethodologyVersion(config.version))
+      .catch(() => undefined);
+  }, []);
 
   function moveRecommended(index: number, direction: -1 | 1) {
     setRecommended((prev) => {
@@ -338,10 +352,10 @@ export default function SurveyBuilderDetailPage({
         ) : (
           <>
             <PageHeader
-              title={study?.title ?? ""}
+              title={need?.title ?? ""}
               description={
-                study?.domain && study?.subDomain
-                  ? `${study.domain} / ${study.subDomain}`
+                need?.domain && need?.subDomain
+                  ? `${need.domain} / ${need.subDomain}`
                   : undefined
               }
               actions={
@@ -381,6 +395,18 @@ export default function SurveyBuilderDetailPage({
                 ) : null
               }
             />
+
+            {survey ? (
+              <div className="mb-4 flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground">{t("methodologyVersionLabel")}</span>
+                <Badge variant="outline">
+                  {survey.methodologyVersion ?? activeMethodologyVersion ?? "—"}
+                </Badge>
+                {!survey.methodologyVersion ? (
+                  <span className="text-muted-foreground">{t("methodologyVersionPendingNote")}</span>
+                ) : null}
+              </div>
+            ) : null}
 
             {dirty ? (
               <p className="text-muted-foreground mb-4 text-xs">

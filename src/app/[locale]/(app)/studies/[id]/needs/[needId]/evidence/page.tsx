@@ -50,7 +50,7 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import type { Evidence } from "@/services/evidence/evidence.types";
-import { studiesService } from "@/services/studies/studies.service";
+import { needsService } from "@/services/needs/needs.service";
 
 // RIO-FR-Add-01: mirrors the backend's own allowlist/limits exactly (see
 // EvidenceStorageService) — rejecting client-side is just a faster,
@@ -122,18 +122,18 @@ interface QueueItem {
   progress: number;
   error?: string;
   // Client-side validation failures (wrong type, too large, over the
-  // per-study limit) never attempted an upload — retrying them would just
+  // per-need limit) never attempted an upload — retrying them would just
   // fail the same way again, so only a real upload failure (network/server
   // error, caught in startUpload's .catch) is retryable.
   retryable?: boolean;
 }
 
 function DropzoneAndQueue({
-  studyId,
+  needId,
   existingCount,
   onUploaded,
 }: {
-  studyId: string;
+  needId: string;
   existingCount: number;
   onUploaded: (evidence: Evidence) => void;
 }) {
@@ -154,7 +154,7 @@ function DropzoneAndQueue({
     const controller = new AbortController();
     controllersRef.current.set(item.localId, controller);
     evidenceService
-      .upload(studyId, item.file, {
+      .upload(needId, item.file, {
         signal: controller.signal,
         onProgress: (percent) => updateItem(item.localId, { progress: percent }),
       })
@@ -384,7 +384,7 @@ function DeleteEvidenceAlert({
   );
 }
 
-function EvidenceUploadScreen({ studyId }: { studyId: string }) {
+function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: string }) {
   const t = useTranslations("app.evidence");
   const locale = useLocale();
   const [evidence, setEvidence] = useState<Evidence[] | null>(null);
@@ -400,11 +400,11 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([evidenceService.listByStudy(studyId), studiesService.getById(studyId)])
-      .then(([list, study]) => {
+    Promise.all([evidenceService.listByNeed(needId), needsService.getById(needId)])
+      .then(([list, need]) => {
         if (cancelled) return;
         setEvidence(list);
-        setIsSubmitted(study.status !== "draft" && study.status !== "need_captured");
+        setIsSubmitted(need.status !== "draft");
       })
       .catch((error) => {
         if (cancelled) return;
@@ -414,7 +414,7 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studyId]);
+  }, [needId]);
 
   const sortedEvidence = useMemo(
     () =>
@@ -428,7 +428,7 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      await evidenceService.submit(studyId);
+      await evidenceService.submit(needId);
       setIsSubmitted(true);
     } catch (error) {
       setSubmitError(error instanceof ApiError ? error.message : t("submitError"));
@@ -440,7 +440,7 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
   return (
     <PageContainer>
       <Link
-        href={`/studies/${studyId}`}
+        href={`/studies/${studyId}/needs/${needId}`}
         className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
       >
         <ArrowLeft className="size-4" />
@@ -459,7 +459,7 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
       <Card>
         <CardContent className="space-y-6">
           <DropzoneAndQueue
-            studyId={studyId}
+            needId={needId}
             existingCount={sortedEvidence.length}
             onUploaded={(created) => {
               setEvidence((prev) => [created, ...(prev ?? [])]);
@@ -627,13 +627,13 @@ function EvidenceUploadScreen({ studyId }: { studyId: string }) {
 export default function EvidenceUploadPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; needId: string }>;
 }) {
-  const { id: studyId } = use(params);
+  const { id: studyId, needId } = use(params);
 
   return (
     <PermissionGuard module="dataCollection" action="write">
-      <EvidenceUploadScreen studyId={studyId} />
+      <EvidenceUploadScreen studyId={studyId} needId={needId} />
     </PermissionGuard>
   );
 }

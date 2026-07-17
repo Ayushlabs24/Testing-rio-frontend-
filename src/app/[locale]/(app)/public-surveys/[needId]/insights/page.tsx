@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Sparkles, Gauge, ListChecks } from "lucide-react";
+import { ArrowLeft, Sparkles, Gauge, ListChecks, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
@@ -51,15 +51,16 @@ const LEVEL_VARIANT: Record<
 // `undefined` (omitted) for consolidated, so this never leaks past `scope`.
 const CONSOLIDATED = "consolidated";
 
-export default function StudyInsightsPage({
+export default function NeedInsightsPage({
   params,
 }: {
-  params: Promise<{ studyId: string }>;
+  params: Promise<{ needId: string }>;
 }) {
-  const { studyId } = use(params);
+  const { needId } = use(params);
   const t = useTranslations("app.publicSurveys.insights");
   const canWrite = usePermission("aiReview", "write");
   const canScore = usePermission("priorityScoring", "create");
+  const canApproveScore = usePermission("priorityScoring", "approve");
 
   const [links, setLinks] = useState<PublicSurveyLink[]>([]);
   const [scope, setScope] = useState<string>(CONSOLIDATED);
@@ -75,25 +76,26 @@ export default function StudyInsightsPage({
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [scoring, setScoring] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     publicSurveysService
-      .listLinks(studyId)
+      .listLinks(needId)
       .then(setLinks)
       .catch(() => setLinks([]));
-  }, [studyId]);
+  }, [needId]);
 
   function load() {
     responseQualityService
-      .getSummary(studyId, surveyLinkId)
+      .getSummary(needId, surveyLinkId)
       .then(setSummary)
       .catch(() => undefined);
     responseQualityService
-      .list(studyId, surveyLinkId)
+      .list(needId, surveyLinkId)
       .then(setQualityResults)
       .catch(() => setQualityResults([]));
     priorityService
-      .getLatest(studyId, surveyLinkId)
+      .getLatest(needId, surveyLinkId)
       .then(setPriorityScore)
       .catch(() => undefined);
   }
@@ -101,13 +103,13 @@ export default function StudyInsightsPage({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studyId, surveyLinkId]);
+  }, [needId, surveyLinkId]);
 
   async function handleGenerateSummary() {
     setGeneratingSummary(true);
     setError(null);
     try {
-      const result = await responseQualityService.generateSummary(studyId, surveyLinkId);
+      const result = await responseQualityService.generateSummary(needId, surveyLinkId);
       setSummary(result);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -120,7 +122,7 @@ export default function StudyInsightsPage({
     setAssessing(true);
     setError(null);
     try {
-      const results = await responseQualityService.assess(studyId, surveyLinkId);
+      const results = await responseQualityService.assess(needId, surveyLinkId);
       setQualityResults(results);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -133,12 +135,26 @@ export default function StudyInsightsPage({
     setScoring(true);
     setError(null);
     try {
-      const result = await priorityService.score(studyId, surveyLinkId);
+      const result = await priorityService.score(needId, surveyLinkId);
       setPriorityScore(result);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setScoring(false);
+    }
+  }
+
+  async function handleApprove() {
+    if (!priorityScore) return;
+    setApproving(true);
+    setError(null);
+    try {
+      const result = await priorityService.approve(priorityScore.id);
+      setPriorityScore(result);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setApproving(false);
     }
   }
 
@@ -279,11 +295,33 @@ export default function StudyInsightsPage({
                   </Button>
                 ) : null}
               </div>
-              <p className="text-muted-foreground text-xs">
-                {t("priorityPlaceholderNote")}
-              </p>
               {priorityScore ? (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className="border-transparent"
+                      variant={priorityScore.isApproved ? "default" : "outline"}
+                    >
+                      {priorityScore.isApproved ? t("approved") : t("pendingApproval")}
+                    </Badge>
+                    {!priorityScore.isApproved && canApproveScore ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={handleApprove}
+                        disabled={approving}
+                      >
+                        <CheckCircle2 className="size-3.5" />
+                        {approving ? t("approving") : t("approveScore")}
+                      </Button>
+                    ) : null}
+                  </div>
+                  {!priorityScore.isApproved ? (
+                    <p className="text-muted-foreground text-xs">
+                      {t("pendingApprovalNote")}
+                    </p>
+                  ) : null}
                   <div className="bg-muted/40 grid gap-4 rounded-md border px-3.5 py-3 sm:grid-cols-3">
                     <div>
                       <p className="text-muted-foreground text-xs">
@@ -314,13 +352,27 @@ export default function StudyInsightsPage({
                       {t("factorsHeading")}
                     </p>
                     <div className="divide-border divide-y rounded-md border">
+                      <div className="text-muted-foreground grid grid-cols-4 gap-2 px-3.5 py-2 text-xs font-medium">
+                        <span>{t("factorIndicatorLabel")}</span>
+                        <span className="text-right">{t("factorWeightLabel")}</span>
+                        <span className="text-right">{t("factorResponseValueLabel")}</span>
+                        <span className="text-right">{t("factorContributionLabel")}</span>
+                      </div>
                       {priorityScore.factors.map((factor) => (
                         <div
-                          key={factor.key}
-                          className="flex items-center justify-between px-3.5 py-2 text-sm"
+                          key={factor.indicator}
+                          className="grid grid-cols-4 gap-2 px-3.5 py-2 text-sm"
                         >
-                          <span className="text-muted-foreground">{factor.label}</span>
-                          <span className="tabular-nums">{factor.value}</span>
+                          <span className="text-muted-foreground truncate">
+                            {factor.indicator}
+                          </span>
+                          <span className="text-right tabular-nums">{factor.weight}</span>
+                          <span className="text-right tabular-nums">
+                            {factor.responseValue.toFixed(2)}
+                          </span>
+                          <span className="text-right tabular-nums">
+                            {factor.weightedContribution.toFixed(2)}
+                          </span>
                         </div>
                       ))}
                     </div>

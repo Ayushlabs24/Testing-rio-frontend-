@@ -1,27 +1,41 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
-import { ApiError } from "@/services/api/types";
 import type {
   CreateNeedPayload,
+  ImportNeedsResult,
   Need,
   UpdateNeedPayload,
 } from "@/services/needs/needs.types";
 
 export const needsService = {
-  async getByStudy(studyId: string): Promise<Need | null> {
-    try {
-      return await apiClient.get<Need>(endpoints.needs.forStudy(studyId));
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 404) return null;
-      throw error;
-    }
+  /** Every Need under a Study — a Study can hold many now. */
+  async listByStudy(studyId: string): Promise<Need[]> {
+    return apiClient.get<Need[]>(endpoints.needs.forStudy(studyId));
+  },
+
+  async getById(needId: string): Promise<Need> {
+    return apiClient.get<Need>(endpoints.needs.byId(needId));
   },
 
   async create(studyId: string, payload: CreateNeedPayload): Promise<Need> {
     return apiClient.post<Need>(endpoints.needs.forStudy(studyId), payload);
   },
 
-  async update(studyId: string, payload: UpdateNeedPayload): Promise<Need> {
-    return apiClient.patch<Need>(endpoints.needs.forStudy(studyId), payload);
+  async update(needId: string, payload: UpdateNeedPayload): Promise<Need> {
+    return apiClient.patch<Need>(endpoints.needs.byId(needId), payload);
+  },
+
+  /** Only while the Need is still `draft` — the backend rejects (409)
+   * anything past that, same rule as editing. */
+  async remove(needId: string): Promise<void> {
+    await apiClient.delete(endpoints.needs.byId(needId));
+  },
+
+  /** CSV/XLSX only — one Need per row. PDF isn't parsed here; attach it as
+   * Evidence on a manually created Need instead. */
+  async importFromFile(studyId: string, file: File): Promise<ImportNeedsResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.uploadForm<ImportNeedsResult>(endpoints.needs.import(studyId), formData);
   },
 };

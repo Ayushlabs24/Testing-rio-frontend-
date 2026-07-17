@@ -1,4 +1,3 @@
-import { toSector } from "@/config/sectors";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
@@ -26,16 +25,11 @@ interface ApiOrganizationSummary extends ApiOrganization {
   memberCount: number;
 }
 
-/**
- * The backend models email as nullable; the frontend treats "not set" as
- * "". `sector` is normalized against the known set rather than blindly
- * cast — an unrecognized value would otherwise break `tSectors(...)` in the UI.
- */
+/** The backend models email as nullable; the frontend treats "not set" as "". */
 function toOrganization(api: ApiOrganization): Organization {
   return {
     ...api,
     email: api.email ?? "",
-    sector: toSector(api.sector),
   };
 }
 

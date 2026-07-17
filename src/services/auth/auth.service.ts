@@ -1,4 +1,3 @@
-import { toSector } from "@/config/sectors";
 import { roles } from "@/mocks/data/roles";
 import { findUserByEmail, resolveContext, type AuthedContext } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
@@ -139,7 +138,7 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
       logoUrl: view.organization.logoUrl,
       region: view.organization.region,
       email: view.organization.email ?? "",
-      sector: toSector(view.organization.sector),
+      sector: view.organization.sector,
       villages: view.organization.villages,
       isActive: view.organization.isActive,
       createdAt: view.organization.createdAt,

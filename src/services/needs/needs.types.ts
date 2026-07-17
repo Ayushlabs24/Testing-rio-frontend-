@@ -1,38 +1,24 @@
-import type { StudyStatus } from "@/services/studies/studies.types";
+export type NeedStatus =
+  | "draft"
+  | "evidence_submitted"
+  | "ai_classified"
+  | "reviewer_approved"
+  | "survey_created"
+  | "survey_published";
 
 /**
- * A Need's editability tracks its parent Study.status — there is deliberately
- * no Need-level status or version column (Need.studyId is unique, so a Need's
- * lifecycle *is* its Study's; a second source of truth could only drift).
- *
- * Editable while the study is still being put together; reviewer-only once
- * evidence/AI work depends on the need; frozen once a human has reviewed it.
+ * A Need runs its own independent workflow now (a Study can hold many
+ * Needs) — it's editable only in `draft`. Every later stage has produced
+ * downstream artifacts (evidence, an AI classification, a survey...) that an
+ * in-place edit would silently invalidate. `survey_published` is terminal:
+ * the Need is done.
  */
-export const NEED_EDITABLE_STATUSES: readonly StudyStatus[] = ["draft", "need_captured"];
-export const NEED_REVIEWER_ONLY_STATUSES: readonly StudyStatus[] = [
-  "evidence_submitted",
-  "ai_classified",
-];
+export const NEED_EDITABLE_STATUSES: readonly NeedStatus[] = ["draft"];
 
-/**
- * - `editable`     — this user can edit it now.
- * - `reviewer_only`— this user can't, but a human_reviewer could (backend: 403).
- * - `locked`       — nobody can, reviewers included (backend: 409).
- *
- * The reviewer_only/locked split is not cosmetic: it's the difference between
- * "ask a reviewer" and "this is final", so don't collapse them into one flag.
- */
-export type NeedLockState = "editable" | "reviewer_only" | "locked";
+export type NeedLockState = "editable" | "locked";
 
-export function needLockState(
-  status: StudyStatus,
-  roleKey: string | undefined,
-): NeedLockState {
-  if (NEED_EDITABLE_STATUSES.includes(status)) return "editable";
-  if (NEED_REVIEWER_ONLY_STATUSES.includes(status)) {
-    return roleKey === "human_reviewer" ? "editable" : "reviewer_only";
-  }
-  return "locked";
+export function needLockState(status: NeedStatus): NeedLockState {
+  return NEED_EDITABLE_STATUSES.includes(status) ? "editable" : "locked";
 }
 
 export interface Need {
@@ -41,9 +27,18 @@ export interface Need {
   title: string;
   statement: string;
   village: string[];
-  /** System-set by the backend ("manual_entry" for needs captured here).
-   * Read-only — it isn't in Create/UpdateNeedPayload, and sending it is a 400. */
+  /** Where this Need came from — user-entered on manual creation (e.g.
+   * "Field Survey"), or "Bulk Import" plus the file's own Source column
+   * for an imported row. */
   source: string;
+  /** The submitter's own external tracking id (a field form number, a
+   * partner org's case id, etc.) — free text, optional. */
+  referenceId: string | null;
+  status: NeedStatus;
+  /** Set once a human approves an AI Classification decision on this Need
+   * (see AiDecisionsService.review) — never directly editable. */
+  domain: string | null;
+  subDomain: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -53,10 +48,26 @@ export interface CreateNeedPayload {
   title: string;
   statement: string;
   village: string[];
+  source?: string;
+  referenceId?: string;
 }
 
 export interface UpdateNeedPayload {
   title?: string;
   statement?: string;
   village?: string[];
+  source?: string;
+  referenceId?: string | null;
+}
+
+export interface ImportNeedRowError {
+  row: number;
+  message: string;
+}
+
+export interface ImportNeedsResult {
+  totalRows: number;
+  imported: number;
+  failed: number;
+  errors: ImportNeedRowError[];
 }

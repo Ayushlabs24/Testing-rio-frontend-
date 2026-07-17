@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Lock, MapPin, X } from "lucide-react";
+import { ArrowLeft, MapPin, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -9,7 +9,6 @@ import { z } from "zod";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { useAuth } from "@/components/providers/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,11 +18,6 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
-import {
-  needLockState,
-  type Need,
-  type NeedLockState,
-} from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
 
@@ -31,6 +25,8 @@ interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
+  source: string;
+  referenceId: string;
 }
 
 function VillageEditor({
@@ -104,84 +100,28 @@ function VillageEditor({
   );
 }
 
-/** Shown instead of the form once the need is no longer editable by this
- * user. Read-only rather than a disabled form: there's nothing to submit, and
- * a greyed-out form invites the user to try. */
-function NeedReadOnly({ need, lockState }: { need: Need; lockState: NeedLockState }) {
-  const t = useTranslations("app.studies.need");
-  return (
-    <div className="space-y-5">
-      <div
-        role="status"
-        className="bg-muted text-muted-foreground flex items-start gap-2 rounded-md border p-3 text-sm"
-      >
-        <Lock className="mt-0.5 size-4 shrink-0" />
-        <span>
-          {lockState === "locked" ? t("lockedNotice") : t("reviewerOnlyNotice")}
-        </span>
-      </div>
-
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">{t("titleLabel")}</p>
-        <p className="text-sm">{need.title}</p>
-      </div>
-
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">{t("statementLabel")}</p>
-        <p className="text-sm whitespace-pre-wrap">{need.statement}</p>
-      </div>
-
-      <div className="space-y-1.5">
-        <p className="text-muted-foreground text-xs font-medium">{t("villageLabel")}</p>
-        <div className="flex flex-wrap gap-1.5">
-          {need.village.map((v) => (
-            <Badge key={v} variant="secondary" className="gap-1">
-              <MapPin className="size-3" />
-              {v}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function DefineNeedPage({ params }: { params: Promise<{ id: string }> }) {
+export default function CreateNeedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: studyId } = use(params);
   const t = useTranslations("app.studies.need");
   const tValidation = useTranslations("app.studies.validation");
   const router = useRouter();
-  const { session } = useAuth();
 
   const [study, setStudy] = useState<Study | null>(null);
-  const [need, setNeed] = useState<Need | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Verify the study exists before offering its need form. getByStudy swallows
-    // a 404 as "no need captured yet" (an empty form is correct there), but that
-    // same 404 fires for a study that doesn't exist at all — e.g. a stale link
-    // to a study that was since removed. Loading the study distinguishes the two
-    // so a dead link shows "not found" instead of a form for a phantom study.
     let cancelled = false;
-    Promise.all([
-      studiesService.getById(studyId).catch((error) => {
-        if (error instanceof ApiError && error.status === 404) {
-          if (!cancelled) setNotFound(true);
-          return null;
-        }
-        throw error;
-      }),
-      needsService.getByStudy(studyId),
-    ])
-      .then(([studyResult, needResult]) => {
-        if (cancelled) return;
-        setStudy(studyResult);
-        setNeed(needResult);
+    studiesService
+      .getById(studyId)
+      .then((result) => {
+        if (!cancelled) setStudy(result);
       })
-      .catch(() => undefined)
+      .catch((error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 404) setNotFound(true);
+      })
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });
@@ -198,6 +138,8 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
       .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
     village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
+    source: z.string().trim().max(200, tValidation("sourceTooLong")),
+    referenceId: z.string().trim().max(200, tValidation("referenceIdTooLong")),
   });
 
   const {
@@ -208,31 +150,30 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
     formState: { errors, isSubmitting },
   } = useForm<NeedFormValues>({
     resolver: zodResolver(schema),
+    // A new Need starts from the villages configured on its Study; once the
+    // Need exists it owns its own list and the Study's is no longer imposed.
     values: {
-      title: need?.title ?? "",
-      statement: need?.statement ?? "",
-      // A new Need starts from the villages configured on its Study; once the
-      // Need exists it owns its own list and the Study's is no longer imposed.
-      village: need?.village ?? study?.villages ?? [],
+      title: "",
+      statement: "",
+      village: study?.villages ?? [],
+      source: "",
+      referenceId: "",
     },
   });
 
   const village = useWatch({ control, name: "village" });
 
-  // Mirrors the server's rule so the form doesn't offer an edit the API will
-  // reject. The server check is the real one — this only keeps the UI honest.
-  const lockState = study ? needLockState(study.status, session?.role.key) : "editable";
-  const canEdit = lockState === "editable";
-
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      if (need) {
-        await needsService.update(studyId, values);
-      } else {
-        await needsService.create(studyId, values);
-      }
-      router.push(`/studies/${studyId}`);
+      const created = await needsService.create(studyId, {
+        title: values.title,
+        statement: values.statement,
+        village: values.village,
+        source: values.source.trim() || undefined,
+        referenceId: values.referenceId.trim() || undefined,
+      });
+      router.push(`/studies/${studyId}/needs/${created.id}`);
     } catch (error) {
       setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
     }
@@ -249,10 +190,7 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
           {t("backToStudy")}
         </Link>
 
-        <PageHeader
-          title={need ? t("editTitle") : t("addTitle")}
-          description={t("pageDescription")}
-        />
+        <PageHeader title={t("addTitle")} description={t("pageDescription")} />
 
         <Card>
           <CardContent className="p-6">
@@ -264,8 +202,6 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
               </div>
             ) : notFound ? (
               <p className="text-muted-foreground text-sm">{t("studyNotFound")}</p>
-            ) : !canEdit && need ? (
-              <NeedReadOnly need={need} lockState={lockState} />
             ) : (
               <form onSubmit={submit} className="space-y-5">
                 <div className="space-y-2">
@@ -305,6 +241,31 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
                   {errors.village ? (
                     <p className="text-destructive text-sm">{errors.village.message}</p>
                   ) : null}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="source">{t("sourceLabel")}</Label>
+                    <Input
+                      id="source"
+                      placeholder={t("sourcePlaceholder")}
+                      {...register("source")}
+                    />
+                    {errors.source ? (
+                      <p className="text-destructive text-sm">{errors.source.message}</p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="referenceId">{t("referenceIdLabel")}</Label>
+                    <Input
+                      id="referenceId"
+                      placeholder={t("referenceIdPlaceholder")}
+                      {...register("referenceId")}
+                    />
+                    {errors.referenceId ? (
+                      <p className="text-destructive text-sm">{errors.referenceId.message}</p>
+                    ) : null}
+                  </div>
                 </div>
 
                 {submitError ? (

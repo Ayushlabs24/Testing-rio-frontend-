@@ -33,11 +33,11 @@ type CreateMode = "ai" | "manual";
  * question list here.
  */
 export function SurveyStatusCard({
-  studyId,
+  needId,
   domain,
   subDomain,
 }: {
-  studyId: string;
+  needId: string;
   domain: string | null | undefined;
   subDomain: string | null | undefined;
 }) {
@@ -55,11 +55,11 @@ export function SurveyStatusCard({
 
   useEffect(() => {
     surveysService
-      .getSurveyByStudyId(studyId)
+      .getSurveyByNeedId(needId)
       .then(setSurvey)
       .catch(() => undefined)
       .finally(() => setLoadingSurvey(false));
-  }, [studyId]);
+  }, [needId]);
 
   const domainApproved = Boolean(domain && subDomain);
 
@@ -68,11 +68,11 @@ export function SurveyStatusCard({
     setError(null);
     try {
       if (mode === "ai") {
-        await surveysService.recommendQuestions(studyId);
+        await surveysService.recommendQuestions(needId);
       } else {
-        await surveysService.createEmptySurvey(studyId);
+        await surveysService.createEmptySurvey(needId);
       }
-      router.push(`/survey-builder/${studyId}`);
+      router.push(`/survey-builder/${needId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
       setCreating(false);
@@ -133,7 +133,7 @@ export function SurveyStatusCard({
               {survey.status === "PUBLISHED" ? t("statusPublished") : t("statusCreated")}
             </Badge>
             <Button asChild size="sm" variant="outline" className="gap-1.5">
-              <Link href={`/survey-builder/${studyId}`}>
+              <Link href={`/survey-builder/${needId}`}>
                 <ClipboardList className="size-3.5" />
                 {t("editSurvey")}
               </Link>

@@ -436,12 +436,6 @@
         "statusActive": "Active",
         "statusInactive": "Inactive",
         "sectors": {
-          "education": "Education",
-          "healthcare": "Healthcare",
-          "agriculture": "Agriculture",
-          "wash": "Water, Sanitation & Hygiene",
-          "livelihoods": "Livelihoods",
-          "disaster_relief": "Disaster Relief",
           "other": "Other"
         }
       },
@@ -607,7 +601,7 @@
     "priorityDashboard": {
       "title": "Priority Dashboard",
       "description": "Every study in your organisation, ranked by placeholder priority score.",
-      "placeholderNote": "Placeholder scoring only — this does not implement the real methodology scoring workbook. See a study's Insights page for the full factor breakdown.",
+      "placeholderNote": "Initial rule-based scoring — response value x indicator weight, normalized to a 0-100 severity. See a Need's Insights page for the full factor breakdown.",
       "filterLevelLabel": "Priority level",
       "filterLevelAll": "All levels",
       "studyColumn": "Study",
@@ -812,7 +806,7 @@
       "statusColumn": "Status",
       "manageLinks": "Manage links",
       "viewInsights": "View insights",
-      "noStudies": "No studies yet.",
+      "noStudies": "No needs have a survey created yet. Build and create a survey in Survey Builder first.",
       "loadError": "Couldn't load studies. Please try again.",
       "insights": {
         "backToList": "Back to Public Surveys",
@@ -846,7 +840,16 @@
         "description": "AI-assisted summary, response quality, and priority scoring for this study — placeholder results until real scoring lands.",
         "scopeLabel": "Survey Scope",
         "scopeConsolidated": "Consolidated (All Survey Links)",
-        "scopeLoadError": "Couldn't load survey links."
+        "scopeLoadError": "Couldn't load survey links.",
+        "approved": "Approved",
+        "pendingApproval": "Pending approval",
+        "approveScore": "Approve score",
+        "approving": "Approving...",
+        "pendingApprovalNote": "This score is not visible on dashboards or reports until a reviewer approves it.",
+        "factorIndicatorLabel": "Indicator",
+        "factorWeightLabel": "Weight",
+        "factorResponseValueLabel": "Response value",
+        "factorContributionLabel": "Contribution"
       },
       "detail": {
         "backToList": "Back to Public Surveys",
@@ -877,7 +880,8 @@
         "active": "Active",
         "inactive": "Inactive",
         "neverExpires": "Never expires",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "methodologyVersionLabel": "Methodology Version"
       }
     },
     "studies": {
@@ -898,10 +902,11 @@
       "actionsColumn": "Actions",
       "status": {
         "draft": "Draft",
-        "need_captured": "Need captured",
         "evidence_submitted": "Evidence submitted",
         "ai_classified": "AI classified",
-        "human_reviewed": "Approved"
+        "reviewer_approved": "Reviewer approved",
+        "survey_created": "Survey created",
+        "survey_published": "Survey published"
       },
       "form": {
         "createTitle": "New study",
@@ -923,7 +928,9 @@
         "titleRequired": "Enter a title.",
         "titleTooLong": "Keep the title to 300 characters or fewer.",
         "needStatementRequired": "Describe the need.",
-        "needVillageRequired": "Enter a village."
+        "needVillageRequired": "Enter a village.",
+        "sourceTooLong": "Data source must be 200 characters or fewer.",
+        "referenceIdTooLong": "Reference ID must be 200 characters or fewer."
       },
       "need": {
         "backToStudy": "Back to study",
@@ -941,10 +948,30 @@
         "save": "Save need",
         "saving": "Saving...",
         "cancel": "Cancel",
-        "lockedNotice": "This need has been reviewed and can no longer be edited.",
-        "reviewerOnlyNotice": "Evidence has been submitted for this study, so only a human reviewer can amend the need now.",
+        "lockedNotice": {
+          "evidence_submitted": "Evidence has been submitted for this need — it can no longer be edited.",
+          "ai_classified": "This need has been AI-classified and is awaiting reviewer approval — it can no longer be edited.",
+          "reviewer_approved": "A reviewer has approved this need's classification — it can no longer be edited.",
+          "survey_created": "A survey has been created for this need — it can no longer be edited.",
+          "survey_published": "This need's survey has been published — it can no longer be edited."
+        },
         "genericError": "Couldn't save the need. Please try again.",
-        "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue."
+        "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",
+        "editNeed": "Edit",
+        "sourceLabel": "Data Source",
+        "sourcePlaceholder": "e.g. Field Survey, Community Meeting",
+        "referenceIdLabel": "Reference ID",
+        "referenceIdPlaceholder": "Optional — your own tracking id",
+        "delete": {
+          "action": "Delete",
+          "title": "Delete this need?",
+          "description": "This permanently removes the need. This cannot be undone.",
+          "confirm": "Delete need",
+          "cancel": "Cancel",
+          "deleting": "Deleting...",
+          "notDeletableBlocked": "This need has already moved past draft and can no longer be deleted.",
+          "lockedHint": "Can't delete — this need has already moved past draft (evidence, an AI classification, or a survey may depend on it)."
+        }
       },
       "classification": {
         "heading": "AI Classification",
@@ -1013,7 +1040,28 @@
         "updatedRelative": "Updated {time}",
         "villagesLabel": "Village(s)",
         "noVillage": "No village recorded yet",
-        "edit": "Edit"
+        "edit": "Edit",
+        "needsHeading": "Needs",
+        "needsEmpty": "No needs added yet.",
+        "openNeed": "Open",
+        "needEyebrow": "Need",
+        "needNotFound": "This need no longer exists. It may have been removed.",
+        "importNeeds": "Import Needs",
+        "needTitleColumn": "Need Title",
+        "villageColumn": "Village",
+        "statusColumn": "Status",
+        "aiStatusColumn": "AI Classification",
+        "surveyStatusColumn": "Survey Status",
+        "aiStatus": {
+          "not_started": "Not started",
+          "classified": "Classified",
+          "reviewed": "Reviewed"
+        },
+        "surveyStatus": {
+          "not_started": "Not started",
+          "draft": "Draft",
+          "published": "Published"
+        }
       },
       "delete": {
         "action": "Delete",
@@ -1053,6 +1101,24 @@
         "continue": "Continue",
         "creating": "Creating...",
         "genericError": "Something went wrong. Please try again."
+      },
+      "needsColumn": "Needs",
+      "import": {
+        "title": "Import Needs",
+        "description": "Upload a CSV or Excel file to create multiple Needs at once — one row becomes one Need.",
+        "chooseFile": "Choose a CSV or Excel file",
+        "allowedTypesHint": "Accepted: .csv, .xls, .xlsx. Columns: Title, Statement, Village, Source, Reference ID.",
+        "invalidType": "Only CSV, XLS and XLSX files are supported.",
+        "import": "Import",
+        "importing": "Importing...",
+        "cancel": "Cancel",
+        "close": "Close",
+        "genericError": "Something went wrong importing this file. Please try again.",
+        "totalRows": "Total rows",
+        "imported": "Imported",
+        "failed": "Failed",
+        "rowColumn": "Row",
+        "errorColumn": "Error"
       }
     },
     "surveyBuilder": {
@@ -1106,8 +1172,11 @@
         "publish": "Publish",
         "publishing": "Publishing...",
         "noSurveyYet": "This study has no survey yet — go to its Study Detail page and create one first.",
-        "genericError": "Something went wrong. Please try again."
-      }
+        "genericError": "Something went wrong. Please try again.",
+        "methodologyVersionLabel": "Methodology Version",
+        "methodologyVersionPendingNote": "(will be recorded when this survey is published)"
+      },
+      "needColumn": "Need"
     }
   },
   "common": {

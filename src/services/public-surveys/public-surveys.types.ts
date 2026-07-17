@@ -1,5 +1,6 @@
 export interface PublicSurveyLink {
   id: string;
+  needId: string;
   studyId: string;
   /** User-facing name — the only identifier ever shown for a link; never the token/id. */
   label: string;

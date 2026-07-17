@@ -47,9 +47,15 @@ export interface SurveyQuestionItem {
 
 export interface Survey {
   id: string;
+  needId: string;
   studyId: string;
   title: string;
   status: string;
+  /** Snapshot of the active Methodology Version at the moment this Survey
+   * was (most recently) published — null until first published. Never a
+   * live reference: a later Methodology/Question Bank change never
+   * retroactively changes what an already-published Survey shows here. */
+  methodologyVersion: string | null;
   questions: SurveyQuestionItem[];
 }
 
@@ -57,6 +63,7 @@ export interface Survey {
  * publishing only ever flips `status`, never touches the question list. */
 export interface SurveyRecord {
   id: string;
+  needId: string;
   studyId: string;
   title: string;
   status: string;
@@ -131,19 +138,19 @@ export const surveysService = {
     });
   },
 
-  async getSurveyByStudyId(studyId: string): Promise<Survey | null> {
-    return apiClient.get<Survey | null>(endpoints.surveys.forStudy(studyId));
+  async getSurveyByNeedId(needId: string): Promise<Survey | null> {
+    return apiClient.get<Survey | null>(endpoints.surveys.forNeed(needId));
   },
 
-  async recommendQuestions(studyId: string): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.surveys.recommendQuestions(studyId));
+  async recommendQuestions(needId: string): Promise<Survey> {
+    return apiClient.post<Survey>(endpoints.surveys.recommendQuestions(needId));
   },
 
   /** "Build Manually" path — an empty DRAFT survey with no questions yet, so
    * the Survey Builder page has something to attach questions to via its
    * add-from-Question-Bank combobox, without calling Gemini at all. */
-  async createEmptySurvey(studyId: string): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.surveys.forStudy(studyId));
+  async createEmptySurvey(needId: string): Promise<Survey> {
+    return apiClient.post<Survey>(endpoints.surveys.forNeed(needId));
   },
 
   async updateQuestions(

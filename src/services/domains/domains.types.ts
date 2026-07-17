@@ -23,6 +23,12 @@ export interface DomainWithSubDomains extends Domain {
   subDomains: SubDomain[];
 }
 
+/** From `GET /domains/public` — reachable pre-login (signup form), so just
+ * the name, nothing else. */
+export interface PublicDomainOption {
+  name: string;
+}
+
 export interface CreateDomainPayload {
   code: string;
   name: string;

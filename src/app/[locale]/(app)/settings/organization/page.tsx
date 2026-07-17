@@ -36,7 +36,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { OrganizationConsentCard } from "@/components/features/settings/organization-consent-card";
-import { SECTORS } from "@/config/sectors";
+import { useSectorOptions } from "@/hooks/use-sector-options";
 import { usePermission } from "@/hooks/use-permission";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import { usersService } from "@/services/users/users.service";
@@ -189,6 +189,7 @@ function ChipListEditor({
 export default function OrganizationSettingsPage() {
   const t = useTranslations("app.settings.organization");
   const tSectors = useTranslations("app.settings.organization.sectors");
+  const sectorOptions = useSectorOptions();
   const locale = useLocale();
   const { session, setSession } = useAuth();
   const canWrite = usePermission("entityTeam", "write");
@@ -257,7 +258,7 @@ export default function OrganizationSettingsPage() {
       name: values.name,
       region: values.region,
       email: values.email,
-      sector: (values.sector as (typeof SECTORS)[number] | null) ?? null,
+      sector: values.sector ?? null,
       purpose: values.sector === "other" ? values.otherSector : null,
       villages: values.villages,
       isActive: values.isActive,
@@ -291,9 +292,7 @@ export default function OrganizationSettingsPage() {
   const sectorDisplay =
     organization.sector === "other"
       ? organization.purpose || tSectors("other")
-      : organization.sector
-        ? tSectors(organization.sector)
-        : "—";
+      : (organization.sector ?? "—");
   const logoInitial = organization.name.charAt(0).toUpperCase();
 
   return (
@@ -437,18 +436,19 @@ export default function OrganizationSettingsPage() {
                   <div className="space-y-2">
                     <Label htmlFor="sector">{t("sectorLabel")}</Label>
                     <Select
-                      defaultValue={organization.sector ?? undefined}
+                      value={selectedSector ?? ""}
                       onValueChange={(value) => setValue("sector", value)}
                     >
                       <SelectTrigger id="sector" className="w-full">
                         <SelectValue placeholder={t("sectorPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {SECTORS.map((sector) => (
+                        {sectorOptions.map((sector) => (
                           <SelectItem key={sector} value={sector}>
-                            {tSectors(sector)}
+                            {sector}
                           </SelectItem>
                         ))}
+                        <SelectItem value="other">{tSectors("other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -6,23 +6,23 @@ import type {
 } from "@/services/public-surveys/public-surveys.types";
 
 export const publicSurveysService = {
-  async listLinks(studyId: string): Promise<PublicSurveyLink[]> {
-    return apiClient.get<PublicSurveyLink[]>(endpoints.publicSurveys.links(studyId));
+  async listLinks(needId: string): Promise<PublicSurveyLink[]> {
+    return apiClient.get<PublicSurveyLink[]>(endpoints.publicSurveys.links(needId));
   },
 
   async createLink(
-    studyId: string,
+    needId: string,
     payload: CreateSurveyLinkPayload,
   ): Promise<PublicSurveyLink> {
     return apiClient.post<PublicSurveyLink>(
-      endpoints.publicSurveys.links(studyId),
+      endpoints.publicSurveys.links(needId),
       payload,
     );
   },
 
-  async deactivateLink(studyId: string, linkId: string): Promise<PublicSurveyLink> {
+  async deactivateLink(needId: string, linkId: string): Promise<PublicSurveyLink> {
     return apiClient.patch<PublicSurveyLink>(
-      endpoints.publicSurveys.deactivateLink(studyId, linkId),
+      endpoints.publicSurveys.deactivateLink(needId, linkId),
     );
   },
 };

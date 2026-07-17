@@ -8,6 +8,7 @@ export interface ClassificationSuggestion {
 
 export interface AiDecision {
   id: string;
+  needId: string;
   studyId: string;
   touchpoint: "need_classification" | "priority_scoring";
   suggestion: ClassificationSuggestion;

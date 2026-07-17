@@ -4,8 +4,8 @@ import {
   Archive,
   BarChart3,
   Building2,
+  ClipboardEdit,
   ClipboardList,
-  FileQuestion,
   Gauge,
   LayoutDashboard,
   ListTree,
@@ -64,7 +64,7 @@ export const appNav: NavItem[] = [
   {
     labelKey: "surveyBuilder",
     href: "/survey-builder",
-    icon: FileQuestion,
+    icon: ClipboardEdit,
     module: "surveyBuilder",
   },
   {
@@ -148,6 +148,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "dashboard",
     "organization",
     "studies",
+    "surveyBuilder",
     "publicSurveys",
     "priorityDashboard",
     "reports",
@@ -158,7 +159,6 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "roles",
     "users",
     "methodologyConfig",
-    "surveyBuilder",
   ],
   ngo_research_officer: [
     "dashboard",

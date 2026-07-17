@@ -4,20 +4,18 @@ import {
   ArrowLeft,
   CalendarDays,
   Clock,
-  FileText,
   MapPin,
   Pencil,
   Plus,
   Trash2,
-  UploadCloud,
+  Upload,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
-import { use, useEffect, useState, type ReactNode } from "react";
-import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
+import { use, useEffect, useState } from "react";
+import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
-import { StudyStatusBadge } from "@/components/features/studies/study-status-badge";
-import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
+import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
+import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -25,13 +23,28 @@ import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
-import { cn, titleCase } from "@/lib/utils";
 import { Link, useRouter } from "@/i18n/navigation";
+import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudyDetail } from "@/services/studies/studies.types";
+import { surveysService } from "@/services/surveys/surveys.service";
 
 function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -69,8 +82,6 @@ function formatRelativeTime(iso: string): string {
   return rtf.format(Math.round(duration), "years");
 }
 
-/** Villages as chips, not plain text — a Need's `village` is a real array
- * from the backend now, not a single comma-separated string to split here. */
 function VillageChips({ villages }: { villages: string[] }) {
   const t = useTranslations("app.studies.detail");
   if (villages.length === 0) {
@@ -88,98 +99,90 @@ function VillageChips({ villages }: { villages: string[] }) {
   );
 }
 
-function FilledTextBlock({ children }: { children: ReactNode }) {
-  return (
-    <div className="border-border bg-muted/40 min-h-24 rounded-md border px-3.5 py-3 text-sm whitespace-pre-wrap">
-      {children}
-    </div>
-  );
+type AiClassificationStatus = "not_started" | "classified" | "reviewed";
+type SurveyStatus = "not_started" | "draft" | "published";
+
+interface NeedRowData {
+  need: Need;
+  aiStatus: AiClassificationStatus;
+  surveyStatus: SurveyStatus;
 }
 
-/** Same filled-input look as the statement block, sized for a single line —
- * Village/Source sit inside the Need card as fields, not a bare dt/dd pair. */
-function FilledField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-muted-foreground text-xs font-medium">{label}</p>
-      <div className="border-border bg-muted/40 rounded-md border px-3.5 py-2 text-sm">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-type StepState = "not_started" | "in_progress" | "completed";
-
-const STEP_BADGE_CLASS: Record<StepState, string> = {
-  not_started: "bg-muted text-muted-foreground",
-  in_progress: "bg-badge-warning text-badge-warning-foreground",
-  completed: "bg-badge-success text-badge-success-foreground",
+const AI_STATUS_VARIANT: Record<AiClassificationStatus, "outline" | "secondary" | "default"> = {
+  not_started: "outline",
+  classified: "secondary",
+  reviewed: "default",
 };
 
-/** Shared chrome for a workflow step — colored icon + tinted header strip +
- * status badge, instead of yet another plain white card. */
-function WorkflowStep({
-  icon,
-  title,
-  state,
-  stateLabel,
-  action,
-  children,
-}: {
-  icon: ReactNode;
-  title: string;
-  state: StepState;
-  stateLabel: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="border-border overflow-hidden rounded-xl border">
-      <div className="bg-primary/5 border-border flex items-center justify-between gap-3 border-b px-5 py-3.5">
-        <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-          <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
-            {icon}
-          </span>
-          {title}
-        </h2>
-        <div className="flex items-center gap-2">
-          <Badge className={cn("border-transparent", STEP_BADGE_CLASS[state])}>
-            {stateLabel}
-          </Badge>
-          {action}
-        </div>
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  );
-}
+const SURVEY_STATUS_VARIANT: Record<SurveyStatus, "outline" | "secondary" | "default"> = {
+  not_started: "outline",
+  draft: "secondary",
+  published: "default",
+};
 
 export default function StudyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations("app.studies.detail");
   const tStudies = useTranslations("app.studies");
+  const tNeedDelete = useTranslations("app.studies.need.delete");
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const prefillVillage = searchParams.get("village") ?? "";
   const canWrite = usePermission("studySurvey", "write");
   const canCaptureNeed = usePermission("dataCollection", "create");
-  const canViewEvidence = usePermission("dataCollection", "read");
-  const canUseSurveyBuilder = usePermission("surveyBuilder", "read");
+  const canDeleteNeed = usePermission("dataCollection", "write");
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
-  const [need, setNeed] = useState<Need | null>(null);
+  const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+
+  const loadNeeds = () => {
+    needsService
+      .listByStudy(id)
+      .then(async (needs) => {
+        setNeedRows(needs.map((need) => ({ need, aiStatus: "not_started", surveyStatus: "not_started" })));
+        const [aiStatuses, surveyStatuses] = await Promise.all([
+          Promise.all(
+            needs.map((need) =>
+              aiDecisionsService
+                .listByNeed(need.id)
+                .then((list): AiClassificationStatus => {
+                  const latest = list[0];
+                  if (!latest) return "not_started";
+                  return latest.humanDecision ? "reviewed" : "classified";
+                })
+                .catch((): AiClassificationStatus => "not_started"),
+            ),
+          ),
+          Promise.all(
+            needs.map((need) =>
+              surveysService
+                .getSurveyByNeedId(need.id)
+                .then((survey): SurveyStatus => {
+                  if (!survey) return "not_started";
+                  return survey.status === "PUBLISHED" ? "published" : "draft";
+                })
+                .catch((): SurveyStatus => "not_started"),
+            ),
+          ),
+        ]);
+        setNeedRows(
+          needs.map((need, index) => ({
+            need,
+            aiStatus: aiStatuses[index],
+            surveyStatus: surveyStatuses[index],
+          })),
+        );
+      })
+      .catch(() => undefined);
+  };
 
   useEffect(() => {
     studiesService
       .getById(id)
       .then(setStudy)
       .catch(() => setNotFound(true));
-    needsService
-      .getByStudy(id)
-      .then(setNeed)
-      .catch(() => undefined);
+    loadNeeds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (notFound) {
@@ -212,14 +215,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
       </PermissionGuard>
     );
   }
-
-  const needState: StepState = need ? "completed" : "not_started";
-  const evidenceState: StepState =
-    study.evidenceCount === 0
-      ? "not_started"
-      : study.status === "draft" || study.status === "need_captured"
-        ? "in_progress"
-        : "completed";
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -269,107 +264,159 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           <div className="space-y-6 lg:col-span-2">
             <Card className="shadow-md">
               <CardContent className="space-y-4 p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                    <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
-                      <FileText className="size-3.5" />
-                    </span>
-                    {t("needHeading")}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-foreground text-sm font-semibold">
+                    {t("needsHeading")}
                   </h2>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      className={cn("border-transparent", STEP_BADGE_CLASS[needState])}
-                    >
-                      {t(`stepState.${needState}`)}
-                    </Badge>
-                    {canCaptureNeed ? (
+                  {canCaptureNeed ? (
+                    <div className="flex items-center gap-2">
                       <Button
                         type="button"
-                        variant={need ? "ghost" : "default"}
+                        variant="outline"
                         size="sm"
                         className="gap-1.5"
-                        onClick={() =>
-                          router.push(
-                            !need && prefillVillage
-                              ? `/studies/${study.id}/need?village=${encodeURIComponent(prefillVillage)}`
-                              : `/studies/${study.id}/need`,
-                          )
-                        }
+                        onClick={() => setImportOpen(true)}
                       >
-                        {need ? (
-                          <Pencil className="size-3.5" />
-                        ) : (
-                          <Plus className="size-3.5" />
-                        )}
-                        {need ? t("editNeed") : t("addNeed")}
+                        <Upload className="size-3.5" />
+                        {t("importNeeds")}
                       </Button>
-                    ) : null}
-                  </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => router.push(`/studies/${study.id}/needs/new`)}
+                      >
+                        <Plus className="size-3.5" />
+                        {t("addNeed")}
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
 
-                {need ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <p className="text-muted-foreground text-xs font-medium">
-                        {t("needStatementLabel")}
-                      </p>
-                      <FilledTextBlock>{need.statement}</FilledTextBlock>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FilledField label={t("needVillageLabel")}>
-                        <VillageChips villages={need.village} />
-                      </FilledField>
-                      <FilledField label={t("needSourceLabel")}>
-                        {titleCase(need.source)}
-                      </FilledField>
-                    </div>
+                {needRows === null ? (
+                  <div className="space-y-2">
+                    <div className="bg-muted h-10 w-full rounded" />
+                    <div className="bg-muted h-10 w-full rounded" />
                   </div>
+                ) : needRows.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">{t("needsEmpty")}</p>
                 ) : (
-                  <p className="text-muted-foreground text-sm">{t("needEmpty")}</p>
+                  <div className="border-border overflow-hidden rounded-lg border">
+                    <TooltipProvider delayDuration={200}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("needTitleColumn")}</TableHead>
+                          <TableHead>{t("villageColumn")}</TableHead>
+                          <TableHead>{t("statusColumn")}</TableHead>
+                          <TableHead>{t("aiStatusColumn")}</TableHead>
+                          <TableHead>{t("surveyStatusColumn")}</TableHead>
+                          {canDeleteNeed ? <TableHead className="w-12" /> : null}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {needRows.map(({ need, aiStatus, surveyStatus }) => (
+                          <TableRow
+                            key={need.id}
+                            className="hover:bg-muted/30 cursor-pointer"
+                            onClick={() => router.push(`/studies/${study.id}/needs/${need.id}`)}
+                          >
+                            <TableCell className="max-w-52 truncate text-sm font-medium">
+                              {need.title}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {need.village.slice(0, 2).map((v) => (
+                                  <Badge key={v} variant="secondary" className="gap-1">
+                                    <MapPin className="size-3" />
+                                    {v}
+                                  </Badge>
+                                ))}
+                                {need.village.length > 2 ? (
+                                  <span className="text-muted-foreground text-xs">
+                                    +{need.village.length - 2}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <NeedStatusBadge status={need.status} />
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={AI_STATUS_VARIANT[aiStatus]}>
+                                {t(`aiStatus.${aiStatus}`)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={SURVEY_STATUS_VARIANT[surveyStatus]}>
+                                {t(`surveyStatus.${surveyStatus}`)}
+                              </Badge>
+                            </TableCell>
+                            {canDeleteNeed ? (
+                              <TableCell onClick={(event) => event.stopPropagation()}>
+                                {need.status === "draft" ? (
+                                  <DeleteNeedDialog
+                                    needId={need.id}
+                                    onDeleted={() =>
+                                      setNeedRows((prev) =>
+                                        (prev ?? []).filter((row) => row.need.id !== need.id),
+                                      )
+                                    }
+                                    trigger={
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="text-muted-foreground hover:text-destructive size-8 shrink-0"
+                                          aria-label={tNeedDelete("action")}
+                                        >
+                                          <Trash2 className="size-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                    }
+                                  />
+                                ) : (
+                                  // Not `draft` anymore — evidence/an AI
+                                  // classification/a survey may already
+                                  // depend on this Need, so deletion is
+                                  // blocked. Shown disabled with a reason
+                                  // rather than just omitted, so it doesn't
+                                  // silently look the same as "no
+                                  // permission" (see the Evidence page's
+                                  // identical pattern for a locked delete).
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          disabled
+                                          className="text-muted-foreground size-8 shrink-0"
+                                          aria-label={tNeedDelete("lockedHint")}
+                                        >
+                                          <Trash2 className="size-4" />
+                                        </Button>
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{tNeedDelete("lockedHint")}</TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </TableCell>
+                            ) : null}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    </TooltipProvider>
+                  </div>
                 )}
               </CardContent>
             </Card>
-
-            {canViewEvidence ? (
-              <WorkflowStep
-                icon={<UploadCloud className="size-3.5" />}
-                title={t("evidenceHeading")}
-                state={evidenceState}
-                stateLabel={t(`stepState.${evidenceState}`)}
-                action={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => router.push(`/studies/${study.id}/evidence`)}
-                  >
-                    <UploadCloud className="size-3.5" />
-                    {t("manageEvidence")}
-                  </Button>
-                }
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className={cn(
-                      "flex size-9 items-center justify-center rounded-full text-sm font-semibold",
-                      study.evidenceCount > 0
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {study.evidenceCount}
-                  </span>
-                  <p className="text-foreground text-sm font-medium">
-                    {t("evidenceCount", { count: study.evidenceCount })}
-                  </p>
-                </div>
-              </WorkflowStep>
-            ) : null}
           </div>
 
-          {/* Study Information — an at-a-glance panel (status, timing,
-           * village, evidence, assigned reviewer) instead of a bare
-           * label/value list. */}
+          {/* Study Information — an at-a-glance panel (villages, timing)
+           * instead of a bare label/value list. A Study has no status of
+           * its own now — that lives on each Need. */}
           <div className="lg:col-span-1">
             <Card className="h-fit">
               <CardContent className="space-y-4 p-6">
@@ -377,12 +424,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                   {t("detailsHeading")}
                 </h2>
                 <dl className="space-y-4 text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="text-muted-foreground">{t("statusLabel")}</dt>
-                    <dd>
-                      <StudyStatusBadge status={study.status} />
-                    </dd>
-                  </div>
                   <div className="flex items-start gap-2.5">
                     <CalendarDays className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                     <span title={formatDateTime(study.createdAt)}>
@@ -403,7 +444,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                       {t("villagesLabel")}
                     </dt>
                     <dd>
-                      <VillageChips villages={need?.village ?? []} />
+                      <VillageChips villages={study.villages} />
                     </dd>
                   </div>
                 </dl>
@@ -412,31 +453,12 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* AI Classification (Need-based) and Survey Builder's AI
-         * recommendation (Study-level) run full width, one below the other,
-         * as their own sections — two distinct AI features, not one card. */}
-        <div className="mt-6 space-y-6">
-          <AiClassificationSection
-            studyId={study.id}
-            studyStatus={study.status}
-            hasNeed={need !== null}
-            evidenceCount={study.evidenceCount}
-            onReviewed={() =>
-              studiesService
-                .getById(id)
-                .then(setStudy)
-                .catch(() => undefined)
-            }
-          />
-
-          {canUseSurveyBuilder ? (
-            <SurveyStatusCard
-              studyId={study.id}
-              domain={study.domain}
-              subDomain={study.subDomain}
-            />
-          ) : null}
-        </div>
+        <ImportNeedsDialog
+          studyId={study.id}
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImported={loadNeeds}
+        />
       </PageContainer>
     </PermissionGuard>
   );

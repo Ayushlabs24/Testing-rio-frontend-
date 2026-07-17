@@ -41,10 +41,11 @@ import {
 import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
+import { needsService } from "@/services/needs/needs.service";
+import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
-import { studiesService } from "@/services/studies/studies.service";
-import type { Study } from "@/services/studies/studies.types";
+import { surveysService } from "@/services/surveys/surveys.service";
 
 const LABEL_MAX_LENGTH = 150;
 
@@ -155,16 +156,21 @@ function LinkRow({
 export default function PublicSurveyDetailPage({
   params,
 }: {
-  params: Promise<{ studyId: string }>;
+  params: Promise<{ needId: string }>;
 }) {
-  const { studyId } = use(params);
+  const { needId } = use(params);
   const t = useTranslations("app.publicSurveys.detail");
   const canCreate = usePermission("studySurvey", "create");
   const canWrite = usePermission("studySurvey", "write");
 
-  const [study, setStudy] = useState<Study | null>(null);
+  const [need, setNeed] = useState<Need | null>(null);
   const [links, setLinks] = useState<PublicSurveyLink[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // The Methodology Version this Need's survey was actually built/published
+  // against — a frozen snapshot (see SurveysService.saveDraft on the
+  // backend), so it's whatever version was active back then, not
+  // necessarily today's active one.
+  const [methodologyVersion, setMethodologyVersion] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState("");
@@ -175,12 +181,14 @@ export default function PublicSurveyDetailPage({
 
   function load() {
     Promise.all([
-      studiesService.getById(studyId),
-      publicSurveysService.listLinks(studyId),
+      needsService.getById(needId),
+      publicSurveysService.listLinks(needId),
+      surveysService.getSurveyByNeedId(needId),
     ])
-      .then(([studyResult, linkRows]) => {
-        setStudy(studyResult);
+      .then(([needResult, linkRows, survey]) => {
+        setNeed(needResult);
         setLinks(linkRows);
+        setMethodologyVersion(survey?.methodologyVersion ?? null);
         setLoadFailed(false);
       })
       .catch(() => {
@@ -192,7 +200,7 @@ export default function PublicSurveyDetailPage({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studyId]);
+  }, [needId]);
 
   function handleCreateOpenChange(next: boolean) {
     setCreateOpen(next);
@@ -219,7 +227,7 @@ export default function PublicSurveyDetailPage({
     setCreating(true);
     setFormError(null);
     try {
-      await publicSurveysService.createLink(studyId, {
+      await publicSurveysService.createLink(needId, {
         label: label.trim(),
         expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
       });
@@ -233,7 +241,7 @@ export default function PublicSurveyDetailPage({
   }
 
   async function deactivate(linkId: string) {
-    await publicSurveysService.deactivateLink(studyId, linkId);
+    await publicSurveysService.deactivateLink(needId, linkId);
     load();
   }
 
@@ -249,7 +257,7 @@ export default function PublicSurveyDetailPage({
         </Link>
 
         <PageHeader
-          title={study?.title ?? ""}
+          title={need?.title ?? ""}
           description={t("description")}
           actions={
             canCreate ? (
@@ -260,6 +268,13 @@ export default function PublicSurveyDetailPage({
             ) : null
           }
         />
+
+        {methodologyVersion ? (
+          <div className="mb-4 flex items-center gap-1.5 text-xs">
+            <span className="text-muted-foreground">{t("methodologyVersionLabel")}</span>
+            <Badge variant="outline">{methodologyVersion}</Badge>
+          </div>
+        ) : null}
 
         <div className="space-y-4">
           <h2 className="text-foreground text-sm font-semibold">{t("linksHeading")}</h2>
@@ -313,6 +328,14 @@ export default function PublicSurveyDetailPage({
               <DialogTitle>{t("newLink")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {methodologyVersion ? (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-muted-foreground">
+                    {t("methodologyVersionLabel")}
+                  </span>
+                  <Badge variant="outline">{methodologyVersion}</Badge>
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="survey-link-label">
                   {t("linkLabelLabel")} <span className="text-destructive">*</span>
