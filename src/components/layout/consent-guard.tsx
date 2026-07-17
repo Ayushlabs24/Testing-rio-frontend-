@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -9,22 +9,43 @@ import { Logo } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { authService } from "@/services/auth/auth.service";
+import { consentService } from "@/services/consent/consent.service";
 
 /**
- * Blocks the app until the current user has personally accepted the
- * data-sharing consent notice. Self-signups consent during signup; anyone
- * an admin invited via the Users page hits this on first login, since
- * consent has to come from the person themselves, not whoever created
- * their account.
+ * Blocks the app until the current user has accepted the *currently active*
+ * consent policy version — not merely "consented at some point." Checking
+ * `consentedPolicyVersion` against the live active version (rather than
+ * just `consentedAt` truthiness) is what forces a re-prompt for everyone,
+ * including already-consented orgs, after a policy version bump. Self-signup
+ * admins no longer auto-consent at signup, so they hit this same gate on
+ * first login, same as anyone an admin invites via the Users page.
  */
 export function ConsentGuard({ children }: { children: ReactNode }) {
   const { session, setSession } = useAuth();
   const t = useTranslations("app.consent");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeVersion, setActiveVersion] = useState<string | null | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    consentService
+      .getActive()
+      .then((policy) => setActiveVersion(policy.version))
+      .catch(() => setActiveVersion(null));
+  }, []);
 
   if (!session) return null;
-  if (session.user.consentedAt) return <>{children}</>;
+  // Still resolving the active version — render nothing rather than
+  // flashing the consent screen for an already-consented user.
+  if (activeVersion === undefined) return null;
+  if (
+    session.user.consentedPolicyVersion &&
+    session.user.consentedPolicyVersion === activeVersion
+  ) {
+    return <>{children}</>;
+  }
 
   const handleAccept = async () => {
     setError(null);

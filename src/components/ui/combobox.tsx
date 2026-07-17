@@ -1,0 +1,126 @@
+"use client";
+
+import { Check, ChevronsUpDown, Search } from "lucide-react";
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+export interface ComboboxItem {
+  value: string;
+  label: string;
+  /** Optional secondary line shown under `label` in the dropdown list only (e.g. an email under a person's name). */
+  description?: string;
+}
+
+interface ComboboxProps {
+  items: ComboboxItem[];
+  value: string | null;
+  onSelect: (value: string) => void;
+  onQueryChange?: (query: string) => void;
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  loading?: boolean;
+  disabled?: boolean;
+  "aria-label"?: string;
+}
+
+// A minimal searchable single-select — no cmdk dependency, built on the
+// same Popover primitive as the rest of the UI kit. `onQueryChange` lets a
+// caller do server-side search (e.g. Sharing's org lookup); when omitted,
+// filtering happens locally against `items` (e.g. Reports' static type list).
+export function Combobox({
+  items,
+  value,
+  onSelect,
+  onQueryChange,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  loading,
+  disabled,
+  "aria-label": ariaLabel,
+}: ComboboxProps) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+
+  const selected = items.find((item) => item.value === value);
+  const filtered = onQueryChange
+    ? items
+    : items.filter((item) => item.label.toLowerCase().includes(query.toLowerCase()));
+
+  function handleQueryChange(next: string) {
+    setQuery(next);
+    onQueryChange?.(next);
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) handleQueryChange("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={ariaLabel}
+          className={cn(
+            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
+            !selected && "text-muted-foreground",
+          )}
+        >
+          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+        <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+          <Search className="text-muted-foreground size-4 shrink-0" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
+          />
+        </div>
+        <div className="max-h-64 overflow-y-auto p-1">
+          {loading ? (
+            <p className="text-muted-foreground px-2.5 py-4 text-center text-sm">
+              {searchPlaceholder}
+            </p>
+          ) : filtered.length === 0 ? (
+            <p className="text-muted-foreground px-2.5 py-4 text-center text-sm">
+              {emptyText}
+            </p>
+          ) : (
+            filtered.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => {
+                  onSelect(item.value);
+                  setOpen(false);
+                }}
+                className="hover:bg-accent hover:text-accent-foreground flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm"
+              >
+                <span className="flex min-w-0 flex-col items-start">
+                  <span className="truncate">{item.label}</span>
+                  {item.description ? (
+                    <span className="text-muted-foreground truncate text-xs">
+                      {item.description}
+                    </span>
+                  ) : null}
+                </span>
+                {item.value === value ? <Check className="size-4 shrink-0" /> : null}
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

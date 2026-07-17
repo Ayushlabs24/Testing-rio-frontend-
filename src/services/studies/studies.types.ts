@@ -24,6 +24,8 @@ export interface Study {
   title: string;
   villages: string[];
   status: StudyStatus;
+  /** Null = no reviewer assigned yet (pre-existing Study, or org had no NGO Research Officer at creation). */
+  assignedReviewerId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -50,6 +52,13 @@ export interface CreateStudyPayload {
 export interface UpdateStudyPayload {
   title?: string;
   villages?: string[];
+}
+
+/** Study-create's reviewer picker — just enough to render "Full Name / Email". */
+export interface AssignableReviewer {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface ListStudiesParams {

@@ -6,6 +6,13 @@ export interface AuthUser {
   name: string;
   email: string;
   consentedAt: string | null;
+  /**
+   * The policy version `consentedAt` corresponds to — compared against the
+   * currently-active policy's version (GET /consent-policy/active) to
+   * decide whether ConsentGuard should re-prompt (e.g. after a policy
+   * version bump), rather than trusting the merely-truthy `consentedAt`.
+   */
+  consentedPolicyVersion: string | null;
 }
 
 export interface AuthOrganization {
@@ -81,16 +88,6 @@ export interface SignupPayload {
   purpose?: string;
   registrationNumber: string;
   email: string;
-  /**
-   * RIO-FR-Add-02: the backend's `SignupBody` rejects anything but the
-   * literal `true` — consent is structurally mandatory, not just a value
-   * the form happens to send. The active policy version itself isn't part
-   * of this payload: the backend looks up whichever policy is active at
-   * signup time itself (see AuthRepository.createOrganisationAndAdmin) and
-   * records that version's acceptance, rather than trusting a
-   * client-supplied version.
-   */
-  consentAccepted: true;
 }
 
 /**

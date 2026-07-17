@@ -4,6 +4,16 @@ import {
   type PermissionModule,
 } from "@/types/permissions";
 
+// IMPORTANT: the real backend has no roles/permissions API yet (see
+// auth.service.ts's toSessionContextFromApi) — every real, non-mock session
+// resolves its permission matrix from THIS file, keyed by role.key, not from
+// whatever the backend's own login/me response's `permissions` array says.
+// That means Project-RIO-Backend/src/rbac/role-matrix.ts and this file are
+// two independently-maintained copies of the same table — changing one
+// without the other silently desyncs frontend nav/permission checks from
+// what the backend actually enforces. Keep them in lockstep by hand until
+// a real roles API replaces this lookup.
+
 export interface Role {
   id: string;
   key:
@@ -147,7 +157,9 @@ export const roles: Role[] = [
       perm("aiReview", READ_ONLY),
       perm("priorityScoring", READ_ONLY),
       perm("reportsDashboards", { read: true, export: true }),
-      perm("archiveSharingAudit"),
+      // Read-only Archive + able to request cross-org Sharing access (the
+      // owning org's admin still has to approve).
+      perm("archiveSharingAudit", { read: true, create: true }),
     ],
   },
   {
@@ -191,8 +203,11 @@ export const roles: Role[] = [
       perm("citizenChannel", READ_ONLY),
       perm("aiReview", { read: true, write: true, approve: true }),
       perm("priorityScoring", READ_ONLY),
-      perm("reportsDashboards"),
-      perm("archiveSharingAudit"),
+      // Reviewer's work starts at Studies/Reviewer-SLA, not an executive
+      // dashboard, but still needs read access to Reports/Archive/Sharing
+      // once a study's classification/review work is done.
+      perm("reportsDashboards", READ_ONLY),
+      perm("archiveSharingAudit", READ_ONLY),
     ],
   },
   {
