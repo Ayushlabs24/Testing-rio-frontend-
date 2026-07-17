@@ -473,6 +473,31 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
                   </Button>
                 ))}
               </div>
+            ) : question.type === "multi_choice" ? (
+              <div className="flex flex-wrap gap-2">
+                {question.options?.map((option) => {
+                  const selected = (answers[question.code] ?? "")
+                    .split(", ")
+                    .filter(Boolean);
+                  const isSelected = selected.includes(option);
+                  return (
+                    <Button
+                      key={option}
+                      type="button"
+                      size="default"
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => {
+                        const next = isSelected
+                          ? selected.filter((o) => o !== option)
+                          : [...selected, option];
+                        setAnswers({ ...answers, [question.code]: next.join(", ") });
+                      }}
+                    >
+                      {option}
+                    </Button>
+                  );
+                })}
+              </div>
             ) : (
               <Textarea
                 className="min-h-32"

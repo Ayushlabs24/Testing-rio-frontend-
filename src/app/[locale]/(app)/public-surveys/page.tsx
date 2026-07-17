@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRouter } from "@/i18n/navigation";
+import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 
@@ -26,13 +27,30 @@ export default function PublicSurveysPage() {
   const router = useRouter();
   const [studies, setStudies] = useState<StudySummary[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // Which studies have at least one active public survey link — "View
+  // Insights" is only meaningful (and only shown) once one exists; opening
+  // it before that would just be an empty page.
+  const [studiesWithActiveLink, setStudiesWithActiveLink] = useState<Set<string>>(
+    new Set(),
+  );
 
   useEffect(() => {
     studiesService
       .list()
-      .then((rows) => {
+      .then(async (rows) => {
         setStudies(rows);
         setLoadFailed(false);
+        const linkChecks = await Promise.all(
+          rows.map((study) =>
+            publicSurveysService
+              .listLinks(study.id)
+              .then((links) => [study.id, links.some((link) => link.isActive)] as const)
+              .catch(() => [study.id, false] as const),
+          ),
+        );
+        setStudiesWithActiveLink(
+          new Set(linkChecks.filter(([, has]) => has).map(([id]) => id)),
+        );
       })
       .catch(() => {
         setStudies([]);
@@ -100,17 +118,19 @@ export default function PublicSurveysPage() {
                             <QrCode className="size-3.5" />
                             {t("manageLinks")}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5"
-                            onClick={() =>
-                              router.push(`/public-surveys/${study.id}/insights`)
-                            }
-                          >
-                            <BarChart3 className="size-3.5" />
-                            {t("viewInsights")}
-                          </Button>
+                          {studiesWithActiveLink.has(study.id) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={() =>
+                                router.push(`/public-surveys/${study.id}/insights`)
+                              }
+                            >
+                              <BarChart3 className="size-3.5" />
+                              {t("viewInsights")}
+                            </Button>
+                          ) : null}
                         </div>
                       </TableCell>
                     </TableRow>

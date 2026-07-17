@@ -17,6 +17,7 @@ import { use, useEffect, useState, type ReactNode } from "react";
 import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { StudyStatusBadge } from "@/components/features/studies/study-status-badge";
+import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -25,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePermission } from "@/hooks/use-permission";
-import { cn } from "@/lib/utils";
+import { cn, titleCase } from "@/lib/utils";
 import { Link, useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
@@ -164,6 +165,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canWrite = usePermission("studySurvey", "write");
   const canCaptureNeed = usePermission("dataCollection", "create");
   const canViewEvidence = usePermission("dataCollection", "read");
+  const canUseSurveyBuilder = usePermission("surveyBuilder", "read");
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
   const [need, setNeed] = useState<Need | null>(null);
@@ -263,10 +265,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           }
         />
 
-        {/* <div className="flex flex-wrap items-center gap-2">
-          <StudyStatusBadge status={study.status} />
-        </div> */}
-
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <Card className="shadow-md">
@@ -322,7 +320,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                         <VillageChips villages={need.village} />
                       </FilledField>
                       <FilledField label={t("needSourceLabel")}>
-                        {need.source}
+                        {titleCase(need.source)}
                       </FilledField>
                     </div>
                   </div>
@@ -370,7 +368,8 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Study Information — an at-a-glance panel (status, timing,
-           * village, evidence) instead of a bare label/value list. */}
+           * village, evidence, assigned reviewer) instead of a bare
+           * label/value list. */}
           <div className="lg:col-span-1">
             <Card className="h-fit">
               <CardContent className="space-y-4 p-6">
@@ -413,16 +412,30 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* AI Classification runs the full width of the page as its own
-         * horizontal section after Evidence, rather than a narrow column
-         * stacked alongside Need/Evidence. */}
-        <div className="mt-6">
+        {/* AI Classification (Need-based) and Survey Builder's AI
+         * recommendation (Study-level) run full width, one below the other,
+         * as their own sections — two distinct AI features, not one card. */}
+        <div className="mt-6 space-y-6">
           <AiClassificationSection
             studyId={study.id}
             studyStatus={study.status}
             hasNeed={need !== null}
             evidenceCount={study.evidenceCount}
+            onReviewed={() =>
+              studiesService
+                .getById(id)
+                .then(setStudy)
+                .catch(() => undefined)
+            }
           />
+
+          {canUseSurveyBuilder ? (
+            <SurveyStatusCard
+              studyId={study.id}
+              domain={study.domain}
+              subDomain={study.subDomain}
+            />
+          ) : null}
         </div>
       </PageContainer>
     </PermissionGuard>

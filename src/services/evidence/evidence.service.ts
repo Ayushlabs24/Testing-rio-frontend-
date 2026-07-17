@@ -31,7 +31,7 @@ export const evidenceService = {
     await apiClient.delete(endpoints.evidence.byId(id));
   },
 
-  // Per Ganesh: a distinct step from uploading — AI Classification only
+  // A distinct step from uploading — AI Classification only
   // becomes eligible once evidence has been explicitly submitted.
   async submit(studyId: string): Promise<void> {
     await apiClient.post(endpoints.evidence.submit(studyId));

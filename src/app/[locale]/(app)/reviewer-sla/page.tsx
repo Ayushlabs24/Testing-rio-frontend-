@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { useAuth } from "@/components/providers/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Link } from "@/i18n/navigation";
 import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
 import type {
@@ -41,12 +46,9 @@ function formatDate(iso: string): string {
 
 export default function ReviewerSlaPage() {
   const t = useTranslations("app.reviewerSla");
-  const { session } = useAuth();
-  // Backend already scopes the response to just this reviewer's assigned
-  // studies when the caller is a Reviewer/Approver (human_reviewer — see
-  // ReviewerSlaService.listAlerts) — this only decides which empty-state
-  // copy to show, it doesn't filter anything itself.
-  const isReviewerApprover = session?.role.key === "human_reviewer";
+  // No concept of assignment: every user with the Reviewer/Approver role
+  // sees the same org-wide pending queue (see ReviewerSlaService.listAlerts)
+  // — once anyone reviews an item, it disappears for everyone.
   const [config, setConfig] = useState<SlaConfig | null>(null);
   const [alerts, setAlerts] = useState<SlaAlert[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -130,87 +132,94 @@ export default function ReviewerSlaPage() {
 
         <Card>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("studyColumn")}</TableHead>
-                  <TableHead>{t("needColumn")}</TableHead>
-                  <TableHead className="w-40">{t("assignedReviewerColumn")}</TableHead>
-                  <TableHead className="w-44">{t("createdColumn")}</TableHead>
-                  <TableHead className="w-44">{t("dueColumn")}</TableHead>
-                  <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-32">{t("actionColumn")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {alerts === null ? (
-                  Array.from({ length: 3 }).map((_, index) => (
-                    <TableRow key={index}>
-                      {Array.from({ length: 7 }).map((__, cell) => (
-                        <TableCell key={cell} className="py-4">
-                          <div className="bg-muted h-4 w-24 rounded" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : alerts.length === 0 ? (
+            <TooltipProvider delayDuration={200}>
+              <Table className="table-fixed">
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-muted-foreground h-32 text-center"
-                    >
-                      <div className="flex flex-col items-center gap-2.5">
-                        <div className="bg-muted flex size-10 items-center justify-center rounded-full">
-                          <AlarmClock className="size-5" />
-                        </div>
-                        <p>
-                          {loadFailed
-                            ? t("loadError")
-                            : isReviewerApprover
-                              ? t("noAlertsAssignedToYou")
-                              : t("noAlerts")}
-                        </p>
-                      </div>
-                    </TableCell>
+                    <TableHead className="w-[26%]">{t("studyColumn")}</TableHead>
+                    <TableHead className="w-[26%]">{t("needColumn")}</TableHead>
+                    <TableHead className="w-36">{t("createdColumn")}</TableHead>
+                    <TableHead className="w-36">{t("dueColumn")}</TableHead>
+                    <TableHead className="w-32">{t("statusColumn")}</TableHead>
+                    <TableHead className="w-28">{t("actionColumn")}</TableHead>
                   </TableRow>
-                ) : (
-                  alerts.map((alert) => (
-                    <TableRow key={alert.aiDecisionId}>
-                      <TableCell className="py-4 text-sm font-medium">
-                        <Link
-                          href={`/studies/${alert.studyId}`}
-                          className="hover:underline"
-                        >
-                          {alert.studyTitle}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-64 truncate text-sm">
-                        {alert.needStatement ?? t("noNeedStatement")}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {alert.assignedReviewerName ?? t("unassigned")}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(alert.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(alert.dueAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[alert.status]}>
-                          {t(`status.${alert.status}`)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/studies/${alert.studyId}`}>{t("reviewNow")}</Link>
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {alerts === null ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <TableRow key={index}>
+                        {Array.from({ length: 6 }).map((__, cell) => (
+                          <TableCell key={cell} className="py-4">
+                            <div className="bg-muted h-4 w-24 rounded" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : alerts.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-muted-foreground h-32 text-center"
+                      >
+                        <div className="flex flex-col items-center gap-2.5">
+                          <div className="bg-muted flex size-10 items-center justify-center rounded-full">
+                            <AlarmClock className="size-5" />
+                          </div>
+                          <p>{loadFailed ? t("loadError") : t("noAlerts")}</p>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    alerts.map((alert) => (
+                      <TableRow key={alert.aiDecisionId}>
+                        <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
+                          <Link
+                            href={`/studies/${alert.studyId}`}
+                            className="hover:underline"
+                          >
+                            {alert.studyTitle}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                          {alert.needStatement ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <p className="line-clamp-3 cursor-default break-words">
+                                  {alert.needStatement}
+                                </p>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm text-wrap">
+                                {alert.needStatement}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            t("noNeedStatement")
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                          {formatDate(alert.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                          {formatDate(alert.dueAt)}
+                        </TableCell>
+                        <TableCell className="py-4 align-top">
+                          <Badge variant={STATUS_VARIANT[alert.status]}>
+                            {t(`status.${alert.status}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-4 align-top">
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/studies/${alert.studyId}`}>
+                              {t("reviewNow")}
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TooltipProvider>
           </CardContent>
         </Card>
       </PageContainer>

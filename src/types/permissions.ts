@@ -16,6 +16,11 @@ export const PERMISSION_MODULES = [
   "priorityScoring",
   "reportsDashboards",
   "archiveSharingAudit",
+  // Survey Builder (Question Bank + AI-assisted questionnaire design) is its
+  // own independent methodology feature, not a Study feature — deliberately
+  // its own module rather than reusing studySurvey. Publish Survey/QR and
+  // the Citizen public flow are unrelated and keep their existing modules.
+  "surveyBuilder",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

@@ -3,14 +3,9 @@ import { endpoints } from "@/services/api/endpoints";
 import type {
   CreateSurveyLinkPayload,
   PublicSurveyLink,
-  SurveyDefinition,
 } from "@/services/public-surveys/public-surveys.types";
 
 export const publicSurveysService = {
-  async getDefinition(studyId: string): Promise<SurveyDefinition> {
-    return apiClient.get<SurveyDefinition>(endpoints.publicSurveys.definition(studyId));
-  },
-
   async listLinks(studyId: string): Promise<PublicSurveyLink[]> {
     return apiClient.get<PublicSurveyLink[]>(endpoints.publicSurveys.links(studyId));
   },

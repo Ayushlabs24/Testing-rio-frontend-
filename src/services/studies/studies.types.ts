@@ -22,10 +22,11 @@ export type StudyStatus = (typeof STUDY_STATUSES)[number];
 export interface Study {
   id: string;
   title: string;
+  /** Set only once a human approves an AI Classification decision on this Study's Need. */
+  domain?: string | null;
+  subDomain?: string | null;
   villages: string[];
   status: StudyStatus;
-  /** Null = no reviewer assigned yet (pre-existing Study, or org had no NGO Research Officer at creation). */
-  assignedReviewerId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -49,16 +50,14 @@ export interface CreateStudyPayload {
   villages?: string[];
 }
 
+/**
+ * `domain`/`subDomain` are never client-writable — they're set only once a
+ * human approves an AI Classification decision (see
+ * AiDecisionsService.review on the backend).
+ */
 export interface UpdateStudyPayload {
   title?: string;
   villages?: string[];
-}
-
-/** Study-create's reviewer picker — just enough to render "Full Name / Email". */
-export interface AssignableReviewer {
-  id: string;
-  name: string;
-  email: string;
 }
 
 export interface ListStudiesParams {
@@ -69,7 +68,7 @@ export interface ListStudiesParams {
 }
 
 /**
- * Business rule (per Ganesh): a study can be deleted up through
+ * Business rule: a study can be deleted up through
  * evidence_submitted — once AI Classification or Human Review has acted on
  * it, other people rely on it and it can no longer be deleted (the backend
  * enforces this with a 409 STUDY_NOT_DELETABLE; this list is only used to

@@ -68,7 +68,7 @@ export function Combobox({
           disabled={disabled}
           aria-label={ariaLabel}
           className={cn(
-            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
+            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
             !selected && "text-muted-foreground",
           )}
         >
@@ -105,7 +105,7 @@ export function Combobox({
                   onSelect(item.value);
                   setOpen(false);
                 }}
-                className="hover:bg-accent hover:text-accent-foreground flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm"
+                className="hover:bg-accent hover:text-accent-foreground flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm"
               >
                 <span className="flex min-w-0 flex-col items-start">
                   <span className="truncate">{item.label}</span>

@@ -9,9 +9,6 @@ export interface SlaAlert {
   createdAt: string;
   dueAt: string;
   status: SlaAlertStatus;
-  /** Null = no reviewer assigned — render as "Unassigned". Always reflects the Study's current assignment. */
-  assignedReviewerId: string | null;
-  assignedReviewerName: string | null;
 }
 
 export interface SlaConfig {

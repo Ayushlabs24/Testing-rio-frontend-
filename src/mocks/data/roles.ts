@@ -4,15 +4,15 @@ import {
   type PermissionModule,
 } from "@/types/permissions";
 
-// IMPORTANT: the real backend has no roles/permissions API yet (see
-// auth.service.ts's toSessionContextFromApi) — every real, non-mock session
-// resolves its permission matrix from THIS file, keyed by role.key, not from
-// whatever the backend's own login/me response's `permissions` array says.
-// That means Project-RIO-Backend/src/rbac/role-matrix.ts and this file are
-// two independently-maintained copies of the same table — changing one
-// without the other silently desyncs frontend nav/permission checks from
-// what the backend actually enforces. Keep them in lockstep by hand until
-// a real roles API replaces this lookup.
+// NOTE: real sessions now resolve `permissions`/`crossEntity` straight from
+// the backend's own login/me response (see auth.service.ts's
+// toSessionContextFromApi) — this file is only consulted for `name`
+// (product-copy renames the backend doesn't track) and `enabled` (a UI-only
+// "is this role live" gate that doesn't exist server-side). The permissions
+// arrays below are otherwise unused by real sessions, but are kept in sync
+// with Project-RIO-Backend/src/rbac/role-matrix.ts anyway — for the
+// mock-only verifyOtp/giveConsent paths, and so this file stays a truthful
+// reference rather than a stale, unused copy.
 
 export interface Role {
   id: string;
@@ -160,6 +160,8 @@ export const roles: Role[] = [
       // Read-only Archive + able to request cross-org Sharing access (the
       // owning org's admin still has to approve).
       perm("archiveSharingAudit", { read: true, create: true }),
+      // The role responsible for creating and managing questionnaires.
+      perm("surveyBuilder", { read: true, write: true, create: true }),
     ],
   },
   {
@@ -182,6 +184,7 @@ export const roles: Role[] = [
       perm("priorityScoring"),
       perm("reportsDashboards"),
       perm("archiveSharingAudit"),
+      perm("surveyBuilder"),
     ],
   },
   {
@@ -208,6 +211,7 @@ export const roles: Role[] = [
       // once a study's classification/review work is done.
       perm("reportsDashboards", READ_ONLY),
       perm("archiveSharingAudit", READ_ONLY),
+      perm("surveyBuilder"),
     ],
   },
   {
@@ -236,6 +240,7 @@ export const roles: Role[] = [
       }),
       perm("reportsDashboards", { read: true, write: true, create: true, export: true }),
       perm("archiveSharingAudit", READ_ONLY),
+      perm("surveyBuilder"),
     ],
   },
   {
@@ -268,6 +273,7 @@ export const roles: Role[] = [
       perm("priorityScoring", READ_ONLY),
       perm("reportsDashboards", READ_ONLY),
       perm("archiveSharingAudit", READ_ONLY),
+      perm("surveyBuilder"),
     ],
   },
   {
@@ -291,6 +297,7 @@ export const roles: Role[] = [
       // "Export — per availability" in the doc: modeled as granted by default.
       perm("reportsDashboards", { read: true, export: true }),
       perm("archiveSharingAudit", READ_ONLY),
+      perm("surveyBuilder"),
     ],
   },
   {
@@ -317,6 +324,7 @@ export const roles: Role[] = [
       perm("priorityScoring", READ_ONLY),
       perm("reportsDashboards", { read: true, export: true }),
       perm("archiveSharingAudit", READ_ONLY),
+      perm("surveyBuilder"),
     ],
   },
   {
