@@ -6,6 +6,7 @@ import { generateMockToken, mockDelay } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
+import type { ModulePermission } from "@/types/permissions";
 import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
@@ -24,7 +25,13 @@ const MOCK_OTP_CODE = "123456";
 /** Shape returned by the real backend's /auth/login, /auth/me, /auth/change-password. */
 interface ApiSessionView {
   token: string;
-  user: { id: string; name: string; email: string; consentedAt: string | null };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    consentedAt: string | null;
+    consentedPolicyVersion: string | null;
+  };
   organization: {
     id: string;
     name: string;
@@ -38,7 +45,14 @@ interface ApiSessionView {
     isActive: boolean;
     createdAt: string;
   };
-  role: { key: string };
+  // The backend's actual authorization data — crossEntity and permissions
+  // are both real, enforced-server-side fields, not display copy. `name`
+  // is deliberately NOT read from here (see toSessionContextFromApi): the
+  // frontend's local roles.ts carries this session's product-copy renames
+  // the backend doesn't track, same as rolesService.list()'s "display source
+  // only" split. `enabled` doesn't exist server-side at all — it's a
+  // UI-only "is this role live for the current demo phase" gate.
+  role: { key: string; crossEntity: boolean; permissions: ModulePermission[] };
   mustChangePassword: boolean;
 }
 
@@ -57,6 +71,9 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
       name: context.user.name,
       email: context.user.email,
       consentedAt: context.user.consentedAt,
+      // Mock accounts don't model policy versioning — null is equivalent to
+      // "not yet consented under a version", same as a fresh real signup.
+      consentedPolicyVersion: null,
     },
     organization: {
       id: context.organization.id,
@@ -87,12 +104,15 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
 
 /**
  * Builds a full `SessionContext` from the real backend's session response.
- * The backend has no roles/permissions API yet — this resolves the role's
- * permission matrix from the same local `roles.ts` the rest of the app
- * treats as the source of truth for that (see rolesService.list(), which
- * does the same lookup-by-key for the one field the backend doesn't carry:
- * `enabled`). Everything else (user, organization, mustChangePassword)
- * comes straight from the backend now.
+ * `permissions`/`crossEntity` come straight from the backend's own role
+ * matrix now — this used to resolve permissions from the local `roles.ts`
+ * mock instead (a stale leftover from before the backend carried them),
+ * which meant a real permission grant could silently diverge from what the
+ * UI actually enforced. `roles.ts` is now only consulted for `name` (this
+ * session's product-copy renames the backend doesn't track) and `enabled`
+ * (a UI-only "is this role live for the current demo phase" gate that
+ * doesn't exist server-side at all) — same "display source only" split
+ * documented in rolesService.list().
  */
 function toSessionContextFromApi(view: ApiSessionView): SessionContext {
   const role = roles.find((r) => r.key === view.role.key);
@@ -109,6 +129,7 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
       name: view.user.name,
       email: view.user.email,
       consentedAt: view.user.consentedAt,
+      consentedPolicyVersion: view.user.consentedPolicyVersion,
     },
     organization: {
       id: view.organization.id,
@@ -125,11 +146,11 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
     },
     role: {
       id: role.id,
-      key: role.key,
+      key: view.role.key,
       name: role.name,
-      crossEntity: role.crossEntity,
+      crossEntity: view.role.crossEntity,
       enabled: role.enabled,
-      permissions: role.permissions,
+      permissions: view.role.permissions,
     },
     mustChangePassword: view.mustChangePassword,
   };

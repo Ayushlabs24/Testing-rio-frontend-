@@ -3,6 +3,7 @@ import { mockDelay } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
+  AssignableReviewer,
   CreateStudyPayload,
   ListStudiesParams,
   PlatformStudyStats,
@@ -48,6 +49,11 @@ export const studiesService = {
 
   async create(payload: CreateStudyPayload): Promise<Study> {
     return apiClient.post<Study>(endpoints.studies.create, payload);
+  },
+
+  /** Every active NGO Research Officer in the caller's own org — the Create Study reviewer picker. */
+  async listAssignableReviewers(): Promise<AssignableReviewer[]> {
+    return apiClient.get<AssignableReviewer[]>(endpoints.studies.assignableReviewers);
   },
 
   async update(id: string, payload: UpdateStudyPayload): Promise<Study> {

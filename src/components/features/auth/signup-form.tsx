@@ -1,22 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Copy, ImageUp, Loader2, MailCheck } from "lucide-react";
+import { ArrowRight, Check, Copy, ImageUp, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,8 +21,6 @@ import { SECTORS } from "@/config/sectors";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
-import { consentService } from "@/services/consent/consent.service";
-import type { ActiveConsentPolicy } from "@/services/consent/consent.types";
 import { organizationsService } from "@/services/organizations/organizations.service";
 
 interface PendingConfirmation {
@@ -136,51 +125,6 @@ function SignupConfirmation({
   );
 }
 
-/** The policy text/version, shown on demand rather than inline in the form — the checkbox + link pattern most signup flows use. */
-function ConsentPolicyDialog({
-  open,
-  onOpenChange,
-  policy,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  policy: ActiveConsentPolicy | null;
-}) {
-  const t = useTranslations("auth.signup");
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("consentTitle")}</DialogTitle>
-          {policy ? (
-            <DialogDescription>
-              {t("consentVersionLabel")}: {policy.version}
-            </DialogDescription>
-          ) : null}
-        </DialogHeader>
-
-        <ol className="text-foreground list-decimal space-y-2 pl-5 text-sm">
-          <li>{t("consentPoint1")}</li>
-          <li>{t("consentPoint2")}</li>
-          <li>{t("consentPoint3")}</li>
-          <li>{t("consentPoint4")}</li>
-        </ol>
-
-        <div className="border-border bg-muted/30 text-muted-foreground max-h-40 overflow-y-auto rounded-md border p-3 text-xs whitespace-pre-wrap">
-          {policy?.text}
-        </div>
-
-        <DialogFooter>
-          <Button type="button" onClick={() => onOpenChange(false)}>
-            {t("close")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
@@ -196,34 +140,6 @@ export function SignupForm() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFileName, setLogoFileName] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
-
-  const [policy, setPolicy] = useState<ActiveConsentPolicy | null>(null);
-  const [policyLoading, setPolicyLoading] = useState(true);
-  const [policyError, setPolicyError] = useState<string | null>(null);
-  const [consentChecked, setConsentChecked] = useState(false);
-  const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    consentService
-      .getActive()
-      .then((active) => {
-        if (!cancelled) setPolicy(active);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setPolicyError(
-          error instanceof ApiError ? error.message : t("consentUnavailable"),
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setPolicyLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const signupSchema = z.object({
     organizationName: z
@@ -272,10 +188,7 @@ export function SignupForm() {
     reader.readAsDataURL(file);
   };
 
-  const canSubmit = !policyLoading && !policyError && Boolean(policy) && consentChecked;
-
   const onSubmit = async (values: SignupValues) => {
-    if (!canSubmit) return;
     setFormError(null);
     try {
       const { temporaryPasswordEmailed, temporaryPassword } = await authService.signup({
@@ -284,7 +197,6 @@ export function SignupForm() {
         purpose: values.sector === "other" ? values.otherSector : undefined,
         registrationNumber: values.registrationNumber,
         email: values.email,
-        consentAccepted: true,
       });
       // The signup response already carries a live session (the backend
       // sets the session cookie on signup) — used only to attach the logo,
@@ -434,43 +346,9 @@ export function SignupForm() {
           {logoError ? <p className="text-destructive text-sm">{logoError}</p> : null}
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
-            {policyLoading ? (
-              <Loader2 className="text-muted-foreground mt-0.5 size-4 shrink-0 animate-spin" />
-            ) : (
-              <Checkbox
-                id="consentAccepted"
-                checked={consentChecked}
-                disabled={!policy}
-                onCheckedChange={(checked) => setConsentChecked(checked === true)}
-              />
-            )}
-            <Label
-              htmlFor="consentAccepted"
-              className="text-muted-foreground text-sm leading-snug font-normal"
-            >
-              {t("consentCheckboxPrefix")}{" "}
-              <button
-                type="button"
-                onClick={() => setPolicyDialogOpen(true)}
-                className="text-primary cursor-pointer font-medium hover:underline"
-              >
-                {t("consentPolicyLink")}
-              </button>
-              .
-            </Label>
-          </div>
-          {policyError ? <p className="text-destructive text-sm">{policyError}</p> : null}
-        </div>
-
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-        <Button
-          type="submit"
-          className="h-11 w-full gap-2 px-6"
-          disabled={isSubmitting || !canSubmit}
-        >
+        <Button type="submit" className="h-11 w-full gap-2 px-6" disabled={isSubmitting}>
           {isSubmitting ? t("submitting") : t("submit")}
           {!isSubmitting && <ArrowRight className="size-4" />}
         </Button>
@@ -485,12 +363,6 @@ export function SignupForm() {
           {t("signIn")}
         </Link>
       </p>
-
-      <ConsentPolicyDialog
-        open={policyDialogOpen}
-        onOpenChange={setPolicyDialogOpen}
-        policy={policy}
-      />
     </div>
   );
 }

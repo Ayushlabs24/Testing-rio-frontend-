@@ -1,6 +1,6 @@
 "use client";
 
-import { History, Lock, Search } from "lucide-react";
+import { Download, History, Lock, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
@@ -8,9 +8,11 @@ import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { usePermission } from "@/hooks/use-permission";
 import {
   Select,
   SelectContent,
@@ -70,15 +72,30 @@ export default function AuditSettingsPage() {
   const t = useTranslations("app.settings.audit");
   const tActions = useTranslations("app.settings.audit.actions");
   const tEntities = useTranslations("app.settings.audit.entities");
+  const canExport = usePermission("archiveSharingAudit", "export");
   const [events, setEvents] = useState<AuditEvent[] | null>(null);
   const [query, setQuery] = useState("");
   const [action, setAction] = useState<AuditAction | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(AUDIT_PAGE_SIZE);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     auditService.list().then(setEvents);
   }, []);
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await auditService.downloadCsv();
+    } catch {
+      setExportError(t("exportError"));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const filteredEvents = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -103,7 +120,26 @@ export default function AuditSettingsPage() {
   return (
     <PermissionGuard module="archiveSharingAudit" action="read">
       <PageContainer>
-        <PageHeader title={t("title")} description={t("description")} />
+        <PageHeader
+          title={t("title")}
+          description={t("description")}
+          actions={
+            canExport ? (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={handleExport}
+                disabled={exporting}
+              >
+                <Download className="size-4" />
+                {exporting ? t("exporting") : t("export")}
+              </Button>
+            ) : null
+          }
+        />
+        {exportError ? (
+          <p className="text-destructive mb-4 text-sm">{exportError}</p>
+        ) : null}
 
         <Card>
           <CardContent className="p-0">

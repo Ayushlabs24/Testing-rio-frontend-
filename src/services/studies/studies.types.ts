@@ -23,6 +23,8 @@ export interface Study {
   id: string;
   title: string;
   status: StudyStatus;
+  /** Null = no reviewer assigned yet (pre-existing Study, or org had no NGO Research Officer at creation). */
+  assignedReviewerId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -43,10 +45,19 @@ export type StudySummary = Study;
 
 export interface CreateStudyPayload {
   title: string;
+  /** Required unless the org has no active NGO Research Officer at all — the backend rejects an omitted value when one exists. */
+  assignedReviewerId?: string;
 }
 
 export interface UpdateStudyPayload {
   title?: string;
+}
+
+/** Study-create's reviewer picker — just enough to render "Full Name / Email". */
+export interface AssignableReviewer {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface ListStudiesParams {

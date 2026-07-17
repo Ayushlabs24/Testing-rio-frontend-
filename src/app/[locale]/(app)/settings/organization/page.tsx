@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { OrganizationConsentCard } from "@/components/features/settings/organization-consent-card";
 import { SECTORS } from "@/config/sectors";
 import { usePermission } from "@/hooks/use-permission";
 import { organizationsService } from "@/services/organizations/organizations.service";
@@ -405,6 +406,8 @@ export default function OrganizationSettingsPage() {
               </>
             )}
           </div>
+
+          <OrganizationConsentCard />
 
           <Card className="mt-6">
             <CardHeader>

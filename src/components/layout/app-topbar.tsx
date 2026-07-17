@@ -28,12 +28,22 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+/** Mobile equivalent of the sidebar's nav + profile footer — the sidebar
+ * itself is hidden below `md`, so this Sheet is the only nav surface on
+ * small screens and needs its own copy of both. */
 function MobileNav() {
-  const { session } = useAuth();
+  const { session, logout } = useAuth();
   const t = useTranslations("app.sidebar");
+  const tTopbar = useTranslations("app.topbar");
   const pathname = usePathname();
+  const router = useRouter();
 
   if (!session) return null;
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
 
   const visibleNav = appNav.filter((item) => {
     if (!item.module) return true;
@@ -47,28 +57,57 @@ function MobileNav() {
   });
 
   return (
-    <nav className="flex flex-col gap-1 p-4">
-      {visibleNav.map((item) => {
-        const isActive =
-          item.href === "/dashboard"
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "text-foreground/70 hover:bg-accent hover:text-accent-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
-              isActive && "bg-accent text-accent-foreground",
-            )}
-          >
-            <Icon className="size-4" />
-            {t(item.labelKey)}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="flex h-[calc(100%-4rem)] flex-col">
+      <nav className="flex flex-1 flex-col gap-1 p-4">
+        {visibleNav.map((item) => {
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "text-foreground/70 hover:bg-accent hover:text-accent-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
+                isActive && "bg-accent text-accent-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+              {t(item.labelKey)}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="border-border border-t p-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="hover:bg-accent flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors"
+            >
+              <Avatar className="size-8 shrink-0">
+                <AvatarFallback>{initials(session.user.name)}</AvatarFallback>
+              </Avatar>
+              <span className="min-w-0 flex-1">
+                <span className="text-foreground block truncate text-sm font-medium">
+                  {session.user.name}
+                </span>
+                <span className="text-muted-foreground block truncate text-xs">
+                  {session.role.name}
+                </span>
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="top">
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut /> {tTopbar("logout")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }
 
@@ -78,16 +117,10 @@ interface AppTopbarProps {
 }
 
 export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
-  const { session, logout } = useAuth();
+  const { session } = useAuth();
   const t = useTranslations("app.topbar");
   const tSidebar = useTranslations("app.sidebar");
-  const router = useRouter();
   const pathname = usePathname();
-
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
 
   if (!session) return null;
 
@@ -151,28 +184,6 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
 
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-auto gap-2 rounded-full px-2 py-1.5">
-              <Avatar className="size-8">
-                <AvatarFallback>{initials(session.user.name)}</AvatarFallback>
-              </Avatar>
-              <span className="hidden text-left sm:block">
-                <span className="text-foreground block text-sm font-medium">
-                  {session.user.name}
-                </span>
-                <span className="text-muted-foreground block text-xs">
-                  {session.role.name}
-                </span>
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut /> {t("logout")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   );

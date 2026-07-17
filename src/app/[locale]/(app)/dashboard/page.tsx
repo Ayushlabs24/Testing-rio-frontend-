@@ -16,6 +16,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import { SupervisorDashboard } from "@/components/features/dashboard/supervisor-dashboard";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import { rolesService } from "@/services/roles/roles.service";
 import { studiesService } from "@/services/studies/studies.service";
@@ -73,6 +74,15 @@ export default function DashboardPage() {
       }
     }
   }, [isCrossEntity, canReadUsers, canReadRoles]);
+
+  // Program Supervisor gets its own read-only, cross-organization dashboard
+  // (real Sharing/Reports/Studies data via /supervisor-overview) rather than
+  // reusing System Admin's platform-stats view below — the two crossEntity
+  // roles have different jobs, so "isCrossEntity" alone isn't the right
+  // branch for this one.
+  if (session?.role.key === "center_supervisor") {
+    return <SupervisorDashboard userName={session.user.name} />;
+  }
 
   return (
     <PageContainer>
