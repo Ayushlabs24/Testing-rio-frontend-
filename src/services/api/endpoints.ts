@@ -83,6 +83,7 @@ export const endpoints = {
   },
   domains: {
     list: "/domains",
+    tree: "/domains/tree",
     create: "/domains",
     byId: (id: string) => `/domains/${id}`,
     activate: (id: string) => `/domains/${id}/activate`,

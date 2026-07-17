@@ -282,7 +282,7 @@ function UserDialog({
             <div className="space-y-2">
               <Label htmlFor="roleId">{t("roleLabel")}</Label>
               <Select
-                value={selectedRoleId || undefined}
+                value={selectedRoleId}
                 onValueChange={(value) => setValue("roleId", value)}
               >
                 <SelectTrigger id="roleId" className="w-full">
@@ -305,7 +305,7 @@ function UserDialog({
               <div className="space-y-2">
                 <Label htmlFor="status">{t("statusColumn")}</Label>
                 <Select
-                  value={selectedStatus || undefined}
+                  value={selectedStatus}
                   onValueChange={(value) => setValue("status", value as UserStatus)}
                 >
                   <SelectTrigger id="status" className="w-full">

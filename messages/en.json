@@ -264,6 +264,18 @@
           "breached": "Breached"
         },
         "noAlerts": "No pending review items."
+      },
+      "researchOfficer": {
+        "title": "Welcome, {name}",
+        "description": "Your studies across the Need, Evidence, and AI Classification pipeline.",
+        "stats": {
+          "awaitingEvidence": "Awaiting Evidence",
+          "readyToClassify": "Ready to Classify",
+          "awaitingReview": "Awaiting Review",
+          "completed": "Completed"
+        },
+        "recentStudiesHeading": "Recent Studies",
+        "noStudies": "No studies yet — create one to get started."
       }
     },
     "evidence": {
@@ -464,7 +476,8 @@
           "aiReview": "AI & Human Review",
           "priorityScoring": "Priority Scoring",
           "reportsDashboards": "Reports & Dashboards",
-          "archiveSharingAudit": "Archive, Sharing & Audit"
+          "archiveSharingAudit": "Archive, Sharing & Audit",
+          "surveyBuilder": "Survey Builder"
         },
         "crossEntityBadge": "Cross-entity",
         "actions": {

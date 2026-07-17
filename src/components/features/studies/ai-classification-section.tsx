@@ -191,22 +191,25 @@ export function AiClassificationSection({
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const domains = (await domainsService.list()).filter((d) => d.isActive);
-        const withSubDomains = await Promise.all(
-          domains.map(async (d) => ({
-            name: d.name,
-            subDomains: (await domainsService.listSubDomains(d.id))
-              .filter((sd) => sd.isActive)
-              .map((sd) => sd.name),
-          })),
+    // One request for every active domain's active sub-domains, nested —
+    // not one listSubDomains() call per domain (that N+1 pattern was ~10
+    // network round trips just to open this section).
+    domainsService
+      .listWithSubDomains()
+      .then((domains) => {
+        if (cancelled) return;
+        setDomainOptions(
+          domains
+            .filter((d) => d.isActive)
+            .map((d) => ({
+              name: d.name,
+              subDomains: d.subDomains.filter((sd) => sd.isActive).map((sd) => sd.name),
+            })),
         );
-        if (!cancelled) setDomainOptions(withSubDomains);
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) setDomainOptions([]);
-      }
-    })();
+      });
     return () => {
       cancelled = true;
     };
