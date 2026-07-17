@@ -9,7 +9,6 @@ import {
   Mail,
   MapPin,
   Pencil,
-  Target,
   Trees,
   Users,
   X,
@@ -36,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { OrganizationConsentCard } from "@/components/features/settings/organization-consent-card";
 import { SECTORS } from "@/config/sectors";
 import { usePermission } from "@/hooks/use-permission";
 import { organizationsService } from "@/services/organizations/organizations.service";
@@ -108,54 +108,78 @@ function DetailRow({
   );
 }
 
-function VillagesEditor({
-  villages,
+/** Splits on commas so pasting/typing "Region A, Region B" (or the same for
+ * villages) adds separate chips, not one literal comma-joined string. */
+function parseChipInput(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function ChipListEditor({
+  values,
   onChange,
+  placeholder,
+  addLabel,
+  removeAriaLabel,
 }: {
-  villages: string[];
-  onChange: (villages: string[]) => void;
+  values: string[];
+  onChange: (values: string[]) => void;
+  placeholder: string;
+  addLabel: string;
+  removeAriaLabel: (value: string) => string;
 }) {
-  const t = useTranslations("app.settings.organization");
   const [draft, setDraft] = useState("");
 
-  const addVillage = () => {
-    const value = draft.trim();
-    if (value && !villages.includes(value)) {
-      onChange([...villages, value]);
-    }
+  const commitDraft = () => {
+    const additions = parseChipInput(draft).filter((v) => !values.includes(v));
+    if (additions.length > 0) onChange([...values, ...additions]);
     setDraft("");
   };
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {villages.map((village) => (
-          <Badge key={village} variant="secondary" className="gap-1">
-            {village}
-            <button
-              type="button"
-              onClick={() => onChange(villages.filter((v) => v !== village))}
-              aria-label={t("removeVillage", { village })}
-            >
-              <X className="size-3" />
-            </button>
-          </Badge>
-        ))}
-      </div>
+      {values.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {values.map((value) => (
+            <Badge key={value} variant="secondary" className="gap-1">
+              {value}
+              <button
+                type="button"
+                onClick={() => onChange(values.filter((v) => v !== value))}
+                aria-label={removeAriaLabel(value)}
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      ) : null}
       <div className="flex gap-2">
         <Input
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value.endsWith(",")) {
+              const additions = parseChipInput(value).filter((v) => !values.includes(v));
+              if (additions.length > 0) onChange([...values, ...additions]);
+              setDraft("");
+            } else {
+              setDraft(value);
+            }
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              addVillage();
+              commitDraft();
             }
           }}
-          placeholder={t("villagesPlaceholder")}
+          onBlur={commitDraft}
+          placeholder={placeholder}
         />
-        <Button type="button" variant="outline" onClick={addVillage}>
-          {t("addVillage")}
+        <Button type="button" variant="outline" onClick={commitDraft}>
+          {addLabel}
         </Button>
       </div>
     </div>
@@ -193,9 +217,10 @@ export default function OrganizationSettingsPage() {
 
   const schema = z.object({
     name: z.string().min(1),
-    region: z.string(),
+    region: z.array(z.string()),
     email: z.string().email().or(z.literal("")),
     sector: z.string().nullable(),
+    otherSector: z.string(),
     villages: z.array(z.string()),
     isActive: z.boolean(),
   });
@@ -212,16 +237,20 @@ export default function OrganizationSettingsPage() {
     resolver: zodResolver(schema),
     values: {
       name: session?.organization.name ?? "",
-      region: session?.organization.region ?? "",
+      region: session?.organization.region ?? [],
       email: session?.organization.email ?? "",
       sector: session?.organization.sector ?? null,
+      otherSector:
+        session?.organization.sector === "other" ? session.organization.purpose : "",
       villages: session?.organization.villages ?? [],
       isActive: session?.organization.isActive ?? true,
     },
   });
 
+  const region = useWatch({ control, name: "region" });
   const villages = useWatch({ control, name: "villages" });
   const isActive = useWatch({ control, name: "isActive" });
+  const selectedSector = useWatch({ control, name: "sector" });
 
   const onSubmit = async (values: Values) => {
     const updated = await organizationsService.update({
@@ -229,6 +258,7 @@ export default function OrganizationSettingsPage() {
       region: values.region,
       email: values.email,
       sector: (values.sector as (typeof SECTORS)[number] | null) ?? null,
+      purpose: values.sector === "other" ? values.otherSector : null,
       villages: values.villages,
       isActive: values.isActive,
     });
@@ -258,6 +288,12 @@ export default function OrganizationSettingsPage() {
     month: "long",
     day: "numeric",
   });
+  const sectorDisplay =
+    organization.sector === "other"
+      ? organization.purpose || tSectors("other")
+      : organization.sector
+        ? tSectors(organization.sector)
+        : "—";
   const logoInitial = organization.name.charAt(0).toUpperCase();
 
   return (
@@ -365,11 +401,13 @@ export default function OrganizationSettingsPage() {
                   tone="primary"
                   icon={<Layers className="size-5" />}
                   label={t("sectorLabel")}
-                  value={organization.sector ? tSectors(organization.sector) : "—"}
+                  value={sectorDisplay}
                 />
               </>
             )}
           </div>
+
+          <OrganizationConsentCard />
 
           <Card className="mt-6">
             <CardHeader>
@@ -378,15 +416,22 @@ export default function OrganizationSettingsPage() {
             <CardContent>
               {editing ? (
                 <div className="space-y-5">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="region">{t("regionLabel")}</Label>
-                      <Input id="region" {...register("region")} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">{t("emailLabel")}</Label>
-                      <Input id="email" type="email" {...register("email")} />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">{t("emailLabel")}</Label>
+                    <Input id="email" type="email" {...register("email")} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t("regionLabel")}</Label>
+                    <ChipListEditor
+                      values={region ?? []}
+                      onChange={(next) =>
+                        setValue("region", next, { shouldValidate: true })
+                      }
+                      placeholder={t("regionsPlaceholder")}
+                      addLabel={t("addVillage")}
+                      removeAriaLabel={(value) => t("removeRegion", { region: value })}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -408,21 +453,34 @@ export default function OrganizationSettingsPage() {
                     </Select>
                   </div>
 
+                  {selectedSector === "other" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="otherSector">{t("otherSectorLabel")}</Label>
+                      <Input
+                        id="otherSector"
+                        placeholder={t("otherSectorPlaceholder")}
+                        {...register("otherSector")}
+                      />
+                    </div>
+                  ) : null}
+
                   <div className="space-y-2">
                     <Label>{t("villagesLabel")}</Label>
-                    <VillagesEditor
-                      villages={villages ?? []}
-                      onChange={(next) => setValue("villages", next)}
+                    <ChipListEditor
+                      values={villages ?? []}
+                      onChange={(next) =>
+                        setValue("villages", next, { shouldValidate: true })
+                      }
+                      placeholder={t("villagesPlaceholder")}
+                      addLabel={t("addVillage")}
+                      removeAriaLabel={(value) => t("removeVillage", { village: value })}
                     />
                   </div>
 
                   <div className="border-border flex items-center justify-between rounded-md border p-3">
-                    <div>
-                      <p className="text-foreground text-sm font-medium">
-                        {t("statusLabel")}
-                      </p>
-                      <p className="text-muted-foreground text-xs">{t("statusHint")}</p>
-                    </div>
+                    <p className="text-foreground text-sm font-medium">
+                      {t("statusLabel")}
+                    </p>
                     <Switch
                       checked={isActive}
                       onCheckedChange={(checked) => setValue("isActive", checked)}
@@ -454,24 +512,26 @@ export default function OrganizationSettingsPage() {
               ) : (
                 <div className="divide-border divide-y">
                   <DetailRow
-                    icon={<Target className="size-4" />}
-                    label={t("purposeLabel")}
-                    value={organization.purpose || "—"}
-                  />
-                  <DetailRow
                     icon={<MapPin className="size-4" />}
                     label={t("regionLabel")}
-                    value={organization.region || "—"}
+                    value={
+                      organization.region.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {organization.region.map((region) => (
+                            <Badge key={region} variant="secondary">
+                              {region}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        "—"
+                      )
+                    }
                   />
                   <DetailRow
                     icon={<Mail className="size-4" />}
                     label={t("emailLabel")}
                     value={organization.email || "—"}
-                  />
-                  <DetailRow
-                    icon={<Layers className="size-4" />}
-                    label={t("sectorLabel")}
-                    value={organization.sector ? tSectors(organization.sector) : "—"}
                   />
                   <DetailRow
                     icon={<Trees className="size-4" />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { History, Lock, Search } from "lucide-react";
+import { Download, History, Lock, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
@@ -8,9 +8,11 @@ import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { usePermission } from "@/hooks/use-permission";
 import {
   Select,
   SelectContent,
@@ -47,6 +49,7 @@ const ACTION_VARIANT: Record<
 };
 
 const ALL = "all";
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
 
 function initials(name: string): string {
   return name
@@ -69,14 +72,30 @@ export default function AuditSettingsPage() {
   const t = useTranslations("app.settings.audit");
   const tActions = useTranslations("app.settings.audit.actions");
   const tEntities = useTranslations("app.settings.audit.entities");
+  const canExport = usePermission("archiveSharingAudit", "export");
   const [events, setEvents] = useState<AuditEvent[] | null>(null);
   const [query, setQuery] = useState("");
   const [action, setAction] = useState<AuditAction | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(AUDIT_PAGE_SIZE);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     auditService.list().then(setEvents);
   }, []);
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await auditService.downloadCsv();
+    } catch {
+      setExportError(t("exportError"));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const filteredEvents = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -91,23 +110,42 @@ export default function AuditSettingsPage() {
     });
   }, [events, query, action]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / AUDIT_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const pagedEvents = filteredEvents.slice(
-    (currentPage - 1) * AUDIT_PAGE_SIZE,
-    currentPage * AUDIT_PAGE_SIZE,
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
   );
 
   return (
     <PermissionGuard module="archiveSharingAudit" action="read">
       <PageContainer>
-        <PageHeader title={t("title")} description={t("description")} />
+        <PageHeader
+          title={t("title")}
+          description={t("description")}
+          actions={
+            canExport ? (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={handleExport}
+                disabled={exporting}
+              >
+                <Download className="size-4" />
+                {exporting ? t("exporting") : t("export")}
+              </Button>
+            ) : null
+          }
+        />
+        {exportError ? (
+          <p className="text-destructive mb-4 text-sm">{exportError}</p>
+        ) : null}
 
         <Card>
           <CardContent className="p-0">
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
-              <div className="flex flex-1 items-center gap-3">
-                <Search className="text-muted-foreground size-4" />
+              <div className="relative flex-1">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={query}
@@ -115,12 +153,15 @@ export default function AuditSettingsPage() {
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="h-8 pl-9"
                 />
               </div>
               <Select
                 value={action}
-                onValueChange={(value) => setAction(value as AuditAction | typeof ALL)}
+                onValueChange={(value) => {
+                  setAction(value as AuditAction | typeof ALL);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger
                   className="h-8 w-full sm:w-44"
@@ -133,6 +174,27 @@ export default function AuditSettingsPage() {
                   {AUDIT_ACTIONS.map((value) => (
                     <SelectItem key={value} value={value}>
                       {tActions(value)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-40"
+                  aria-label={t("rowsPerPageLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROWS_PER_PAGE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {t("rowsPerPageLabel")}: {size}
                     </SelectItem>
                   ))}
                 </SelectContent>

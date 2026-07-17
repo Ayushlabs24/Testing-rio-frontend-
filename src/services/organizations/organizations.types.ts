@@ -3,7 +3,8 @@ import type { Sector } from "@/config/sectors";
 export interface Organization {
   id: string;
   name: string;
-  /** Captured at signup; not yet editable from the organization profile screen. */
+  /** Only meaningful when `sector` is `"other"` — the org's own free-text
+   * description of what that is. */
   purpose: string;
   /**
    * The org's unique registration number — captured at signup and used to
@@ -13,7 +14,7 @@ export interface Organization {
    */
   registrationNumber: string;
   logoUrl: string | null;
-  region: string;
+  region: string[];
   email: string;
   sector: Sector | null;
   villages: string[];
@@ -24,9 +25,10 @@ export interface Organization {
 export interface UpdateOrganizationPayload {
   name?: string;
   logoUrl?: string | null;
-  region?: string;
+  region?: string[];
   email?: string;
   sector?: Sector | null;
+  purpose?: string | null;
   villages?: string[];
   isActive?: boolean;
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Lock, Mail } from "lucide-react";
+import { ArrowRight, Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
+import { PasswordInput } from "@/components/features/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,16 +73,11 @@ export function LoginForm() {
 
         <div className="space-y-2.5">
           <Label htmlFor="password">{t("passwordLabel")}</Label>
-          <div className="relative">
-            <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-            <Input
-              id="password"
-              type="password"
-              placeholder={t("passwordPlaceholder")}
-              className="h-11 pr-4 pl-10 text-base"
-              {...register("password")}
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            placeholder={t("passwordPlaceholder")}
+            {...register("password")}
+          />
           {errors.password ? (
             <p className="text-destructive text-sm">{errors.password.message}</p>
           ) : null}

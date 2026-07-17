@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/common/logo";
+import { ContactDialog } from "@/components/features/auth/contact-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface AuthShellProps {
@@ -56,12 +57,17 @@ export function AuthShell({
         <div />
       </div>
 
-      <div className="bg-background relative flex items-center justify-center p-6 sm:p-8 lg:p-12">
+      <div className="bg-auth-surface relative flex items-center justify-center p-6 sm:p-8 lg:p-12">
         <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
           <ThemeToggle />
         </div>
         {children}
       </div>
+
+      {/* Rendered here rather than per-page so the enquiry form is reachable
+          from every auth page — someone locked out needs it most when they
+          cannot sign in. It positions itself as a fixed floating button. */}
+      <ContactDialog />
     </div>
   );
 }

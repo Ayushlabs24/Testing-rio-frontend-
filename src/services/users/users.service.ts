@@ -3,6 +3,7 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
   CreateUserPayload,
+  CreateUserResponse,
   OrgUser,
   PlatformUser,
   UpdateUserPayload,
@@ -30,8 +31,8 @@ export const usersService = {
     });
   },
 
-  async create(payload: CreateUserPayload): Promise<OrgUser> {
-    return apiClient.post<OrgUser>(endpoints.users.create, payload);
+  async create(payload: CreateUserPayload): Promise<CreateUserResponse> {
+    return apiClient.post<CreateUserResponse>(endpoints.users.create, payload);
   },
 
   async update(id: string, payload: UpdateUserPayload): Promise<OrgUser> {

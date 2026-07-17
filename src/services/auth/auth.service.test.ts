@@ -9,9 +9,10 @@ import { authService } from "@/services/auth/auth.service";
  * password verification live server-side (covered in
  * Project-RIO-Backend's auth.service.spec.ts). These tests only cover the
  * frontend's own responsibility: calling the right endpoint with the right
- * payload, and correctly mapping the backend's minimal session response
- * into a full `SessionContext` (resolving role permissions from the local
- * roles.ts matrix, since the backend doesn't expose those yet).
+ * payload, and correctly mapping the backend's session response into a
+ * full `SessionContext` (permissions/crossEntity come from the backend's
+ * own response now; only display-only `name`/`enabled` still resolve from
+ * the local roles.ts matrix).
  */
 vi.mock("@/services/api/client", () => ({
   apiClient: { get: vi.fn(), post: vi.fn() },
@@ -19,7 +20,13 @@ vi.mock("@/services/api/client", () => ({
 
 const apiSession = {
   token: "jwt-token",
-  user: { id: "user_1", name: "Priya Nair", email: "priya@demo.org", consentedAt: null },
+  user: {
+    id: "user_1",
+    name: "Priya Nair",
+    email: "priya@demo.org",
+    consentedAt: null,
+    consentedPolicyVersion: null,
+  },
   organization: {
     id: "org_1",
     name: "Demo NGO",
@@ -33,7 +40,21 @@ const apiSession = {
     isActive: true,
     createdAt: "2026-01-01T00:00:00.000Z",
   },
-  role: { key: "ngo_admin" },
+  role: {
+    key: "ngo_admin",
+    crossEntity: false,
+    permissions: [
+      {
+        module: "studySurvey",
+        read: true,
+        write: true,
+        create: true,
+        approve: true,
+        export: true,
+        share: true,
+      },
+    ],
+  },
   mustChangePassword: false,
 };
 
@@ -72,7 +93,7 @@ describe("authService", () => {
 
     const payload = {
       organizationName: "Demo NGO",
-      purpose: "Community Health",
+      sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
     };
@@ -93,7 +114,7 @@ describe("authService", () => {
 
     const result = await authService.signup({
       organizationName: "Demo NGO",
-      purpose: "Community Health",
+      sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
     });
@@ -110,7 +131,7 @@ describe("authService", () => {
 
     const result = await authService.signup({
       organizationName: "Demo NGO",
-      purpose: "Community Health",
+      sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
     });
@@ -122,7 +143,7 @@ describe("authService", () => {
   it("me() reads the session via GET /auth/me", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       ...apiSession,
-      role: { key: "human_reviewer" },
+      role: { key: "human_reviewer", crossEntity: false, permissions: [] },
     });
 
     const session = await authService.me();
@@ -178,7 +199,11 @@ describe("authService", () => {
     });
     vi.mocked(apiClient.get).mockResolvedValue({
       ...apiSession,
-      user: { ...apiSession.user, consentedAt: "2026-01-02T00:00:00.000Z" },
+      user: {
+        ...apiSession.user,
+        consentedAt: "2026-01-02T00:00:00.000Z",
+        consentedPolicyVersion: "v1",
+      },
     });
 
     const session = await authService.giveConsent();
@@ -186,6 +211,7 @@ describe("authService", () => {
     expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.consent);
     expect(apiClient.get).toHaveBeenCalledWith(endpoints.auth.me);
     expect(session.user.consentedAt).toBe("2026-01-02T00:00:00.000Z");
+    expect(session.user.consentedPolicyVersion).toBe("v1");
   });
 
   it("me() carries a null consentedAt through as-is (not yet consented)", async () => {

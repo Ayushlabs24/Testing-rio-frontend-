@@ -14,7 +14,7 @@ interface ApiOrganization {
   purpose: string;
   registrationNumber: string;
   logoUrl: string | null;
-  region: string | null;
+  region: string[];
   email: string | null;
   sector: string | null;
   villages: string[];
@@ -27,14 +27,13 @@ interface ApiOrganizationSummary extends ApiOrganization {
 }
 
 /**
- * The backend models region/email as nullable; the frontend treats "not set"
- * as "". `sector` is normalized against the known set rather than blindly
+ * The backend models email as nullable; the frontend treats "not set" as
+ * "". `sector` is normalized against the known set rather than blindly
  * cast — an unrecognized value would otherwise break `tSectors(...)` in the UI.
  */
 function toOrganization(api: ApiOrganization): Organization {
   return {
     ...api,
-    region: api.region ?? "",
     email: api.email ?? "",
     sector: toSector(api.sector),
   };

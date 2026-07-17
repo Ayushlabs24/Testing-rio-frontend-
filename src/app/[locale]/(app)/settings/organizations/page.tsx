@@ -84,7 +84,11 @@ function OrganizationDetailSheet({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground text-xs">{t("regionColumn")}</p>
-                  <p className="text-foreground">{organization.region || "—"}</p>
+                  <p className="text-foreground">
+                    {organization.region.length > 0
+                      ? organization.region.join(", ")
+                      : "—"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">{t("statusColumn")}</p>
@@ -231,7 +235,7 @@ export default function OrganizationsSettingsPage() {
                         {organization.name}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {organization.region}
+                        {organization.region.join(", ")}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {organization.sector ? tSectors(organization.sector) : "—"}

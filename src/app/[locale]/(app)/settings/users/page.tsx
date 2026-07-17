@@ -112,7 +112,21 @@ function UserDialog({
   const t = useTranslations("app.settings.users");
   const tValidation = useTranslations("auth.validation");
   const [formError, setFormError] = useState<string | null>(null);
+  // Set only right after a successful create — shows a confirmation step
+  // (emailed, or the temporary password itself if the mailer isn't
+  // configured) instead of immediately closing the dialog, since this is
+  // the one chance to hand the new user their credentials.
+  const [credentials, setCredentials] = useState<{
+    email: string;
+    temporaryPasswordEmailed: boolean;
+    temporaryPassword?: string;
+  } | null>(null);
   const isEdit = Boolean(user);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setCredentials(null);
+    onOpenChange(next);
+  };
 
   const schema = z.object({
     name: z.string().min(1, { message: tValidation("nameRequired") }),
@@ -157,43 +171,93 @@ function UserDialog({
   const onSubmit = async (values: Values) => {
     setFormError(null);
     try {
-      let saved: PlatformUser;
       if (isEdit) {
         const changes = {
           name: values.name,
           roleId: values.roleId,
           status: values.status,
         };
-        saved = await usersService.update(user!.id, changes).then((updated) => ({
+        const updated = await usersService.update(user!.id, changes);
+        onSaved({
           ...updated,
           organizationId: user!.organizationId,
           organizationName: user!.organizationName,
-        }));
-      } else {
-        // The backend scopes creation to the caller's own organization but
-        // returns a plain `OrgUser` (no org id/name) — attach it from what
-        // we already know, same as the update path above. Only the declared
-        // CreateUserPayload fields are sent; `status` isn't part of create
-        // (new users are always active) and would otherwise leak into the
-        // request body since `values` is a superset.
-        saved = await usersService
-          .create({ name: values.name, email: values.email, roleId: values.roleId })
-          .then((created) => ({
-            ...created,
-            organizationId: currentOrganization.id,
-            organizationName: currentOrganization.name,
-          }));
+        });
+        reset();
+        onOpenChange(false);
+        return;
       }
-      onSaved(saved);
+
+      // The backend scopes creation to the caller's own organization but
+      // returns a plain `OrgUser` (no org id/name) — attach it from what we
+      // already know, same as the update path above. Only the declared
+      // CreateUserPayload fields are sent; `status` isn't part of create
+      // (new users are always active) and would otherwise leak into the
+      // request body since `values` is a superset.
+      const created = await usersService.create({
+        name: values.name,
+        email: values.email,
+        roleId: values.roleId,
+      });
+      onSaved({
+        ...created,
+        organizationId: currentOrganization.id,
+        organizationName: currentOrganization.name,
+      });
       reset();
-      onOpenChange(false);
+      // Don't close yet — the temporary password (or emailed confirmation)
+      // needs to be shown to the admin first; see the `credentials` state.
+      setCredentials({
+        email: created.email,
+        temporaryPasswordEmailed: created.temporaryPasswordEmailed,
+        temporaryPassword: created.temporaryPassword,
+      });
     } catch (error) {
       setFormError(error instanceof Error ? error.message : t("genericError"));
     }
   };
 
+  if (credentials) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("newUserTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-foreground text-sm">
+              {t("userCreatedSuccess", { email: credentials.email })}
+            </p>
+            {credentials.temporaryPasswordEmailed ? (
+              <p className="border-badge-success bg-badge-success/40 text-badge-success-foreground rounded-md border p-3 text-sm">
+                {t("temporaryPasswordEmailed")}
+              </p>
+            ) : (
+              <div className="border-warning/40 bg-warning/10 space-y-2 rounded-md border p-3">
+                <p className="text-foreground text-sm">
+                  {t("temporaryPasswordNotEmailed")}
+                </p>
+                <p className="border-border bg-background rounded-md border px-3 py-2 font-mono text-sm">
+                  {credentials.temporaryPassword}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {t("temporaryPasswordHint")}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => handleOpenChange(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? t("editUserTitle") : t("newUserTitle")}</DialogTitle>
@@ -528,17 +592,19 @@ export default function UsersSettingsPage() {
 
         <Card>
           <CardContent className="p-0">
-            <div className="border-border flex items-center gap-3 border-b px-4 py-3">
-              <Search className="text-muted-foreground size-4" />
-              <Input
-                placeholder={t("searchPlaceholder")}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setPage(1);
-                }}
-                className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-              />
+            <div className="border-border flex items-center border-b px-4 py-3">
+              <div className="relative w-full">
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input
+                  placeholder={t("searchPlaceholder")}
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-8 pl-9"
+                />
+              </div>
             </div>
 
             <Table>

@@ -21,5 +21,10 @@ export function usePermission(
   const permission = session.role.permissions.find((entry) => entry.module === module);
   if (!permission) return false;
 
-  return action === "write" ? permission.write : permission.read;
+  // Indexed, not branched: every grant resolves to its own field. An earlier
+  // version read `action === "write" ? permission.write : permission.read`,
+  // which would answer a `create`/`approve`/`export`/`share` check with the
+  // role's `read` grant — fail-open on exactly the actions that gate
+  // mutations.
+  return permission[action] === true;
 }

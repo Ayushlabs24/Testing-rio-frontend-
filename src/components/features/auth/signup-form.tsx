@@ -1,21 +1,47 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Copy, MailCheck } from "lucide-react";
+import { ArrowRight, Check, Copy, ImageUp, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SECTORS } from "@/config/sectors";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
+import { organizationsService } from "@/services/organizations/organizations.service";
 
 interface PendingConfirmation {
   temporaryPasswordEmailed: boolean;
   temporaryPassword?: string;
+}
+
+// Client-side allowlist for the organization logo — mirrors the backend's
+// evidence-upload allowlist pattern (extension check before anything is
+// sent), just for images instead of documents.
+const ALLOWED_LOGO_EXTENSIONS = [".png", ".jpg", ".jpeg", ".svg"];
+
+// The logo is stored as a base64 data URI (no object storage yet — see
+// organizations.contract.ts on the backend), so this cap isn't arbitrary:
+// 2MB raw expands to ~2.7M base64 chars, just under the backend's 2.8M-char
+// limit on `logoUrl`. Raising this requires raising that backend limit too.
+const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+
+function hasAllowedExtension(fileName: string, allowed: string[]): boolean {
+  const lower = fileName.toLowerCase();
+  return allowed.some((ext) => lower.endsWith(ext));
 }
 
 /**
@@ -102,16 +128,25 @@ function SignupConfirmation({
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
+  // Reuses the same sector labels as Settings > Organization — one source
+  // of truth for what a sector is called, not a duplicated copy here.
+  const tSectors = useTranslations("app.settings.organization.sectors");
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] =
     useState<PendingConfirmation | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
   const signupSchema = z.object({
     organizationName: z
       .string()
       .min(1, { message: tValidation("organizationNameRequired") }),
-    purpose: z.string().min(1, { message: tValidation("purposeRequired") }),
+    sector: z.string().min(1, { message: tValidation("sectorRequired") }),
+    otherSector: z.string(),
     registrationNumber: z
       .string()
       .min(1, { message: tValidation("registrationNumberRequired") }),
@@ -123,14 +158,59 @@ export function SignupForm() {
   const {
     register,
     handleSubmit,
+    setValue,
+    control,
     formState: { errors, isSubmitting },
-  } = useForm<SignupValues>({ resolver: zodResolver(signupSchema) });
+  } = useForm<SignupValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { sector: "", otherSector: "" },
+  });
+
+  const selectedSector = useWatch({ control, name: "sector" });
+
+  const onLogoSelected = (file: File) => {
+    setLogoError(null);
+    if (!hasAllowedExtension(file.name, ALLOWED_LOGO_EXTENSIONS)) {
+      setLogoError(t("logoInvalidType"));
+      setLogoPreview(null);
+      setLogoFileName(null);
+      return;
+    }
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      setLogoError(t("logoTooLarge"));
+      setLogoPreview(null);
+      setLogoFileName(null);
+      return;
+    }
+    setLogoFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
     try {
-      const { temporaryPasswordEmailed, temporaryPassword } =
-        await authService.signup(values);
+      const { temporaryPasswordEmailed, temporaryPassword } = await authService.signup({
+        organizationName: values.organizationName,
+        sector: values.sector,
+        purpose: values.sector === "other" ? values.otherSector : undefined,
+        registrationNumber: values.registrationNumber,
+        email: values.email,
+      });
+      // The signup response already carries a live session (the backend
+      // sets the session cookie on signup) — used only to attach the logo,
+      // right here, before the admin has actually "signed in" from the
+      // app's point of view. A failed logo upload doesn't fail the whole
+      // signup: the organization/account already exist at this point.
+      if (logoPreview) {
+        try {
+          await organizationsService.update({ logoUrl: logoPreview });
+        } catch {
+          // Non-fatal — the admin can still upload a logo later from
+          // Settings > Organization.
+        }
+      }
       // Signup doesn't sign the admin in automatically — they confirm
       // either how they got their password (emailed) or the password
       // itself (fallback), then sign in explicitly with it, same as any
@@ -153,12 +233,12 @@ export function SignupForm() {
 
   return (
     <div className="w-full max-w-lg">
-      <div className="mb-8 space-y-1.5">
+      <div className="mb-6 space-y-1.5">
         <h1 className="text-foreground text-2xl font-semibold">{t("title")}</h1>
         <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="organizationName">{t("organizationNameLabel")}</Label>
           <Input
@@ -186,17 +266,40 @@ export function SignupForm() {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="purpose">{t("purposeLabel")}</Label>
-            <Input
-              id="purpose"
-              placeholder={t("purposePlaceholder")}
-              {...register("purpose")}
-            />
-            {errors.purpose ? (
-              <p className="text-destructive text-sm">{errors.purpose.message}</p>
+            <Label htmlFor="sector">{t("sectorLabel")}</Label>
+            <Select
+              value={selectedSector || undefined}
+              onValueChange={(value) =>
+                setValue("sector", value, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger id="sector" className="w-full">
+                <SelectValue placeholder={t("sectorPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {SECTORS.map((sector) => (
+                  <SelectItem key={sector} value={sector}>
+                    {tSectors(sector)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.sector ? (
+              <p className="text-destructive text-sm">{errors.sector.message}</p>
             ) : null}
           </div>
         </div>
+
+        {selectedSector === "other" ? (
+          <div className="space-y-2">
+            <Label htmlFor="otherSector">{t("otherSectorLabel")}</Label>
+            <Input
+              id="otherSector"
+              placeholder={t("otherSectorPlaceholder")}
+              {...register("otherSector")}
+            />
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           <Label htmlFor="email">{t("emailLabel")}</Label>
@@ -209,6 +312,38 @@ export function SignupForm() {
           {errors.email ? (
             <p className="text-destructive text-sm">{errors.email.message}</p>
           ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="logoUpload">{t("logoLabel")}</Label>
+          <button
+            id="logoUpload"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="border-input hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none focus-visible:ring-3"
+          >
+            <ImageUp className="text-muted-foreground size-4 shrink-0" />
+            {logoPreview ? (
+              <Avatar size="sm" className="shrink-0">
+                <AvatarImage src={logoPreview} alt="" />
+              </Avatar>
+            ) : null}
+            <span className="text-muted-foreground min-w-0 flex-1 truncate text-left">
+              {logoFileName ?? t("logoPlaceholder")}
+            </span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onLogoSelected(file);
+              event.target.value = "";
+            }}
+          />
+          {logoError ? <p className="text-destructive text-sm">{logoError}</p> : null}
         </div>
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}

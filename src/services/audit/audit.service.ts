@@ -3,6 +3,7 @@ import { findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
+import { apiConfig } from "@/services/api/config";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
 import type { AuditEvent, RecordAuditEventInput } from "@/services/audit/audit.types";
@@ -64,5 +65,37 @@ export const auditService = {
   /** Read-only history for the current user's organisation, newest first. */
   async list(): Promise<AuditEvent[]> {
     return apiClient.get<AuditEvent[]>(endpoints.audit.list);
+  },
+
+  /**
+   * CSV export (real, not a placeholder stub — audit rows are plain text
+   * and don't need PDF/Excel rendering to be useful). Bypasses apiClient
+   * (JSON-only) the same way reportsService.download() does, and triggers
+   * a real browser download from the response.
+   */
+  async downloadCsv(): Promise<void> {
+    const url = new URL(
+      endpoints.audit.export.replace(/^\//, ""),
+      `${apiConfig.baseUrl}/`,
+    );
+    const response = await fetch(url, { credentials: "include" });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => undefined);
+      throw new ApiError({
+        message: payload?.error?.message ?? response.statusText,
+        status: response.status,
+      });
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const filenameMatch = /filename="([^"]+)"/.exec(disposition);
+    const filename = filenameMatch?.[1] ?? "audit-log.csv";
+
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(objectUrl);
   },
 };

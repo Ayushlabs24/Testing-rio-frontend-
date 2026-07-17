@@ -1,15 +1,27 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  AlarmClock,
+  Archive,
+  BarChart3,
   Building2,
+  ClipboardList,
+  Gauge,
   LayoutDashboard,
+  ListTree,
+  QrCode,
   ScrollText,
+  Share2,
   ShieldCheck,
   Users2,
 } from "lucide-react";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
 
 export interface NavItem {
-  /** Key into the `app.sidebar` namespace of the message files. */
+  /**
+   * Key into the `app.sidebar` namespace of the message files, and the
+   * identifier `NAV_ORDER_BY_ROLE` below references to build each role's
+   * ordered menu — must be unique across `appNav`.
+   */
   labelKey: string;
   href: string;
   icon: LucideIcon;
@@ -26,8 +38,55 @@ export interface NavItem {
   scope?: "entity" | "crossEntity";
 }
 
+/** Every nav item the app has, keyed by `labelKey`. Order here is irrelevant —
+ * actual display order per role comes from `NAV_ORDER_BY_ROLE` below. */
 export const appNav: NavItem[] = [
   { labelKey: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  // No `scope`: cross-entity roles read studies too — the Center Supervisor's
+  // oversight view (FR-11) is the same list, widened to every organisation.
+  { labelKey: "studies", href: "/studies", icon: ClipboardList, module: "studySurvey" },
+  {
+    labelKey: "publicSurveys",
+    href: "/public-surveys",
+    icon: QrCode,
+    module: "studySurvey",
+  },
+  {
+    labelKey: "methodologyConfig",
+    href: "/settings/methodology",
+    icon: ListTree,
+    module: "methodologyQuestionBank",
+  },
+  {
+    labelKey: "priorityDashboard",
+    href: "/priority-dashboard",
+    icon: Gauge,
+    module: "priorityScoring",
+  },
+  {
+    labelKey: "reports",
+    href: "/reports",
+    icon: BarChart3,
+    module: "reportsDashboards",
+  },
+  {
+    labelKey: "archive",
+    href: "/archive",
+    icon: Archive,
+    module: "archiveSharingAudit",
+  },
+  {
+    labelKey: "sharing",
+    href: "/sharing",
+    icon: Share2,
+    module: "archiveSharingAudit",
+  },
+  {
+    labelKey: "reviewerSla",
+    href: "/reviewer-sla",
+    icon: AlarmClock,
+    module: "aiReview",
+  },
   {
     labelKey: "organization",
     href: "/settings/organization",
@@ -62,3 +121,82 @@ export const appNav: NavItem[] = [
     module: "archiveSharingAudit",
   },
 ];
+
+/**
+ * Explicit per-role menu order — the sidebar walks each role's own list
+ * top-to-bottom rather than filtering one shared array, so "which order does
+ * X role see its menu in" is answered by reading this config, not by
+ * reverse-engineering permission side-effects. Permission checks in
+ * app-sidebar.tsx still apply on top of this (fail-closed): an item listed
+ * here that the role doesn't actually hold the permission for is still
+ * hidden, so a stale/wrong entry here can only under-show, never over-show.
+ *
+ * Deliberately omits items the role has no real reason to land on first —
+ * e.g. Human Reviewer's work starts at Studies, not an executive Dashboard,
+ * so "dashboard" isn't in its list even though the role could technically
+ * view /dashboard directly.
+ */
+export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
+  ngo_admin: [
+    "dashboard",
+    "organization",
+    "studies",
+    "publicSurveys",
+    "priorityDashboard",
+    "reports",
+    "archive",
+    "sharing",
+    "reviewerSla",
+    "audit",
+    "roles",
+    "users",
+    "methodologyConfig",
+  ],
+  ngo_research_officer: [
+    "dashboard",
+    "studies",
+    "publicSurveys",
+    "priorityDashboard",
+    "reports",
+    "archive",
+    "sharing",
+    "reviewerSla",
+  ],
+  field_researcher: ["dashboard", "studies", "publicSurveys"],
+  human_reviewer: [
+    "studies",
+    "reviewerSla",
+    "publicSurveys",
+    "priorityDashboard",
+    "reports",
+    "archive",
+    "sharing",
+  ],
+  data_analyst: [
+    "dashboard",
+    "studies",
+    "priorityDashboard",
+    "reports",
+    "archive",
+    "sharing",
+    "methodologyConfig",
+  ],
+  system_admin: [
+    "dashboard",
+    "organizations",
+    "users",
+    "roles",
+    "audit",
+    "methodologyConfig",
+  ],
+  read_only_viewer: ["dashboard", "studies", "priorityDashboard", "reports", "archive"],
+  // Program Supervisor.
+  center_supervisor: [
+    "dashboard",
+    "organizations",
+    "priorityDashboard",
+    "reports",
+    "sharing",
+    "audit",
+  ],
+};

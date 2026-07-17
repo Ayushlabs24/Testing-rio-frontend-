@@ -104,6 +104,15 @@
   --popover: var(--palette-neutral-0);
   --popover-foreground: var(--palette-neutral-950);
 
+  /*
+   * The public auth screens' form panel (login/signup/forgot/reset/OTP/
+   * change-password — see AuthShell) — same as --background in light mode,
+   * but overridden to a lighter charcoal in dark mode below, since the
+   * near-black --background reads harshly on the auth split-screen next to
+   * the brand gradient panel.
+   */
+  --auth-surface: var(--background);
+
   /* 700 is where the exact brand hex (#145463) lives in this ramp (see the
    * primitive palette above) — referenced directly here so headings/links
    * render the precise NCNP color, not an adjacent approximation. */
@@ -228,6 +237,9 @@
 .dark {
   --background: var(--palette-neutral-950);
   --foreground: var(--palette-neutral-50);
+
+  /* Lighter charcoal than --background — see the root definition above. */
+  --auth-surface: var(--palette-neutral-800);
 
   --card: var(--palette-neutral-900);
   --card-foreground: var(--palette-neutral-50);
