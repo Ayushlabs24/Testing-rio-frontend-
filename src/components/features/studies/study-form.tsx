@@ -16,9 +16,8 @@ import type { AssignableReviewer, Study } from "@/services/studies/studies.types
 export interface StudyFormValues {
   title: string;
   /**
-   * Create-only, local convenience field — never sent to the backend (the
-   * Study itself has no village; that lives on its Need, one per study).
-   * Carried through to prefill Define Need after the study is created.
+   * Create-only. Free text, comma-separated — the caller splits it into
+   * Study.villages before sending (see parseVillageInput).
    */
   village: string;
   /**
@@ -32,8 +31,8 @@ export interface StudyFormValues {
 
 interface StudyFormProps {
   /** Omit to create; pass a study to edit. Title is the only field an edit
-   * can change — Village/Need/Evidence/Classification each live on their
-   * own screen. */
+   * can change — Villages are set at create; Need/Evidence/Classification
+   * each live on their own screen. */
   study?: Study;
   onSubmit: (values: StudyFormValues) => Promise<void>;
   onCancel: () => void;

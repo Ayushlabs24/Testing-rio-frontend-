@@ -1,39 +1,36 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, MapPin, X } from "lucide-react";
+import { ArrowLeft, Lock, MapPin, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
+import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
-import type { Need } from "@/services/needs/needs.types";
+import {
+  needLockState,
+  type Need,
+  type NeedLockState,
+} from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
+import type { Study } from "@/services/studies/studies.types";
 
 interface NeedFormValues {
+  title: string;
   statement: string;
   village: string[];
-  source: string;
-}
-
-/** Splits on commas so pasting/typing "Al Wathba, Al Falah, Bani Yas" adds
- * three separate villages, not one literal string — same behavior as Enter. */
-function parseVillageInput(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
 }
 
 function VillageEditor({
@@ -107,14 +104,56 @@ function VillageEditor({
   );
 }
 
+/** Shown instead of the form once the need is no longer editable by this
+ * user. Read-only rather than a disabled form: there's nothing to submit, and
+ * a greyed-out form invites the user to try. */
+function NeedReadOnly({ need, lockState }: { need: Need; lockState: NeedLockState }) {
+  const t = useTranslations("app.studies.need");
+  return (
+    <div className="space-y-5">
+      <div
+        role="status"
+        className="bg-muted text-muted-foreground flex items-start gap-2 rounded-md border p-3 text-sm"
+      >
+        <Lock className="mt-0.5 size-4 shrink-0" />
+        <span>
+          {lockState === "locked" ? t("lockedNotice") : t("reviewerOnlyNotice")}
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs font-medium">{t("titleLabel")}</p>
+        <p className="text-sm">{need.title}</p>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs font-medium">{t("statementLabel")}</p>
+        <p className="text-sm whitespace-pre-wrap">{need.statement}</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <p className="text-muted-foreground text-xs font-medium">{t("villageLabel")}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {need.village.map((v) => (
+            <Badge key={v} variant="secondary" className="gap-1">
+              <MapPin className="size-3" />
+              {v}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DefineNeedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: studyId } = use(params);
   const t = useTranslations("app.studies.need");
   const tValidation = useTranslations("app.studies.validation");
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const prefillVillage = searchParams.get("village") ?? "";
+  const { session } = useAuth();
 
+  const [study, setStudy] = useState<Study | null>(null);
   const [need, setNeed] = useState<Need | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -137,8 +176,10 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
       }),
       needsService.getByStudy(studyId),
     ])
-      .then(([, needResult]) => {
-        if (!cancelled) setNeed(needResult);
+      .then(([studyResult, needResult]) => {
+        if (cancelled) return;
+        setStudy(studyResult);
+        setNeed(needResult);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -150,9 +191,13 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
   }, [studyId]);
 
   const schema = z.object({
+    title: z
+      .string()
+      .trim()
+      .min(1, tValidation("titleRequired"))
+      .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
     village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
-    source: z.string().trim().min(1, tValidation("needSourceRequired")),
   });
 
   const {
@@ -164,13 +209,20 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
   } = useForm<NeedFormValues>({
     resolver: zodResolver(schema),
     values: {
+      title: need?.title ?? "",
       statement: need?.statement ?? "",
-      village: need?.village ?? parseVillageInput(prefillVillage),
-      source: need?.source ?? "",
+      // A new Need starts from the villages configured on its Study; once the
+      // Need exists it owns its own list and the Study's is no longer imposed.
+      village: need?.village ?? study?.villages ?? [],
     },
   });
 
   const village = useWatch({ control, name: "village" });
+
+  // Mirrors the server's rule so the form doesn't offer an edit the API will
+  // reject. The server check is the real one — this only keeps the UI honest.
+  const lockState = study ? needLockState(study.status, session?.role.key) : "editable";
+  const canEdit = lockState === "editable";
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -212,8 +264,22 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
               </div>
             ) : notFound ? (
               <p className="text-muted-foreground text-sm">{t("studyNotFound")}</p>
+            ) : !canEdit && need ? (
+              <NeedReadOnly need={need} lockState={lockState} />
             ) : (
               <form onSubmit={submit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="title">{t("titleLabel")}</Label>
+                  <Input
+                    id="title"
+                    placeholder={t("titlePlaceholder")}
+                    {...register("title")}
+                  />
+                  {errors.title ? (
+                    <p className="text-destructive text-sm">{errors.title.message}</p>
+                  ) : null}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="statement">{t("statementLabel")}</Label>
                   <textarea
@@ -238,18 +304,6 @@ export default function DefineNeedPage({ params }: { params: Promise<{ id: strin
                   />
                   {errors.village ? (
                     <p className="text-destructive text-sm">{errors.village.message}</p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="source">{t("sourceLabel")}</Label>
-                  <Input
-                    id="source"
-                    placeholder={t("sourcePlaceholder")}
-                    {...register("source")}
-                  />
-                  {errors.source ? (
-                    <p className="text-destructive text-sm">{errors.source.message}</p>
                   ) : null}
                 </div>
 

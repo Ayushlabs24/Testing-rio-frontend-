@@ -14,14 +14,15 @@ export type StudyStatus = (typeof STUDY_STATUSES)[number];
  * only ever rename the title directly; everything else about the lifecycle
  * moves forward through those other screens, never a free-form edit.
  *
- * There's no `villages` field here — "village" is a property of the Need
- * (one per study), not the Study itself; see `needs.types.ts`. The backend's
- * Study row happens to carry an (unused) `villages` column from an earlier
- * iteration, but this app no longer reads or writes it.
+ * `villages` is the set the study concerns, chosen at create. A Need carries
+ * its own `village` list (see `needs.types.ts`) which starts from the Study's
+ * but can then diverge — the Study's is the wider scope, the Need's is what
+ * that specific need is actually about.
  */
 export interface Study {
   id: string;
   title: string;
+  villages: string[];
   status: StudyStatus;
   /** Null = no reviewer assigned yet (pre-existing Study, or org had no NGO Research Officer at creation). */
   assignedReviewerId: string | null;
@@ -45,12 +46,12 @@ export type StudySummary = Study;
 
 export interface CreateStudyPayload {
   title: string;
-  /** Required unless the org has no active NGO Research Officer at all — the backend rejects an omitted value when one exists. */
-  assignedReviewerId?: string;
+  villages?: string[];
 }
 
 export interface UpdateStudyPayload {
   title?: string;
+  villages?: string[];
 }
 
 /** Study-create's reviewer picker — just enough to render "Full Name / Email". */
