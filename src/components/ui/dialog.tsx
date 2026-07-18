@@ -55,7 +55,15 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-popover text-popover-foreground ring-foreground/10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm",
+          // `[&>*]:min-w-0`: grid items default to `min-width: auto`, so a
+          // direct child with long unbreakable content (e.g. a Combobox
+          // showing a long selected title) would refuse to shrink below its
+          // own content width and overflow past this dialog's fixed
+          // max-w-* — regardless of any truncate/min-w-0 applied deeper
+          // inside that child. This makes every direct child shrinkable by
+          // default so `truncate` further down actually has something
+          // bounded to clip against.
+          "bg-popover text-popover-foreground ring-foreground/10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm [&>*]:min-w-0",
           className,
         )}
         {...props}

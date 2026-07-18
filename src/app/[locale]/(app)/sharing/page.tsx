@@ -142,7 +142,7 @@ function CreateRequestDialog({
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="space-y-2">
             <Label>{t("ownerOrgLabel")}</Label>
             <Combobox

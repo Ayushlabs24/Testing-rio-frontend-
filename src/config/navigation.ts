@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Gauge,
   LayoutDashboard,
+  // ListChecks,
   ListTree,
   QrCode,
   ScrollText,
@@ -147,7 +148,10 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
   ngo_admin: [
     "dashboard",
     "organization",
+    "roles",
+    "users",
     "studies",
+    "surveyBuilder",
     "surveyBuilder",
     "publicSurveys",
     "priorityDashboard",
@@ -155,9 +159,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "archive",
     "sharing",
     "reviewerSla",
-    "audit",
-    "roles",
-    "users",
+
     "methodologyConfig",
   ],
   ngo_research_officer: [

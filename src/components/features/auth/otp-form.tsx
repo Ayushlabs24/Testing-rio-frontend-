@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -91,14 +91,13 @@ export function OtpForm() {
 
           {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-          <Button
+          <LoadingButton
             type="submit"
             className="h-11 w-full gap-2 px-6 text-base"
-            disabled={verifyForm.formState.isSubmitting}
-          >
-            {verifyForm.formState.isSubmitting ? t("verifying") : t("verify")}
-            {!verifyForm.formState.isSubmitting && <ArrowRight className="size-4" />}
-          </Button>
+            isLoading={verifyForm.formState.isSubmitting}
+            text={verifyForm.formState.isSubmitting ? t("verifying") : t("verify")}
+            endIcon={<ArrowRight className="size-4" />}
+          />
         </form>
 
         <button
@@ -141,14 +140,13 @@ export function OtpForm() {
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-        <Button
+        <LoadingButton
           type="submit"
           className="h-11 w-full gap-2 px-6 text-base"
-          disabled={requestForm.formState.isSubmitting}
-        >
-          {requestForm.formState.isSubmitting ? t("sending") : t("sendCode")}
-          {!requestForm.formState.isSubmitting && <ArrowRight className="size-4" />}
-        </Button>
+          isLoading={requestForm.formState.isSubmitting}
+          text={requestForm.formState.isSubmitting ? t("sending") : t("sendCode")}
+          endIcon={<ArrowRight className="size-4" />}
+        />
       </form>
 
       <Link

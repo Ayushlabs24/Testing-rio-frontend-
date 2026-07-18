@@ -178,27 +178,6 @@ export default function AuditSettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(value) => {
-                  setPageSize(Number(value));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger
-                  className="h-8 w-full sm:w-40"
-                  aria-label={t("rowsPerPageLabel")}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROWS_PER_PAGE_OPTIONS.map((size) => (
-                    <SelectItem key={size} value={String(size)}>
-                      {t("rowsPerPageLabel")}: {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <Table>
@@ -300,7 +279,28 @@ export default function AuditSettingsPage() {
             </Table>
 
             {filteredEvents.length > 0 ? (
-              <div className="border-border border-t px-4 py-3">
+              <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-40"
+                    aria-label={t("rowsPerPageLabel")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROWS_PER_PAGE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {t("rowsPerPageLabel")}: {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Pagination
                   page={currentPage}
                   pageCount={pageCount}
@@ -308,6 +308,7 @@ export default function AuditSettingsPage() {
                   previousLabel={t("pagination.previous")}
                   nextLabel={t("pagination.next")}
                   pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                  className="sm:w-auto"
                 />
               </div>
             ) : null}

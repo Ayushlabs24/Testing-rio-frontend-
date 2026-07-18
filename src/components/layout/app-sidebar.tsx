@@ -82,7 +82,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
         <button
           type="button"
           className={cn(
-            "hover:bg-sidebar-accent flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+            "group hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
             collapsed && "justify-center px-0",
           )}
           aria-label={session.user.name}
@@ -92,10 +92,10 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
           </Avatar>
           {!collapsed ? (
             <span className="min-w-0 flex-1">
-              <span className="text-sidebar-foreground block truncate text-sm font-medium">
+              <span className="text-sidebar-foreground group-hover:text-sidebar-accent-foreground group-aria-expanded:text-sidebar-accent-foreground block truncate text-sm font-medium">
                 {session.user.name}
               </span>
-              <span className="text-sidebar-foreground/60 block truncate text-xs">
+              <span className="text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground/80 group-aria-expanded:text-sidebar-accent-foreground/80 block truncate text-xs">
                 {role.name}
               </span>
             </span>
@@ -115,7 +115,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
       <aside
         className={cn(
           "border-sidebar-border bg-sidebar hidden shrink-0 flex-col border-r transition-[width] duration-200 md:flex",
-          collapsed ? "w-16" : "w-64",
+          collapsed ? "w-20" : "w-64",
         )}
       >
         {!collapsed ? (

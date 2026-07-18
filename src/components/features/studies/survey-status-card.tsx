@@ -1,10 +1,11 @@
 "use client";
 
-import { ClipboardList, Loader2, Sparkles } from "lucide-react";
+import { ClipboardList, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -139,15 +140,13 @@ export function SurveyStatusCard({
               </Link>
             </Button>
             {canWrite && survey.status !== "PUBLISHED" ? (
-              <Button
+              <LoadingButton
                 size="sm"
-                disabled={publishing}
+                isLoading={publishing}
                 onClick={publishNow}
                 className="gap-1.5"
-              >
-                {publishing ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                {publishing ? t("publishing") : t("publishSurvey")}
-              </Button>
+                text={publishing ? t("publishing") : t("publishSurvey")}
+              />
             ) : null}
           </div>
         ) : canWrite ? (
@@ -216,15 +215,13 @@ export function SurveyStatusCard({
             >
               {t("cancel")}
             </Button>
-            <Button
+            <LoadingButton
               type="button"
               onClick={createSurvey}
-              disabled={creating}
+              isLoading={creating}
               className="gap-1.5"
-            >
-              {creating ? <Loader2 className="size-4 animate-spin" /> : null}
-              {creating ? t("creating") : t("continue")}
-            </Button>
+              text={creating ? t("creating") : t("continue")}
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>
