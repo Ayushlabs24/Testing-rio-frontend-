@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Gauge,
   LayoutDashboard,
+  ListChecks,
   ListTree,
   QrCode,
   ScrollText,
@@ -56,6 +57,15 @@ export const appNav: NavItem[] = [
     href: "/settings/methodology",
     icon: ListTree,
     module: "methodologyQuestionBank",
+  },
+  // Question Bank + AI-assisted questionnaire design — its own independent
+  // methodology feature, not a Study feature, hence its own module rather
+  // than being nested under a Study or gated on studySurvey.
+  {
+    labelKey: "surveyBuilder",
+    href: "/survey-builder",
+    icon: ListChecks,
+    module: "surveyBuilder",
   },
   {
     labelKey: "priorityDashboard",
@@ -131,43 +141,41 @@ export const appNav: NavItem[] = [
  * here that the role doesn't actually hold the permission for is still
  * hidden, so a stale/wrong entry here can only under-show, never over-show.
  *
- * Deliberately omits items the role has no real reason to land on first —
- * e.g. Human Reviewer's work starts at Studies, not an executive Dashboard,
- * so "dashboard" isn't in its list even though the role could technically
- * view /dashboard directly.
+ * Deliberately omits items the role has no real reason to land on first.
  */
 export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
   ngo_admin: [
     "dashboard",
     "organization",
+    "roles",
+    "users",
     "studies",
+    "surveyBuilder",
     "publicSurveys",
     "priorityDashboard",
     "reports",
     "archive",
     "sharing",
     "reviewerSla",
-    "audit",
-    "roles",
-    "users",
+
     "methodologyConfig",
+    "audit",
   ],
   ngo_research_officer: [
     "dashboard",
     "studies",
+    "surveyBuilder",
     "publicSurveys",
     "priorityDashboard",
     "reports",
     "archive",
     "sharing",
-    "reviewerSla",
   ],
   field_researcher: ["dashboard", "studies", "publicSurveys"],
   human_reviewer: [
+    "dashboard",
     "studies",
     "reviewerSla",
-    "publicSurveys",
-    "priorityDashboard",
     "reports",
     "archive",
     "sharing",

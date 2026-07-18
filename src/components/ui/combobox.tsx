@@ -68,15 +68,20 @@ export function Combobox({
           disabled={disabled}
           aria-label={ariaLabel}
           className={cn(
-            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
+            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 overflow-hidden rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
             !selected && "text-muted-foreground",
           )}
         >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <span className="min-w-0 flex-1 truncate text-left">
+            {selected ? selected.label : placeholder}
+          </span>
           <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+      <PopoverContent
+        className="w-(--radix-popper-anchor-width) max-w-(--radix-popper-available-width) p-0"
+        align="start"
+      >
         <div className="border-border flex items-center gap-2 border-b px-3 py-2">
           <Search className="text-muted-foreground size-4 shrink-0" />
           <input
@@ -105,9 +110,9 @@ export function Combobox({
                   onSelect(item.value);
                   setOpen(false);
                 }}
-                className="hover:bg-accent hover:text-accent-foreground flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm"
+                className="hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-md px-2.5 py-1.5 text-left text-sm"
               >
-                <span className="flex min-w-0 flex-col items-start">
+                <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{item.label}</span>
                   {item.description ? (
                     <span className="text-muted-foreground truncate text-xs">

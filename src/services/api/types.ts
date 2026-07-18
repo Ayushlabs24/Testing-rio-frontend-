@@ -24,4 +24,8 @@ export interface RequestOptions {
   headers?: HeadersInit;
   signal?: AbortSignal;
   cache?: RequestCache;
+  /** Overrides `apiConfig.timeoutMs` for this one call — e.g. AI
+   * classification, which can genuinely take longer than the app-wide
+   * default before Gemini responds. */
+  timeoutMs?: number;
 }

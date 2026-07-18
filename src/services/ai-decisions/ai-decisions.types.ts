@@ -1,6 +1,3 @@
-// One Need can classify into multiple domains/sub-domains at once (per
-// Ganesh) — this is NOT multiple Needs, just multiple AI suggestions
-// against the one Need.
 export interface ClassificationSuggestion {
   domains: string[];
   subDomains: string[];

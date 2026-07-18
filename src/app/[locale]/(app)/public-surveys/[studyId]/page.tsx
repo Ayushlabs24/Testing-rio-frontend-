@@ -42,10 +42,9 @@ import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
-import type {
-  PublicSurveyLink,
-  SurveyDefinition,
-} from "@/services/public-surveys/public-surveys.types";
+import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
+import { studiesService } from "@/services/studies/studies.service";
+import type { Study } from "@/services/studies/studies.types";
 
 const LABEL_MAX_LENGTH = 150;
 
@@ -163,7 +162,7 @@ export default function PublicSurveyDetailPage({
   const canCreate = usePermission("studySurvey", "create");
   const canWrite = usePermission("studySurvey", "write");
 
-  const [definition, setDefinition] = useState<SurveyDefinition | null>(null);
+  const [study, setStudy] = useState<Study | null>(null);
   const [links, setLinks] = useState<PublicSurveyLink[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -176,11 +175,11 @@ export default function PublicSurveyDetailPage({
 
   function load() {
     Promise.all([
-      publicSurveysService.getDefinition(studyId),
+      studiesService.getById(studyId),
       publicSurveysService.listLinks(studyId),
     ])
-      .then(([def, linkRows]) => {
-        setDefinition(def);
+      .then(([studyResult, linkRows]) => {
+        setStudy(studyResult);
         setLinks(linkRows);
         setLoadFailed(false);
       })
@@ -250,8 +249,8 @@ export default function PublicSurveyDetailPage({
         </Link>
 
         <PageHeader
-          title={definition?.title ?? ""}
-          description={t("definitionPlaceholderNote")}
+          title={study?.title ?? ""}
+          description={t("description")}
           actions={
             canCreate ? (
               <Button onClick={() => setCreateOpen(true)} className="gap-2">

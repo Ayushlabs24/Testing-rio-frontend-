@@ -4,6 +4,7 @@ import type {
   CreateDomainPayload,
   CreateSubDomainPayload,
   Domain,
+  DomainWithSubDomains,
   SubDomain,
   UpdateDomainPayload,
   UpdateSubDomainPayload,
@@ -17,6 +18,12 @@ import type {
 export const domainsService = {
   async list(): Promise<Domain[]> {
     return apiClient.get<Domain[]>(endpoints.domains.list);
+  },
+
+  /** One request for every domain's sub-domains, nested — use this instead
+   * of `list()` + one `listSubDomains()` call per domain. */
+  async listWithSubDomains(): Promise<DomainWithSubDomains[]> {
+    return apiClient.get<DomainWithSubDomains[]>(endpoints.domains.tree);
   },
 
   async create(payload: CreateDomainPayload): Promise<Domain> {

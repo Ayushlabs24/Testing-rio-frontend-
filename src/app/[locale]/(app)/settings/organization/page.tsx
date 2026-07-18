@@ -5,7 +5,6 @@ import {
   CalendarDays,
   Check,
   Layers,
-  Loader2,
   Mail,
   MapPin,
   Pencil,
@@ -23,6 +22,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -488,14 +488,13 @@ export default function OrganizationSettingsPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={isSubmitting} className="gap-2">
-                      {isSubmitting ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Check className="size-4" />
-                      )}
-                      {t("save")}
-                    </Button>
+                    <LoadingButton
+                      type="submit"
+                      className="gap-2"
+                      isLoading={isSubmitting}
+                      text={t("save")}
+                      startIcon={<Check className="size-4" />}
+                    />
                     <Button
                       type="button"
                       variant="outline"

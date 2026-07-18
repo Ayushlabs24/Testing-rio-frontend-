@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ModuleAccessList } from "@/components/features/settings/module-access-list";
+import { LoadingButton } from "@/components/common/loading-button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -260,9 +261,11 @@ function UserDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? t("editUserTitle") : t("newUserTitle")}</DialogTitle>
+          <DialogTitle className="text-primary">
+            {isEdit ? t("editUserTitle") : t("newUserTitle")}
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 sm:grid-cols-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 p-3 sm:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">{t("nameLabel")}</Label>
@@ -282,7 +285,7 @@ function UserDialog({
             <div className="space-y-2">
               <Label htmlFor="roleId">{t("roleLabel")}</Label>
               <Select
-                value={selectedRoleId || undefined}
+                value={selectedRoleId}
                 onValueChange={(value) => setValue("roleId", value)}
               >
                 <SelectTrigger id="roleId" className="w-full">
@@ -305,7 +308,7 @@ function UserDialog({
               <div className="space-y-2">
                 <Label htmlFor="status">{t("statusColumn")}</Label>
                 <Select
-                  value={selectedStatus || undefined}
+                  value={selectedStatus}
                   onValueChange={(value) => setValue("status", value as UserStatus)}
                 >
                   <SelectTrigger id="status" className="w-full">
@@ -338,15 +341,19 @@ function UserDialog({
           </div>
 
           <DialogFooter className="sm:col-span-2">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? isEdit
-                  ? t("saving")
-                  : t("creating")
-                : isEdit
-                  ? t("save")
-                  : t("create")}
-            </Button>
+            <LoadingButton
+              type="submit"
+              isLoading={isSubmitting}
+              text={
+                isSubmitting
+                  ? isEdit
+                    ? t("saving")
+                    : t("creating")
+                  : isEdit
+                    ? t("save")
+                    : t("create")
+              }
+            />
           </DialogFooter>
         </form>
       </DialogContent>

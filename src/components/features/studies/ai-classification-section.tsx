@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/common/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { DOMAINS, subDomainsFor } from "@/config/methodology";
+import { domainsService } from "@/services/domains/domains.service";
 import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
 import type { AiDecision } from "@/services/ai-decisions/ai-decisions.types";
 import { ApiError } from "@/services/api/types";
@@ -31,36 +31,27 @@ import type { StudyStatus } from "@/services/studies/studies.types";
 
 /**
  * Editable chip list for the reviewer's domain/sub-domain override. `options`
- * (the methodology's Domain/Sub-Domain reference — see config/methodology.ts)
- * populates a dropdown so a reviewer picks from the approved list by default;
- * the free-text input next to it stays available for a genuine edge case the
- * methodology doesn't cover, not as the primary way to add one.
+ * is always the live, active Domain/SubDomain master list (see
+ * domainsService) — a reviewer can only pick from that list, never type an
+ * ad-hoc value, since Domain/SubDomain already has its own master-data
+ * screen (Settings → Methodology) for adding new ones.
  */
 function ChipEditor({
   values,
   onChange,
-  placeholder,
   options,
+  loading = false,
 }: {
   values: string[];
   onChange: (values: string[]) => void;
-  placeholder: string;
-  options?: string[];
+  options: string[];
+  loading?: boolean;
 }) {
   const t = useTranslations("app.studies.classification");
-  const [draft, setDraft] = useState("");
-  // With a dropdown present, the free-text row stays collapsed behind a
-  // small toggle until needed, instead of always taking up a second row.
-  const [showCustom, setShowCustom] = useState(!options);
-  const add = () => {
-    const value = draft.trim();
-    if (value && !values.includes(value)) onChange([...values, value]);
-    setDraft("");
-  };
   const addFromOptions = (value: string) => {
     if (value && !values.includes(value)) onChange([...values, value]);
   };
-  const remaining = (options ?? []).filter((option) => !values.includes(option));
+  const remaining = options.filter((option) => !values.includes(option));
 
   return (
     <div className="space-y-1.5">
@@ -80,57 +71,21 @@ function ChipEditor({
         </div>
       ) : null}
 
-      {options ? (
-        <div className="flex min-w-0 gap-2">
-          <Select value="" onValueChange={addFromOptions}>
-            <SelectTrigger className="h-8 min-w-0 flex-1">
-              <SelectValue
-                placeholder={t("selectFromMethodology")}
-                className="truncate"
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {remaining.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!showCustom ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0"
-              onClick={() => setShowCustom(true)}
-            >
-              {t("addCustom")}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {showCustom ? (
-        <div className="flex gap-2">
-          <Input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                add();
-              }
-            }}
-            placeholder={placeholder}
-            className="h-8"
-            autoFocus={Boolean(options)}
+      <Select value="" onValueChange={addFromOptions} disabled={loading}>
+        <SelectTrigger className="h-8 w-full">
+          <SelectValue
+            placeholder={loading ? t("loadingMethodology") : t("selectFromMethodology")}
+            className="truncate"
           />
-          <Button type="button" variant="outline" size="sm" onClick={add}>
-            +
-          </Button>
-        </div>
-      ) : null}
+        </SelectTrigger>
+        <SelectContent>
+          {remaining.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -191,11 +146,15 @@ export function AiClassificationSection({
   studyStatus,
   hasNeed,
   evidenceCount,
+  onReviewed,
 }: {
   studyId: string;
   studyStatus: StudyStatus;
   hasNeed: boolean;
   evidenceCount: number;
+  /** Fires after an approved/modified review — Study.domain/subDomain just
+   * changed server-side, so the parent should refetch the Study. */
+  onReviewed?: () => void;
 }) {
   const t = useTranslations("app.studies.classification");
   const canRun = usePermission("aiReview", "write");
@@ -210,6 +169,14 @@ export function AiClassificationSection({
   const [overrideReason, setOverrideReason] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
 
+  // Same source (and same active-only filter) as the backend's Gemini
+  // candidate list (AiDecisionsService.runClassification) — the override
+  // modal must only ever offer domains/sub-domains the AI was actually
+  // allowed to pick from, never a separate hardcoded list.
+  const [domainOptions, setDomainOptions] = useState<
+    { name: string; subDomains: string[] }[] | null
+  >(null);
+
   useEffect(() => {
     let cancelled = false;
     aiDecisionsService
@@ -222,6 +189,47 @@ export function AiClassificationSection({
       cancelled = true;
     };
   }, [studyId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // One request for every active domain's active sub-domains, nested —
+    // not one listSubDomains() call per domain (that N+1 pattern was ~10
+    // network round trips just to open this section).
+    domainsService
+      .listWithSubDomains()
+      .then((domains) => {
+        if (cancelled) return;
+        setDomainOptions(
+          domains
+            .filter((d) => d.isActive)
+            .map((d) => ({
+              name: d.name,
+              subDomains: d.subDomains.filter((sd) => sd.isActive).map((sd) => sd.name),
+            })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setDomainOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const domainOptionsLoading = domainOptions === null;
+  const domainNames = (domainOptions ?? []).map((d) => d.name);
+  const subDomainNamesFor = (domains: string[]): string[] => {
+    if (!domainOptions) return [];
+    if (domains.length === 0) {
+      return Array.from(new Set(domainOptions.flatMap((d) => d.subDomains)));
+    }
+    const set = new Set<string>();
+    for (const domain of domains) {
+      const match = domainOptions.find((d) => d.name === domain);
+      for (const sub of match?.subDomains ?? []) set.add(sub);
+    }
+    return Array.from(set);
+  };
 
   if (!canRun) return null;
 
@@ -245,8 +253,23 @@ export function AiClassificationSection({
 
   const startOverride = () => {
     if (!latest) return;
-    setOverrideDomains(latest.suggestion.domains ?? []);
-    setOverrideSubDomains(latest.suggestion.subDomains ?? []);
+    // Only pre-fill with values that actually exist in the live methodology
+    // list — Gemini's raw suggestion is free-form text and, despite the
+    // prompt instructing it to pick an exact name, isn't guaranteed to match
+    // verbatim. Pre-filling an unmatched value would silently exclude it
+    // from the dropdown (already "selected") with no way to tell why —
+    // exactly the confusion this is meant to avoid. If it doesn't match,
+    // the reviewer picks from the dropdown instead; the raw suggestion is
+    // still shown for reference below.
+    const suggestedDomains = (latest.suggestion.domains ?? []).filter((d) =>
+      domainNames.includes(d),
+    );
+    const eligibleSubDomains = subDomainNamesFor(suggestedDomains);
+    const suggestedSubDomains = (latest.suggestion.subDomains ?? []).filter((sd) =>
+      eligibleSubDomains.includes(sd),
+    );
+    setOverrideDomains(suggestedDomains);
+    setOverrideSubDomains(suggestedSubDomains);
     setOverrideReason("");
     setOverriding(true);
   };
@@ -267,6 +290,7 @@ export function AiClassificationSection({
       });
       setLatest(updated);
       setOverriding(false);
+      if (decision === "approved" || decision === "modified") onReviewed?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("reviewError"));
     } finally {
@@ -326,15 +350,14 @@ export function AiClassificationSection({
               </p>
               <p className="text-muted-foreground text-sm">{t("readyToClassifyHint")}</p>
             </div>
-            <Button
+            <LoadingButton
               type="button"
               onClick={runClassify}
-              disabled={isRunning}
+              isLoading={isRunning}
               className="gap-2"
-            >
-              <Sparkles className="size-4" />
-              {isRunning ? t("classifying") : t("runClassification")}
-            </Button>
+              text={isRunning ? t("classifying") : t("runClassification")}
+              startIcon={<Sparkles className="size-4" />}
+            />
           </div>
         ) : null}
 
@@ -407,21 +430,21 @@ export function AiClassificationSection({
                   </p>
 
                   <div className="flex justify-end gap-2">
-                    <Button
+                    <LoadingButton
                       type="button"
                       size="lg"
                       onClick={() => submitReview("approved")}
-                      disabled={isReviewing}
+                      isLoading={isReviewing}
                       className="gap-1.5"
-                    >
-                      <CheckCircle2 className="size-4" />
-                      {t("approve")}
-                    </Button>
+                      text={isReviewing ? t("approving") : t("approve")}
+                      startIcon={<CheckCircle2 className="size-4" />}
+                    />
                     <Button
                       type="button"
                       size="lg"
                       variant="outline"
                       onClick={startOverride}
+                      disabled={isReviewing}
                     >
                       {t("override")}
                     </Button>
@@ -485,6 +508,11 @@ export function AiClassificationSection({
           </DialogHeader>
 
           <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-0.5">
+            {/* AI's raw suggestion, for reference while overriding — always
+             * shown as-is (even if it didn't exactly match the live
+             * methodology list below and so couldn't be pre-filled; see
+             * startOverride). Distinct from "Your domain(s)" below, which is
+             * what actually gets saved. */}
             <div className="bg-secondary/10 grid grid-cols-2 gap-3 rounded-lg p-2.5">
               <div className="space-y-1">
                 <p className="text-muted-foreground text-[11px] font-medium">
@@ -509,20 +537,27 @@ export function AiClassificationSection({
                 <ChipEditor
                   values={overrideDomains}
                   onChange={setOverrideDomains}
-                  placeholder={t("addDomain")}
-                  options={DOMAINS}
+                  options={domainNames}
+                  loading={domainOptionsLoading}
                 />
               </div>
               <div className="space-y-1.5">
                 <p className="text-xs font-medium">{t("editableSubLabel")}</p>
-                <ChipEditor
-                  values={overrideSubDomains}
-                  onChange={setOverrideSubDomains}
-                  placeholder={t("addSubDomain")}
-                  options={subDomainsFor(overrideDomains)}
-                />
+                {overrideDomains.length === 0 ? (
+                  <p className="text-muted-foreground border-input rounded-md border border-dashed px-3 py-2 text-xs">
+                    {t("selectDomainFirst")}
+                  </p>
+                ) : (
+                  <ChipEditor
+                    values={overrideSubDomains}
+                    onChange={setOverrideSubDomains}
+                    options={subDomainNamesFor(overrideDomains)}
+                    loading={domainOptionsLoading}
+                  />
+                )}
               </div>
             </div>
+            <p className="text-muted-foreground text-xs">{t("overrideSelectionNote")}</p>
 
             <div className="space-y-1.5">
               <label htmlFor="overrideReason" className="text-xs font-medium">
@@ -549,13 +584,14 @@ export function AiClassificationSection({
             >
               {t("cancel")}
             </Button>
-            <Button
+            <LoadingButton
               type="button"
               onClick={() => submitReview("modified")}
-              disabled={isReviewing || overrideReason.trim().length === 0}
-            >
-              {t("saveOverride")}
-            </Button>
+              disabled={overrideReason.trim().length === 0}
+              isLoading={isReviewing}
+              className="gap-1.5"
+              text={isReviewing ? t("savingOverride") : t("saveOverride")}
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>

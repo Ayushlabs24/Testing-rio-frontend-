@@ -16,6 +16,13 @@ export interface SubDomain {
   isActive: boolean;
 }
 
+/** A domain with its sub-domains nested — from `GET /domains/tree`, one
+ * request instead of listing domains then fetching each one's sub-domains
+ * separately. */
+export interface DomainWithSubDomains extends Domain {
+  subDomains: SubDomain[];
+}
+
 export interface CreateDomainPayload {
   code: string;
   name: string;

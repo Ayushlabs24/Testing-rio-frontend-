@@ -29,7 +29,19 @@ export const endpoints = {
     list: "/studies",
     create: "/studies",
     byId: (id: string) => `/studies/${id}`,
-    assignableReviewers: "/studies/assignable-reviewers",
+  },
+  questionBank: {
+    domainOptions: "/question-bank/domain-options",
+    questions: "/question-bank/questions",
+  },
+  surveys: {
+    forStudy: (studyId: string) => `/studies/${studyId}/survey`,
+    recommendQuestions: (studyId: string) => `/studies/${studyId}/recommend-questions`,
+    updateQuestions: (id: string) => `/surveys/${id}/questions`,
+    saveDraft: (id: string) => `/surveys/${id}/save-draft`,
+    public: (id: string) => `/surveys/public/${id}`,
+    submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
+    responses: (id: string) => `/surveys/${id}/responses`,
   },
   roles: {
     list: "/roles",
@@ -71,6 +83,7 @@ export const endpoints = {
   },
   domains: {
     list: "/domains",
+    tree: "/domains/tree",
     create: "/domains",
     byId: (id: string) => `/domains/${id}`,
     activate: (id: string) => `/domains/${id}/activate`,
@@ -85,7 +98,6 @@ export const endpoints = {
   },
   publicSurveys: {
     // Admin/authenticated side (Publish Survey + Generate QR).
-    definition: (studyId: string) => `/studies/${studyId}/survey-definition`,
     links: (studyId: string) => `/studies/${studyId}/survey-links`,
     deactivateLink: (studyId: string, linkId: string) =>
       `/studies/${studyId}/survey-links/${linkId}/deactivate`,

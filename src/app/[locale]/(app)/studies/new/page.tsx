@@ -22,9 +22,10 @@ export default function NewStudyPage() {
       title: values.title,
       villages: parseVillageInput(values.village),
     });
-    // Capturing the Need is the next step of the workflow, so go straight
-    // there rather than via the Study detail page.
-    router.push(`/studies/${study.id}/need`);
+    // The Need section lives inline on the Study Detail page now (see
+    // NeedSection) — it auto-opens its create form when there's no Need yet,
+    // so landing here is enough; no separate Need route to redirect to.
+    router.push(`/studies/${study.id}`);
   };
 
   return (

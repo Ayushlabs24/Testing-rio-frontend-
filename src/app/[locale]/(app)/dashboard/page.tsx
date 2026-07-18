@@ -15,6 +15,8 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { ResearchOfficerDashboard } from "@/components/features/dashboard/research-officer-dashboard";
+import { ReviewerDashboard } from "@/components/features/dashboard/reviewer-dashboard";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { SupervisorDashboard } from "@/components/features/dashboard/supervisor-dashboard";
 import { organizationsService } from "@/services/organizations/organizations.service";
@@ -82,6 +84,22 @@ export default function DashboardPage() {
   // branch for this one.
   if (session?.role.key === "center_supervisor") {
     return <SupervisorDashboard userName={session.user.name} />;
+  }
+
+  // Human Reviewer gets its own dashboard — the pending AI-review queue,
+  // studies awaiting review, recently reviewed studies, and SLA status —
+  // rather than the org-stats tiles below, which this role has no
+  // read access to populate anyway (no entityTeam/rolesPermissions).
+  if (session?.role.key === "human_reviewer") {
+    return <ReviewerDashboard userName={session.user.name} />;
+  }
+
+  // Research Officer's work is the Study -> Need -> Evidence -> AI
+  // Classification pipeline, so its dashboard reflects that directly
+  // instead of the generic org-stats tiles below (Users/Roles/Modules
+  // count), which this role can't populate anyway.
+  if (session?.role.key === "ngo_research_officer") {
+    return <ResearchOfficerDashboard userName={session.user.name} />;
   }
 
   return (

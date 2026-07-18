@@ -3,7 +3,6 @@ import { mockDelay } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
-  AssignableReviewer,
   CreateStudyPayload,
   ListStudiesParams,
   PlatformStudyStats,
@@ -14,14 +13,14 @@ import type {
 } from "@/services/studies/studies.types";
 
 /**
- * CRUD runs against the real backend (its studies module). `update` only
- * accepts `title` — that's the only Study-level field the backend exposes
- * for direct edit; status only ever advances through the Need/Evidence/AI
- * Classification/Human Review workflow. `remove` is status-gated
- * server-side (409 STUDY_NOT_DELETABLE once ai_classified/human_reviewed).
- * `getPlatformStats` is still mock-backed — there is no stats endpoint yet,
- * so it stays on `mocks/data/studies` until one exists, per the
- * incremental-swap convention.
+ * CRUD runs against the real backend (its studies module). `create`/`update`
+ * only ever accept title/villages — domain/subDomain are set server-side
+ * once a human approves an AI Classification decision, never a direct PATCH.
+ * Status only ever advances through the Need/Evidence/AI Classification/
+ * Human Review workflow. `remove` is status-gated server-side (409
+ * STUDY_NOT_DELETABLE once ai_classified/human_reviewed). `getPlatformStats`
+ * is still mock-backed — there is no stats endpoint yet, so it stays on
+ * `mocks/data/studies` until one exists, per the incremental-swap convention.
  */
 export const studiesService = {
   async list(params: ListStudiesParams = {}): Promise<StudySummary[]> {
@@ -49,11 +48,6 @@ export const studiesService = {
 
   async create(payload: CreateStudyPayload): Promise<Study> {
     return apiClient.post<Study>(endpoints.studies.create, payload);
-  },
-
-  /** Every active NGO Research Officer in the caller's own org — the Create Study reviewer picker. */
-  async listAssignableReviewers(): Promise<AssignableReviewer[]> {
-    return apiClient.get<AssignableReviewer[]>(endpoints.studies.assignableReviewers);
   },
 
   async update(id: string, payload: UpdateStudyPayload): Promise<Study> {

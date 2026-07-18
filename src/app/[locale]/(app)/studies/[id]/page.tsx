@@ -4,10 +4,8 @@ import {
   ArrowLeft,
   CalendarDays,
   Clock,
-  FileText,
   MapPin,
   Pencil,
-  Plus,
   Trash2,
   UploadCloud,
 } from "lucide-react";
@@ -16,7 +14,9 @@ import { useSearchParams } from "next/navigation";
 import { use, useEffect, useState, type ReactNode } from "react";
 import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
+import { NeedSection } from "@/components/features/studies/need-section";
 import { StudyStatusBadge } from "@/components/features/studies/study-status-badge";
+import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -87,27 +87,6 @@ function VillageChips({ villages }: { villages: string[] }) {
   );
 }
 
-function FilledTextBlock({ children }: { children: ReactNode }) {
-  return (
-    <div className="border-border bg-muted/40 min-h-24 rounded-md border px-3.5 py-3 text-sm whitespace-pre-wrap">
-      {children}
-    </div>
-  );
-}
-
-/** Same filled-input look as the statement block, sized for a single line —
- * Village/Source sit inside the Need card as fields, not a bare dt/dd pair. */
-function FilledField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-muted-foreground text-xs font-medium">{label}</p>
-      <div className="border-border bg-muted/40 rounded-md border px-3.5 py-2 text-sm">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 type StepState = "not_started" | "in_progress" | "completed";
 
 const STEP_BADGE_CLASS: Record<StepState, string> = {
@@ -164,6 +143,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canWrite = usePermission("studySurvey", "write");
   const canCaptureNeed = usePermission("dataCollection", "create");
   const canViewEvidence = usePermission("dataCollection", "read");
+  const canUseSurveyBuilder = usePermission("surveyBuilder", "read");
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
   const [need, setNeed] = useState<Need | null>(null);
@@ -211,7 +191,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const needState: StepState = need ? "completed" : "not_started";
   const evidenceState: StepState =
     study.evidenceCount === 0
       ? "not_started"
@@ -263,72 +242,25 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           }
         />
 
-        {/* <div className="flex flex-wrap items-center gap-2">
-          <StudyStatusBadge status={study.status} />
-        </div> */}
-
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <Card className="shadow-md">
-              <CardContent className="space-y-4 p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                    <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
-                      <FileText className="size-3.5" />
-                    </span>
-                    {t("needHeading")}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      className={cn("border-transparent", STEP_BADGE_CLASS[needState])}
-                    >
-                      {t(`stepState.${needState}`)}
-                    </Badge>
-                    {canCaptureNeed ? (
-                      <Button
-                        type="button"
-                        variant={need ? "ghost" : "default"}
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() =>
-                          router.push(
-                            !need && prefillVillage
-                              ? `/studies/${study.id}/need?village=${encodeURIComponent(prefillVillage)}`
-                              : `/studies/${study.id}/need`,
-                          )
-                        }
-                      >
-                        {need ? (
-                          <Pencil className="size-3.5" />
-                        ) : (
-                          <Plus className="size-3.5" />
-                        )}
-                        {need ? t("editNeed") : t("addNeed")}
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-
-                {need ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <p className="text-muted-foreground text-xs font-medium">
-                        {t("needStatementLabel")}
-                      </p>
-                      <FilledTextBlock>{need.statement}</FilledTextBlock>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FilledField label={t("needVillageLabel")}>
-                        <VillageChips villages={need.village} />
-                      </FilledField>
-                      <FilledField label={t("needSourceLabel")}>
-                        {need.source}
-                      </FilledField>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm">{t("needEmpty")}</p>
-                )}
+              <CardContent className="p-6">
+                <NeedSection
+                  studyId={study.id}
+                  studyStatus={study.status}
+                  studyVillages={study.villages}
+                  need={need}
+                  canEdit={canCaptureNeed}
+                  prefillVillage={prefillVillage}
+                  onSaved={(saved) => {
+                    setNeed(saved);
+                    studiesService
+                      .getById(id)
+                      .then(setStudy)
+                      .catch(() => undefined);
+                  }}
+                />
               </CardContent>
             </Card>
 
@@ -370,7 +302,8 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Study Information — an at-a-glance panel (status, timing,
-           * village, evidence) instead of a bare label/value list. */}
+           * village, evidence, assigned reviewer) instead of a bare
+           * label/value list. */}
           <div className="lg:col-span-1">
             <Card className="h-fit">
               <CardContent className="space-y-4 p-6">
@@ -413,16 +346,30 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* AI Classification runs the full width of the page as its own
-         * horizontal section after Evidence, rather than a narrow column
-         * stacked alongside Need/Evidence. */}
-        <div className="mt-6">
+        {/* AI Classification (Need-based) and Survey Builder's AI
+         * recommendation (Study-level) run full width, one below the other,
+         * as their own sections — two distinct AI features, not one card. */}
+        <div className="mt-6 space-y-6">
           <AiClassificationSection
             studyId={study.id}
             studyStatus={study.status}
             hasNeed={need !== null}
             evidenceCount={study.evidenceCount}
+            onReviewed={() =>
+              studiesService
+                .getById(id)
+                .then(setStudy)
+                .catch(() => undefined)
+            }
           />
+
+          {canUseSurveyBuilder ? (
+            <SurveyStatusCard
+              studyId={study.id}
+              domain={study.domain}
+              subDomain={study.subDomain}
+            />
+          ) : null}
         </div>
       </PageContainer>
     </PermissionGuard>
