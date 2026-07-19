@@ -29,13 +29,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { titleCase } from "@/lib/utils";
@@ -44,9 +37,7 @@ import { methodologyConfigService } from "@/services/methodology-config/methodol
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import {
-  ADDITIONAL_QUESTION_ANSWER_TYPES,
   surveysService,
-  type AdditionalQuestionAnswerType,
   type Question,
   type SaveSurveyQuestionInput,
   type Survey,
@@ -59,10 +50,12 @@ function nextTempId(prefix: string): string {
   return `${prefix}-${tempIdCounter}`;
 }
 
-const OPTIONS_ANSWER_TYPES = new Set<AdditionalQuestionAnswerType>([
-  "multiple_choice",
-  "checkbox",
-]);
+// Open-ended (Additional) questions are qualitative by design — excluded
+// from Priority Scoring, feeding AI Summary instead — so there's no need
+// for structured answer types here. Long Text is the only option; this used
+// to also offer multiple_choice/checkbox/yes_no/rating, which added a whole
+// options-editor UI for a question type that was never actually scored.
+const OPEN_ENDED_ANSWER_TYPE = "long_text";
 
 export default function SurveyBuilderDetailPage({
   params,
@@ -101,9 +94,6 @@ export default function SurveyBuilderDetailPage({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState("");
-  const [draftAnswerType, setDraftAnswerType] =
-    useState<AdditionalQuestionAnswerType>("long_text");
-  const [draftOptions, setDraftOptions] = useState<string[]>(["", ""]);
   const [draftRequired, setDraftRequired] = useState(true);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -192,8 +182,6 @@ export default function SurveyBuilderDetailPage({
 
   function resetModalDraft() {
     setDraftText("");
-    setDraftAnswerType("long_text");
-    setDraftOptions(["", ""]);
     setDraftRequired(true);
     setModalError(null);
   }
@@ -207,10 +195,6 @@ export default function SurveyBuilderDetailPage({
   function openEditModal(item: SurveyQuestionItem) {
     setEditingId(item.id);
     setDraftText(item.questionText);
-    setDraftAnswerType((item.answerType as AdditionalQuestionAnswerType) || "long_text");
-    setDraftOptions(
-      item.answerOptions && item.answerOptions.length > 0 ? item.answerOptions : ["", ""],
-    );
     setDraftRequired(item.isRequired);
     setModalError(null);
     setModalOpen(true);
@@ -222,12 +206,6 @@ export default function SurveyBuilderDetailPage({
       setModalError(t("openEndedTextRequired"));
       return;
     }
-    const needsOptions = OPTIONS_ANSWER_TYPES.has(draftAnswerType);
-    const cleanedOptions = draftOptions.map((o) => o.trim()).filter(Boolean);
-    if (needsOptions && cleanedOptions.length < 2) {
-      setModalError(t("openEndedOptionsRequired"));
-      return;
-    }
 
     setAdditional((prev) => {
       if (editingId) {
@@ -236,8 +214,8 @@ export default function SurveyBuilderDetailPage({
             ? {
                 ...q,
                 questionText: text,
-                answerType: draftAnswerType,
-                answerOptions: needsOptions ? cleanedOptions : null,
+                answerType: OPEN_ENDED_ANSWER_TYPE,
+                answerOptions: null,
                 isRequired: draftRequired,
               }
             : q,
@@ -250,8 +228,8 @@ export default function SurveyBuilderDetailPage({
           bankQuestionId: null,
           questionCode: null,
           questionText: text,
-          answerType: draftAnswerType,
-          answerOptions: needsOptions ? cleanedOptions : null,
+          answerType: OPEN_ENDED_ANSWER_TYPE,
+          answerOptions: null,
           indicator: null,
           kpi: null,
           isCustom: true,
@@ -269,18 +247,6 @@ export default function SurveyBuilderDetailPage({
   function removeAdditional(id: string) {
     setAdditional((prev) => prev.filter((q) => q.id !== id));
     setDirty(true);
-  }
-
-  function updateDraftOption(index: number, value: string) {
-    setDraftOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
-  }
-
-  function addDraftOption() {
-    setDraftOptions((prev) => [...prev, ""]);
-  }
-
-  function removeDraftOption(index: number) {
-    setDraftOptions((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function save() {
@@ -331,7 +297,6 @@ export default function SurveyBuilderDetailPage({
   const availableToAdd = eligibleQuestions.filter(
     (q) => !recommended.some((included) => included.bankQuestionId === q.id),
   );
-  const needsOptionsEditor = OPTIONS_ANSWER_TYPES.has(draftAnswerType);
 
   return (
     <PermissionGuard module="surveyBuilder" action="read">
@@ -693,66 +658,6 @@ export default function SurveyBuilderDetailPage({
                   placeholder={t("openEndedPlaceholder")}
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="open-ended-answer-type">
-                  {t("answerTypeLabel")} <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={draftAnswerType}
-                  onValueChange={(v) =>
-                    setDraftAnswerType(v as AdditionalQuestionAnswerType)
-                  }
-                >
-                  <SelectTrigger id="open-ended-answer-type" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ADDITIONAL_QUESTION_ANSWER_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {titleCase(type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {needsOptionsEditor ? (
-                <div className="space-y-1.5">
-                  <Label>{t("optionsLabel")}</Label>
-                  <div className="space-y-2">
-                    {draftOptions.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={option}
-                          onChange={(e) => updateDraftOption(index, e.target.value)}
-                          placeholder={t("optionPlaceholder", { number: index + 1 })}
-                        />
-                        {draftOptions.length > 2 ? (
-                          <button
-                            type="button"
-                            onClick={() => removeDraftOption(index)}
-                            className="text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
-                            aria-label={t("remove")}
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addDraftOption}
-                      className="gap-1.5"
-                    >
-                      <Plus className="size-3.5" />
-                      {t("addOption")}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
 
               <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
                 <Checkbox

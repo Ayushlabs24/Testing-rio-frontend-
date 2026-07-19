@@ -129,6 +129,14 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canWrite = usePermission("studySurvey", "write");
   const canCaptureNeed = usePermission("dataCollection", "create");
   const canDeleteNeed = usePermission("dataCollection", "write");
+  // Reviewer/Approver — read-only on dataCollection, approve on aiReview
+  // (see role-matrix.ts) — their job starts once a Need reaches AI
+  // Classification, so a Need still in draft/evidence collection isn't
+  // theirs to look at yet. Everyone else (Research Officer, Admin) still
+  // sees every Need, since they own the whole pipeline including this
+  // earlier part of it.
+  const canApproveAi = usePermission("aiReview", "approve");
+  const isReviewerOnly = !canCaptureNeed && canApproveAi;
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
@@ -216,6 +224,12 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
+  const visibleNeedRows = needRows
+    ? isReviewerOnly
+      ? needRows.filter(({ need }) => need.status !== "draft" && need.status !== "evidence_submitted")
+      : needRows
+    : null;
+
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
@@ -293,13 +307,15 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                   ) : null}
                 </div>
 
-                {needRows === null ? (
+                {visibleNeedRows === null ? (
                   <div className="space-y-2">
                     <div className="bg-muted h-10 w-full rounded" />
                     <div className="bg-muted h-10 w-full rounded" />
                   </div>
-                ) : needRows.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">{t("needsEmpty")}</p>
+                ) : visibleNeedRows.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    {isReviewerOnly ? t("needsEmptyForReviewer") : t("needsEmpty")}
+                  </p>
                 ) : (
                   <div className="border-border overflow-hidden rounded-lg border">
                     <TooltipProvider delayDuration={200}>
@@ -315,7 +331,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {needRows.map(({ need, aiStatus, surveyStatus }) => (
+                        {visibleNeedRows.map(({ need, aiStatus, surveyStatus }) => (
                           <TableRow
                             key={need.id}
                             className="hover:bg-muted/30 cursor-pointer"

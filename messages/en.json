@@ -1016,6 +1016,7 @@
       },
       "detail": {
         "backToList": "Back to studies",
+        "backToStudy": "Back to study",
         "eyebrow": "Study",
         "stepState": {
           "not_started": "Not Started",
@@ -1043,6 +1044,7 @@
         "edit": "Edit",
         "needsHeading": "Needs",
         "needsEmpty": "No needs added yet.",
+        "needsEmptyForReviewer": "No needs are ready for your review in this study yet.",
         "openNeed": "Open",
         "needEyebrow": "Need",
         "needNotFound": "This need no longer exists. It may have been removed.",
@@ -1083,6 +1085,8 @@
         "approvedDomainLabel": "Approved domain",
         "approvedSubDomainLabel": "Approved sub-domain",
         "domainNotApprovedNote": "Complete and approve AI Classification on this study's need first.",
+        "awaitingReviewNote": "AI Classification complete — sent to the reviewer for approval. You can create a survey once it's approved.",
+        "notEligibleNote": "Submit evidence and run AI Classification on this need before a survey can be created.",
         "domainRequiredNote": "Approve a domain and sub-domain via AI Classification before creating a survey.",
         "noSurveyYet": "No survey created yet.",
         "createSurvey": "Create Survey",

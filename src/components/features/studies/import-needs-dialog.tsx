@@ -95,6 +95,12 @@ export function ImportNeedsDialog({
       const outcome = await needsService.importFromFile(studyId, file);
       setResult(outcome);
       if (outcome.imported > 0) onImported();
+      // Fully successful (nothing to review) — close on its own after a
+      // moment instead of leaving the user to find and click Close. Any
+      // failed row keeps the dialog open so the error table stays visible.
+      if (outcome.failed === 0 && outcome.imported > 0) {
+        setTimeout(() => handleOpenChange(false), 1200);
+      }
     } catch (error) {
       setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
     } finally {

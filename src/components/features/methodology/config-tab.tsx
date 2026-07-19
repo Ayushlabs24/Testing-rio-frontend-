@@ -289,7 +289,19 @@ export function MethodologyConfigTab() {
   const weightSumValid = Math.abs(weightSum - 1) <= WEIGHT_SUM_TOLERANCE;
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6">
+      {canWrite ? (
+        <div className="bg-background/95 border-border sticky top-0 z-20 -mx-4 flex flex-wrap items-center justify-end gap-3 border-b px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {saved && !dirty ? (
+            <p className="text-badge-success-foreground text-sm">{t("savedNote")}</p>
+          ) : null}
+          <Button onClick={save} disabled={saving || !dirty || !weightSumValid}>
+            {saving ? t("saving") : t("save")}
+          </Button>
+        </div>
+      ) : null}
+
       <VersionCard config={config} canWrite={canWrite} onChanged={applyConfig} />
 
       <Card>
@@ -466,20 +478,6 @@ export function MethodologyConfigTab() {
           </div>
         </CardContent>
       </Card>
-
-      {canWrite ? (
-        <div className="bg-background/95 border-border fixed inset-x-0 bottom-0 z-20 border-t px-4 py-3 backdrop-blur-sm sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-6xl items-center justify-end gap-3">
-            {error ? <p className="text-destructive text-sm">{error}</p> : null}
-            {saved && !dirty ? (
-              <p className="text-badge-success-foreground text-sm">{t("savedNote")}</p>
-            ) : null}
-            <Button onClick={save} disabled={saving || !dirty || !weightSumValid}>
-              {saving ? t("saving") : t("save")}
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

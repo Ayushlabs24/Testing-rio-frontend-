@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { usePermission } from "@/hooks/use-permission";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
+import type { NeedStatus } from "@/services/needs/needs.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
 
 type CreateMode = "ai" | "manual";
@@ -35,10 +35,12 @@ type CreateMode = "ai" | "manual";
  */
 export function SurveyStatusCard({
   needId,
+  needStatus,
   domain,
   subDomain,
 }: {
   needId: string;
+  needStatus: NeedStatus;
   domain: string | null | undefined;
   subDomain: string | null | undefined;
 }) {
@@ -95,30 +97,44 @@ export function SurveyStatusCard({
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 p-6">
+    <div className="border-border overflow-hidden rounded-xl border">
+      {/* Same tinted header-strip chrome as the other workflow sections
+       * (Need, Evidence, AI Classification) on this page. */}
+      <div className="bg-primary/5 border-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
           <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
             <ClipboardList className="size-3.5" />
           </span>
           {t("heading")}
         </h2>
+        {survey ? (
+          <Badge
+            className="border-transparent"
+            variant={survey.status === "PUBLISHED" ? "default" : "secondary"}
+          >
+            {survey.status === "PUBLISHED" ? t("statusPublished") : t("statusCreated")}
+          </Badge>
+        ) : null}
+      </div>
 
+      <div className="space-y-4 p-5">
         {domainApproved ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div className="flex items-center gap-2">
               <p className="text-muted-foreground text-xs">{t("approvedDomainLabel")}</p>
               <Badge variant="secondary">{domain}</Badge>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <p className="text-muted-foreground text-xs">
                 {t("approvedSubDomainLabel")}
               </p>
               <Badge variant="secondary">{subDomain}</Badge>
             </div>
           </div>
+        ) : needStatus === "ai_classified" ? (
+          <p className="text-muted-foreground text-sm">{t("awaitingReviewNote")}</p>
         ) : (
-          <p className="text-muted-foreground text-sm">{t("domainNotApprovedNote")}</p>
+          <p className="text-muted-foreground text-sm">{t("notEligibleNote")}</p>
         )}
 
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
@@ -126,13 +142,7 @@ export function SurveyStatusCard({
         {loadingSurvey ? (
           <div className="bg-muted h-9 w-40 animate-pulse rounded" />
         ) : survey ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge
-              className="border-transparent"
-              variant={survey.status === "PUBLISHED" ? "default" : "secondary"}
-            >
-              {survey.status === "PUBLISHED" ? t("statusPublished") : t("statusCreated")}
-            </Badge>
+          <div className="flex flex-wrap items-center gap-2.5">
             <Button asChild size="sm" variant="outline" className="gap-1.5">
               <Link href={`/survey-builder/${needId}`}>
                 <ClipboardList className="size-3.5" />
@@ -150,7 +160,7 @@ export function SurveyStatusCard({
             ) : null}
           </div>
         ) : canWrite ? (
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               size="sm"
               disabled={!domainApproved}
@@ -161,15 +171,13 @@ export function SurveyStatusCard({
               {t("createSurvey")}
             </Button>
             {!domainApproved ? (
-              <p className="text-muted-foreground mt-1.5 text-xs">
-                {t("domainRequiredNote")}
-              </p>
+              <p className="text-muted-foreground text-xs">{t("domainRequiredNote")}</p>
             ) : null}
           </div>
         ) : (
           <p className="text-muted-foreground text-sm">{t("noSurveyYet")}</p>
         )}
-      </CardContent>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !creating && setDialogOpen(open)}>
         <DialogContent>
@@ -225,6 +233,6 @@ export function SurveyStatusCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

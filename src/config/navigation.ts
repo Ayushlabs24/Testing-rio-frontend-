@@ -152,14 +152,13 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "users",
     "studies",
     "surveyBuilder",
-    "surveyBuilder",
     "publicSurveys",
     "priorityDashboard",
     "reports",
     "archive",
     "sharing",
     "reviewerSla",
-
+    "audit",
     "methodologyConfig",
   ],
   ngo_research_officer: [

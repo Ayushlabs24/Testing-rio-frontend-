@@ -58,9 +58,6 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
   const pendingCount = alerts?.length ?? 0;
   const atRiskCount = alerts?.filter((a) => a.status === "at_risk").length ?? 0;
   const breachedCount = alerts?.filter((a) => a.status === "breached").length ?? 0;
-  const needsAwaitingReview = alerts
-    ? Array.from(new Map(alerts.map((a) => [a.needId, a])).values())
-    : null;
 
   return (
     <PageContainer>
@@ -76,41 +73,66 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
         <StatCard label={t("stats.breached")} value={breachedCount} icon={ShieldAlert} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardContent className="space-y-3 p-6">
-            <h2 className="text-foreground text-sm font-semibold">
-              {t("awaitingReviewHeading")}
-            </h2>
-            {needsAwaitingReview === null ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-muted h-9 w-full rounded" />
-                ))}
-              </div>
-            ) : needsAwaitingReview.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                {t("noStudiesAwaitingReview")}
-              </p>
-            ) : (
-              <div className="divide-border divide-y rounded-md border">
-                {needsAwaitingReview.map((alert) => (
-                  <Link
-                    key={alert.aiDecisionId}
-                    href={`/studies/${alert.studyId}/needs/${alert.needId}`}
-                    className="hover:bg-muted/50 flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
-                  >
-                    <span className="truncate font-medium">{alert.studyTitle}</span>
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {formatDate(alert.createdAt)}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* One table, not a duplicate card + table showing the same alerts —
+       * this is the detailed view (Study, Due date, Status all at once). */}
+      <Card>
+        <CardContent className="space-y-3 p-6 pb-0">
+          <h2 className="text-foreground text-sm font-semibold">
+            {t("awaitingReviewHeading")}
+          </h2>
+        </CardContent>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("studyColumn")}</TableHead>
+                <TableHead className="w-36">{t("dueColumn")}</TableHead>
+                <TableHead className="w-28">{t("statusColumn")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {alerts === null ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <TableRow key={index}>
+                    {Array.from({ length: 3 }).map((__, cell) => (
+                      <TableCell key={cell} className="py-4">
+                        <div className="bg-muted h-4 w-24 rounded" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : alerts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-muted-foreground h-24 text-center">
+                    {t("noAlerts")}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                alerts.slice(0, 5).map((alert) => (
+                  <TableRow key={alert.aiDecisionId}>
+                    <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
+                      <Link
+                        href={`/studies/${alert.studyId}/needs/${alert.needId}`}
+                        className="hover:underline"
+                      >
+                        {alert.studyTitle}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {formatDate(alert.dueAt)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {t(`status.${alert.status}`)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
+      <div className="mt-6">
         <Card>
           <CardContent className="space-y-3 p-6">
             <h2 className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
@@ -141,63 +163,6 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-6">
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("studyColumn")}</TableHead>
-                  <TableHead className="w-36">{t("dueColumn")}</TableHead>
-                  <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {alerts === null ? (
-                  Array.from({ length: 3 }).map((_, index) => (
-                    <TableRow key={index}>
-                      {Array.from({ length: 3 }).map((__, cell) => (
-                        <TableCell key={cell} className="py-4">
-                          <div className="bg-muted h-4 w-24 rounded" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : alerts.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-muted-foreground h-24 text-center"
-                    >
-                      {t("noAlerts")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  alerts.slice(0, 5).map((alert) => (
-                    <TableRow key={alert.aiDecisionId}>
-                      <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                        <Link
-                          href={`/studies/${alert.studyId}/needs/${alert.needId}`}
-                          className="hover:underline"
-                        >
-                          {alert.studyTitle}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(alert.dueAt)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {t(`status.${alert.status}`)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>

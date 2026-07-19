@@ -533,7 +533,12 @@ export default function NeedWorkspacePage({
           />
 
           {canUseSurveyBuilder ? (
-            <SurveyStatusCard needId={need.id} domain={need.domain} subDomain={need.subDomain} />
+            <SurveyStatusCard
+              needId={need.id}
+              needStatus={need.status}
+              domain={need.domain}
+              subDomain={need.subDomain}
+            />
           ) : null}
         </div>
       </PageContainer>

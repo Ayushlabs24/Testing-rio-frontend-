@@ -7,7 +7,6 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { LoadingButton } from "@/components/common/loading-button";
-import { useAuth } from "@/components/providers/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,6 @@ import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import { needLockState, type Need } from "@/services/needs/needs.types";
-import type { StudyStatus } from "@/services/studies/studies.types";
 
 interface NeedFormValues {
   title: string;
@@ -137,7 +135,6 @@ function VillageChips({ villages }: { villages: string[] }) {
  */
 export function NeedSection({
   studyId,
-  studyStatus,
   studyVillages,
   need,
   canEdit: canCapture,
@@ -145,7 +142,6 @@ export function NeedSection({
   onSaved,
 }: {
   studyId: string;
-  studyStatus: StudyStatus;
   studyVillages: string[];
   need: Need | null;
   /** Permission to create/edit a Need at all (dataCollection:create). */
@@ -156,12 +152,14 @@ export function NeedSection({
   const t = useTranslations("app.studies.need");
   const td = useTranslations("app.studies.detail");
   const tValidation = useTranslations("app.studies.validation");
-  const { session } = useAuth();
 
   const [editing, setEditing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const lockState = needLockState(studyStatus, session?.role.key);
+  // A Need with no status yet (not created) has nothing to lock — the form
+  // is always open for it (see isFormOpen below). Once it exists, its own
+  // status (not the Study's — a Study has none) drives lock state.
+  const lockState = need ? needLockState(need.status) : "editable";
   const canEdit = canCapture && lockState === "editable";
   // A brand-new Need can always be captured once (mirrors the backend: there
   // is no lock check on create, only on editing one that already exists) —
@@ -314,9 +312,7 @@ export function NeedSection({
               className="bg-muted text-muted-foreground flex items-start gap-2 rounded-md border p-3 text-sm"
             >
               <Lock className="mt-0.5 size-4 shrink-0" />
-              <span>
-                {lockState === "locked" ? t("lockedNotice") : t("reviewerOnlyNotice")}
-              </span>
+              <span>{t("lockedNotice")}</span>
             </div>
           ) : null}
           <div className="space-y-1.5">
