@@ -51,7 +51,19 @@ export default function SurveyBuilderPage() {
             surveysService.getSurveyByNeedId(need.id).catch(() => null),
           ),
         );
-        setRows(needs.map(({ need, studyTitle }, index) => ({ need, studyTitle, survey: surveys[index] })));
+        // Survey Builder is for reviewing/curating live surveys, not
+        // drafting new ones (that starts from the Need's own Survey section)
+        // — a Need with no survey yet, or one still in DRAFT, has nothing
+        // published to show here.
+        setRows(
+          needs
+            .map(({ need, studyTitle }, index) => ({
+              need,
+              studyTitle,
+              survey: surveys[index],
+            }))
+            .filter((row) => row.survey?.status === "PUBLISHED"),
+        );
         setLoadFailed(false);
       })
       .catch(() => {
@@ -120,21 +132,10 @@ export default function SurveyBuilderPage() {
                       </TableCell>
                       <TableCell>
                         {survey ? (
-                          <Badge
-                            variant={survey.status === "DRAFT" ? "outline" : "default"}
-                            className={
-                              survey.status !== "DRAFT"
-                                ? "bg-badge-success text-badge-success-foreground border-transparent"
-                                : undefined
-                            }
-                          >
+                          <Badge className="bg-badge-success text-badge-success-foreground border-transparent">
                             {survey.status}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            {t("noSurvey")}
-                          </span>
-                        )}
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild size="sm" variant="outline">

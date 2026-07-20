@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowDown,
-  ArrowUp,
-  Loader2,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -37,10 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePermission } from "@/hooks/use-permission";
-import { Link } from "@/i18n/navigation";
 import { titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
-import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import {
@@ -77,14 +68,6 @@ export default function SurveyBuilderDetailPage({
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [eligibleQuestions, setEligibleQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
-  // The currently active Methodology Version — read-only here (Settings >
-  // Methodology is the only place it's edited). Shown before publish so a
-  // Research Officer knows what will be stamped onto the Survey; once
-  // published, `survey.methodologyVersion` (a frozen snapshot) is shown
-  // instead, since that's what the Survey actually recorded.
-  const [activeMethodologyVersion, setActiveMethodologyVersion] = useState<string | null>(
-    null,
-  );
 
   // Draft — the two sections editable locally, only persisted on Save. Kept
   // apart (rather than one array) since the UI, save-validation, and
@@ -136,13 +119,6 @@ export default function SurveyBuilderDetailPage({
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needId]);
-
-  useEffect(() => {
-    methodologyConfigService
-      .get()
-      .then((config) => setActiveMethodologyVersion(config.version))
-      .catch(() => undefined);
-  }, []);
 
   function moveRecommended(index: number, direction: -1 | 1) {
     setRecommended((prev) => {
@@ -335,13 +311,9 @@ export default function SurveyBuilderDetailPage({
   return (
     <PermissionGuard module="surveyBuilder" action="read">
       <PageContainer>
-        <Link
-          href="/survey-builder"
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-3.5" />
-          {t("backToList")}
-        </Link>
+        <div className="mb-4 flex justify-end">
+          <BackButton href="/survey-builder" label={t("backToList")} />
+        </div>
 
         {!loaded ? (
           <div className="space-y-4">
@@ -394,22 +366,6 @@ export default function SurveyBuilderDetailPage({
                 ) : null
               }
             />
-
-            {survey ? (
-              <div className="mb-4 flex items-center gap-1.5 text-xs">
-                <span className="text-muted-foreground">
-                  {t("methodologyVersionLabel")}
-                </span>
-                <Badge variant="outline">
-                  {survey.methodologyVersion ?? activeMethodologyVersion ?? "—"}
-                </Badge>
-                {!survey.methodologyVersion ? (
-                  <span className="text-muted-foreground">
-                    {t("methodologyVersionPendingNote")}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
 
             {dirty ? (
               <p className="text-muted-foreground mb-4 text-xs">

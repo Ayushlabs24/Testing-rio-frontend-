@@ -46,6 +46,7 @@ const ACTION_VARIANT: Record<
   delete: "destructive",
   login: "outline",
   logout: "outline",
+  consent: "secondary",
 };
 
 const ALL = "all";

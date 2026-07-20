@@ -1,11 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, MapPin, X } from "lucide-react";
+import { MapPin, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
@@ -25,8 +26,6 @@ interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
-  source: string;
-  referenceId: string;
 }
 
 function VillageEditor({
@@ -138,8 +137,6 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
     village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
-    source: z.string().trim().max(200, tValidation("sourceTooLong")),
-    referenceId: z.string().trim().max(200, tValidation("referenceIdTooLong")),
   });
 
   const {
@@ -156,8 +153,6 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       title: "",
       statement: "",
       village: study?.villages ?? [],
-      source: "",
-      referenceId: "",
     },
   });
 
@@ -170,8 +165,6 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
         title: values.title,
         statement: values.statement,
         village: values.village,
-        source: values.source.trim() || undefined,
-        referenceId: values.referenceId.trim() || undefined,
       });
       router.push(`/studies/${studyId}/needs/${created.id}`);
     } catch (error) {
@@ -182,15 +175,11 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   return (
     <PermissionGuard module="dataCollection" action="create">
       <PageContainer>
-        <Link
-          href={`/studies/${studyId}`}
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-4" />
-          {t("backToStudy")}
-        </Link>
-
-        <PageHeader title={t("addTitle")} description={t("pageDescription")} />
+        <PageHeader
+          title={t("addTitle")}
+          description={t("pageDescription")}
+          actions={<BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />}
+        />
 
         <Card>
           <CardContent className="p-6">
@@ -241,31 +230,6 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                   {errors.village ? (
                     <p className="text-destructive text-sm">{errors.village.message}</p>
                   ) : null}
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="source">{t("sourceLabel")}</Label>
-                    <Input
-                      id="source"
-                      placeholder={t("sourcePlaceholder")}
-                      {...register("source")}
-                    />
-                    {errors.source ? (
-                      <p className="text-destructive text-sm">{errors.source.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="referenceId">{t("referenceIdLabel")}</Label>
-                    <Input
-                      id="referenceId"
-                      placeholder={t("referenceIdPlaceholder")}
-                      {...register("referenceId")}
-                    />
-                    {errors.referenceId ? (
-                      <p className="text-destructive text-sm">{errors.referenceId.message}</p>
-                    ) : null}
-                  </div>
                 </div>
 
                 {submitError ? (

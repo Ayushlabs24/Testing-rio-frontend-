@@ -159,7 +159,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     try {
       await citizenService.verifyOtp(token, { challengeId, code });
       setQuestionIndex(0);
-      setPhase("questions");
+      // A survey with zero questions has nothing to show on the "questions"
+      // phase (which unconditionally renders `questions[questionIndex]`) —
+      // go straight to Review instead of crashing. Publishing an empty
+      // survey is now blocked server-side, but this protects anyone who
+      // already has a link to one published before that guard existed.
+      setPhase(questions.length === 0 ? "review" : "questions");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
@@ -383,6 +388,15 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               onChange={(e) => setContact(e.target.value)}
             />
           </div>
+          {/* RIO-NFR-002: a privacy notice before any personal contact
+           * detail is collected — this data is used analytically (aggregate
+           * needs assessment), never to open an individual case/ticket. */}
+          <div className="border-border bg-muted/40 flex items-start gap-2.5 rounded-lg border p-3.5">
+            <ShieldCheck className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {t("details.privacyNotice")}
+            </p>
+          </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
         <Button
@@ -438,7 +452,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     );
   }
 
-  if (phase === "questions") {
+  if (phase === "questions" && questions[questionIndex]) {
     const question = questions[questionIndex];
     return (
       <Shell>
@@ -527,6 +541,10 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       />
       <BackButton
         onClick={() => {
+          if (questions.length === 0) {
+            setPhase("otp");
+            return;
+          }
           setQuestionIndex(questions.length - 1);
           setPhase("questions");
         }}

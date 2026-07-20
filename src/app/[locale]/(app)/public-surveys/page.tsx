@@ -32,7 +32,10 @@ interface Row {
 // — before that (draft/evidence_submitted/ai_classified/reviewer_approved)
 // there's no survey to attach a public link to yet, so it doesn't belong on
 // this list at all.
-const SURVEY_EXISTS_STATUSES: readonly Need["status"][] = ["survey_created", "survey_published"];
+const SURVEY_EXISTS_STATUSES: readonly Need["status"][] = [
+  "survey_created",
+  "survey_published",
+];
 
 /** One row per Need, not per Study — each Need runs its own independent
  * survey/link set now. */
@@ -44,9 +47,7 @@ export default function PublicSurveysPage() {
   // Which Needs have at least one active public survey link — "View
   // Insights" is only meaningful (and only shown) once one exists; opening
   // it before that would just be an empty page.
-  const [needsWithActiveLink, setNeedsWithActiveLink] = useState<Set<string>>(
-    new Set(),
-  );
+  const [needsWithActiveLink, setNeedsWithActiveLink] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     studiesService
@@ -140,6 +141,10 @@ export default function PublicSurveysPage() {
                             <QrCode className="size-3.5" />
                             {t("manageLinks")}
                           </Button>
+                          {/* View Responses hidden for now — screen stays
+                           * reachable by direct URL, just not linked from
+                           * here yet (this list was getting crowded with
+                           * Manage Links/Insights already). */}
                           {needsWithActiveLink.has(need.id) ? (
                             <Button
                               size="sm"

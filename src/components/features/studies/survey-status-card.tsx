@@ -119,16 +119,13 @@ export function SurveyStatusCard({
 
       <div className="space-y-4 p-5">
         {domainApproved ? (
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-            <div className="flex items-center gap-2">
-              <p className="text-muted-foreground text-xs">{t("approvedDomainLabel")}</p>
-              <Badge variant="secondary">{domain}</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-muted-foreground text-xs">
-                {t("approvedSubDomainLabel")}
-              </p>
-              <Badge variant="secondary">{subDomain}</Badge>
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground text-xs font-medium">
+              {t("classifiedAsLabel")}
+            </p>
+            <div className="border-border bg-muted/40 rounded-md border px-3.5 py-2.5">
+              <p className="text-foreground text-sm font-medium">{domain}</p>
+              <p className="text-muted-foreground text-sm">{subDomain}</p>
             </div>
           </div>
         ) : needStatus === "ai_classified" ? (

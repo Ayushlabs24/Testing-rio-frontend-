@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, Sparkles, Gauge, ListChecks, CheckCircle2 } from "lucide-react";
+import { Sparkles, Gauge, ListChecks, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -25,7 +26,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
-import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { priorityService } from "@/services/priority/priority.service";
 import type { PriorityScore } from "@/services/priority/priority.types";
@@ -161,13 +161,9 @@ export default function NeedInsightsPage({
   return (
     <PermissionGuard module="aiReview" action="read">
       <PageContainer>
-        <Link
-          href="/public-surveys"
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-3.5" />
-          {t("backToList")}
-        </Link>
+        <div className="mb-4 flex justify-end">
+          <BackButton href="/public-surveys" label={t("backToList")} />
+        </div>
 
         <PageHeader
           title={t("title")}
@@ -355,7 +351,9 @@ export default function NeedInsightsPage({
                       <div className="text-muted-foreground grid grid-cols-4 gap-2 px-3.5 py-2 text-xs font-medium">
                         <span>{t("factorIndicatorLabel")}</span>
                         <span className="text-right">{t("factorWeightLabel")}</span>
-                        <span className="text-right">{t("factorResponseValueLabel")}</span>
+                        <span className="text-right">
+                          {t("factorResponseValueLabel")}
+                        </span>
                         <span className="text-right">{t("factorContributionLabel")}</span>
                       </div>
                       {priorityScore.factors.map((factor) => (

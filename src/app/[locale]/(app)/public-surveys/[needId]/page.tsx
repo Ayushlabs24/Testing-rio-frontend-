@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Copy, Plus, QrCode as QrCodeIcon } from "lucide-react";
+import { Check, Copy, Plus, QrCode as QrCodeIcon, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { use, useEffect, useState } from "react";
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -38,14 +39,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
-import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
-import { surveysService } from "@/services/surveys/surveys.service";
 
 const LABEL_MAX_LENGTH = 150;
 
@@ -74,9 +79,30 @@ function LinkRow({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // Reuses the existing publicUrl as-is — never generates a new URL or QR.
+  // Falls back to the same copy-link behavior (and its "Copied" feedback)
+  // when the Web Share API isn't available, or when the user's platform
+  // share sheet fails for a reason other than them just cancelling it.
+  async function shareUrl() {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: link.label, url: link.publicUrl });
+        return;
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+      }
+    }
+    await copyUrl();
+  }
+
   return (
     <TableRow>
-      <TableCell className="py-4 text-sm font-medium">{link.label}</TableCell>
+      <TableCell
+        className="max-w-48 truncate py-4 text-sm font-medium"
+        title={link.label}
+      >
+        {link.label}
+      </TableCell>
       <TableCell className="text-muted-foreground text-sm">
         {formatDate(link.createdAt)}
       </TableCell>
@@ -99,55 +125,99 @@ function LinkRow({
         </Badge>
       </TableCell>
       <TableCell className="py-4">
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={() => setQrOpen(true)}
-          >
-            <QrCodeIcon className="size-3.5" />
-          </Button>
-          <Dialog open={qrOpen} onOpenChange={setQrOpen}>
-            <DialogContent className="sm:max-w-xs">
-              <DialogHeader>
-                <DialogTitle>{link.label}</DialogTitle>
-              </DialogHeader>
-              <div className="flex justify-center py-2">
-                <div className="bg-background rounded-md border p-3">
-                  <QRCodeSVG value={link.publicUrl} size={192} />
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={copyUrl}>
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            {copied ? t("copied") : t("copyUrl")}
-          </Button>
-          {canWrite && link.isActive ? (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button size="sm" variant="ghost" className="text-destructive">
-                  {t("deactivate")}
+        <TooltipProvider delayDuration={200}>
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="size-8"
+                  onClick={copyUrl}
+                  aria-label={copied ? t("copied") : t("copyUrl")}
+                >
+                  {copied ? (
+                    <Check className="size-3.5" />
+                  ) : (
+                    <Copy className="size-3.5" />
+                  )}
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("deactivateConfirmTitle")}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t("deactivateConfirmDescription")}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDeactivated}>
+              </TooltipTrigger>
+              <TooltipContent>{copied ? t("copied") : t("copyUrl")}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="size-8"
+                  onClick={shareUrl}
+                  aria-label={t("share")}
+                >
+                  <Share2 className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("share")}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="size-8"
+                  onClick={() => setQrOpen(true)}
+                  aria-label={t("viewQrCode")}
+                >
+                  <QrCodeIcon className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t("viewQrCode")}</TooltipContent>
+            </Tooltip>
+
+            {canWrite && link.isActive ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                  >
                     {t("deactivate")}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          ) : null}
-        </div>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("deactivateConfirmTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("deactivateConfirmDescription")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDeactivated}>
+                      {t("deactivate")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : null}
+          </div>
+        </TooltipProvider>
+
+        <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+          <DialogContent className="sm:max-w-xs">
+            <DialogHeader>
+              <DialogTitle>{link.label}</DialogTitle>
+            </DialogHeader>
+            <div className="flex justify-center py-2">
+              <div className="bg-background rounded-md border p-3">
+                <QRCodeSVG value={link.publicUrl} size={192} />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </TableCell>
     </TableRow>
   );
@@ -166,11 +236,6 @@ export default function PublicSurveyDetailPage({
   const [need, setNeed] = useState<Need | null>(null);
   const [links, setLinks] = useState<PublicSurveyLink[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  // The Methodology Version this Need's survey was actually built/published
-  // against — a frozen snapshot (see SurveysService.saveDraft on the
-  // backend), so it's whatever version was active back then, not
-  // necessarily today's active one.
-  const [methodologyVersion, setMethodologyVersion] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState("");
@@ -180,15 +245,10 @@ export default function PublicSurveyDetailPage({
   const [formError, setFormError] = useState<string | null>(null);
 
   function load() {
-    Promise.all([
-      needsService.getById(needId),
-      publicSurveysService.listLinks(needId),
-      surveysService.getSurveyByNeedId(needId),
-    ])
-      .then(([needResult, linkRows, survey]) => {
+    Promise.all([needsService.getById(needId), publicSurveysService.listLinks(needId)])
+      .then(([needResult, linkRows]) => {
         setNeed(needResult);
         setLinks(linkRows);
-        setMethodologyVersion(survey?.methodologyVersion ?? null);
         setLoadFailed(false);
       })
       .catch(() => {
@@ -248,33 +308,23 @@ export default function PublicSurveyDetailPage({
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
-        <Link
-          href="/public-surveys"
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-3.5" />
-          {t("backToList")}
-        </Link>
-
         <PageHeader
           title={need?.title ?? ""}
           description={t("description")}
           actions={
-            canCreate ? (
-              <Button onClick={() => setCreateOpen(true)} className="gap-2">
-                <Plus className="size-4" />
-                {t("newLink")}
-              </Button>
-            ) : null
+            <>
+              <BackButton href="/public-surveys" label={t("backToList")} />
+              {/* "View Responses" hidden for now — page still exists, just
+               * not linked from here yet. */}
+              {canCreate ? (
+                <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  {t("newLink")}
+                </Button>
+              ) : null}
+            </>
           }
         />
-
-        {methodologyVersion ? (
-          <div className="mb-4 flex items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground">{t("methodologyVersionLabel")}</span>
-            <Badge variant="outline">{methodologyVersion}</Badge>
-          </div>
-        ) : null}
 
         <div className="space-y-4">
           <h2 className="text-foreground text-sm font-semibold">{t("linksHeading")}</h2>
@@ -298,12 +348,12 @@ export default function PublicSurveyDetailPage({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("labelColumn")}</TableHead>
+                      <TableHead className="w-48">{t("labelColumn")}</TableHead>
                       <TableHead className="w-32">{t("createdColumn")}</TableHead>
                       <TableHead className="w-32">{t("expiryColumn")}</TableHead>
                       <TableHead className="w-28">{t("responsesColumn")}</TableHead>
                       <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                      <TableHead className="w-64" />
+                      <TableHead className="w-44" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -328,14 +378,6 @@ export default function PublicSurveyDetailPage({
               <DialogTitle>{t("newLink")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              {methodologyVersion ? (
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-muted-foreground">
-                    {t("methodologyVersionLabel")}
-                  </span>
-                  <Badge variant="outline">{methodologyVersion}</Badge>
-                </div>
-              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="survey-link-label">
                   {t("linkLabelLabel")} <span className="text-destructive">*</span>

@@ -1,17 +1,18 @@
 "use client";
 
 import {
-  ArrowLeft,
   CalendarDays,
   Clock,
   MapPin,
   Pencil,
   Plus,
+  Search,
   Trash2,
   Upload,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { BackButton } from "@/components/common/back-button";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
@@ -19,10 +20,28 @@ import { NeedStatusBadge } from "@/components/features/studies/study-status-badg
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -38,13 +57,22 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
 import { needsService } from "@/services/needs/needs.service";
-import type { Need } from "@/services/needs/needs.types";
+import type { Need, NeedStatus } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudyDetail } from "@/services/studies/studies.types";
 import { surveysService } from "@/services/surveys/surveys.service";
+
+const NEED_STATUSES: readonly NeedStatus[] = [
+  "draft",
+  "evidence_submitted",
+  "ai_classified",
+  "reviewer_approved",
+  "survey_created",
+  "survey_published",
+];
 
 function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -108,7 +136,10 @@ interface NeedRowData {
   surveyStatus: SurveyStatus;
 }
 
-const AI_STATUS_VARIANT: Record<AiClassificationStatus, "outline" | "secondary" | "default"> = {
+const AI_STATUS_VARIANT: Record<
+  AiClassificationStatus,
+  "outline" | "secondary" | "default"
+> = {
   not_started: "outline",
   classified: "secondary",
   reviewed: "default",
@@ -125,6 +156,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const t = useTranslations("app.studies.detail");
   const tStudies = useTranslations("app.studies");
   const tNeedDelete = useTranslations("app.studies.need.delete");
+  const tStatus = useTranslations("app.studies.status");
   const router = useRouter();
   const canWrite = usePermission("studySurvey", "write");
   const canCaptureNeed = usePermission("dataCollection", "create");
@@ -142,12 +174,27 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  // Multiple Needs per Study is intentional (each runs its own independent
+  // lifecycle) — this isn't a block, just a heads-up so someone doesn't
+  // add/import a second Need by mistake when they meant to edit the
+  // existing one.
+  const [pendingNeedAction, setPendingNeedAction] = useState<"add" | "import" | null>(
+    null,
+  );
+  const [needQuery, setNeedQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<NeedStatus | "all">("all");
 
   const loadNeeds = () => {
     needsService
       .listByStudy(id)
       .then(async (needs) => {
-        setNeedRows(needs.map((need) => ({ need, aiStatus: "not_started", surveyStatus: "not_started" })));
+        setNeedRows(
+          needs.map((need) => ({
+            need,
+            aiStatus: "not_started",
+            surveyStatus: "not_started",
+          })),
+        );
         const [aiStatuses, surveyStatuses] = await Promise.all([
           Promise.all(
             needs.map((need) =>
@@ -197,15 +244,10 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <PermissionGuard module="studySurvey" action="read">
         <PageContainer>
-          <PageHeader title={tStudies("noResults")} />
-          <Button
-            variant="outline"
-            onClick={() => router.push("/studies")}
-            className="gap-2"
-          >
-            <ArrowLeft className="size-4" />
-            {t("backToList")}
-          </Button>
+          <PageHeader
+            title={tStudies("noResults")}
+            actions={<BackButton href="/studies" label={t("backToList")} />}
+          />
         </PageContainer>
       </PermissionGuard>
     );
@@ -226,99 +268,147 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
 
   const visibleNeedRows = needRows
     ? isReviewerOnly
-      ? needRows.filter(({ need }) => need.status !== "draft" && need.status !== "evidence_submitted")
+      ? needRows.filter(
+          ({ need }) => need.status !== "draft" && need.status !== "evidence_submitted",
+        )
       : needRows
+    : null;
+
+  const filteredNeedRows = visibleNeedRows
+    ? visibleNeedRows.filter(({ need }) => {
+        const query = needQuery.trim().toLowerCase();
+        const matchesQuery = !query || need.title.toLowerCase().includes(query);
+        const matchesStatus = statusFilter === "all" || need.status === statusFilter;
+        return matchesQuery && matchesStatus;
+      })
     : null;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
-        <Link
-          href="/studies"
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-4" />
-          {t("backToList")}
-        </Link>
-
         <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
           {t("eyebrow")}
         </p>
         <PageHeader
           title={study.title}
           actions={
-            canWrite ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(`/studies/${study.id}/edit`)}
-                  className="gap-2"
-                >
-                  <Pencil className="size-4" />
-                  {t("edit")}
-                </Button>
-                <DeleteStudyDialog
-                  studyId={study.id}
-                  onDeleted={() => router.push("/studies")}
-                  trigger={
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" className="text-destructive gap-2">
-                        <Trash2 className="size-4" />
-                        {tStudies("delete.action")}
-                      </Button>
-                    </AlertDialogTrigger>
-                  }
-                />
-              </>
-            ) : null
+            <>
+              <BackButton href="/studies" label={t("backToList")} />
+              {canWrite ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/studies/${study.id}/edit`)}
+                    className="gap-2"
+                  >
+                    <Pencil className="size-4" />
+                    {t("edit")}
+                  </Button>
+                  <DeleteStudyDialog
+                    studyId={study.id}
+                    onDeleted={() => router.push("/studies")}
+                    trigger={
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="text-destructive gap-2">
+                          <Trash2 className="size-4" />
+                          {tStudies("delete.action")}
+                        </Button>
+                      </AlertDialogTrigger>
+                    }
+                  />
+                </>
+              ) : null}
+            </>
           }
         />
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <Card className="shadow-md">
-              <CardContent className="space-y-4 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-foreground text-sm font-semibold">
-                    {t("needsHeading")}
-                  </h2>
-                  {canCaptureNeed ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => setImportOpen(true)}
-                      >
-                        <Upload className="size-3.5" />
-                        {t("importNeeds")}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => router.push(`/studies/${study.id}/needs/new`)}
-                      >
-                        <Plus className="size-3.5" />
-                        {t("addNeed")}
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-
-                {visibleNeedRows === null ? (
-                  <div className="space-y-2">
-                    <div className="bg-muted h-10 w-full rounded" />
-                    <div className="bg-muted h-10 w-full rounded" />
+        <div className="mt-6 space-y-6">
+          <Card className="shadow-md">
+            <CardContent className="space-y-4 p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-foreground text-sm font-semibold">
+                  {t("needsHeading")}
+                </h2>
+                {canCaptureNeed ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() =>
+                        needRows && needRows.length > 0
+                          ? setPendingNeedAction("import")
+                          : setImportOpen(true)
+                      }
+                    >
+                      <Upload className="size-3.5" />
+                      {t("importNeeds")}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() =>
+                        needRows && needRows.length > 0
+                          ? setPendingNeedAction("add")
+                          : router.push(`/studies/${study.id}/needs/new`)
+                      }
+                    >
+                      <Plus className="size-3.5" />
+                      {t("addNeed")}
+                    </Button>
                   </div>
-                ) : visibleNeedRows.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">
-                    {isReviewerOnly ? t("needsEmptyForReviewer") : t("needsEmpty")}
-                  </p>
-                ) : (
-                  <div className="border-border overflow-hidden rounded-lg border">
-                    <TooltipProvider delayDuration={200}>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <Input
+                    placeholder={t("searchNeedsPlaceholder")}
+                    value={needQuery}
+                    onChange={(event) => setNeedQuery(event.target.value)}
+                    className="h-9 pl-9"
+                  />
+                </div>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value as NeedStatus | "all")}
+                >
+                  <SelectTrigger
+                    className="h-9 w-full sm:w-56"
+                    aria-label={t("filterStatusLabel")}
+                  >
+                    <SelectValue placeholder={t("filterStatusLabel")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("filterStatusAll")}</SelectItem>
+                    {NEED_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {tStatus(status)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {filteredNeedRows === null ? (
+                <div className="space-y-2">
+                  <div className="bg-muted h-10 w-full rounded" />
+                  <div className="bg-muted h-10 w-full rounded" />
+                </div>
+              ) : visibleNeedRows && visibleNeedRows.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  {isReviewerOnly ? t("needsEmptyForReviewer") : t("needsEmpty")}
+                </p>
+              ) : filteredNeedRows.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  {t("needsNoSearchResults")}
+                </p>
+              ) : (
+                <div className="border-border overflow-hidden rounded-lg border">
+                  <TooltipProvider delayDuration={200}>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -331,11 +421,13 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {visibleNeedRows.map(({ need, aiStatus, surveyStatus }) => (
+                        {filteredNeedRows.map(({ need, aiStatus, surveyStatus }) => (
                           <TableRow
                             key={need.id}
                             className="hover:bg-muted/30 cursor-pointer"
-                            onClick={() => router.push(`/studies/${study.id}/needs/${need.id}`)}
+                            onClick={() =>
+                              router.push(`/studies/${study.id}/needs/${need.id}`)
+                            }
                           >
                             <TableCell className="max-w-52 truncate text-sm font-medium">
                               {need.title}
@@ -375,7 +467,9 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                                     needId={need.id}
                                     onDeleted={() =>
                                       setNeedRows((prev) =>
-                                        (prev ?? []).filter((row) => row.need.id !== need.id),
+                                        (prev ?? []).filter(
+                                          (row) => row.need.id !== need.id,
+                                        ),
                                       )
                                     }
                                     trigger={
@@ -414,7 +508,9 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                                         </Button>
                                       </span>
                                     </TooltipTrigger>
-                                    <TooltipContent>{tNeedDelete("lockedHint")}</TooltipContent>
+                                    <TooltipContent>
+                                      {tNeedDelete("lockedHint")}
+                                    </TooltipContent>
                                   </Tooltip>
                                 )}
                               </TableCell>
@@ -423,50 +519,48 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                         ))}
                       </TableBody>
                     </Table>
-                    </TooltipProvider>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  </TooltipProvider>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Study Information — an at-a-glance panel (villages, timing)
-           * instead of a bare label/value list. A Study has no status of
-           * its own now — that lives on each Need. */}
-          <div className="lg:col-span-1">
-            <Card className="h-fit">
-              <CardContent className="space-y-4 p-6">
-                <h2 className="text-foreground text-sm font-semibold">
-                  {t("detailsHeading")}
-                </h2>
-                <dl className="space-y-4 text-sm">
-                  <div className="flex items-start gap-2.5">
-                    <CalendarDays className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                    <span title={formatDateTime(study.createdAt)}>
-                      {t("createdOn", { date: formatDate(study.createdAt) })}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <Clock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                    <span title={formatDateTime(study.updatedAt)}>
-                      {t("updatedRelative", {
-                        time: formatRelativeTime(study.updatedAt),
-                      })}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <dt className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                      <MapPin className="size-3.5" />
-                      {t("villagesLabel")}
-                    </dt>
-                    <dd>
-                      <VillageChips villages={study.villages} />
-                    </dd>
-                  </div>
-                </dl>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Study Information — moved below the (now full-width) Needs
+           * table, laid out horizontally rather than in a narrow sidebar
+           * column. A Study has no status of its own now — that lives on
+           * each Need. */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-foreground mb-4 text-sm font-semibold">
+                {t("detailsHeading")}
+              </h2>
+              <dl className="flex flex-wrap items-start gap-x-10 gap-y-4 text-sm">
+                <div className="flex items-start gap-2.5">
+                  <CalendarDays className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                  <span title={formatDateTime(study.createdAt)}>
+                    {t("createdOn", { date: formatDate(study.createdAt) })}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <Clock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                  <span title={formatDateTime(study.updatedAt)}>
+                    {t("updatedRelative", {
+                      time: formatRelativeTime(study.updatedAt),
+                    })}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  <dt className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <MapPin className="size-3.5" />
+                    {t("villagesLabel")}
+                  </dt>
+                  <dd>
+                    <VillageChips villages={study.villages} />
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
         </div>
 
         <ImportNeedsDialog
@@ -475,6 +569,35 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           onOpenChange={setImportOpen}
           onImported={loadNeeds}
         />
+
+        <AlertDialog
+          open={pendingNeedAction !== null}
+          onOpenChange={(open) => !open && setPendingNeedAction(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("existingNeedWarningTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("existingNeedWarningDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pendingNeedAction === "import") {
+                    setImportOpen(true);
+                  } else if (pendingNeedAction === "add") {
+                    router.push(`/studies/${study.id}/needs/new`);
+                  }
+                  setPendingNeedAction(null);
+                }}
+              >
+                {t("existingNeedWarningContinue")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageContainer>
     </PermissionGuard>
   );

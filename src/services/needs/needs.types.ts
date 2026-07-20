@@ -21,16 +21,19 @@ export function needLockState(status: NeedStatus): NeedLockState {
   return NEED_EDITABLE_STATUSES.includes(status) ? "editable" : "locked";
 }
 
+/** Where a Need came from — system-assigned only (RIO-FR-001), never
+ * user-editable. `citizen_input`/`field_survey` are valid values with no
+ * producing flow yet in this app. */
+export type NeedSource =
+  "manual_entry" | "file_upload" | "citizen_input" | "field_survey";
+
 export interface Need {
   id: string;
   studyId: string;
   title: string;
   statement: string;
   village: string[];
-  /** Where this Need came from — user-entered on manual creation (e.g.
-   * "Field Survey"), or "Bulk Import" plus the file's own Source column
-   * for an imported row. */
-  source: string;
+  source: NeedSource;
   /** The submitter's own external tracking id (a field form number, a
    * partner org's case id, etc.) — free text, optional. */
   referenceId: string | null;
@@ -40,6 +43,9 @@ export interface Need {
   domain: string | null;
   subDomain: string | null;
   createdBy: string;
+  /** Resolved display name for Entered By — null if the creating user has
+   * since been removed. */
+  createdByName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,7 +54,6 @@ export interface CreateNeedPayload {
   title: string;
   statement: string;
   village: string[];
-  source?: string;
   referenceId?: string;
 }
 
@@ -56,7 +61,6 @@ export interface UpdateNeedPayload {
   title?: string;
   statement?: string;
   village?: string[];
-  source?: string;
   referenceId?: string | null;
 }
 

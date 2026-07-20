@@ -583,7 +583,8 @@
           "share": "Shared",
           "delete": "Deleted",
           "login": "Signed in",
-          "logout": "Signed out"
+          "logout": "Signed out",
+          "consent": "Accepted consent"
         },
         "entities": {
           "organization": "Organisation",
@@ -592,6 +593,7 @@
           "need": "Need",
           "ai_decision": "AI classification",
           "survey": "Survey",
+          "survey_response": "Survey response",
           "evidence": "Evidence",
           "report": "Report",
           "sharing_request": "Sharing request"
@@ -806,6 +808,7 @@
       "statusColumn": "Status",
       "manageLinks": "Manage links",
       "viewInsights": "View insights",
+      "viewResponses": "View responses",
       "noStudies": "No needs have a survey created yet. Build and create a survey in Survey Builder first.",
       "loadError": "Couldn't load studies. Please try again.",
       "insights": {
@@ -854,6 +857,7 @@
       "detail": {
         "backToList": "Back to Public Surveys",
         "description": "Create public links and QR codes for this study's published survey.",
+        "viewResponses": "View responses",
         "linksHeading": "Public links",
         "newLink": "Create link",
         "linkLabelLabel": "Link Label",
@@ -873,7 +877,10 @@
         "responsesColumn": "Responses",
         "statusColumn": "Status",
         "copyUrl": "Copy link",
+        "moreActions": "More actions",
+        "viewQrCode": "View QR code",
         "copied": "Copied",
+        "share": "Share",
         "deactivate": "Deactivate",
         "deactivateConfirmTitle": "Deactivate this link?",
         "deactivateConfirmDescription": "The QR code and public URL will stop accepting new responses. This can't be undone.",
@@ -882,6 +889,29 @@
         "neverExpires": "Never expires",
         "genericError": "Something went wrong. Please try again.",
         "methodologyVersionLabel": "Methodology Version"
+      },
+      "responses": {
+        "backToLinks": "Back to survey links",
+        "description": "Review and export every response submitted to this survey.",
+        "respondentColumn": "Respondent",
+        "contactColumn": "Contact",
+        "submittedColumn": "Submitted",
+        "view": "View",
+        "viewDialogTitle": "Survey response",
+        "answersHeading": "Answers",
+        "noAnswers": "This response has no recorded answers.",
+        "noAnswer": "No answer provided",
+        "anonymousRespondent": "Anonymous",
+        "searchPlaceholder": "Search by name or contact...",
+        "noResponses": "No responses have been submitted yet.",
+        "noSearchResults": "No responses match your search.",
+        "loadError": "Couldn't load responses. Please try again.",
+        "loadDetailError": "Couldn't load this response. Please try again.",
+        "exportResponses": "Export Responses",
+        "exportCsv": "Export as CSV",
+        "exportExcel": "Export as Excel",
+        "exporting": "Exporting...",
+        "exportError": "Couldn't export responses. Please try again."
       }
     },
     "studies": {
@@ -959,6 +989,9 @@
         "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",
         "editNeed": "Edit",
         "sourceLabel": "Data Source",
+        "enteredByLabel": "Entered By",
+        "enteredByUnknown": "Unknown",
+        "captureDateLabel": "Capture Date",
         "sourcePlaceholder": "e.g. Field Survey, Community Meeting",
         "referenceIdLabel": "Reference ID",
         "referenceIdPlaceholder": "Optional — your own tracking id",
@@ -972,6 +1005,12 @@
           "notDeletableBlocked": "This need has already moved past draft and can no longer be deleted.",
           "lockedHint": "Can't delete — this need has already moved past draft (evidence, an AI classification, or a survey may depend on it)."
         }
+      },
+      "source": {
+        "manual_entry": "Manual Entry",
+        "file_upload": "File Upload",
+        "citizen_input": "Citizen Input",
+        "field_survey": "Field Survey"
       },
       "classification": {
         "heading": "AI Classification",
@@ -1024,6 +1063,10 @@
           "completed": "Completed"
         },
         "needHeading": "Need",
+        "existingNeedWarningTitle": "This study already has a Need",
+        "existingNeedWarningDescription": "This study already has one or more Needs linked to it. Adding another is fine if it's genuinely a separate Need — just make sure you're not duplicating one that already exists.",
+        "existingNeedWarningContinue": "Continue",
+        "cancel": "Cancel",
         "needStatementLabel": "Statement",
         "needVillageLabel": "Village",
         "needSourceLabel": "Source",
@@ -1044,11 +1087,15 @@
         "edit": "Edit",
         "needsHeading": "Needs",
         "needsEmpty": "No needs added yet.",
+        "needsNoSearchResults": "No needs match your search or filter.",
         "needsEmptyForReviewer": "No needs are ready for your review in this study yet.",
         "openNeed": "Open",
         "needEyebrow": "Need",
         "needNotFound": "This need no longer exists. It may have been removed.",
         "importNeeds": "Import Needs",
+        "searchNeedsPlaceholder": "Search needs by title...",
+        "filterStatusLabel": "Filter by status",
+        "filterStatusAll": "All statuses",
         "needTitleColumn": "Need Title",
         "villageColumn": "Village",
         "statusColumn": "Status",
@@ -1082,6 +1129,7 @@
       },
       "survey": {
         "heading": "Survey",
+        "classifiedAsLabel": "Classified as",
         "approvedDomainLabel": "Approved domain",
         "approvedSubDomainLabel": "Approved sub-domain",
         "domainNotApprovedNote": "Complete and approve AI Classification on this study's need first.",
@@ -1220,6 +1268,7 @@
         "namePlaceholder": "Your name",
         "emailLabel": "Email",
         "emailPlaceholder": "you@example.com",
+        "privacyNotice": "Your responses are used only in aggregate to understand community needs and inform planning. This is not a request or complaint system, and you will not be personally contacted about your answers.",
         "submit": "Start Survey",
         "submitting": "Checking...",
         "duplicateError": "You have already submitted a response for this survey."

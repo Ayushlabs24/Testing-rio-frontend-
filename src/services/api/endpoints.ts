@@ -108,6 +108,11 @@ export const endpoints = {
     links: (needId: string) => `/needs/${needId}/survey-links`,
     deactivateLink: (needId: string, linkId: string) =>
       `/needs/${needId}/survey-links/${linkId}/deactivate`,
+    responses: (needId: string) => `/needs/${needId}/survey-responses`,
+    response: (needId: string, responseId: string) =>
+      `/needs/${needId}/survey-responses/${responseId}`,
+    exportResponses: (needId: string, format: "csv" | "excel") =>
+      `/needs/${needId}/survey-responses/export?format=${format}`,
   },
   citizen: {
     // Fully unauthenticated (Citizen public flow) — token identifies the

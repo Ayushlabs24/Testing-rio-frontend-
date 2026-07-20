@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Lock, MapPin, Pencil, Trash2, UploadCloud, X } from "lucide-react";
+import { Lock, MapPin, Pencil, Trash2, UploadCloud, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import { AiClassificationSection } from "@/components/features/studies/ai-classi
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -21,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
@@ -32,8 +33,13 @@ interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
-  source: string;
-  referenceId: string;
+}
+
+function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
 }
 
 function VillageChips({ villages }: { villages: string[] }) {
@@ -199,6 +205,7 @@ function NeedDetailsCard({
   onDeleted: () => void;
 }) {
   const t = useTranslations("app.studies.need");
+  const tSource = useTranslations("app.studies.source");
   const tDelete = useTranslations("app.studies.need.delete");
   const tValidation = useTranslations("app.studies.validation");
   const [editing, setEditing] = useState(false);
@@ -212,8 +219,6 @@ function NeedDetailsCard({
       .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
     village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
-    source: z.string().trim().max(200, tValidation("sourceTooLong")),
-    referenceId: z.string().trim().max(200, tValidation("referenceIdTooLong")),
   });
 
   const {
@@ -228,8 +233,6 @@ function NeedDetailsCard({
       title: need.title,
       statement: need.statement,
       village: need.village,
-      source: need.source,
-      referenceId: need.referenceId ?? "",
     },
   });
 
@@ -242,8 +245,6 @@ function NeedDetailsCard({
         title: values.title,
         statement: values.statement,
         village: values.village,
-        source: values.source,
-        referenceId: values.referenceId.trim() || null,
       });
       onSaved(updated);
       setEditing(false);
@@ -343,23 +344,9 @@ function NeedDetailsCard({
                 <p className="text-destructive text-sm">{errors.village.message}</p>
               ) : null}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="source">{t("sourceLabel")}</Label>
-                <Input id="source" {...register("source")} />
-                {errors.source ? (
-                  <p className="text-destructive text-sm">{errors.source.message}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="referenceId">{t("referenceIdLabel")}</Label>
-                <Input id="referenceId" {...register("referenceId")} />
-                {errors.referenceId ? (
-                  <p className="text-destructive text-sm">{errors.referenceId.message}</p>
-                ) : null}
-              </div>
-            </div>
-            {submitError ? <p className="text-destructive text-sm">{submitError}</p> : null}
+            {submitError ? (
+              <p className="text-destructive text-sm">{submitError}</p>
+            ) : null}
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? t("saving") : t("save")}
@@ -386,11 +373,14 @@ function NeedDetailsCard({
               <FilledField label={t("villageLabel")}>
                 <VillageChips villages={need.village} />
               </FilledField>
-              <FilledField label={t("sourceLabel")}>{need.source}</FilledField>
+              <FilledField label={t("sourceLabel")}>{tSource(need.source)}</FilledField>
+              <FilledField label={t("enteredByLabel")}>
+                {need.createdByName ?? t("enteredByUnknown")}
+              </FilledField>
+              <FilledField label={t("captureDateLabel")}>
+                {formatDateTime(need.createdAt)}
+              </FilledField>
             </div>
-            {need.referenceId ? (
-              <FilledField label={t("referenceIdLabel")}>{need.referenceId}</FilledField>
-            ) : null}
           </div>
         )}
       </CardContent>
@@ -439,11 +429,10 @@ export default function NeedWorkspacePage({
     return (
       <PermissionGuard module="dataCollection" action="read">
         <PageContainer>
-          <PageHeader title={t("needNotFound")} />
-          <Button variant="outline" onClick={() => router.push(`/studies/${studyId}`)} className="gap-2">
-            <ArrowLeft className="size-4" />
-            {t("backToList")}
-          </Button>
+          <PageHeader
+            title={t("needNotFound")}
+            actions={<BackButton href={`/studies/${studyId}`} label={t("backToList")} />}
+          />
         </PageContainer>
       </PermissionGuard>
     );
@@ -463,23 +452,22 @@ export default function NeedWorkspacePage({
   }
 
   const evidenceState: StepState =
-    evidenceCount === 0 ? "not_started" : need.status === "draft" ? "in_progress" : "completed";
+    evidenceCount === 0
+      ? "not_started"
+      : need.status === "draft"
+        ? "in_progress"
+        : "completed";
 
   return (
     <PermissionGuard module="dataCollection" action="read">
       <PageContainer>
-        <Link
-          href={`/studies/${studyId}`}
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-4" />
-          {t("backToStudy")}
-        </Link>
-
         <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
           {t("needEyebrow")}
         </p>
-        <PageHeader title={need.title} />
+        <PageHeader
+          title={need.title}
+          actions={<BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />}
+        />
 
         <div className="mt-6 space-y-6">
           <NeedDetailsCard
@@ -500,7 +488,9 @@ export default function NeedWorkspacePage({
                   size="sm"
                   variant="outline"
                   className="gap-1.5"
-                  onClick={() => router.push(`/studies/${studyId}/needs/${needId}/evidence`)}
+                  onClick={() =>
+                    router.push(`/studies/${studyId}/needs/${needId}/evidence`)
+                  }
                 >
                   <UploadCloud className="size-3.5" />
                   {t("manageEvidence")}

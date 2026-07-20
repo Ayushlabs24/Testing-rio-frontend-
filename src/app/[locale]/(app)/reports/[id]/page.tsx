@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Sparkles, Table2 } from "lucide-react";
+import { Download, FileText, Sparkles, Table2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -18,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
-import { Link } from "@/i18n/navigation";
 import { flattenReportContent } from "@/lib/report-content-flatten";
 import { ApiError } from "@/services/api/types";
 import { reportsService } from "@/services/reports/reports.service";
@@ -109,13 +109,9 @@ export default function ReportPreviewPage({
   return (
     <PermissionGuard module="reportsDashboards" action="read">
       <PageContainer>
-        <Link
-          href="/reports"
-          className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="size-3.5" />
-          {tp("backToList")}
-        </Link>
+        <div className="mb-4 flex justify-end">
+          <BackButton href="/reports" label={tp("backToList")} />
+        </div>
 
         {loadFailed ? (
           <p className="text-destructive text-sm">{tp("loadError")}</p>

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   Check,
   FileText,
   Info,
@@ -43,10 +42,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
@@ -440,15 +439,16 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
 
   return (
     <PageContainer>
-      <Link
-        href={`/studies/${studyId}/needs/${needId}`}
-        className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm"
-      >
-        <ArrowLeft className="size-4" />
-        {t("backToStudy")}
-      </Link>
-
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        actions={
+          <BackButton
+            href={`/studies/${studyId}/needs/${needId}`}
+            label={t("backToStudy")}
+          />
+        }
+      />
 
       <div className="border-info/30 bg-info/10 mb-6 flex items-start gap-3 rounded-lg border p-4">
         <Info className="text-info mt-0.5 size-4 shrink-0" />
