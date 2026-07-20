@@ -2,10 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { GovernoratePicker } from "@/components/common/governorate-picker";
 import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +15,8 @@ import type { Study } from "@/services/studies/studies.types";
 
 export interface StudyFormValues {
   title: string;
-  /**
-   * Create-only. Free text, comma-separated — the caller splits it into
-   * Study.villages before sending (see parseVillageInput).
-   */
-  village: string;
+  /** Create-only — sent to Study.villages as-is. */
+  village: string[];
 }
 
 interface StudyFormProps {
@@ -26,11 +24,14 @@ interface StudyFormProps {
    * can change — Villages are set at create; Need/Evidence/Classification
    * each live on their own screen. */
   study?: Study;
+  /** The org's own configured governorates (Settings > Organization), offered
+   * as a dropdown alongside free text. */
+  orgVillages: string[];
   onSubmit: (values: StudyFormValues) => Promise<void>;
   onCancel: () => void;
 }
 
-export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
+export function StudyForm({ study, orgVillages, onSubmit, onCancel }: StudyFormProps) {
   const t = useTranslations("app.studies.form");
   const tValidation = useTranslations("app.studies.validation");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -42,17 +43,21 @@ export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
       .trim()
       .min(1, tValidation("titleRequired"))
       .max(300, tValidation("titleTooLong")),
-    village: z.string(),
+    village: z.array(z.string()),
   });
 
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<StudyFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { title: study?.title ?? "", village: "" },
+    defaultValues: { title: study?.title ?? "", village: [] },
   });
+
+  const village = useWatch({ control, name: "village" });
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -78,12 +83,11 @@ export function StudyForm({ study, onSubmit, onCancel }: StudyFormProps) {
       {isCreate ? (
         <div className="space-y-2">
           <Label htmlFor="village">{t("villageLabel")}</Label>
-          <Input
-            id="village"
-            placeholder={t("villagePlaceholder")}
-            {...register("village")}
+          <GovernoratePicker
+            values={village ?? []}
+            options={orgVillages}
+            onChange={(next) => setValue("village", next, { shouldValidate: true })}
           />
-          <p className="text-muted-foreground text-xs">{t("villageHint")}</p>
         </div>
       ) : null}
 

@@ -78,10 +78,10 @@ test("direct URL navigation to an unauthorized page redirects away", async ({ pa
 
 // POST /users (invite) creates the row but never provisions a password —
 // unlike self-signup, there's no temp-password issuance for an
-// admin-invited user yet, so they have no way to ever log in and reach
-// the consent gate at all. Flip back to test() once invite provisions
-// credentials (temp password + email, mirroring AuthService.signup()).
-test.skip("an admin-invited user is prompted for consent on first login, not the admin who created them", async ({
+// admin-invited user yet, so they have no way to ever log in at all.
+// Flip back to test() once invite provisions credentials (temp password +
+// email, mirroring AuthService.signup()).
+test.skip("an admin-invited user is never prompted for consent — the NGO Admin consents for the org", async ({
   page,
 }) => {
   const email = `invitee.${Date.now()}@demo.org`;
@@ -107,8 +107,7 @@ test.skip("an admin-invited user is prompted for consent on first login, not the
   await page.getByPlaceholder("Search by name or email...").fill(email);
   await expect(page.getByText(email)).toBeVisible();
 
-  // Admin created the account but never consented on the invitee's behalf —
-  // admin's own session must be unaffected.
+  // Creating a user doesn't disturb the admin's own already-consented session.
   await expect(page.getByText("Before you continue")).toHaveCount(0);
 
   // Log out, log in as the newly created user.
@@ -120,12 +119,10 @@ test.skip("an admin-invited user is prompted for consent on first login, not the
   await page.getByLabel("Password").fill("Passw0rd!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
-  // Blocked by the consent gate before seeing any app content.
-  await expect(page.getByText("Before you continue")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Welcome, Nadia Khan" })).toHaveCount(0);
-
-  await page.getByRole("button", { name: "I agree, continue" }).click();
+  // A Research Officer is covered by the admin's org-level acceptance, so
+  // the gate never appears — they land straight in the app.
   await expect(page.getByRole("heading", { name: "Welcome, Nadia Khan" })).toBeVisible();
+  await expect(page.getByText("Before you continue")).toHaveCount(0);
 });
 
 test("cross-entity access is prevented between organizations", async ({ page }) => {
@@ -319,7 +316,9 @@ test("public signup creates an organization and its first NGO Admin, who must ch
     page.getByRole("heading", { name: `Welcome, ${orgName} Admin` }),
   ).toHaveCount(0);
 
-  const newPassword = "a-brand-new-password";
+  // Must satisfy the set-password policy: 8+ chars, one capital, one
+  // digit, one special character (see src/lib/password-policy.ts).
+  const newPassword = "A-Brand-New-Password1";
   await page.getByLabel("Temporary password").fill(temporaryPassword);
   await page.getByLabel("New password", { exact: true }).fill(newPassword);
   await page.getByLabel("Confirm new password").fill(newPassword);

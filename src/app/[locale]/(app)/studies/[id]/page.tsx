@@ -20,17 +20,7 @@ import { NeedStatusBadge } from "@/components/features/studies/study-status-badg
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -174,13 +164,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  // Multiple Needs per Study is intentional (each runs its own independent
-  // lifecycle) — this isn't a block, just a heads-up so someone doesn't
-  // add/import a second Need by mistake when they meant to edit the
-  // existing one.
-  const [pendingNeedAction, setPendingNeedAction] = useState<"add" | "import" | null>(
-    null,
-  );
   const [needQuery, setNeedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<NeedStatus | "all">("all");
 
@@ -336,11 +319,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                       variant="outline"
                       size="sm"
                       className="gap-1.5"
-                      onClick={() =>
-                        needRows && needRows.length > 0
-                          ? setPendingNeedAction("import")
-                          : setImportOpen(true)
-                      }
+                      onClick={() => setImportOpen(true)}
                     >
                       <Upload className="size-3.5" />
                       {t("importNeeds")}
@@ -349,11 +328,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                       type="button"
                       size="sm"
                       className="gap-1.5"
-                      onClick={() =>
-                        needRows && needRows.length > 0
-                          ? setPendingNeedAction("add")
-                          : router.push(`/studies/${study.id}/needs/new`)
-                      }
+                      onClick={() => router.push(`/studies/${study.id}/needs/new`)}
                     >
                       <Plus className="size-3.5" />
                       {t("addNeed")}
@@ -569,35 +544,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           onOpenChange={setImportOpen}
           onImported={loadNeeds}
         />
-
-        <AlertDialog
-          open={pendingNeedAction !== null}
-          onOpenChange={(open) => !open && setPendingNeedAction(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("existingNeedWarningTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("existingNeedWarningDescription")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (pendingNeedAction === "import") {
-                    setImportOpen(true);
-                  } else if (pendingNeedAction === "add") {
-                    router.push(`/studies/${study.id}/needs/new`);
-                  }
-                  setPendingNeedAction(null);
-                }}
-              >
-                {t("existingNeedWarningContinue")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </PageContainer>
     </PermissionGuard>
   );

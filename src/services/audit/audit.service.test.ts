@@ -74,7 +74,7 @@ describe("auditService", () => {
     expect(event.action).toBe("edit");
   });
 
-  it("list() calls GET /audit and returns the response as-is", async () => {
+  it("list() calls GET /audit and returns the paginated envelope as-is", async () => {
     const events: AuditEvent[] = [
       {
         id: "audit_1",
@@ -87,12 +87,54 @@ describe("auditService", () => {
         createdAt: "2026-03-01T00:00:00.000Z",
       },
     ];
-    vi.mocked(apiClient.get).mockResolvedValue(events);
+    const result = { items: events, total: 1, limit: 50, offset: 0 };
+    vi.mocked(apiClient.get).mockResolvedValue(result);
 
     const list = await auditService.list();
 
     expect(apiClient.get).toHaveBeenCalledWith(endpoints.audit.list);
-    expect(list).toEqual(events);
+    expect(list).toEqual(result);
+  });
+
+  it("list() serialises filters and paging into the query string", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 25,
+      offset: 25,
+    });
+
+    await auditService.list({
+      action: "login",
+      dateFrom: "2026-01-01T00:00:00.000Z",
+      dateTo: "2026-01-31T23:59:59.999Z",
+      search: "alex",
+      limit: 25,
+      offset: 25,
+    });
+
+    const [url] = vi.mocked(apiClient.get).mock.calls[0];
+    const params = new URLSearchParams(url.split("?")[1]);
+    expect(url.startsWith(`${endpoints.audit.list}?`)).toBe(true);
+    expect(params.get("action")).toBe("login");
+    expect(params.get("dateFrom")).toBe("2026-01-01T00:00:00.000Z");
+    expect(params.get("dateTo")).toBe("2026-01-31T23:59:59.999Z");
+    expect(params.get("search")).toBe("alex");
+    expect(params.get("limit")).toBe("25");
+    expect(params.get("offset")).toBe("25");
+  });
+
+  it("list() omits empty filters rather than sending blank params", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+    });
+
+    await auditService.list({ action: undefined, search: "", limit: 50 });
+
+    expect(apiClient.get).toHaveBeenCalledWith(`${endpoints.audit.list}?limit=50`);
   });
 
   it("requires an authenticated actor to record", () => {

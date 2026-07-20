@@ -28,14 +28,12 @@ interface Row {
   studyTitle: string;
 }
 
-// A Need only has anything to link/QR-code once its survey actually exists
-// — before that (draft/evidence_submitted/ai_classified/reviewer_approved)
-// there's no survey to attach a public link to yet, so it doesn't belong on
-// this list at all.
-const SURVEY_EXISTS_STATUSES: readonly Need["status"][] = [
-  "survey_created",
-  "survey_published",
-];
+// A Need only belongs on this list once its survey is actually published —
+// `survey_created` means a survey exists but is still a DRAFT, and a public
+// link to a DRAFT survey is dead on arrival (the citizen flow rejects it
+// with SURVEY_NOT_PUBLISHED). Surfacing it here before that point just
+// invites creating/sharing a link that doesn't work yet.
+const SURVEY_EXISTS_STATUSES: readonly Need["status"][] = ["survey_published"];
 
 /** One row per Need, not per Study — each Need runs its own independent
  * survey/link set now. */

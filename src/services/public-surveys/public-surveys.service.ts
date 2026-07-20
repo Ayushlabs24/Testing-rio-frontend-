@@ -43,6 +43,19 @@ export const publicSurveysService = {
     );
   },
 
+  /** Same rows as `listResponses`, with each one's answers already joined
+   * in — one call for a summary screen to build its own tallies from,
+   * instead of one `getResponse` per row. */
+  async listResponsesWithAnswers(
+    needId: string,
+    surveyLinkId?: string,
+  ): Promise<SurveyResponseDetail[]> {
+    return apiClient.get<SurveyResponseDetail[]>(
+      endpoints.publicSurveys.responsesWithAnswers(needId),
+      { params: { surveyLinkId } },
+    );
+  },
+
   async getResponse(needId: string, responseId: string): Promise<SurveyResponseDetail> {
     return apiClient.get<SurveyResponseDetail>(
       endpoints.publicSurveys.response(needId, responseId),

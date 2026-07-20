@@ -26,7 +26,7 @@ import { surveysService, type Survey } from "@/services/surveys/surveys.service"
 interface Row {
   need: Need;
   studyTitle: string;
-  survey: Survey | null;
+  survey: Survey;
 }
 
 /** One row per Need, not per Study — a Study can hold many Needs now, each
@@ -51,10 +51,11 @@ export default function SurveyBuilderPage() {
             surveysService.getSurveyByNeedId(need.id).catch(() => null),
           ),
         );
-        // Survey Builder is for reviewing/curating live surveys, not
-        // drafting new ones (that starts from the Need's own Survey section)
-        // — a Need with no survey yet, or one still in DRAFT, has nothing
-        // published to show here.
+        // Survey Builder is for reviewing/curating surveys, DRAFT or
+        // PUBLISHED — a Need with no survey yet has nothing to curate here
+        // (that starts from the Need's own Survey section instead), but a
+        // DRAFT survey belongs on this list just as much as a PUBLISHED one;
+        // this is exactly where someone would come to open and finish it.
         setRows(
           needs
             .map(({ need, studyTitle }, index) => ({
@@ -62,7 +63,9 @@ export default function SurveyBuilderPage() {
               studyTitle,
               survey: surveys[index],
             }))
-            .filter((row) => row.survey?.status === "PUBLISHED"),
+            // Loose check — a 204/empty response for "no survey yet" can
+            // come back as `undefined`, not `null`; either means "skip".
+            .filter((row): row is Row => row.survey != null),
         );
         setLoadFailed(false);
       })
@@ -131,11 +134,16 @@ export default function SurveyBuilderPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {survey ? (
-                          <Badge className="bg-badge-success text-badge-success-foreground border-transparent">
-                            {survey.status}
-                          </Badge>
-                        ) : null}
+                        <Badge
+                          variant={survey.status === "DRAFT" ? "outline" : "default"}
+                          className={
+                            survey.status !== "DRAFT"
+                              ? "bg-badge-success text-badge-success-foreground border-transparent"
+                              : undefined
+                          }
+                        >
+                          {survey.status}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild size="sm" variant="outline">

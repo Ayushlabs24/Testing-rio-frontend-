@@ -159,7 +159,7 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
                 logoUrl={session.organization.logoUrl}
                 crossEntity={session.role.crossEntity}
               />
-              <span className="min-w-0 flex-1 truncate">
+              <span className="min-w-0 flex-1 break-words">
                 {session.role.crossEntity ? siteConfig.name : session.organization.name}
               </span>
             </div>

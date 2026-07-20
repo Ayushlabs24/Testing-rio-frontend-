@@ -32,10 +32,17 @@ export const needsService = {
   },
 
   /** CSV/XLSX only — one Need per row. PDF isn't parsed here; attach it as
-   * Evidence on a manually created Need instead. */
+   * Evidence on a manually created Need instead. Duplicate rows (by
+   * Reference ID, or Title + Governorate, against this Study's existing
+   * Needs) are skipped automatically — see each error's `type` in the
+   * response to tell a skipped duplicate apart from a real validation
+   * failure. */
   async importFromFile(studyId: string, file: File): Promise<ImportNeedsResult> {
     const formData = new FormData();
     formData.append("file", file);
-    return apiClient.uploadForm<ImportNeedsResult>(endpoints.needs.import(studyId), formData);
+    return apiClient.uploadForm<ImportNeedsResult>(
+      endpoints.needs.import(studyId),
+      formData,
+    );
   },
 };

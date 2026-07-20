@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, MapPin, Pencil, Trash2, UploadCloud, X } from "lucide-react";
+import { Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,8 @@ import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dial
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
 import { BackButton } from "@/components/common/back-button";
+import { GovernoratePicker } from "@/components/common/governorate-picker";
+import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -23,11 +25,11 @@ import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { useRouter } from "@/i18n/navigation";
-import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { organizationsService } from "@/services/organizations/organizations.service";
 
 interface NeedFormValues {
   title: string;
@@ -55,74 +57,6 @@ function VillageChips({ villages }: { villages: string[] }) {
           {village}
         </Badge>
       ))}
-    </div>
-  );
-}
-
-function VillageEditor({
-  villages,
-  onChange,
-}: {
-  villages: string[];
-  onChange: (villages: string[]) => void;
-}) {
-  const t = useTranslations("app.studies.need");
-  const [draft, setDraft] = useState("");
-
-  const commitDraft = () => {
-    const additions = parseVillageInput(draft).filter((v) => !villages.includes(v));
-    if (additions.length > 0) onChange([...villages, ...additions]);
-    setDraft("");
-  };
-
-  return (
-    <div className="space-y-2">
-      {villages.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {villages.map((village) => (
-            <Badge key={village} variant="secondary" className="gap-1">
-              <MapPin className="size-3" />
-              {village}
-              <button
-                type="button"
-                onClick={() => onChange(villages.filter((v) => v !== village))}
-                aria-label={t("removeVillage", { village })}
-              >
-                <X className="size-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-      <div className="flex gap-2">
-        <Input
-          id="village"
-          value={draft}
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value.endsWith(",")) {
-              const additions = parseVillageInput(value).filter(
-                (v) => !villages.includes(v),
-              );
-              if (additions.length > 0) onChange([...villages, ...additions]);
-              setDraft("");
-            } else {
-              setDraft(value);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commitDraft();
-            }
-          }}
-          onBlur={commitDraft}
-          placeholder={t("villagePlaceholder")}
-        />
-        <Button type="button" variant="outline" onClick={commitDraft}>
-          {t("addVillage")}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -196,11 +130,13 @@ function WorkflowStep({
 function NeedDetailsCard({
   need,
   canEdit,
+  orgVillages,
   onSaved,
   onDeleted,
 }: {
   need: Need;
   canEdit: boolean;
+  orgVillages: string[];
   onSaved: (need: Need) => void;
   onDeleted: () => void;
 }) {
@@ -336,8 +272,9 @@ function NeedDetailsCard({
             </div>
             <div className="space-y-2">
               <Label htmlFor="village">{t("villageLabel")}</Label>
-              <VillageEditor
-                villages={village ?? []}
+              <GovernoratePicker
+                values={village ?? []}
+                options={orgVillages}
                 onChange={(next) => setValue("village", next, { shouldValidate: true })}
               />
               {errors.village ? (
@@ -348,9 +285,11 @@ function NeedDetailsCard({
               <p className="text-destructive text-sm">{submitError}</p>
             ) : null}
             <div className="flex items-center gap-2">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t("saving") : t("save")}
-              </Button>
+              <LoadingButton
+                type="submit"
+                isLoading={isSubmitting}
+                text={isSubmitting ? t("saving") : t("save")}
+              />
               <Button
                 type="button"
                 variant="outline"
@@ -401,6 +340,7 @@ export default function NeedWorkspacePage({
   const canUseSurveyBuilder = usePermission("surveyBuilder", "read");
 
   const [need, setNeed] = useState<Need | null>(null);
+  const [orgVillages, setOrgVillages] = useState<string[]>([]);
   const [evidenceCount, setEvidenceCount] = useState(0);
   const [notFound, setNotFound] = useState(false);
 
@@ -424,6 +364,13 @@ export default function NeedWorkspacePage({
       .then((list) => setEvidenceCount(list.length))
       .catch(() => undefined);
   }, [needId]);
+
+  useEffect(() => {
+    organizationsService
+      .getCurrent()
+      .then((org) => setOrgVillages(org.villages))
+      .catch(() => undefined);
+  }, []);
 
   if (notFound) {
     return (
@@ -473,6 +420,7 @@ export default function NeedWorkspacePage({
           <NeedDetailsCard
             need={need}
             canEdit={canEdit}
+            orgVillages={orgVillages}
             onSaved={setNeed}
             onDeleted={() => router.push(`/studies/${studyId}`)}
           />

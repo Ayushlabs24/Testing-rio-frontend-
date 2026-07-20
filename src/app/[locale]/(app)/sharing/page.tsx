@@ -449,35 +449,20 @@ export default function SharingPage() {
 
         <Tabs defaultValue="incoming">
           <div className="overflow-x-auto">
-            <TabsList className="h-auto w-fit gap-2 rounded-lg p-1.5 group-data-[orientation=horizontal]/tabs:h-11">
-              <TabsTrigger
-                value="incoming"
-                className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
-              >
+            <TabsList variant="line" size="lg">
+              <TabsTrigger value="incoming" size="lg">
                 {t("tabIncoming")}
               </TabsTrigger>
-              <TabsTrigger
-                value="outgoing"
-                className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
-              >
+              <TabsTrigger value="outgoing" size="lg">
                 {t("tabOutgoing")}
               </TabsTrigger>
-              <TabsTrigger
-                value="approved"
-                className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
-              >
+              <TabsTrigger value="approved" size="lg">
                 {t("tabApproved")}
               </TabsTrigger>
-              <TabsTrigger
-                value="rejected"
-                className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
-              >
+              <TabsTrigger value="rejected" size="lg">
                 {t("tabRejected")}
               </TabsTrigger>
-              <TabsTrigger
-                value="sharedReports"
-                className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
-              >
+              <TabsTrigger value="sharedReports" size="lg">
                 {t("tabSharedReports")}
               </TabsTrigger>
             </TabsList>

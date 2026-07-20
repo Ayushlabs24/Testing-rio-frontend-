@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, Copy, Plus, QrCode as QrCodeIcon, Share2 } from "lucide-react";
+import {
+  BarChart3,
+  Check,
+  Copy,
+  FileWarning,
+  Plus,
+  QrCode as QrCodeIcon,
+  Share2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { use, useEffect, useState } from "react";
@@ -16,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/common/back-button";
+import { Link } from "@/i18n/navigation";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -53,6 +62,33 @@ import { publicSurveysService } from "@/services/public-surveys/public-surveys.s
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 
 const LABEL_MAX_LENGTH = 150;
+
+// The backend caps the window at 365 days (see public-surveys.contract.ts) —
+// mirrored here so an over-long range is caught before the request.
+const MAX_EXPIRY_DAYS = 365;
+
+/** Local `yyyy-mm-dd`, the format `<input type="date">` reads and writes. */
+function toDateInputValue(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * Whole days between two `yyyy-mm-dd` values, or null if either is missing
+ * or the range is inverted. Parsed as local dates (matching what the picker
+ * shows) and compared at midnight, so the result is a plain calendar-day
+ * difference with no timezone or DST drift.
+ */
+function daysBetween(from: string, to: string): number | null {
+  if (!from || !to) return null;
+  const [fromYear, fromMonth, fromDay] = from.split("-").map(Number);
+  const [toYear, toMonth, toDay] = to.split("-").map(Number);
+  const start = new Date(fromYear, fromMonth - 1, fromDay);
+  const end = new Date(toYear, toMonth - 1, toDay);
+  const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+  return diff > 0 ? diff : null;
+}
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
@@ -239,7 +275,11 @@ export default function PublicSurveyDetailPage({
 
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState("");
-  const [expiresInDays, setExpiresInDays] = useState("");
+  // The expiry window is picked as a date range, but the API takes a day
+  // count — the backend always starts the window at creation time, so
+  // `expiryFrom` is the basis for the arithmetic, not a scheduled start.
+  const [expiryFrom, setExpiryFrom] = useState(() => toDateInputValue(new Date()));
+  const [expiryTo, setExpiryTo] = useState("");
   const [creating, setCreating] = useState(false);
   const [labelError, setLabelError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -266,11 +306,14 @@ export default function PublicSurveyDetailPage({
     setCreateOpen(next);
     if (!next) {
       setLabel("");
-      setExpiresInDays("");
+      setExpiryFrom(toDateInputValue(new Date()));
+      setExpiryTo("");
       setLabelError(null);
       setFormError(null);
     }
   }
+
+  const expiryDays = daysBetween(expiryFrom, expiryTo);
 
   function validateLabel(value: string): string | null {
     const trimmed = value.trim();
@@ -284,12 +327,23 @@ export default function PublicSurveyDetailPage({
     setLabelError(validationError);
     if (validationError) return;
 
+    // A "to" date with no usable range is a mistake worth naming, rather
+    // than silently creating a never-expiring link.
+    if (expiryTo && expiryDays === null) {
+      setFormError(t("expiryRangeInvalid"));
+      return;
+    }
+    if (expiryDays !== null && expiryDays > MAX_EXPIRY_DAYS) {
+      setFormError(t("expiryRangeTooLong", { max: MAX_EXPIRY_DAYS }));
+      return;
+    }
+
     setCreating(true);
     setFormError(null);
     try {
       await publicSurveysService.createLink(needId, {
         label: label.trim(),
-        expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
+        expiresInDays: expiryDays ?? undefined,
       });
       handleCreateOpenChange(false);
       load();
@@ -305,6 +359,13 @@ export default function PublicSurveyDetailPage({
     load();
   }
 
+  // A Need reaches this page once it has a survey at all (see the list
+  // page's SURVEY_EXISTS_STATUSES), but that survey may still be DRAFT —
+  // a public link to an unpublished survey is dead on arrival (the citizen
+  // flow rejects it with SURVEY_NOT_PUBLISHED), so link creation/sharing is
+  // gated on the survey actually being published, not just existing.
+  const surveyPublished = need?.status === "survey_published";
+
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
@@ -314,9 +375,15 @@ export default function PublicSurveyDetailPage({
           actions={
             <>
               <BackButton href="/public-surveys" label={t("backToList")} />
-              {/* "View Responses" hidden for now — page still exists, just
-               * not linked from here yet. */}
-              {canCreate ? (
+              {surveyPublished ? (
+                <Button asChild variant="outline" className="gap-2">
+                  <Link href={`/public-surveys/${needId}/responses`}>
+                    <BarChart3 className="size-4" />
+                    {t("viewResponses")}
+                  </Link>
+                </Button>
+              ) : null}
+              {canCreate && surveyPublished ? (
                 <Button onClick={() => setCreateOpen(true)} className="gap-2">
                   <Plus className="size-4" />
                   {t("newLink")}
@@ -329,7 +396,28 @@ export default function PublicSurveyDetailPage({
         <div className="space-y-4">
           <h2 className="text-foreground text-sm font-semibold">{t("linksHeading")}</h2>
 
-          {links === null ? (
+          {need === null ? (
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div key={index} className="bg-muted h-12 animate-pulse rounded-md" />
+              ))}
+            </div>
+          ) : !surveyPublished ? (
+            <Card>
+              <CardContent className="flex h-32 flex-col items-center justify-center gap-2 text-center">
+                <FileWarning className="text-muted-foreground size-6" />
+                <p className="text-foreground text-sm font-medium">
+                  {t("notPublishedTitle")}
+                </p>
+                <p className="text-muted-foreground max-w-sm text-xs">
+                  {t("notPublishedDescription")}
+                </p>
+                <Button asChild size="sm" variant="outline" className="mt-1">
+                  <Link href={`/survey-builder/${needId}`}>{t("goToSurveyBuilder")}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : links === null ? (
             <div className="space-y-3">
               {Array.from({ length: 2 }).map((_, index) => (
                 <div key={index} className="bg-muted h-12 animate-pulse rounded-md" />
@@ -398,15 +486,52 @@ export default function PublicSurveyDetailPage({
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expires-in-days">{t("expiresInDaysLabel")}</Label>
-                <Input
-                  id="expires-in-days"
-                  type="number"
-                  min={1}
-                  placeholder={t("expiresInDaysPlaceholder")}
-                  value={expiresInDays}
-                  onChange={(e) => setExpiresInDays(e.target.value)}
-                />
+                <Label>{t("expiryRangeLabel")}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="expiry-from"
+                      className="text-muted-foreground text-xs font-normal"
+                    >
+                      {t("expiryFromLabel")}
+                    </Label>
+                    <Input
+                      id="expiry-from"
+                      type="date"
+                      value={expiryFrom}
+                      max={expiryTo || undefined}
+                      onChange={(e) => {
+                        setExpiryFrom(e.target.value);
+                        setFormError(null);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="expiry-to"
+                      className="text-muted-foreground text-xs font-normal"
+                    >
+                      {t("expiryToLabel")}
+                    </Label>
+                    <Input
+                      id="expiry-to"
+                      type="date"
+                      value={expiryTo}
+                      min={expiryFrom || undefined}
+                      onChange={(e) => {
+                        setExpiryTo(e.target.value);
+                        setFormError(null);
+                      }}
+                    />
+                  </div>
+                </div>
+                {/* The day count the API actually receives — shown so the
+                    picked range and the stored expiry can't diverge silently. */}
+                <p className="text-muted-foreground text-xs">
+                  {expiryDays === null
+                    ? t("expiryNeverExpires")
+                    : t("expiryDaysComputed", { days: expiryDays })}
+                </p>
               </div>
               {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
             </div>

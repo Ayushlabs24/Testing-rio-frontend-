@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { usePermission } from "@/hooks/use-permission";
 import {
   Select,
@@ -31,7 +32,7 @@ import {
 import { AUDIT_ACTIONS, type AuditAction } from "@/config/audit";
 import { AUDIT_PAGE_SIZE } from "@/config/pagination";
 import { auditService } from "@/services/audit/audit.service";
-import type { AuditEvent } from "@/services/audit/audit.types";
+import type { AuditEvent, AuditListParams } from "@/services/audit/audit.types";
 import { ChangeDetailsDialog } from "./change-details-dialog";
 
 /** Badge tone per action — keeps destructive/approval events visually distinct. */
@@ -52,6 +53,66 @@ const ACTION_VARIANT: Record<
 const ALL = "all";
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
 
+/**
+ * Quick date presets, plus `custom` which reveals the from/to inputs. The
+ * rolling options ("last 30 days") are deliberately relative to *now*, not
+ * to calendar boundaries — "this month" and "this year" cover the calendar
+ * cases.
+ */
+const DATE_PRESETS = [
+  "all",
+  "last7Days",
+  "last30Days",
+  "thisMonth",
+  "thisYear",
+  "custom",
+] as const;
+type DatePreset = (typeof DATE_PRESETS)[number];
+
+/** Local midnight `n` days back, so "last 7 days" includes all of today. */
+function daysAgo(days: number): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - days);
+  return date;
+}
+
+/**
+ * Resolves a preset (or the custom from/to pair) to an inclusive
+ * [start, end] instant range. `null` on either side means unbounded.
+ * Custom dates come from `<input type="date">` as `yyyy-mm-dd`, parsed as
+ * *local* dates so the range matches what the user sees in the Date column
+ * (which renders in their locale/timezone), not UTC.
+ */
+function resolveDateRange(
+  preset: DatePreset,
+  from: string,
+  to: string,
+): { start: Date | null; end: Date | null } {
+  const now = new Date();
+  switch (preset) {
+    case "last7Days":
+      return { start: daysAgo(6), end: null };
+    case "last30Days":
+      return { start: daysAgo(29), end: null };
+    case "thisMonth":
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: null };
+    case "thisYear":
+      return { start: new Date(now.getFullYear(), 0, 1), end: null };
+    case "custom": {
+      const [fromYear, fromMonth, fromDay] = from.split("-").map(Number);
+      const [toYear, toMonth, toDay] = to.split("-").map(Number);
+      return {
+        start: from ? new Date(fromYear, fromMonth - 1, fromDay, 0, 0, 0, 0) : null,
+        // End of the chosen day — a "to" of the 5th must include the 5th.
+        end: to ? new Date(toYear, toMonth - 1, toDay, 23, 59, 59, 999) : null,
+      };
+    }
+    default:
+      return { start: null, end: null };
+  }
+}
+
 function initials(name: string): string {
   return name
     .split(" ")
@@ -69,54 +130,92 @@ function formatTimestamp(iso: string): string {
   }).format(date);
 }
 
+/** A fetched page, tagged with the request object that produced it. */
+interface LoadedPage {
+  request: AuditListParams;
+  items: AuditEvent[];
+  total: number;
+}
+
 export default function AuditSettingsPage() {
   const t = useTranslations("app.settings.audit");
   const tActions = useTranslations("app.settings.audit.actions");
   const tEntities = useTranslations("app.settings.audit.entities");
+  const tDatePresets = useTranslations("app.settings.audit.datePresets");
   const canExport = usePermission("archiveSharingAudit", "export");
-  const [events, setEvents] = useState<AuditEvent[] | null>(null);
+  // Results are stamped with the request that produced them, so "is this
+  // stale?" is derived rather than tracked in a separate loading flag that
+  // an effect would have to set.
+  const [result, setResult] = useState<LoadedPage | null>(null);
   const [query, setQuery] = useState("");
   const [action, setAction] = useState<AuditAction | typeof ALL>(ALL);
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(AUDIT_PAGE_SIZE);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  // The log is unbounded, so filtering runs server-side — the typed query is
+  // debounced to keep that to one request per pause, not one per keystroke.
+  const debouncedQuery = useDebouncedValue(query);
+
+  const filters = useMemo(() => {
+    const { start, end } = resolveDateRange(datePreset, fromDate, toDate);
+    return {
+      action: action === ALL ? undefined : action,
+      dateFrom: start?.toISOString(),
+      dateTo: end?.toISOString(),
+      search: debouncedQuery.trim() || undefined,
+    };
+  }, [action, datePreset, fromDate, toDate, debouncedQuery]);
+
+  // Clamped rather than corrected in state: a result set that shrinks (a
+  // narrowing filter, rows aging out) must not strand the user on a page
+  // past the end, and deriving it avoids a setState-in-effect round trip.
+  const pageCount = Math.max(1, Math.ceil((result?.total ?? 0) / pageSize));
+  const currentPage = Math.min(page, pageCount);
+
+  const request = useMemo(
+    () => ({ ...filters, limit: pageSize, offset: (currentPage - 1) * pageSize }),
+    [filters, pageSize, currentPage],
+  );
+
   useEffect(() => {
-    auditService.list().then(setEvents);
-  }, []);
+    let cancelled = false;
+    auditService
+      .list(request)
+      // A slow response for a request the user has already moved on from must
+      // not overwrite a newer one.
+      .then(({ items, total }) => {
+        if (!cancelled) setResult({ request, items, total });
+      })
+      .catch(() => {
+        if (!cancelled) setResult({ request, items: [], total: 0 });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [request]);
+
+  const isLoading = result?.request !== request;
+  const pagedEvents = result?.items ?? [];
+  const total = result?.total ?? 0;
 
   async function handleExport() {
     setExporting(true);
     setExportError(null);
     try {
-      await auditService.downloadCsv();
+      // Same filters the table is showing, minus paging — the CSV covers the
+      // whole matching range, not just the visible page.
+      await auditService.downloadCsv(filters);
     } catch {
       setExportError(t("exportError"));
     } finally {
       setExporting(false);
     }
   }
-
-  const filteredEvents = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return (events ?? []).filter((event) => {
-      if (action !== ALL && event.action !== action) return false;
-      if (!normalized) return true;
-      return (
-        (event.actor?.name.toLowerCase().includes(normalized) ?? false) ||
-        (event.actor?.email.toLowerCase().includes(normalized) ?? false) ||
-        event.entityLabel.toLowerCase().includes(normalized)
-      );
-    });
-  }, [events, query, action]);
-
-  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const pagedEvents = filteredEvents.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
 
   return (
     <PermissionGuard module="archiveSharingAudit" action="read">
@@ -179,7 +278,85 @@ export default function AuditSettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select
+                value={datePreset}
+                onValueChange={(value) => {
+                  setDatePreset(value as DatePreset);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-44"
+                  aria-label={t("dateFilterLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_PRESETS.map((preset) => (
+                    <SelectItem key={preset} value={preset}>
+                      {tDatePresets(preset)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {datePreset === "custom" ? (
+              <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="auditFromDate"
+                    className="text-muted-foreground text-xs whitespace-nowrap"
+                  >
+                    {t("fromDateLabel")}
+                  </label>
+                  <Input
+                    id="auditFromDate"
+                    type="date"
+                    value={fromDate}
+                    // Can't start after the end of the range.
+                    max={toDate || undefined}
+                    onChange={(event) => {
+                      setFromDate(event.target.value);
+                      setPage(1);
+                    }}
+                    className="h-8 w-full sm:w-44"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="auditToDate"
+                    className="text-muted-foreground text-xs whitespace-nowrap"
+                  >
+                    {t("toDateLabel")}
+                  </label>
+                  <Input
+                    id="auditToDate"
+                    type="date"
+                    value={toDate}
+                    min={fromDate || undefined}
+                    onChange={(event) => {
+                      setToDate(event.target.value);
+                      setPage(1);
+                    }}
+                    className="h-8 w-full sm:w-44"
+                  />
+                </div>
+                {fromDate || toDate ? (
+                  <Button
+                    variant="ghost"
+                    className="h-8 px-2 text-xs sm:ml-auto"
+                    onClick={() => {
+                      setFromDate("");
+                      setToDate("");
+                      setPage(1);
+                    }}
+                  >
+                    {t("clearDates")}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
 
             <Table>
               <TableHeader>
@@ -191,7 +368,7 @@ export default function AuditSettingsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {events === null ? (
+                {isLoading ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
                       <TableCell className="py-5">
@@ -211,7 +388,7 @@ export default function AuditSettingsPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredEvents.length === 0 ? (
+                ) : pagedEvents.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
@@ -279,7 +456,7 @@ export default function AuditSettingsPage() {
               </TableBody>
             </Table>
 
-            {filteredEvents.length > 0 ? (
+            {total > 0 ? (
               <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <Select
                   value={String(pageSize)}

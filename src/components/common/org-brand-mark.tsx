@@ -1,5 +1,4 @@
 import { ShieldCheck } from "lucide-react";
-import { Logo } from "@/components/common/logo";
 import { cn } from "@/lib/utils";
 
 interface OrgBrandMarkProps {
@@ -12,10 +11,10 @@ interface OrgBrandMarkProps {
 
 /**
  * The org's own branding, wherever the app shows "which workspace am I in"
- * (sidebar header, topbar, mobile nav). Falls back to the Rio logo when the
- * org hasn't uploaded one yet — never a hardcoded image, always whatever
- * `session.organization.logoUrl` currently is, so it updates the moment the
- * org's logo changes (see Settings > Organization / signup).
+ * (sidebar header, topbar, mobile nav). Signup no longer collects a logo,
+ * so most orgs have none — renders nothing at all in that case (just the
+ * org name text next to it, from the caller) rather than falling back to a
+ * generic placeholder mark that isn't actually the org's own branding.
  */
 export function OrgBrandMark({ logoUrl, crossEntity, className }: OrgBrandMarkProps) {
   if (crossEntity) {
@@ -42,5 +41,5 @@ export function OrgBrandMark({ logoUrl, crossEntity, className }: OrgBrandMarkPr
     );
   }
 
-  return <Logo className={cn("shrink-0", className)} />;
+  return null;
 }

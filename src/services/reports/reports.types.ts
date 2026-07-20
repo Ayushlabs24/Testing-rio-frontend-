@@ -44,12 +44,12 @@ export const REPORT_TYPE_META: Record<
     requiresStudyId: false,
   },
   RPT05: {
-    name: "Village-wise Needs",
+    name: "Governorate-wise Needs",
     exportFormats: ["pdf", "excel"],
     requiresStudyId: false,
   },
   RPT06: {
-    name: "Region/Governorate/Village Filtering",
+    name: "Region/Governorate Filtering",
     exportFormats: [],
     requiresStudyId: false,
   },

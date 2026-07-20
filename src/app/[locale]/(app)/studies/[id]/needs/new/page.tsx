@@ -1,24 +1,24 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MapPin, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { BackButton } from "@/components/common/back-button";
+import { GovernoratePicker } from "@/components/common/governorate-picker";
+import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
-import { parseVillageInput } from "@/lib/villages";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
+import { organizationsService } from "@/services/organizations/organizations.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
 
@@ -28,77 +28,6 @@ interface NeedFormValues {
   village: string[];
 }
 
-function VillageEditor({
-  villages,
-  onChange,
-}: {
-  villages: string[];
-  onChange: (villages: string[]) => void;
-}) {
-  const t = useTranslations("app.studies.need");
-  const [draft, setDraft] = useState("");
-
-  const commitDraft = () => {
-    const additions = parseVillageInput(draft).filter((v) => !villages.includes(v));
-    if (additions.length > 0) onChange([...villages, ...additions]);
-    setDraft("");
-  };
-
-  return (
-    <div className="space-y-2">
-      {villages.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {villages.map((village) => (
-            <Badge key={village} variant="secondary" className="gap-1">
-              <MapPin className="size-3" />
-              {village}
-              <button
-                type="button"
-                onClick={() => onChange(villages.filter((v) => v !== village))}
-                aria-label={t("removeVillage", { village })}
-              >
-                <X className="size-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-      <div className="flex gap-2">
-        <Input
-          id="village"
-          value={draft}
-          onChange={(event) => {
-            const value = event.target.value;
-            // A trailing comma commits everything typed so far as chips,
-            // so typing "Al Wathba, Al Falah," behaves the same as pressing
-            // Enter after each one.
-            if (value.endsWith(",")) {
-              const additions = parseVillageInput(value).filter(
-                (v) => !villages.includes(v),
-              );
-              if (additions.length > 0) onChange([...villages, ...additions]);
-              setDraft("");
-            } else {
-              setDraft(value);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commitDraft();
-            }
-          }}
-          onBlur={commitDraft}
-          placeholder={t("villagePlaceholder")}
-        />
-        <Button type="button" variant="outline" onClick={commitDraft}>
-          {t("addVillage")}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export default function CreateNeedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: studyId } = use(params);
   const t = useTranslations("app.studies.need");
@@ -106,6 +35,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
 
   const [study, setStudy] = useState<Study | null>(null);
+  const [orgVillages, setOrgVillages] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -123,6 +53,14 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       })
       .finally(() => {
         if (!cancelled) setLoaded(true);
+      });
+    organizationsService
+      .getCurrent()
+      .then((org) => {
+        if (!cancelled) setOrgVillages(org.villages);
+      })
+      .catch(() => {
+        // Non-fatal — the picker still works with free text if this fails.
       });
     return () => {
       cancelled = true;
@@ -221,8 +159,9 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
 
                 <div className="space-y-2">
                   <Label htmlFor="village">{t("villageLabel")}</Label>
-                  <VillageEditor
-                    villages={village ?? []}
+                  <GovernoratePicker
+                    values={village ?? []}
+                    options={orgVillages}
                     onChange={(next) =>
                       setValue("village", next, { shouldValidate: true })
                     }
@@ -237,9 +176,11 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                 ) : null}
 
                 <div className="flex items-center gap-2">
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? t("saving") : t("save")}
-                  </Button>
+                  <LoadingButton
+                    type="submit"
+                    isLoading={isSubmitting}
+                    text={isSubmitting ? t("saving") : t("save")}
+                  />
                   <Button
                     type="button"
                     variant="outline"

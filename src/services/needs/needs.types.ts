@@ -67,6 +67,7 @@ export interface UpdateNeedPayload {
 export interface ImportNeedRowError {
   row: number;
   message: string;
+  type: "duplicate" | "validation";
 }
 
 export interface ImportNeedsResult {

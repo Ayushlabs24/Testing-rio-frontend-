@@ -17,9 +17,13 @@ export default function MethodologyConfigurationPage() {
         <PageHeader title={t("title")} description={t("description")} />
 
         <Tabs defaultValue="domains">
-          <TabsList>
-            <TabsTrigger value="domains">{t("tabs.domains")}</TabsTrigger>
-            <TabsTrigger value="config">{t("tabs.config")}</TabsTrigger>
+          <TabsList variant="line" size="lg">
+            <TabsTrigger value="domains" size="lg">
+              {t("tabs.domains")}
+            </TabsTrigger>
+            <TabsTrigger value="config" size="lg">
+              {t("tabs.config")}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="domains" className="mt-6">
             <DomainsTab />

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
-import type { ImportNeedsResult } from "@/services/needs/needs.types";
+import type { ImportNeedRowError, ImportNeedsResult } from "@/services/needs/needs.types";
 
 const ALLOWED_EXTENSIONS = [".csv", ".xls", ".xlsx"];
 
@@ -32,11 +32,51 @@ function extensionOf(fileName: string): string {
   return idx === -1 ? "" : fileName.slice(idx).toLowerCase();
 }
 
+function ErrorTable({
+  rows,
+  destructive,
+}: {
+  rows: ImportNeedRowError[];
+  destructive: boolean;
+}) {
+  const t = useTranslations("app.studies.import");
+  return (
+    <div className="max-h-56 overflow-y-auto rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-20">{t("rowColumn")}</TableHead>
+            <TableHead>{t("errorColumn")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((err) => (
+            <TableRow key={err.row}>
+              <TableCell>
+                <Badge variant="outline">{err.row}</Badge>
+              </TableCell>
+              <TableCell className={destructive ? "text-destructive text-sm" : "text-sm"}>
+                {err.message}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 /**
  * Bulk-create Needs from a CSV/XLSX file — one Need per row (see the
  * backend's NeedsImportService). PDF isn't supported here — no AI
  * extraction yet; attach a PDF as Evidence on a manually created Need
  * instead.
+ *
+ * Duplicate rows (matching a Need already in the Study, or another row in
+ * the same file) are skipped automatically by the backend — this is a
+ * single import step, not a "possible duplicate, continue?" prompt followed
+ * by a second duplicate notice: the result screen below is the only place
+ * duplicates are ever shown, split out from real validation failures.
  */
 export function ImportNeedsDialog({
   studyId,
@@ -97,7 +137,8 @@ export function ImportNeedsDialog({
       if (outcome.imported > 0) onImported();
       // Fully successful (nothing to review) — close on its own after a
       // moment instead of leaving the user to find and click Close. Any
-      // failed row keeps the dialog open so the error table stays visible.
+      // failed row (duplicate or otherwise) keeps the dialog open so the
+      // results stay visible.
       if (outcome.failed === 0 && outcome.imported > 0) {
         setTimeout(() => handleOpenChange(false), 1200);
       }
@@ -108,6 +149,9 @@ export function ImportNeedsDialog({
       setImporting(false);
     }
   }
+
+  const duplicateErrors = result?.errors.filter((e) => e.type === "duplicate") ?? [];
+  const otherErrors = result?.errors.filter((e) => e.type !== "duplicate") ?? [];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -161,8 +205,8 @@ export function ImportNeedsDialog({
           {submitError ? <p className="text-destructive text-sm">{submitError}</p> : null}
 
           {result ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
                 <div className="border-border rounded-md border p-3">
                   <p className="text-foreground text-lg font-semibold tabular-nums">
                     {result.totalRows}
@@ -176,35 +220,39 @@ export function ImportNeedsDialog({
                   <p className="text-muted-foreground text-xs">{t("imported")}</p>
                 </div>
                 <div className="border-border rounded-md border p-3">
-                  <p className="text-destructive text-lg font-semibold tabular-nums">
-                    {result.failed}
+                  <p className="text-foreground text-lg font-semibold tabular-nums">
+                    {duplicateErrors.length}
                   </p>
-                  <p className="text-muted-foreground text-xs">{t("failed")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("duplicatesSkipped")}
+                  </p>
+                </div>
+                <div className="border-border rounded-md border p-3">
+                  <p className="text-destructive text-lg font-semibold tabular-nums">
+                    {otherErrors.length}
+                  </p>
+                  <p className="text-muted-foreground text-xs">{t("otherFailures")}</p>
                 </div>
               </div>
 
-              {result.errors.length > 0 ? (
-                <div className="max-h-56 overflow-y-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-20">{t("rowColumn")}</TableHead>
-                        <TableHead>{t("errorColumn")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.errors.map((err) => (
-                        <TableRow key={err.row}>
-                          <TableCell>
-                            <Badge variant="outline">{err.row}</Badge>
-                          </TableCell>
-                          <TableCell className="text-destructive text-sm">
-                            {err.message}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              {duplicateErrors.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-foreground text-sm font-medium">
+                    {t("duplicatesSkipped")}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("duplicatesSkippedNote")}
+                  </p>
+                  <ErrorTable rows={duplicateErrors} destructive={false} />
+                </div>
+              ) : null}
+
+              {otherErrors.length > 0 ? (
+                <div className="space-y-1.5">
+                  <p className="text-foreground text-sm font-medium">
+                    {t("otherFailures")}
+                  </p>
+                  <ErrorTable rows={otherErrors} destructive />
                 </div>
               ) : null}
             </div>
@@ -227,7 +275,11 @@ export function ImportNeedsDialog({
               disabled={!file || importing}
               className="gap-1.5"
             >
-              {importing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              {importing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Upload className="size-4" />
+              )}
               {importing ? t("importing") : t("import")}
             </Button>
           ) : null}

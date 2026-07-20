@@ -52,6 +52,7 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
             ) : (
               <StudyForm
                 study={study}
+                orgVillages={[]}
                 onSubmit={handleSubmit}
                 onCancel={() => router.push(`/studies/${id}`)}
               />

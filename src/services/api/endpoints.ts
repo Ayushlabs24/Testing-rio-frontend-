@@ -109,6 +109,8 @@ export const endpoints = {
     deactivateLink: (needId: string, linkId: string) =>
       `/needs/${needId}/survey-links/${linkId}/deactivate`,
     responses: (needId: string) => `/needs/${needId}/survey-responses`,
+    // Same rows as `responses`, with each one's answers already joined in.
+    responsesWithAnswers: (needId: string) => `/needs/${needId}/survey-responses-full`,
     response: (needId: string, responseId: string) =>
       `/needs/${needId}/survey-responses/${responseId}`,
     exportResponses: (needId: string, format: "csv" | "excel") =>
