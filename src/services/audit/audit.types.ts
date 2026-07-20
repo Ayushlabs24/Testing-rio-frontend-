@@ -66,6 +66,33 @@ export interface AuditEvent {
 }
 
 /**
+ * Query params accepted by `GET /audit/export` (a subset of the ones the
+ * list endpoint takes — the ones the Audit Log page actually exposes).
+ * `dateFrom`/`dateTo` are ISO-8601 instants, inclusive on both ends.
+ */
+export interface AuditExportFilters {
+  action?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  /** Matches the entity label or the actor's name/email, case-insensitively. */
+  search?: string;
+}
+
+/** The same filters, plus paging — `GET /audit`. Server caps `limit` at 200. */
+export interface AuditListParams extends AuditExportFilters {
+  limit?: number;
+  offset?: number;
+}
+
+/** Paginated envelope from `GET /audit`. `total` ignores limit/offset. */
+export interface AuditListResult {
+  items: AuditEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
  * Everything a caller supplies to record an event. The log fills in the id,
  * organisation, actor, timestamp, and request context itself so those can't
  * be spoofed.

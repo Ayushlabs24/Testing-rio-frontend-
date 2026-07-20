@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowDown,
   ArrowUp,
+  Check,
   Loader2,
   Pencil,
   Plus,
@@ -18,7 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { titleCase } from "@/lib/utils";
@@ -327,9 +328,6 @@ export default function SurveyBuilderDetailPage({
     }
   }
 
-  const availableToAdd = eligibleQuestions.filter(
-    (q) => !recommended.some((included) => included.bankQuestionId === q.id),
-  );
   const needsOptionsEditor = OPTIONS_ANSWER_TYPES.has(draftAnswerType);
 
   return (
@@ -431,136 +429,249 @@ export default function SurveyBuilderDetailPage({
               <div className="space-y-6">
                 <Card>
                   <CardContent className="space-y-4 p-6">
-                    <h2 className="text-foreground text-sm font-semibold">
-                      {t("recommendedHeading")}
-                    </h2>
-
-                    {canWrite ? (
-                      <div className="space-y-2">
-                        <label className="text-muted-foreground text-xs font-medium">
-                          {t("addQuestionLabel")}
-                        </label>
-                        <Combobox
-                          items={availableToAdd.map((q) => ({
-                            value: q.id,
-                            label: q.questionText,
-                          }))}
-                          value={null}
-                          onSelect={addFromQuestionBank}
-                          placeholder={t("addQuestionPlaceholder")}
-                          searchPlaceholder={t("addQuestionPlaceholder")}
-                          emptyText={t("noEligibleQuestions")}
-                          aria-label={t("addQuestionLabel")}
-                        />
-                      </div>
-                    ) : null}
-
-                    {recommended.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">
-                        {t("noRecommendedQuestions")}
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {recommended.map((q, index) => (
-                          <div
-                            key={q.id}
-                            className="border-border space-y-2.5 rounded-lg border p-4"
+                    <Tabs defaultValue="recommended">
+                      <div className="overflow-x-auto">
+                        <TabsList className="h-auto w-fit gap-2 rounded-lg p-1.5 group-data-[orientation=horizontal]/tabs:h-11">
+                          <TabsTrigger
+                            value="recommended"
+                            className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="text-foreground text-sm font-semibold">
-                                {t("questionNumber", { number: index + 1 })}
-                              </p>
-                              {canWrite ? (
-                                <div className="flex shrink-0 items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => moveRecommended(index, -1)}
-                                    disabled={index === 0}
-                                    className="text-muted-foreground hover:text-foreground cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-30"
-                                    aria-label={t("moveUp")}
-                                  >
-                                    <ArrowUp className="size-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveRecommended(index, 1)}
-                                    disabled={index === recommended.length - 1}
-                                    className="text-muted-foreground hover:text-foreground cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-30"
-                                    aria-label={t("moveDown")}
-                                  >
-                                    <ArrowDown className="size-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeRecommended(q.id)}
-                                    className="text-muted-foreground hover:text-destructive ml-1 cursor-pointer"
-                                    aria-label={t("remove")}
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-
-                            <div>
-                              <p className="text-muted-foreground text-xs font-medium">
-                                {t("questionLabel")}
-                              </p>
-                              <p className="text-foreground text-sm">{q.questionText}</p>
-                            </div>
-
-                            {q.indicator ? (
-                              <div>
-                                <p className="text-muted-foreground text-xs font-medium">
-                                  {t("indicatorLabel")}
-                                </p>
-                                <p className="text-foreground text-sm">
-                                  <span className="font-medium">{q.questionCode}</span> ·{" "}
-                                  {q.indicator}
-                                </p>
-                              </div>
-                            ) : null}
-
-                            <div>
-                              <p className="text-muted-foreground text-xs font-medium">
-                                {t("answerTypeLabel")}
-                              </p>
-                              <Badge variant="outline" className="mt-0.5">
-                                {titleCase(q.answerType)}
-                              </Badge>
-                            </div>
-
-                            {q.answerOptions && q.answerOptions.length > 0 ? (
-                              <div>
-                                <p className="text-muted-foreground text-xs font-medium">
-                                  {t("optionsLabel")}
-                                </p>
-                                <div className="mt-1 flex flex-wrap gap-1.5">
-                                  {q.answerOptions.map((option) => (
-                                    <Badge
-                                      key={option}
-                                      variant="secondary"
-                                      className="font-normal"
-                                    >
-                                      {option}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : null}
-
-                            <label className="flex w-fit cursor-pointer items-center gap-2 pt-1 text-sm">
-                              <Checkbox
-                                checked={q.isRequired}
-                                disabled={!canWrite}
-                                onCheckedChange={() => toggleRecommendedRequired(q.id)}
-                              />
-                              {t("requiredLabel")}
-                            </label>
-                          </div>
-                        ))}
+                            {t("recommendedHeading")}
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="questionBank"
+                            className="flex-none rounded-md px-5 py-2.5 data-[state=active]:font-semibold"
+                          >
+                            {t("questionBankTab")}
+                          </TabsTrigger>
+                        </TabsList>
                       </div>
-                    )}
+
+                      <TabsContent value="questionBank" className="mt-6 space-y-4">
+                        {/* Every Question Bank row for this Need's classified
+                            domain/sub-domain — the same `eligibleQuestions` the
+                            combobox draws from, browsable in full rather than
+                            one search-and-select at a time. */}
+                        <p className="text-muted-foreground text-xs">
+                          {need?.domain && need?.subDomain
+                            ? t("questionBankDescription", {
+                                domain: need.domain,
+                                subDomain: need.subDomain,
+                              })
+                            : t("questionBankNoDomain")}
+                        </p>
+
+                        {eligibleQuestions.length === 0 ? (
+                          <p className="text-muted-foreground text-sm">
+                            {t("questionBankEmpty")}
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {eligibleQuestions.map((q) => {
+                              const added = recommended.some(
+                                (included) => included.bankQuestionId === q.id,
+                              );
+                              return (
+                                <div
+                                  key={q.id}
+                                  className="border-border space-y-2.5 rounded-lg border p-4"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <p className="text-foreground text-sm">
+                                      {q.questionText}
+                                    </p>
+                                    {canWrite ? (
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant={added ? "secondary" : "outline"}
+                                        className="size-8 shrink-0"
+                                        // Already-in-survey rows keep the tick
+                                        // visible but inert — clicking again
+                                        // would add a duplicate.
+                                        disabled={added}
+                                        onClick={() => addFromQuestionBank(q.id)}
+                                        aria-label={
+                                          added ? t("alreadyAdded") : t("addToSurvey")
+                                        }
+                                        title={
+                                          added ? t("alreadyAdded") : t("addToSurvey")
+                                        }
+                                      >
+                                        <Check className="size-4" />
+                                      </Button>
+                                    ) : null}
+                                  </div>
+
+                                  {q.indicator ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("indicatorLabel")}
+                                      </p>
+                                      <p className="text-foreground text-sm">
+                                        <span className="font-medium">
+                                          {q.questionId}
+                                        </span>{" "}
+                                        · {q.indicator}
+                                      </p>
+                                    </div>
+                                  ) : null}
+
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("answerTypeLabel")}
+                                    </p>
+                                    <Badge variant="outline" className="mt-0.5">
+                                      {titleCase(q.answerType)}
+                                    </Badge>
+                                  </div>
+
+                                  {q.answerOptions && q.answerOptions.length > 0 ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("optionsLabel")}
+                                      </p>
+                                      <div className="mt-1 flex flex-wrap gap-1.5">
+                                        {q.answerOptions.map((option) => (
+                                          <Badge
+                                            key={option}
+                                            variant="secondary"
+                                            className="font-normal"
+                                          >
+                                            {option}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : null}
+
+                                  {added ? (
+                                    <p className="text-muted-foreground text-xs">
+                                      {t("alreadyAdded")}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="recommended" className="mt-6 space-y-4">
+                        {recommended.length === 0 ? (
+                          <p className="text-muted-foreground text-sm">
+                            {t("noRecommendedQuestions")}
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {recommended.map((q, index) => (
+                              <div
+                                key={q.id}
+                                className="border-border space-y-2.5 rounded-lg border p-4"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="text-foreground text-sm font-semibold">
+                                    {t("questionNumber", { number: index + 1 })}
+                                  </p>
+                                  {canWrite ? (
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => moveRecommended(index, -1)}
+                                        disabled={index === 0}
+                                        className="text-muted-foreground hover:text-foreground cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-30"
+                                        aria-label={t("moveUp")}
+                                      >
+                                        <ArrowUp className="size-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => moveRecommended(index, 1)}
+                                        disabled={index === recommended.length - 1}
+                                        className="text-muted-foreground hover:text-foreground cursor-pointer disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-30"
+                                        aria-label={t("moveDown")}
+                                      >
+                                        <ArrowDown className="size-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeRecommended(q.id)}
+                                        className="text-muted-foreground hover:text-destructive ml-1 cursor-pointer"
+                                        aria-label={t("remove")}
+                                      >
+                                        <Trash2 className="size-4" />
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div>
+                                  <p className="text-muted-foreground text-xs font-medium">
+                                    {t("questionLabel")}
+                                  </p>
+                                  <p className="text-foreground text-sm">
+                                    {q.questionText}
+                                  </p>
+                                </div>
+
+                                {q.indicator ? (
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("indicatorLabel")}
+                                    </p>
+                                    <p className="text-foreground text-sm">
+                                      <span className="font-medium">
+                                        {q.questionCode}
+                                      </span>{" "}
+                                      · {q.indicator}
+                                    </p>
+                                  </div>
+                                ) : null}
+
+                                <div>
+                                  <p className="text-muted-foreground text-xs font-medium">
+                                    {t("answerTypeLabel")}
+                                  </p>
+                                  <Badge variant="outline" className="mt-0.5">
+                                    {titleCase(q.answerType)}
+                                  </Badge>
+                                </div>
+
+                                {q.answerOptions && q.answerOptions.length > 0 ? (
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("optionsLabel")}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap gap-1.5">
+                                      {q.answerOptions.map((option) => (
+                                        <Badge
+                                          key={option}
+                                          variant="secondary"
+                                          className="font-normal"
+                                        >
+                                          {option}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
+
+                                <label className="flex w-fit cursor-pointer items-center gap-2 pt-1 text-sm">
+                                  <Checkbox
+                                    checked={q.isRequired}
+                                    disabled={!canWrite}
+                                    onCheckedChange={() =>
+                                      toggleRecommendedRequired(q.id)
+                                    }
+                                  />
+                                  {t("requiredLabel")}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
 

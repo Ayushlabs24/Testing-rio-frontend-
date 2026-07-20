@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -107,6 +108,10 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Participant consent, collected on the details step before any personal
+  // detail leaves the device. Same shape as the NGO Admin's own consent gate
+  // (see ConsentGuard): notice, checkbox, explicit must-agree error.
+  const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -134,6 +139,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   // their contact details — before any OTP challenge (or any other record)
   // is created. Nothing is persisted until the final Submit.
   async function submitDetails() {
+    // An unticked box is a validation failure to name, not a silently
+    // disabled button — mirrors the admin consent gate.
+    if (!consented) {
+      setError(t("details.consentRequired"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -383,6 +394,38 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               onChange={(e) => setContact(e.target.value)}
             />
           </div>
+
+          <div className="border-border space-y-3 border-t pt-5">
+            <div className="space-y-1.5">
+              <h2 className="text-foreground text-sm font-semibold">
+                {t("details.consentTitle")}
+              </h2>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {t("details.consentBody", {
+                  organization: survey.organizationName || t("details.consentThisOrg"),
+                })}
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="citizen-consent"
+                checked={consented}
+                aria-invalid={Boolean(error) && !consented}
+                onCheckedChange={(checked) => {
+                  setConsented(checked === true);
+                  if (checked === true) setError(null);
+                }}
+                className="mt-0.5"
+              />
+              <Label
+                htmlFor="citizen-consent"
+                className="text-muted-foreground text-xs leading-relaxed font-normal"
+              >
+                {t("details.consentAgreeLabel")}
+              </Label>
+            </div>
+          </div>
+
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
         <Button
