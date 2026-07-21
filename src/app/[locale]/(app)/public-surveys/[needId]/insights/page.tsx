@@ -1,8 +1,9 @@
 "use client";
 
-import { Sparkles, Gauge, ListChecks, CheckCircle2 } from "lucide-react";
+import { Sparkles, Gauge, ListChecks, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -36,16 +37,14 @@ import type {
   AiSummary,
   ResponseQualityResult,
 } from "@/services/response-quality/response-quality.types";
-
-const LEVEL_VARIANT: Record<
-  PriorityScore["level"],
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  critical: "destructive",
-  high: "default",
-  medium: "secondary",
-  low: "outline",
-};
+import { needsService } from "@/services/needs/needs.service";
+import { surveysService } from "@/services/surveys/surveys.service";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SeverityDashboard } from "@/components/features/insights/severity-dashboard";
+import {
+  severityScoringService,
+  VillagePriorityResult,
+} from "@/services/priority/severity-scoring.service";
 
 // Sentinel for the Select's "Consolidated" option — the actual API param is
 // `undefined` (omitted) for consolidated, so this never leaks past `scope`.
@@ -60,7 +59,6 @@ export default function NeedInsightsPage({
   const t = useTranslations("app.publicSurveys.insights");
   const canWrite = usePermission("aiReview", "write");
   const canScore = usePermission("priorityScoring", "create");
-  const canApproveScore = usePermission("priorityScoring", "approve");
 
   const [links, setLinks] = useState<PublicSurveyLink[]>([]);
   const [scope, setScope] = useState<string>(CONSOLIDATED);
@@ -70,13 +68,16 @@ export default function NeedInsightsPage({
   const [qualityResults, setQualityResults] = useState<ResponseQualityResult[] | null>(
     null,
   );
-  const [priorityScore, setPriorityScore] = useState<PriorityScore | null>(null);
+  const [priorityV2, setPriorityV2] = useState<VillagePriorityResult | null>(null);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const [need, setNeed] = useState<any | null>(null);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const [survey, setSurvey] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [scoring, setScoring] = useState(false);
-  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     publicSurveysService
@@ -86,6 +87,22 @@ export default function NeedInsightsPage({
   }, [needId]);
 
   function load() {
+    needsService
+      .getById(needId)
+      .then(setNeed)
+      .catch(() => undefined);
+    surveysService
+      .getSurveyByNeedId(needId)
+      .then((srv) => {
+        setSurvey(srv);
+        if (srv) {
+          severityScoringService
+            .getVillagePriority(srv.studyId, srv.id, null)
+            .then(setPriorityV2)
+            .catch(() => setPriorityV2(null));
+        }
+      })
+      .catch(() => undefined);
     responseQualityService
       .getSummary(needId, surveyLinkId)
       .then(setSummary)
@@ -94,10 +111,6 @@ export default function NeedInsightsPage({
       .list(needId, surveyLinkId)
       .then(setQualityResults)
       .catch(() => setQualityResults([]));
-    priorityService
-      .getLatest(needId, surveyLinkId)
-      .then(setPriorityScore)
-      .catch(() => undefined);
   }
 
   useEffect(() => {
@@ -132,29 +145,21 @@ export default function NeedInsightsPage({
   }
 
   async function handleScore() {
+    if (!survey) return;
     setScoring(true);
     setError(null);
     try {
-      const result = await priorityService.score(needId, surveyLinkId);
-      setPriorityScore(result);
+      await severityScoringService.recalculate(survey.studyId, survey.id);
+      const result = await severityScoringService.getVillagePriority(
+        survey.studyId,
+        survey.id,
+        null,
+      );
+      setPriorityV2(result);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setScoring(false);
-    }
-  }
-
-  async function handleApprove() {
-    if (!priorityScore) return;
-    setApproving(true);
-    setError(null);
-    try {
-      const result = await priorityService.approve(priorityScore.id);
-      setPriorityScore(result);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
-    } finally {
-      setApproving(false);
     }
   }
 
@@ -192,196 +197,319 @@ export default function NeedInsightsPage({
 
         {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
 
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                  <Sparkles className="size-4" />
-                  {t("aiSummaryHeading")}
-                </h2>
-                {canWrite ? (
-                  <Button
-                    size="sm"
-                    onClick={handleGenerateSummary}
-                    disabled={generatingSummary}
-                  >
-                    {generatingSummary ? t("generating") : t("generateSummary")}
-                  </Button>
-                ) : null}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                {t("aiSummaryPlaceholderNote")}
+        <Tabs defaultValue="severity" className="mt-6">
+          <TabsList variant="line" className="mb-6">
+            <TabsTrigger value="severity">Severity Dashboard</TabsTrigger>
+            <TabsTrigger value="placeholder">Priority Score</TabsTrigger>
+            <TabsTrigger value="quality">Response Quality & AI Summary</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="severity">
+            {survey ? (
+              <SeverityDashboard
+                studyId={survey.studyId}
+                surveyId={survey.id}
+                villages={need?.village || []}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                No published survey for this need yet.
               </p>
-              {summary ? (
-                <div className="bg-muted/40 rounded-md border px-3.5 py-3 text-sm">
-                  <p>{summary.summaryText}</p>
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    {t("responseCount", { count: summary.responseCount })}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">{t("noSummary")}</p>
-              )}
-            </CardContent>
-          </Card>
+            )}
+          </TabsContent>
 
-          <Card>
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                  <ListChecks className="size-4" />
-                  {t("responseQualityHeading")}
-                </h2>
-                {canWrite ? (
-                  <Button size="sm" onClick={handleAssess} disabled={assessing}>
-                    {assessing ? t("assessing") : t("assessQuality")}
-                  </Button>
-                ) : null}
-              </div>
-              {qualityResults === null ? (
-                <div className="bg-muted h-16 animate-pulse rounded-md" />
-              ) : qualityResults.length === 0 ? (
-                <p className="text-muted-foreground text-sm">{t("noQualityResults")}</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("completenessColumn")}</TableHead>
-                      <TableHead>{t("confidenceColumn")}</TableHead>
-                      <TableHead>{t("duplicateColumn")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {qualityResults.map((result) => (
-                      <TableRow key={result.id}>
-                        <TableCell className="text-sm">
-                          {result.completenessScore}%
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              result.confidenceFlag === "low" ? "outline" : "secondary"
-                            }
-                          >
-                            {result.confidenceFlag}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {result.isDuplicate ? t("yes") : t("no")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="space-y-4 p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                  <Gauge className="size-4" />
-                  {t("priorityHeading")}
-                </h2>
-                {canScore ? (
-                  <Button size="sm" onClick={handleScore} disabled={scoring}>
-                    {scoring ? t("scoring") : t("runScoring")}
-                  </Button>
-                ) : null}
-              </div>
-              {priorityScore ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      className="border-transparent"
-                      variant={priorityScore.isApproved ? "default" : "outline"}
-                    >
-                      {priorityScore.isApproved ? t("approved") : t("pendingApproval")}
-                    </Badge>
-                    {!priorityScore.isApproved && canApproveScore ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={handleApprove}
-                        disabled={approving}
-                      >
-                        <CheckCircle2 className="size-3.5" />
-                        {approving ? t("approving") : t("approveScore")}
-                      </Button>
-                    ) : null}
-                  </div>
-                  {!priorityScore.isApproved ? (
-                    <p className="text-muted-foreground text-xs">
-                      {t("pendingApprovalNote")}
-                    </p>
+          <TabsContent value="placeholder">
+            <Card className="border-border bg-card/60 relative overflow-hidden backdrop-blur-md">
+              <div
+                className={cn(
+                  "absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r",
+                  priorityV2
+                    ? priorityV2.priorityStatus === "HIGH"
+                      ? "from-rose-600 to-rose-400"
+                      : priorityV2.priorityStatus === "MEDIUM"
+                        ? "from-amber-500 to-amber-400"
+                        : "from-teal-500 to-teal-400"
+                    : "from-muted to-muted",
+                )}
+              />
+              <CardContent className="space-y-6 p-6 pt-8">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                    <Gauge className="size-4" />
+                    Priority Score
+                  </h2>
+                  {canScore ? (
+                    <Button size="sm" onClick={handleScore} disabled={scoring}>
+                      {scoring ? "Recalculating..." : "Recalculate Priority"}
+                    </Button>
                   ) : null}
-                  <div className="bg-muted/40 grid gap-4 rounded-md border px-3.5 py-3 sm:grid-cols-3">
-                    <div>
-                      <p className="text-muted-foreground text-xs">
-                        {t("overallScoreLabel")}
-                      </p>
-                      <p className="text-foreground text-lg font-semibold tabular-nums">
-                        {priorityScore.overallScore}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">{t("levelLabel")}</p>
-                      <Badge variant={LEVEL_VARIANT[priorityScore.level]}>
-                        {priorityScore.level}
+                </div>
+
+                {priorityV2 ? (
+                  <div className="space-y-6">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between border-b pb-4">
+                      <span className="text-muted-foreground text-sm font-semibold">
+                        Priority Category
+                      </span>
+                      <Badge
+                        className={cn(
+                          "border-transparent px-3 py-1 text-sm font-bold text-white",
+                          priorityV2.priorityStatus === "HIGH"
+                            ? "bg-rose-600"
+                            : priorityV2.priorityStatus === "MEDIUM"
+                              ? "bg-amber-500"
+                              : "bg-teal-600",
+                        )}
+                      >
+                        {priorityV2.priorityStatus === "HIGH"
+                          ? "High Priority"
+                          : priorityV2.priorityStatus === "MEDIUM"
+                            ? "Medium Priority"
+                            : "Low Priority"}
                       </Badge>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">{t("gapTypeLabel")}</p>
-                      <p className="text-foreground text-sm">{priorityScore.gapType}</p>
-                    </div>
-                  </div>
-                  {priorityScore.cycleNote ? (
-                    <p className="text-muted-foreground text-xs">
-                      {t("cycleNoteLabel")}: {priorityScore.cycleNote}
-                    </p>
-                  ) : null}
-                  <div>
-                    <p className="text-foreground mb-2 text-xs font-medium">
-                      {t("factorsHeading")}
-                    </p>
-                    <div className="divide-border divide-y rounded-md border">
-                      <div className="text-muted-foreground grid grid-cols-4 gap-2 px-3.5 py-2 text-xs font-medium">
-                        <span>{t("factorIndicatorLabel")}</span>
-                        <span className="text-right">{t("factorWeightLabel")}</span>
-                        <span className="text-right">
-                          {t("factorResponseValueLabel")}
-                        </span>
-                        <span className="text-right">{t("factorContributionLabel")}</span>
-                      </div>
-                      {priorityScore.factors.map((factor) => (
-                        <div
-                          key={factor.indicator}
-                          className="grid grid-cols-4 gap-2 px-3.5 py-2 text-sm"
-                        >
-                          <span className="text-muted-foreground truncate">
-                            {factor.indicator}
-                          </span>
-                          <span className="text-right tabular-nums">{factor.weight}</span>
-                          <span className="text-right tabular-nums">
-                            {factor.responseValue.toFixed(2)}
-                          </span>
-                          <span className="text-right tabular-nums">
-                            {factor.weightedContribution.toFixed(2)}
-                          </span>
+
+                    {/* Override Alert */}
+                    {priorityV2.overrideApplied && (
+                      <div className="flex items-start gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-500" />
+                        <div className="text-sm">
+                          <p className="font-bold text-rose-600 dark:text-rose-400">
+                            High Priority — Critical Domain Override
+                          </p>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            {priorityV2.overrideReason}
+                          </p>
                         </div>
-                      ))}
+                      </div>
+                    )}
+
+                    {/* Score Display */}
+                    <div className="bg-muted/30 flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                          Village Priority Score
+                        </span>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          Lower performance = higher intervention priority
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-3xl font-black tabular-nums",
+                          priorityV2.priorityStatus === "HIGH"
+                            ? "text-rose-500"
+                            : priorityV2.priorityStatus === "MEDIUM"
+                              ? "text-amber-500"
+                              : "text-teal-500",
+                        )}
+                      >
+                        {priorityV2.priorityScore.toFixed(1)}
+                        <span className="text-muted-foreground ml-1 text-sm font-normal">
+                          / 100
+                        </span>
+                      </span>
                     </div>
+
+                    {/* Domain Table */}
+                    {priorityV2.domainComponents.length > 0 && (
+                      <div>
+                        <h3 className="text-foreground mb-3 text-xs font-bold tracking-wider uppercase">
+                          Domain Performance & Priority Breakdown
+                        </h3>
+                        <div className="overflow-x-auto rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/40">
+                                <TableHead className="py-2 text-xs">Domain</TableHead>
+                                <TableHead className="py-2 text-right text-xs">
+                                  Severity
+                                </TableHead>
+                                <TableHead className="py-2 text-right text-xs">
+                                  Performance
+                                </TableHead>
+                                <TableHead className="py-2 text-right text-xs">
+                                  Weight
+                                </TableHead>
+                                <TableHead className="py-2 text-right text-xs">
+                                  Contribution
+                                </TableHead>
+                                <TableHead className="py-2 text-center text-xs">
+                                  Critical?
+                                </TableHead>
+                                <TableHead className="py-2 text-center text-xs">
+                                  Override?
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {priorityV2.domainComponents.map((comp) => (
+                                <TableRow
+                                  key={comp.domainKey}
+                                  className={cn(
+                                    "hover:bg-muted/20 text-xs",
+                                    comp.triggeredOverride && "bg-rose-500/5",
+                                  )}
+                                >
+                                  <TableCell className="py-2 font-semibold">
+                                    {comp.domainNameSnapshot}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground py-2 text-right tabular-nums">
+                                    {comp.domainSeverityScore.toFixed(1)}
+                                  </TableCell>
+                                  <TableCell
+                                    className={cn(
+                                      "py-2 text-right font-bold tabular-nums",
+                                      comp.domainPerformanceScore <
+                                        comp.criticalThreshold && comp.isCriticalDomain
+                                        ? "text-rose-500"
+                                        : "text-foreground",
+                                    )}
+                                  >
+                                    {comp.domainPerformanceScore.toFixed(1)}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground py-2 text-right tabular-nums">
+                                    {(comp.domainWeight * 100).toFixed(0)}%
+                                  </TableCell>
+                                  <TableCell className="text-primary py-2 text-right font-semibold tabular-nums">
+                                    {comp.weightedContribution.toFixed(2)}
+                                  </TableCell>
+                                  <TableCell className="py-2 text-center">
+                                    {comp.isCriticalDomain ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="border-rose-400 px-1 py-0 text-[9px] text-rose-500"
+                                      >
+                                        Yes
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2 text-center">
+                                    {comp.triggeredOverride ? (
+                                      <Badge
+                                        variant="destructive"
+                                        className="px-1 py-0 text-[9px]"
+                                      >
+                                        ⚠ Yes
+                                      </Badge>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-muted-foreground mb-4 text-sm">
+                      No priority score calculated for this scope yet.
+                    </p>
+                    {canScore && (
+                      <Button size="sm" onClick={handleScore} disabled={scoring}>
+                        {scoring ? "Calculating..." : "Run Priority Scoring"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quality" className="space-y-6">
+            <Card>
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                    <Sparkles className="size-4" />
+                    {t("aiSummaryHeading")}
+                  </h2>
+                  {canWrite ? (
+                    <Button
+                      size="sm"
+                      onClick={handleGenerateSummary}
+                      disabled={generatingSummary}
+                    >
+                      {generatingSummary ? t("generating") : t("generateSummary")}
+                    </Button>
+                  ) : null}
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">{t("noScore")}</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                <p className="text-muted-foreground text-xs">
+                  {t("aiSummaryPlaceholderNote")}
+                </p>
+                {summary ? (
+                  <div className="bg-muted/40 rounded-md border px-3.5 py-3 text-sm">
+                    <p>{summary.summaryText}</p>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      {t("responseCount", { count: summary.responseCount })}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">{t("noSummary")}</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-4 p-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                    <ListChecks className="size-4" />
+                    {t("responseQualityHeading")}
+                  </h2>
+                  {canWrite ? (
+                    <Button size="sm" onClick={handleAssess} disabled={assessing}>
+                      {assessing ? t("assessing") : t("assessQuality")}
+                    </Button>
+                  ) : null}
+                </div>
+                {qualityResults === null ? (
+                  <div className="bg-muted h-16 animate-pulse rounded-md" />
+                ) : qualityResults.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">{t("noQualityResults")}</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("completenessColumn")}</TableHead>
+                        <TableHead>{t("confidenceColumn")}</TableHead>
+                        <TableHead>{t("duplicateColumn")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {qualityResults.map((result) => (
+                        <TableRow key={result.id}>
+                          <TableCell className="text-sm">
+                            {result.completenessScore}%
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                result.confidenceFlag === "low" ? "outline" : "secondary"
+                              }
+                            >
+                              {result.confidenceFlag}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {result.isDuplicate ? t("yes") : t("no")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </PageContainer>
     </PermissionGuard>
   );
