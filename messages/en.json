@@ -327,7 +327,8 @@
         "description": "Domains, sub-domains, priority thresholds, confidence-flag rules, and the methodology version — the full configurable baseline AI Classification, Response Quality, and Priority Dashboard read from.",
         "tabs": {
           "domains": "Domains & Sub-domains",
-          "config": "Thresholds, Flags & Version"
+          "config": "Thresholds, Flags & Version",
+          "scoring": "Scoring Lookups"
         },
         "domains": {
           "domainsHeading": "Domains",
@@ -398,6 +399,36 @@
           "factorColumnLabel": "Factor",
           "weightColumnLabel": "Weight",
           "weightTotalLabel": "Total"
+        },
+        "scoring": {
+          "title": "Scoring Methodology & Lookups",
+          "description": "Manage methodology versions and upload scoring lookup tables mapping answer options to severity values.",
+          "versionSelectLabel": "Select Version",
+          "createVersionBtn": "Create New Version",
+          "createDialogTitle": "Create Methodology Version",
+          "createDialogDescription": "Add a new version to manage different phases or revisions of the severity scoring rules.",
+          "versionNameLabel": "Name / Label",
+          "versionNamePlaceholder": "e.g. FY26 Community Needs",
+          "versionCodeLabel": "Version String",
+          "versionCodePlaceholder": "e.g. v1.0",
+          "versionDescLabel": "Description",
+          "versionDescPlaceholder": "Optional details about this methodology version...",
+          "uploadBtn": "Upload Scoring Lookups CSV",
+          "uploadDialogTitle": "Upload Scoring Lookups CSV",
+          "uploadDialogDescription": "Select a CSV file containing scoring lookup values for the current methodology version. Each row will map a question's response to a severity score (0 to 100).",
+          "chooseFile": "Choose CSV file",
+          "allowedTypesHint": "Accepted: .csv. Columns: methodologyVersion, questionId, lookupType, optionId, optionOrder, severityScore, numericFloor, numericCeiling, severityDirection, isExcluded, exclusionReason.",
+          "importedSuccess": "Successfully imported {count} scoring lookup rules.",
+          "lookupsTableHeading": "Scoring Lookup Rules",
+          "questionIdCol": "Question ID",
+          "typeCol": "Lookup Type",
+          "optionIdCol": "Option ID",
+          "severityCol": "Severity Score",
+          "exclusionCol": "Is Excluded?",
+          "reasonCol": "Exclusion Reason",
+          "noLookups": "No scoring lookups have been uploaded for this methodology version yet.",
+          "loading": "Loading lookups...",
+          "genericError": "Something went wrong. Please try again."
         }
       },
       "organization": {
