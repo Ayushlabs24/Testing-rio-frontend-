@@ -73,7 +73,9 @@ export default function StudiesPage() {
               ]),
             ),
           );
-          setNeedCountByStudy(Object.fromEntries(entries.map(([id, needs]) => [id, needs.length])));
+          setNeedCountByStudy(
+            Object.fromEntries(entries.map(([id, needs]) => [id, needs.length])),
+          );
         });
       })
       .catch(() => {
@@ -139,13 +141,13 @@ export default function StudiesPage() {
               </div>
             </div>
 
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-3">{t("titleColumn")}</TableHead>
                   <TableHead className="py-3">{t("villageColumn")}</TableHead>
-                  <TableHead className="w-40 py-3">{t("needsColumn")}</TableHead>
-                  <TableHead className="w-40 py-3">{t("updatedColumn")}</TableHead>
+                  <TableHead className="py-3">{t("needsColumn")}</TableHead>
+                  <TableHead className="py-3">{t("updatedColumn")}</TableHead>
                   <TableHead className="w-16 py-3" />
                 </TableRow>
               </TableHeader>
@@ -180,26 +182,26 @@ export default function StudiesPage() {
                 ) : (
                   paged.map((study) => (
                     <TableRow key={study.id}>
-                      <TableCell className="py-4">
+                      <TableCell className="py-4 align-middle whitespace-normal">
                         <Link
                           href={`/studies/${study.id}`}
-                          className="text-foreground text-sm font-medium hover:underline"
+                          className="text-foreground block text-sm font-medium break-words hover:underline"
                         >
                           {study.title}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-muted-foreground py-4 text-sm">
+                      <TableCell className="text-muted-foreground py-4 align-middle text-sm break-words whitespace-normal">
                         {villagesByStudy[study.id]?.length
                           ? villagesByStudy[study.id].join(", ")
                           : t("villageNotDefined")}
                       </TableCell>
-                      <TableCell className="text-muted-foreground py-4 text-sm tabular-nums">
+                      <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
                         {needCountByStudy[study.id] ?? 0}
                       </TableCell>
-                      <TableCell className="text-muted-foreground py-4 text-sm tabular-nums">
+                      <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
                         {formatDate(study.updatedAt)}
                       </TableCell>
-                      <TableCell className="py-4 text-right">
+                      <TableCell className="py-4 text-right align-middle">
                         {canWrite ? (
                           <DeleteStudyDialog
                             studyId={study.id}

@@ -92,14 +92,14 @@ export default function SurveyBuilderPage() {
 
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("studyColumn")}</TableHead>
                   <TableHead>{t("needColumn")}</TableHead>
                   <TableHead>{t("domainColumn")}</TableHead>
-                  <TableHead className="w-36">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-24" />
+                  <TableHead>{t("statusColumn")}</TableHead>
+                  <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -130,20 +130,22 @@ export default function SurveyBuilderPage() {
                 ) : (
                   rows.map(({ need, studyTitle, survey }) => (
                     <TableRow key={need.id}>
-                      <TableCell className="py-4 text-sm font-medium">
+                      <TableCell className="py-4 align-middle text-sm font-medium break-words whitespace-normal">
                         {studyTitle}
                       </TableCell>
-                      <TableCell className="text-sm">{need.title}</TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="align-middle text-sm break-words whitespace-normal">
+                        {need.title}
+                      </TableCell>
+                      <TableCell className="align-middle text-sm whitespace-normal">
                         {need.domain && need.subDomain ? (
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground break-words">
                             {need.domain} / {need.subDomain}
                           </span>
                         ) : (
                           <Badge variant="outline">{t("noDomain")}</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-middle">
                         <Badge
                           variant="outline"
                           className={STATUS_BADGE_CLASS[survey.status]}
@@ -151,7 +153,7 @@ export default function SurveyBuilderPage() {
                           {t(`status.${survey.status}`)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right align-middle">
                         {canApprove && !canWrite && survey.status === "SUBMITTED" ? (
                           <Button asChild size="sm" variant="outline">
                             <Link href={`/survey-builder/${need.id}/review`}>
