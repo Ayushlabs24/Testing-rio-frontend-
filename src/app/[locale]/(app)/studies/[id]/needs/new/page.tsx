@@ -132,6 +132,12 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
         subDomain: values.subDomain,
       });
       router.push(`/studies/${studyId}/needs/${created.id}`);
+      // router.push() enqueues the navigation but doesn't wait for it to
+      // finish — returning here would let isSubmitting flip back to false
+      // and the button flash re-enabled while this page is still visible.
+      // Never resolving keeps it in the loading state until this component
+      // unmounts on the route change.
+      await new Promise<void>(() => {});
     } catch (error) {
       setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
     }
