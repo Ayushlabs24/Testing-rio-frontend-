@@ -8,17 +8,9 @@ import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
-import { IndividualResponsesDialog } from "@/components/features/surveys/individual-responses-dialog";
 import { QuestionResponseCard } from "@/components/features/surveys/question-response-card";
-import {
-  RespondentAvatarGroup,
-  type RespondentAvatarInfo,
-} from "@/components/features/surveys/respondent-avatar-group";
 import { SurveyResponseSummaryCard } from "@/components/features/surveys/survey-response-summary-card";
-import {
-  computeQuestionStats,
-  respondentAnswersForQuestion,
-} from "@/lib/survey-response-stats";
+import { computeQuestionStats } from "@/lib/survey-response-stats";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
@@ -39,7 +31,6 @@ export default function SurveyResponseSummaryPage({
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [responses, setResponses] = useState<SurveyResponseDetail[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [viewingQuestionId, setViewingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,21 +64,6 @@ export default function SurveyResponseSummaryPage({
     () => computeQuestionStats(survey?.questions ?? [], responses ?? []),
     [survey, responses],
   );
-
-  const recentRespondents: RespondentAvatarInfo[] = useMemo(
-    // `responses` is already ordered most-recent-first by the backend.
-    () =>
-      (responses ?? []).map((r) => ({
-        id: r.id,
-        name: r.contactName || r.contact,
-      })),
-    [responses],
-  );
-
-  const viewingStat = stats.find((s) => s.questionId === viewingQuestionId) ?? null;
-  const viewingEntries = viewingQuestionId
-    ? respondentAnswersForQuestion(viewingQuestionId, responses ?? [])
-    : [];
 
   const loaded = responses !== null;
   const hasResponses = (responses ?? []).length > 0;
@@ -131,13 +107,6 @@ export default function SurveyResponseSummaryPage({
               </Card>
             ) : (
               <>
-                <div className="space-y-2">
-                  <h2 className="text-foreground text-sm font-semibold">
-                    {t("recentRespondentsHeading")}
-                  </h2>
-                  <RespondentAvatarGroup respondents={recentRespondents} />
-                </div>
-
                 <div className="space-y-3">
                   <h2 className="text-foreground text-sm font-semibold">
                     {t("questionsHeading")}
@@ -146,8 +115,8 @@ export default function SurveyResponseSummaryPage({
                     {stats.map((stat) => (
                       <QuestionResponseCard
                         key={stat.questionId}
+                        needId={needId}
                         stat={stat}
-                        onViewResponses={() => setViewingQuestionId(stat.questionId)}
                       />
                     ))}
                   </div>
@@ -156,13 +125,6 @@ export default function SurveyResponseSummaryPage({
             )}
           </div>
         )}
-
-        <IndividualResponsesDialog
-          open={viewingQuestionId !== null}
-          onOpenChange={(open) => !open && setViewingQuestionId(null)}
-          questionText={viewingStat?.questionText ?? ""}
-          entries={viewingEntries}
-        />
       </PageContainer>
     </PermissionGuard>
   );

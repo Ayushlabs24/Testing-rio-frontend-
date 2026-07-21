@@ -56,16 +56,6 @@ export function describeAnswerType(answerType: string): string {
   return ANSWER_TYPE_LABELS[answerType] ?? "Open Ended";
 }
 
-/** One respondent's answer to one specific question — what the per-question
- * "View Responses" dialog lists. */
-export interface QuestionRespondentAnswer {
-  responseId: string;
-  respondentName: string | null;
-  contact: string;
-  answer: string | null;
-  submittedAt: string;
-}
-
 // Question Bank answer types that render as a fixed option set the citizen
 // picks from (see CitizenService#mapAnswerTypeForCitizen on the backend,
 // which this mirrors) — `checkbox` is the one multi-select type among them,
@@ -198,21 +188,4 @@ export function computeQuestionStats(
       textAnswers: rawAnswers,
     };
   });
-}
-
-/** Every respondent's answer to one specific question — feeds the
- * per-question "View Responses" dialog. Includes respondents who left this
- * particular question blank (answer: null), so the list still accounts for
- * everyone who submitted, not just the ones who answered this one. */
-export function respondentAnswersForQuestion(
-  questionId: string,
-  responses: SurveyResponseDetail[],
-): QuestionRespondentAnswer[] {
-  return responses.map((r) => ({
-    responseId: r.id,
-    respondentName: r.contactName,
-    contact: r.contact,
-    answer: answerFor(r, questionId),
-    submittedAt: r.submittedAt,
-  }));
 }

@@ -45,28 +45,47 @@ export interface SurveyQuestionItem {
   isRequired: boolean;
 }
 
+/** DRAFT -> SUBMITTED -> PUBLISHED, or SUBMITTED -> REJECTED -> (edit) ->
+ * SUBMITTED again. See the backend SurveysService for the full state
+ * machine and who's allowed to make each transition. */
+export type SurveyStatus = "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED";
+
 export interface Survey {
   id: string;
   needId: string;
   studyId: string;
   title: string;
-  status: string;
+  status: SurveyStatus;
   /** Snapshot of the active Methodology Version at the moment this Survey
    * was (most recently) published — null until first published. Never a
    * live reference: a later Methodology/Question Bank change never
    * retroactively changes what an already-published Survey shows here. */
   methodologyVersion: string | null;
+  submittedAt: string | null;
+  /** The Approver's reason for the most recent rejection — only set while
+   * `status === "REJECTED"`; cleared the next time the survey is
+   * resubmitted, so it never lingers as stale feedback. */
+  approverComments: string | null;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  approvedByName: string | null;
+  rejectedAt: string | null;
+  rejectedBy: string | null;
+  rejectedByName: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+  publishedByName: string | null;
   questions: SurveyQuestionItem[];
 }
 
-/** `saveDraft`'s response — the raw Survey record (no `questions`), since
- * publishing only ever flips `status`, never touches the question list. */
+/** The approve/reject/submit endpoints' response — the raw Survey record
+ * (no `questions`), since none of them touch the question list itself. */
 export interface SurveyRecord {
   id: string;
   needId: string;
   studyId: string;
   title: string;
-  status: string;
+  status: SurveyStatus;
 }
 
 export interface SubmitAnswersResult {
@@ -162,10 +181,31 @@ export const surveysService = {
     });
   },
 
-  async saveDraft(surveyId: string, status?: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.saveDraft(surveyId), {
-      status,
+  /** Researcher: picks the Methodology Version this survey will publish
+   * under — mandatory before submitForApproval. Same editable-only window
+   * as updateQuestions (DRAFT/REJECTED). The Approver never calls this. */
+  async setMethodologyVersion(surveyId: string, version: string): Promise<Survey> {
+    return apiClient.patch<Survey>(endpoints.surveys.setMethodologyVersion(surveyId), {
+      version,
     });
+  },
+
+  /** Researcher: hands the current content to the Approver. Valid from
+   * DRAFT (first submission) or REJECTED (resubmission). */
+  async submitForApproval(surveyId: string): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.submit(surveyId));
+  },
+
+  /** Approver-only. Combines approve + publish — there's no intermediate
+   * "approved but not yet published" state. */
+  async approveAndPublish(surveyId: string): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId));
+  },
+
+  /** Approver-only. `comments` is required — explains what needs to change
+   * before the Researcher resubmits. */
+  async rejectSurvey(surveyId: string, comments: string): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), { comments });
   },
 
   async getPublicSurvey(id: string): Promise<Survey> {

@@ -38,10 +38,16 @@ export interface Need {
    * partner org's case id, etc.) — free text, optional. */
   referenceId: string | null;
   status: NeedStatus;
-  /** Set once a human approves an AI Classification decision on this Need
-   * (see AiDecisionsService.review) — never directly editable. */
+  /** Manual, authoritative Domain Category — selected by the Researcher at
+   * creation (mandatory), editable while still `draft`. This is what
+   * reporting/scoring/downstream processing reads. */
   domain: string | null;
   subDomain: string | null;
+  /** AI Classification's own suggestion — stored for transparency/future
+   * reference only once a human reviews it (see AiDecisionsService.review).
+   * Never the authoritative value, never used downstream. */
+  aiSuggestedDomain: string | null;
+  aiSuggestedSubDomain: string | null;
   createdBy: string;
   /** Resolved display name for Entered By — null if the creating user has
    * since been removed. */
@@ -54,6 +60,8 @@ export interface CreateNeedPayload {
   title: string;
   statement: string;
   village: string[];
+  domain: string;
+  subDomain: string;
   referenceId?: string;
 }
 
@@ -61,6 +69,8 @@ export interface UpdateNeedPayload {
   title?: string;
   statement?: string;
   village?: string[];
+  domain?: string;
+  subDomain?: string;
   referenceId?: string | null;
 }
 

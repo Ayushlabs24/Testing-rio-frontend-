@@ -40,7 +40,12 @@ export const endpoints = {
     forNeed: (needId: string) => `/needs/${needId}/survey`,
     recommendQuestions: (needId: string) => `/needs/${needId}/recommend-questions`,
     updateQuestions: (id: string) => `/surveys/${id}/questions`,
-    saveDraft: (id: string) => `/surveys/${id}/save-draft`,
+    setMethodologyVersion: (id: string) => `/surveys/${id}/methodology-version`,
+    // Approval workflow — Researcher submits, Approver approves/rejects.
+    // See SurveysService's state machine on the backend.
+    submit: (id: string) => `/surveys/${id}/submit`,
+    approve: (id: string) => `/surveys/${id}/approve`,
+    reject: (id: string) => `/surveys/${id}/reject`,
     public: (id: string) => `/surveys/public/${id}`,
     submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
     responses: (id: string) => `/surveys/${id}/responses`,
@@ -113,6 +118,8 @@ export const endpoints = {
     responsesWithAnswers: (needId: string) => `/needs/${needId}/survey-responses-full`,
     response: (needId: string, responseId: string) =>
       `/needs/${needId}/survey-responses/${responseId}`,
+    questionResponses: (needId: string, questionId: string) =>
+      `/needs/${needId}/survey-responses/questions/${questionId}`,
     exportResponses: (needId: string, format: "csv" | "excel") =>
       `/needs/${needId}/survey-responses/export?format=${format}`,
   },
@@ -167,5 +174,8 @@ export const endpoints = {
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",
+    // TEMPORARY — see the MethodologyVersionOption model comment on the
+    // backend. Backs the Survey workflow's Methodology Version selector.
+    versions: "/methodology-config/versions",
   },
 } as const;

@@ -118,7 +118,7 @@ function VillageChips({ villages }: { villages: string[] }) {
 }
 
 type AiClassificationStatus = "not_started" | "classified" | "reviewed";
-type SurveyStatus = "not_started" | "draft" | "published";
+type SurveyStatus = "not_started" | "draft" | "submitted" | "rejected" | "published";
 
 interface NeedRowData {
   need: Need;
@@ -135,9 +135,14 @@ const AI_STATUS_VARIANT: Record<
   reviewed: "default",
 };
 
-const SURVEY_STATUS_VARIANT: Record<SurveyStatus, "outline" | "secondary" | "default"> = {
+const SURVEY_STATUS_VARIANT: Record<
+  SurveyStatus,
+  "outline" | "secondary" | "default" | "destructive"
+> = {
   not_started: "outline",
   draft: "secondary",
+  submitted: "secondary",
+  rejected: "destructive",
   published: "default",
 };
 
@@ -197,7 +202,16 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                 .getSurveyByNeedId(need.id)
                 .then((survey): SurveyStatus => {
                   if (!survey) return "not_started";
-                  return survey.status === "PUBLISHED" ? "published" : "draft";
+                  switch (survey.status) {
+                    case "PUBLISHED":
+                      return "published";
+                    case "SUBMITTED":
+                      return "submitted";
+                    case "REJECTED":
+                      return "rejected";
+                    default:
+                      return "draft";
+                  }
                 })
                 .catch((): SurveyStatus => "not_started"),
             ),

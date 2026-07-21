@@ -811,7 +811,12 @@
       "reviewNow": "Review now",
       "summaryPending": "Pending Review",
       "summaryAtRisk": "At risk",
-      "summaryBreached": "Breached"
+      "summaryBreached": "Breached",
+      "typeColumn": "Type",
+      "type": {
+        "ai_classification": "AI Classification",
+        "survey_approval": "Survey Approval"
+      }
     },
     "publicSurveys": {
       "title": "Public Surveys",
@@ -908,7 +913,8 @@
         "methodologyVersionLabel": "Methodology Version",
         "notPublishedTitle": "Survey not published yet",
         "notPublishedDescription": "This Need has a survey, but it is still a draft. Public links only work once the survey is published — publish it from Survey Builder, then come back here to create links and QR codes.",
-        "goToSurveyBuilder": "Open in Survey Builder"
+        "goToSurveyBuilder": "Open in Survey Builder",
+        "viewResponsesDisabledHint": "No responses have been submitted for this survey yet."
       },
       "responses": {
         "backToLinks": "Back to Survey Responses",
@@ -931,7 +937,13 @@
         "exportCsv": "Export as CSV",
         "exportExcel": "Export as Excel",
         "exporting": "Exporting...",
-        "exportError": "Couldn't export responses. Please try again."
+        "exportError": "Couldn't export responses. Please try again.",
+        "pagination": {
+          "previous": "Previous",
+          "next": "Next",
+          "label": "Page {page} of {count}"
+        },
+        "rowsPerPageLabel": "Rows per page"
       },
       "responseSummary": {
         "description": "Review what respondents have submitted for this survey.",
@@ -940,7 +952,6 @@
         "totalResponsesLabel": "Responses",
         "lastResponseLabel": "Last response",
         "emptyStateTitle": "No survey responses have been submitted yet.",
-        "recentRespondentsHeading": "Recent Respondents",
         "moreRespondents": "{count, plural, one {+# more} other {+# more}}",
         "questionsHeading": "Question-wise Response Summary",
         "responseCount": "{count, plural, =0 {No responses} one {# response} other {# responses}}",
@@ -949,10 +960,30 @@
         "averageLabel": "Average",
         "noResponses": "No responses received yet.",
         "viewResponses": "View Responses",
-        "individualResponsesTitle": "Individual Responses",
         "noAnswer": "No answer",
-        "submittedOn": "Submitted on {date}",
         "viewAllResponses": "View All Responses"
+      },
+      "questionResponses": {
+        "title": "Question Responses",
+        "description": "Every respondent's answer to this question.",
+        "backToSummary": "Back to Summary",
+        "totalResponses": "{count, plural, =0 {No responses} one {# response} other {# responses}}",
+        "searchPlaceholder": "Search by name or contact…",
+        "respondentColumn": "Respondent",
+        "contactColumn": "Contact",
+        "answerColumn": "Answer",
+        "submittedColumn": "Submitted",
+        "anonymousRespondent": "Anonymous",
+        "noAnswer": "No answer",
+        "noResponses": "No responses received yet.",
+        "noSearchResults": "No responses match your search.",
+        "loadError": "Could not load responses. Please try again.",
+        "rowsPerPageLabel": "Rows per page",
+        "pagination": {
+          "previous": "Previous",
+          "next": "Next",
+          "label": "Page {page} of {count}"
+        }
       }
     },
     "studies": {
@@ -1001,7 +1032,8 @@
         "needStatementRequired": "Describe the need.",
         "needVillageRequired": "Enter a governorate.",
         "sourceTooLong": "Data source must be 200 characters or fewer.",
-        "referenceIdTooLong": "Reference ID must be 200 characters or fewer."
+        "referenceIdTooLong": "Reference ID must be 200 characters or fewer.",
+        "domainCategoryRequired": "Select a domain category."
       },
       "need": {
         "backToStudy": "Back to study",
@@ -1047,7 +1079,14 @@
           "lockedHint": "Can't delete — this need has already moved past draft (evidence, an AI classification, or a survey may depend on it)."
         },
         "villageSearchPlaceholder": "Search your organization's governorates, or type to add a new one",
-        "addNewVillage": "Add \"{village}\""
+        "addNewVillage": "Add \"{village}\"",
+        "domainCategoryLabel": "Domain Category",
+        "domainCategoryPlaceholder": "Select a domain category",
+        "domainCategorySearchPlaceholder": "Search domain categories",
+        "domainCategoryEmpty": "No domain categories found.",
+        "domainCategoryHint": "This becomes the authoritative domain used for reporting, scoring, and downstream processing. AI Classification will still suggest a domain later for reference, but this selection always takes precedence.",
+        "aiSuggestedDomainLabel": "AI Suggested Domain",
+        "aiSuggestedDomainNote": "For reference only — the Domain Category above is what the system uses."
       },
       "source": {
         "manual_entry": "Manual Entry",
@@ -1094,7 +1133,10 @@
         "cancel": "Cancel",
         "reviewError": "Couldn't save the review. Please try again.",
         "classificationApproved": "AI Classification Approved",
-        "humanOverrideSaved": "Human Override Saved"
+        "humanOverrideSaved": "Human Override Saved",
+        "sentForReviewTitle": "Sent for Review",
+        "sentForReviewDescription": "AI Classification is complete. This need has been sent to the Approver for review — you can continue with your other work in the meantime.",
+        "sentForReviewContinue": "Continue"
       },
       "detail": {
         "backToList": "Back to studies",
@@ -1149,8 +1191,13 @@
         "surveyStatus": {
           "not_started": "Not started",
           "draft": "Draft",
-          "published": "Published"
-        }
+          "published": "Published",
+          "submitted": "Submitted for Approval",
+          "rejected": "Rejected"
+        },
+        "surveyPendingReviewTitle": "Survey submitted for approval",
+        "surveyPendingReviewDescription": "This need has a survey awaiting your review.",
+        "reviewSurvey": "Review Survey"
       },
       "delete": {
         "action": "Delete",
@@ -1169,7 +1216,7 @@
       },
       "survey": {
         "heading": "Survey",
-        "classifiedAsLabel": "Classified as",
+        "classifiedAsLabel": "Domain Category",
         "approvedDomainLabel": "Approved domain",
         "approvedSubDomainLabel": "Approved sub-domain",
         "domainNotApprovedNote": "Complete and approve AI Classification on this study's need first.",
@@ -1178,11 +1225,7 @@
         "domainRequiredNote": "Approve a domain and sub-domain via AI Classification before creating a survey.",
         "noSurveyYet": "No survey created yet.",
         "createSurvey": "Create Survey",
-        "statusCreated": "Survey Created",
-        "statusPublished": "Published",
         "editSurvey": "Edit Survey",
-        "publishSurvey": "Publish Survey",
-        "publishing": "Publishing...",
         "createDialogTitle": "Create Survey",
         "createDialogDescription": "How would you like to build this survey?",
         "optionAiTitle": "Generate AI Suggestions",
@@ -1192,7 +1235,16 @@
         "cancel": "Cancel",
         "continue": "Continue",
         "creating": "Creating...",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "submitForApproval": "Submit for Approval",
+        "submitting": "Submitting...",
+        "status": {
+          "DRAFT": "Draft",
+          "SUBMITTED": "Submitted for Approval",
+          "REJECTED": "Rejected",
+          "PUBLISHED": "Published"
+        },
+        "aiSuggestedNote": "AI suggested: {domain} / {subDomain} (for reference only)"
       },
       "needsColumn": "Needs",
       "import": {
@@ -1266,15 +1318,78 @@
         "saving": "Saving...",
         "saved": "Saved.",
         "unsavedChangesNote": "You have unsaved changes — Save before publishing.",
-        "saveBeforePublish": "Save your changes before publishing.",
-        "publish": "Publish",
-        "publishing": "Publishing...",
         "noSurveyYet": "This study has no survey yet — go to its Study Detail page and create one first.",
         "genericError": "Something went wrong. Please try again.",
         "methodologyVersionLabel": "Methodology Version",
-        "methodologyVersionPendingNote": "(will be recorded when this survey is published)"
+        "methodologyVersionPendingNote": "(will be recorded when this survey is published)",
+        "submitForApproval": "Submit for Approval",
+        "submitting": "Submitting...",
+        "saveBeforeSubmit": "Save your changes before submitting for approval.",
+        "submittedNotice": "This survey has been submitted and is awaiting approval. Editing is disabled until it is reviewed.",
+        "rejectedNoticeTitle": "Changes requested",
+        "goToReview": "Go to Review",
+        "status": {
+          "DRAFT": "Draft",
+          "SUBMITTED": "Submitted for Approval",
+          "REJECTED": "Rejected",
+          "PUBLISHED": "Published"
+        },
+        "methodologyVersionPlaceholder": "Select a methodology version",
+        "methodologyVersionHint": "Required before submitting for approval. The Approver publishes exactly the version selected here — they cannot change it.",
+        "methodologyVersionLockedHint": "Set by the Researcher before this survey was submitted for approval.",
+        "methodologyVersionRequiredNote": "Select a Methodology Version before submitting for approval."
       },
-      "needColumn": "Need"
+      "needColumn": "Need",
+      "review": {
+        "backToList": "Back to Survey Builder",
+        "description": "Review this survey before approving or rejecting it. Any requested changes go back to the Researcher.",
+        "noSurveyYet": "There is nothing to review for this need yet.",
+        "nothingToReviewNote": "This survey is not currently awaiting approval.",
+        "contextHeading": "Survey Information",
+        "studyLabel": "Study",
+        "needLabel": "Need",
+        "needStatementLabel": "Need Statement",
+        "villageLabel": "Governorate",
+        "aiClassificationLabel": "Domain Category",
+        "noClassification": "Not classified.",
+        "submittedAtLabel": "Submitted",
+        "recommendedHeading": "AI Recommended Questions",
+        "noRecommendedQuestions": "No Question Bank questions selected.",
+        "additionalHeading": "Additional Questions",
+        "noAdditionalQuestions": "No additional questions added.",
+        "questionNumber": "Question {number}",
+        "questionLabel": "Question",
+        "indicatorLabel": "Indicator",
+        "requiredLabel": "Required",
+        "approveAndPublish": "Approve & Publish",
+        "approving": "Approving...",
+        "approvedMessage": "Survey approved and published.",
+        "reject": "Reject",
+        "rejectDialogTitle": "Reject this survey",
+        "rejectDialogDescription": "Explain what needs to change — the Researcher will see these comments and can resubmit once addressed.",
+        "commentsLabel": "Comments",
+        "commentsPlaceholder": "What needs to change before this can be approved?",
+        "commentsRequired": "Comments are required when rejecting a survey.",
+        "cancel": "Cancel",
+        "confirmReject": "Reject Survey",
+        "rejecting": "Rejecting...",
+        "rejectedMessage": "Survey rejected and sent back to the Researcher.",
+        "status": {
+          "DRAFT": "Draft",
+          "SUBMITTED": "Submitted for Approval",
+          "REJECTED": "Rejected",
+          "PUBLISHED": "Published"
+        },
+        "genericError": "Something went wrong. Please try again.",
+        "aiSuggestedNote": "AI suggested: {domain} / {subDomain} (for reference only)",
+        "methodologyVersionLabel": "Methodology Version"
+      },
+      "status": {
+        "DRAFT": "Draft",
+        "SUBMITTED": "Submitted for Approval",
+        "REJECTED": "Rejected",
+        "PUBLISHED": "Published"
+      }
     }
   },
   "common": {

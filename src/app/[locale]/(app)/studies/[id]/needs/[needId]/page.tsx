@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
+import { ClipboardCheck, Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,10 @@ import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dial
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
 import { BackButton } from "@/components/common/back-button";
+import {
+  DomainCategoryPicker,
+  type DomainCategoryValue,
+} from "@/components/common/domain-category-picker";
 import { GovernoratePicker } from "@/components/common/governorate-picker";
 import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
@@ -24,17 +28,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { organizationsService } from "@/services/organizations/organizations.service";
+import {
+  surveysService,
+  type QuestionOption,
+  type Survey,
+} from "@/services/surveys/surveys.service";
 
 interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
+  domain: string;
+  subDomain: string;
 }
 
 function formatDateTime(iso: string): string {
@@ -131,12 +142,14 @@ function NeedDetailsCard({
   need,
   canEdit,
   orgVillages,
+  domainOptions,
   onSaved,
   onDeleted,
 }: {
   need: Need;
   canEdit: boolean;
   orgVillages: string[];
+  domainOptions: QuestionOption[];
   onSaved: (need: Need) => void;
   onDeleted: () => void;
 }) {
@@ -155,6 +168,8 @@ function NeedDetailsCard({
       .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
     village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
+    domain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
+    subDomain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
   });
 
   const {
@@ -169,10 +184,16 @@ function NeedDetailsCard({
       title: need.title,
       statement: need.statement,
       village: need.village,
+      domain: need.domain ?? "",
+      subDomain: need.subDomain ?? "",
     },
   });
 
   const village = useWatch({ control, name: "village" });
+  const domain = useWatch({ control, name: "domain" });
+  const subDomain = useWatch({ control, name: "subDomain" });
+  const domainValue: DomainCategoryValue | null =
+    domain && subDomain ? { domain, subDomain } : null;
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -181,6 +202,8 @@ function NeedDetailsCard({
         title: values.title,
         statement: values.statement,
         village: values.village,
+        domain: values.domain,
+        subDomain: values.subDomain,
       });
       onSaved(updated);
       setEditing(false);
@@ -281,6 +304,22 @@ function NeedDetailsCard({
                 <p className="text-destructive text-sm">{errors.village.message}</p>
               ) : null}
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="domain">{t("domainCategoryLabel")}</Label>
+              <DomainCategoryPicker
+                value={domainValue}
+                options={domainOptions}
+                onChange={(next) => {
+                  setValue("domain", next.domain, { shouldValidate: true });
+                  setValue("subDomain", next.subDomain, { shouldValidate: true });
+                }}
+              />
+              {errors.domain || errors.subDomain ? (
+                <p className="text-destructive text-sm">
+                  {errors.domain?.message ?? errors.subDomain?.message}
+                </p>
+              ) : null}
+            </div>
             {submitError ? (
               <p className="text-destructive text-sm">{submitError}</p>
             ) : null}
@@ -312,6 +351,15 @@ function NeedDetailsCard({
               <FilledField label={t("villageLabel")}>
                 <VillageChips villages={need.village} />
               </FilledField>
+              <FilledField label={t("domainCategoryLabel")}>
+                {need.domain && need.subDomain ? (
+                  `${need.domain} / ${need.subDomain}`
+                ) : (
+                  <span className="text-muted-foreground">
+                    {t("domainCategoryPlaceholder")}
+                  </span>
+                )}
+              </FilledField>
               <FilledField label={t("sourceLabel")}>{tSource(need.source)}</FilledField>
               <FilledField label={t("enteredByLabel")}>
                 {need.createdByName ?? t("enteredByUnknown")}
@@ -319,6 +367,13 @@ function NeedDetailsCard({
               <FilledField label={t("captureDateLabel")}>
                 {formatDateTime(need.createdAt)}
               </FilledField>
+              {need.aiSuggestedDomain && need.aiSuggestedSubDomain ? (
+                <FilledField label={t("aiSuggestedDomainLabel")}>
+                  <span className="text-muted-foreground">
+                    {need.aiSuggestedDomain} / {need.aiSuggestedSubDomain}
+                  </span>
+                </FilledField>
+              ) : null}
             </div>
           </div>
         )}
@@ -337,12 +392,28 @@ export default function NeedWorkspacePage({
   const router = useRouter();
   const canEdit = usePermission("dataCollection", "write");
   const canViewEvidence = usePermission("dataCollection", "read");
-  const canUseSurveyBuilder = usePermission("surveyBuilder", "read");
+  // `write`, not `read` — this section is the Researcher's own "create
+  // survey / edit / submit for approval" workflow tool (see
+  // SurveyStatusCard's own doc comment), not a general survey viewer. The
+  // Approver also holds `surveyBuilder` read (so they can view a survey's
+  // content while reviewing it), but their actual review happens on the
+  // dedicated Review page — this card has no business showing up for them
+  // here, since every action on it is something they're not allowed to do.
+  const canUseSurveyBuilder = usePermission("surveyBuilder", "write");
+  // Approver's own counterpart to canUseSurveyBuilder above — they don't get
+  // the Researcher's create/edit card, but if a survey on this need is
+  // sitting SUBMITTED, they still need a way to reach the Review page from
+  // here (this is where they'd naturally land after opening a Need from the
+  // Studies list, not just via Reviewer Alerts).
+  const canApproveSurvey =
+    usePermission("surveyBuilder", "approve") && !canUseSurveyBuilder;
 
   const [need, setNeed] = useState<Need | null>(null);
   const [orgVillages, setOrgVillages] = useState<string[]>([]);
+  const [domainOptions, setDomainOptions] = useState<QuestionOption[]>([]);
   const [evidenceCount, setEvidenceCount] = useState(0);
   const [notFound, setNotFound] = useState(false);
+  const [survey, setSurvey] = useState<Survey | null>(null);
 
   const refreshNeed = () => {
     needsService
@@ -366,9 +437,21 @@ export default function NeedWorkspacePage({
   }, [needId]);
 
   useEffect(() => {
+    if (!canApproveSurvey) return;
+    surveysService
+      .getSurveyByNeedId(needId)
+      .then(setSurvey)
+      .catch(() => undefined);
+  }, [needId, canApproveSurvey]);
+
+  useEffect(() => {
     organizationsService
       .getCurrent()
       .then((org) => setOrgVillages(org.villages))
+      .catch(() => undefined);
+    surveysService
+      .getDomainOptions()
+      .then(setDomainOptions)
       .catch(() => undefined);
   }, []);
 
@@ -421,6 +504,7 @@ export default function NeedWorkspacePage({
             need={need}
             canEdit={canEdit}
             orgVillages={orgVillages}
+            domainOptions={domainOptions}
             onSaved={setNeed}
             onDeleted={() => router.push(`/studies/${studyId}`)}
           />
@@ -476,7 +560,32 @@ export default function NeedWorkspacePage({
               needStatus={need.status}
               domain={need.domain}
               subDomain={need.subDomain}
+              aiSuggestedDomain={need.aiSuggestedDomain}
+              aiSuggestedSubDomain={need.aiSuggestedSubDomain}
             />
+          ) : null}
+
+          {canApproveSurvey && survey && survey.status === "SUBMITTED" ? (
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-6">
+                <div className="flex items-start gap-2.5">
+                  <ClipboardCheck className="text-primary mt-0.5 size-4 shrink-0" />
+                  <div>
+                    <p className="text-foreground text-sm font-medium">
+                      {t("surveyPendingReviewTitle")}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {t("surveyPendingReviewDescription")}
+                    </p>
+                  </div>
+                </div>
+                <Button asChild size="sm">
+                  <Link href={`/survey-builder/${need.id}/review`}>
+                    {t("reviewSurvey")}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           ) : null}
         </div>
       </PageContainer>

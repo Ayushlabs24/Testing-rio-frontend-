@@ -29,6 +29,15 @@ export interface SurveyResponseSummary {
   submittedAt: string;
 }
 
+/** A survey can collect thousands of public responses — the list view is
+ * server-paginated, never fetched all at once. */
+export interface SurveyResponseListResult {
+  items: SurveyResponseSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /** One answered question, enriched with the question's own text/type — the
  * raw `answers` JSON is keyed by SurveyQuestion id and meaningless without
  * this join, which the backend already does. */
@@ -44,3 +53,23 @@ export interface SurveyResponseDetail extends SurveyResponseSummary {
 }
 
 export type SurveyResponseExportFormat = "csv" | "excel";
+
+/** One respondent's answer to one specific question — a row on the
+ * dedicated per-question responses page. */
+export interface QuestionResponseRow {
+  responseId: string;
+  respondentName: string | null;
+  contact: string;
+  answer: string | null;
+  submittedAt: string;
+}
+
+export interface QuestionResponseListResult {
+  questionId: string;
+  questionText: string;
+  answerType: string;
+  items: QuestionResponseRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}

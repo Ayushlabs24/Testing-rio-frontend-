@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ResponseDistribution } from "@/components/features/surveys/response-distribution";
+import { Link } from "@/i18n/navigation";
 import {
   describeAnswerType,
   type QuestionResponseStat,
@@ -21,14 +22,15 @@ function truncate(text: string): string {
 /** One question's response summary — the distribution/numeric summary
  * shape depends entirely on `stat.kind` (set by computeQuestionStats from
  * the question's own answerType, never guessed here), plus a "View
- * Responses" button that hands off to the caller's single shared dialog
- * instance rather than each card owning its own. */
+ * Responses" link to that question's own dedicated, paginated responses
+ * page (a survey can collect thousands of responses — a dialog that lists
+ * them all in one scrolling list doesn't hold up at that scale). */
 export function QuestionResponseCard({
+  needId,
   stat,
-  onViewResponses,
 }: {
+  needId: string;
   stat: QuestionResponseStat;
-  onViewResponses: () => void;
 }) {
   const t = useTranslations("app.publicSurveys.responseSummary");
 
@@ -47,14 +49,13 @@ export function QuestionResponseCard({
               </span>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0 gap-1.5"
-            onClick={onViewResponses}
-          >
-            <Eye className="size-3.5" />
-            {t("viewResponses")}
+          <Button asChild size="sm" variant="outline" className="shrink-0 gap-1.5">
+            <Link
+              href={`/public-surveys/${needId}/responses/questions/${stat.questionId}`}
+            >
+              <Eye className="size-3.5" />
+              {t("viewResponses")}
+            </Link>
           </Button>
         </div>
 

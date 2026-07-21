@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
+import { usePermission } from "@/hooks/use-permission";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
@@ -29,10 +30,19 @@ interface Row {
   survey: Survey;
 }
 
+const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
+  DRAFT: undefined,
+  SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
+  REJECTED: "bg-destructive/10 text-destructive border-transparent",
+  PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
+};
+
 /** One row per Need, not per Study — a Study can hold many Needs now, each
  * running its own independent survey. */
 export default function SurveyBuilderPage() {
   const t = useTranslations("app.surveyBuilder");
+  const canWrite = usePermission("surveyBuilder", "write");
+  const canApprove = usePermission("surveyBuilder", "approve");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -135,20 +145,24 @@ export default function SurveyBuilderPage() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={survey.status === "DRAFT" ? "outline" : "default"}
-                          className={
-                            survey.status !== "DRAFT"
-                              ? "bg-badge-success text-badge-success-foreground border-transparent"
-                              : undefined
-                          }
+                          variant="outline"
+                          className={STATUS_BADGE_CLASS[survey.status]}
                         >
-                          {survey.status}
+                          {t(`status.${survey.status}`)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/survey-builder/${need.id}`}>{t("open")}</Link>
-                        </Button>
+                        {canApprove && !canWrite && survey.status === "SUBMITTED" ? (
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/survey-builder/${need.id}/review`}>
+                              {t("review")}
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/survey-builder/${need.id}`}>{t("open")}</Link>
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

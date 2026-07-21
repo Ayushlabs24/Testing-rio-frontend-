@@ -37,6 +37,17 @@ const STATUS_VARIANT: Record<SlaAlertStatus, "default" | "secondary" | "destruct
   breached: "destructive",
 };
 
+// AI Classification review happens on the Need workspace page; Survey
+// Approval review happens on the dedicated Review page (see
+// SurveysService's state machine / the Survey Builder Review page) — never
+// the same link, since these are two different queues on two different
+// screens.
+function alertHref(alert: SlaAlert): string {
+  return alert.type === "survey_approval"
+    ? `/survey-builder/${alert.needId}/review`
+    : `/studies/${alert.studyId}/needs/${alert.needId}`;
+}
+
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
@@ -136,11 +147,12 @@ export default function ReviewerSlaPage() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[26%]">{t("studyColumn")}</TableHead>
-                    <TableHead className="w-[26%]">{t("needColumn")}</TableHead>
-                    <TableHead className="w-36">{t("createdColumn")}</TableHead>
-                    <TableHead className="w-36">{t("dueColumn")}</TableHead>
-                    <TableHead className="w-32">{t("statusColumn")}</TableHead>
+                    <TableHead className="w-28">{t("typeColumn")}</TableHead>
+                    <TableHead className="w-[22%]">{t("studyColumn")}</TableHead>
+                    <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
+                    <TableHead className="w-32">{t("createdColumn")}</TableHead>
+                    <TableHead className="w-32">{t("dueColumn")}</TableHead>
+                    <TableHead className="w-28">{t("statusColumn")}</TableHead>
                     <TableHead className="w-28">{t("actionColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -148,7 +160,7 @@ export default function ReviewerSlaPage() {
                   {alerts === null ? (
                     Array.from({ length: 3 }).map((_, index) => (
                       <TableRow key={index}>
-                        {Array.from({ length: 6 }).map((__, cell) => (
+                        {Array.from({ length: 7 }).map((__, cell) => (
                           <TableCell key={cell} className="py-4">
                             <div className="bg-muted h-4 w-24 rounded" />
                           </TableCell>
@@ -158,7 +170,7 @@ export default function ReviewerSlaPage() {
                   ) : alerts.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="text-muted-foreground h-32 text-center"
                       >
                         <div className="flex flex-col items-center gap-2.5">
@@ -171,12 +183,14 @@ export default function ReviewerSlaPage() {
                     </TableRow>
                   ) : (
                     alerts.map((alert) => (
-                      <TableRow key={alert.aiDecisionId}>
+                      <TableRow key={alert.id}>
+                        <TableCell className="py-4 align-top">
+                          <Badge variant="outline" className="font-normal">
+                            {t(`type.${alert.type}`)}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
-                          <Link
-                            href={`/studies/${alert.studyId}/needs/${alert.needId}`}
-                            className="hover:underline"
-                          >
+                          <Link href={alertHref(alert)} className="hover:underline">
                             {alert.studyTitle}
                           </Link>
                         </TableCell>
@@ -209,9 +223,7 @@ export default function ReviewerSlaPage() {
                         </TableCell>
                         <TableCell className="py-4 align-top">
                           <Button asChild size="sm" variant="outline">
-                            <Link href={`/studies/${alert.studyId}/needs/${alert.needId}`}>
-                              {t("reviewNow")}
-                            </Link>
+                            <Link href={alertHref(alert)}>{t("reviewNow")}</Link>
                           </Button>
                         </TableCell>
                       </TableRow>

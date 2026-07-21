@@ -5,9 +5,10 @@ import { ApiError } from "@/services/api/types";
 import type {
   CreateSurveyLinkPayload,
   PublicSurveyLink,
+  QuestionResponseListResult,
   SurveyResponseDetail,
   SurveyResponseExportFormat,
-  SurveyResponseSummary,
+  SurveyResponseListResult,
 } from "@/services/public-surveys/public-surveys.types";
 
 export const publicSurveysService = {
@@ -33,13 +34,16 @@ export const publicSurveysService = {
 
   async listResponses(
     needId: string,
-    surveyLinkId?: string,
-  ): Promise<SurveyResponseSummary[]> {
-    return apiClient.get<SurveyResponseSummary[]>(
+    params: {
+      surveyLinkId?: string;
+      limit?: number;
+      offset?: number;
+      search?: string;
+    } = {},
+  ): Promise<SurveyResponseListResult> {
+    return apiClient.get<SurveyResponseListResult>(
       endpoints.publicSurveys.responses(needId),
-      {
-        params: { surveyLinkId },
-      },
+      { params },
     );
   },
 
@@ -53,6 +57,17 @@ export const publicSurveysService = {
     return apiClient.get<SurveyResponseDetail[]>(
       endpoints.publicSurveys.responsesWithAnswers(needId),
       { params: { surveyLinkId } },
+    );
+  },
+
+  async listQuestionResponses(
+    needId: string,
+    questionId: string,
+    params: { limit?: number; offset?: number; search?: string } = {},
+  ): Promise<QuestionResponseListResult> {
+    return apiClient.get<QuestionResponseListResult>(
+      endpoints.publicSurveys.questionResponses(needId, questionId),
+      { params },
     );
   },
 

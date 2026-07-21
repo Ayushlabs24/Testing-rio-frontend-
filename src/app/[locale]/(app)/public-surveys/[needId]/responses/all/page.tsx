@@ -2,7 +2,7 @@
 
 import { Download, Eye, MessageSquareText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -17,6 +17,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -25,6 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  SURVEY_RESPONSES_PAGE_SIZE,
+  SURVEY_RESPONSES_PAGE_SIZE_OPTIONS,
+} from "@/config/pagination";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
@@ -168,37 +181,53 @@ export default function SurveyResponsesPage({
 
   const [need, setNeed] = useState<Need | null>(null);
   const [responses, setResponses] = useState<SurveyResponseSummary[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [loadFailed, setLoadFailed] = useState(false);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(SURVEY_RESPONSES_PAGE_SIZE);
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  // The response set is unbounded (a popular public link can collect
+  // thousands of submissions) — search and paging both run server-side, the
+  // typed query debounced to one request per pause rather than per keystroke.
+  const debouncedQuery = useDebouncedValue(query);
+
   useEffect(() => {
-    Promise.all([
-      needsService.getById(needId),
-      publicSurveysService.listResponses(needId),
-    ])
-      .then(([needResult, responseRows]) => {
-        setNeed(needResult);
-        setResponses(responseRows);
+    needsService
+      .getById(needId)
+      .then(setNeed)
+      .catch(() => undefined);
+  }, [needId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    publicSurveysService
+      .listResponses(needId, {
+        search: debouncedQuery.trim() || undefined,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      })
+      .then(({ items, total: totalCount }) => {
+        if (cancelled) return;
+        setResponses(items);
+        setTotal(totalCount);
         setLoadFailed(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setResponses([]);
+        setTotal(0);
         setLoadFailed(true);
       });
-  }, [needId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [needId, debouncedQuery, page, pageSize]);
 
-  const filteredResponses = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return responses ?? [];
-    return (responses ?? []).filter(
-      (response) =>
-        (response.contactName ?? "").toLowerCase().includes(normalized) ||
-        response.contact.toLowerCase().includes(normalized),
-    );
-  }, [responses, query]);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   async function handleExport(format: "csv" | "excel") {
     setExportError(null);
@@ -226,7 +255,7 @@ export default function SurveyResponsesPage({
           title={need?.title ?? ""}
           description={t("description")}
           actions={
-            canExport && responses && responses.length > 0 ? (
+            canExport && total > 0 ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" className="gap-1.5" disabled={exporting}>
@@ -259,7 +288,10 @@ export default function SurveyResponsesPage({
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setPage(1);
+                  }}
                   className="h-8 pl-9"
                 />
               </div>
@@ -285,7 +317,7 @@ export default function SurveyResponsesPage({
                       ))}
                     </TableRow>
                   ))
-                ) : filteredResponses.length === 0 ? (
+                ) : responses.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
@@ -298,15 +330,15 @@ export default function SurveyResponsesPage({
                         <p>
                           {loadFailed
                             ? t("loadError")
-                            : responses.length === 0
-                              ? t("noResponses")
-                              : t("noSearchResults")}
+                            : debouncedQuery.trim()
+                              ? t("noSearchResults")
+                              : t("noResponses")}
                         </p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredResponses.map((response) => (
+                  responses.map((response) => (
                     <TableRow key={response.id}>
                       <TableCell className="py-4 text-sm font-medium">
                         {response.contactName || t("anonymousRespondent")}
@@ -333,6 +365,41 @@ export default function SurveyResponsesPage({
                 )}
               </TableBody>
             </Table>
+
+            {total > 0 ? (
+              <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-40"
+                    aria-label={t("rowsPerPageLabel")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SURVEY_RESPONSES_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {t("rowsPerPageLabel")}: {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Pagination
+                  page={page}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                  className="sm:w-auto"
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

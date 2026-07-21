@@ -6,6 +6,10 @@ import { use, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { BackButton } from "@/components/common/back-button";
+import {
+  DomainCategoryPicker,
+  type DomainCategoryValue,
+} from "@/components/common/domain-category-picker";
 import { GovernoratePicker } from "@/components/common/governorate-picker";
 import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
@@ -21,11 +25,14 @@ import { needsService } from "@/services/needs/needs.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
+import { surveysService, type QuestionOption } from "@/services/surveys/surveys.service";
 
 interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
+  domain: string;
+  subDomain: string;
 }
 
 export default function CreateNeedPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +43,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
 
   const [study, setStudy] = useState<Study | null>(null);
   const [orgVillages, setOrgVillages] = useState<string[]>([]);
+  const [domainOptions, setDomainOptions] = useState<QuestionOption[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -62,6 +70,15 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       .catch(() => {
         // Non-fatal — the picker still works with free text if this fails.
       });
+    surveysService
+      .getDomainOptions()
+      .then((options) => {
+        if (!cancelled) setDomainOptions(options);
+      })
+      .catch(() => {
+        // Non-fatal for page load — the field just has nothing to pick
+        // from yet; the required validation still blocks submission.
+      });
     return () => {
       cancelled = true;
     };
@@ -75,6 +92,8 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
     village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
+    domain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
+    subDomain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
   });
 
   const {
@@ -91,10 +110,16 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       title: "",
       statement: "",
       village: study?.villages ?? [],
+      domain: "",
+      subDomain: "",
     },
   });
 
   const village = useWatch({ control, name: "village" });
+  const domain = useWatch({ control, name: "domain" });
+  const subDomain = useWatch({ control, name: "subDomain" });
+  const domainValue: DomainCategoryValue | null =
+    domain && subDomain ? { domain, subDomain } : null;
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -103,6 +128,8 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
         title: values.title,
         statement: values.statement,
         village: values.village,
+        domain: values.domain,
+        subDomain: values.subDomain,
       });
       router.push(`/studies/${studyId}/needs/${created.id}`);
     } catch (error) {
@@ -168,6 +195,26 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                   />
                   {errors.village ? (
                     <p className="text-destructive text-sm">{errors.village.message}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="domain">{t("domainCategoryLabel")}</Label>
+                  <DomainCategoryPicker
+                    value={domainValue}
+                    options={domainOptions}
+                    onChange={(next) => {
+                      setValue("domain", next.domain, { shouldValidate: true });
+                      setValue("subDomain", next.subDomain, { shouldValidate: true });
+                    }}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {t("domainCategoryHint")}
+                  </p>
+                  {errors.domain || errors.subDomain ? (
+                    <p className="text-destructive text-sm">
+                      {errors.domain?.message ?? errors.subDomain?.message}
+                    </p>
                   ) : null}
                 </div>
 

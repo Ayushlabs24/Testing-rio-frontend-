@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Check, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Clock,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
@@ -29,9 +39,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
 import { cn, titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
+import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
+import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import {
@@ -43,6 +56,13 @@ import {
   type Survey,
   type SurveyQuestionItem,
 } from "@/services/surveys/surveys.service";
+
+const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
+  DRAFT: undefined,
+  SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
+  REJECTED: "bg-destructive/10 text-destructive border-transparent",
+  PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
+};
 
 let tempIdCounter = 0;
 function nextTempId(prefix: string): string {
@@ -63,6 +83,7 @@ export default function SurveyBuilderDetailPage({
   const { needId } = use(params);
   const t = useTranslations("app.surveyBuilder.detail");
   const canWrite = usePermission("surveyBuilder", "write");
+  const canApprove = usePermission("surveyBuilder", "approve");
 
   const [need, setNeed] = useState<Need | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
@@ -77,9 +98,24 @@ export default function SurveyBuilderDetailPage({
   const [dirty, setDirty] = useState(false);
 
   const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // TEMPORARY — see MethodologyVersionOption's doc comment. Mandatory
+  // before Submit for Approval; the Researcher picks it here, the Approver
+  // only ever reviews/publishes whatever was chosen (see the Review page).
+  const [methodologyOptions, setMethodologyOptions] = useState<
+    MethodologyVersionOption[]
+  >([]);
+  const [savingMethodologyVersion, setSavingMethodologyVersion] = useState(false);
+
+  // The Researcher only edits/saves/submits from DRAFT or REJECTED — once
+  // SUBMITTED, content is frozen for the Approver's review; once PUBLISHED,
+  // it's frozen for good. The backend enforces this too (SURVEY_NOT_EDITABLE);
+  // this just keeps the UI from offering actions that would 409.
+  const isEditable =
+    canWrite && (survey?.status === "DRAFT" || survey?.status === "REJECTED");
 
   // Additional Question modal — add or edit one question at a time,
   // instead of the page growing with an ever-longer inline editable list.
@@ -119,6 +155,27 @@ export default function SurveyBuilderDetailPage({
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needId]);
+
+  useEffect(() => {
+    methodologyConfigService
+      .listVersionOptions()
+      .then(setMethodologyOptions)
+      .catch(() => undefined);
+  }, []);
+
+  async function changeMethodologyVersion(version: string) {
+    if (!survey) return;
+    setSavingMethodologyVersion(true);
+    setError(null);
+    try {
+      const updated = await surveysService.setMethodologyVersion(survey.id, version);
+      setSurvey(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setSavingMethodologyVersion(false);
+    }
+  }
 
   function moveRecommended(index: number, direction: -1 | 1) {
     setRecommended((prev) => {
@@ -289,17 +346,17 @@ export default function SurveyBuilderDetailPage({
     }
   }
 
-  async function publish() {
+  async function submitForApproval() {
     if (!survey) return;
-    setPublishing(true);
+    setSubmitting(true);
     setError(null);
     try {
-      await surveysService.saveDraft(survey.id, "PUBLISHED");
-      setSurvey({ ...survey, status: "PUBLISHED" });
+      const updated = await surveysService.submitForApproval(survey.id);
+      setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
-      setPublishing(false);
+      setSubmitting(false);
     }
   }
 
@@ -330,16 +387,19 @@ export default function SurveyBuilderDetailPage({
                 survey ? (
                   <div className="flex items-center gap-2">
                     <Badge
-                      variant={survey.status === "DRAFT" ? "outline" : "default"}
-                      className={
-                        survey.status !== "DRAFT"
-                          ? "bg-badge-success text-badge-success-foreground border-transparent"
-                          : undefined
-                      }
+                      variant="outline"
+                      className={STATUS_BADGE_CLASS[survey.status]}
                     >
-                      {survey.status}
+                      {t(`status.${survey.status}`)}
                     </Badge>
-                    {canWrite ? (
+                    {canApprove && !canWrite && survey.status === "SUBMITTED" ? (
+                      <Button asChild size="sm" className="gap-1.5">
+                        <Link href={`/survey-builder/${needId}/review`}>
+                          {t("goToReview")}
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {isEditable ? (
                       <Button
                         size="sm"
                         variant="outline"
@@ -351,20 +411,55 @@ export default function SurveyBuilderDetailPage({
                         {saving ? t("saving") : t("saveDraft")}
                       </Button>
                     ) : null}
-                    {canWrite && survey.status === "DRAFT" ? (
+                    {isEditable ? (
                       <Button
                         size="sm"
-                        onClick={publish}
-                        disabled={publishing || dirty}
-                        title={dirty ? t("saveBeforePublish") : undefined}
+                        onClick={submitForApproval}
+                        disabled={submitting || dirty || !survey.methodologyVersion}
+                        title={
+                          dirty
+                            ? t("saveBeforeSubmit")
+                            : !survey.methodologyVersion
+                              ? t("methodologyVersionRequiredNote")
+                              : undefined
+                        }
                       >
-                        {publishing ? t("publishing") : t("publish")}
+                        {submitting ? t("submitting") : t("submitForApproval")}
                       </Button>
                     ) : null}
                   </div>
                 ) : null
               }
             />
+
+            {survey?.status === "SUBMITTED" ? (
+              <div
+                role="status"
+                className="border-badge-warning/40 bg-badge-warning/10 mb-4 flex items-start gap-2.5 rounded-md border p-3.5"
+              >
+                <Clock className="text-badge-warning-foreground mt-0.5 size-4 shrink-0" />
+                <p className="text-badge-warning-foreground text-sm">
+                  {t("submittedNotice")}
+                </p>
+              </div>
+            ) : null}
+
+            {survey?.status === "REJECTED" && survey.approverComments ? (
+              <div
+                role="alert"
+                className="border-destructive/40 bg-destructive/5 mb-4 flex items-start gap-2.5 rounded-md border p-3.5"
+              >
+                <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-destructive text-sm font-medium">
+                    {t("rejectedNoticeTitle")}
+                  </p>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">
+                    {survey.approverComments}
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
             {dirty ? (
               <p className="text-muted-foreground mb-4 text-xs">
@@ -384,6 +479,36 @@ export default function SurveyBuilderDetailPage({
               </Card>
             ) : (
               <div className="space-y-6">
+                <Card>
+                  <CardContent className="space-y-2 p-6">
+                    <Label htmlFor="methodology-version">
+                      {t("methodologyVersionLabel")}{" "}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={survey.methodologyVersion ?? undefined}
+                      onValueChange={changeMethodologyVersion}
+                      disabled={!isEditable || savingMethodologyVersion}
+                    >
+                      <SelectTrigger id="methodology-version" className="w-full sm:w-96">
+                        <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {methodologyOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.version}>
+                            {option.version}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground text-xs">
+                      {isEditable
+                        ? t("methodologyVersionHint")
+                        : t("methodologyVersionLockedHint")}
+                    </p>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardContent className="space-y-4 p-6">
                     <Tabs defaultValue="recommended">
@@ -436,7 +561,7 @@ export default function SurveyBuilderDetailPage({
                                     <p className="text-foreground text-sm">
                                       {q.questionText}
                                     </p>
-                                    {canWrite ? (
+                                    {isEditable ? (
                                       <Button
                                         type="button"
                                         size="icon"
@@ -534,7 +659,7 @@ export default function SurveyBuilderDetailPage({
                                   <p className="text-foreground text-sm font-semibold">
                                     {t("questionNumber", { number: index + 1 })}
                                   </p>
-                                  {canWrite ? (
+                                  {isEditable ? (
                                     <div className="flex shrink-0 items-center gap-1">
                                       <button
                                         type="button"
@@ -620,7 +745,7 @@ export default function SurveyBuilderDetailPage({
                                 <label className="flex w-fit cursor-pointer items-center gap-2 pt-1 text-sm">
                                   <Checkbox
                                     checked={q.isRequired}
-                                    disabled={!canWrite}
+                                    disabled={!isEditable}
                                     onCheckedChange={() =>
                                       toggleRecommendedRequired(q.id)
                                     }
@@ -642,7 +767,7 @@ export default function SurveyBuilderDetailPage({
                       <h2 className="text-foreground text-sm font-semibold">
                         {t("additionalHeading")}
                       </h2>
-                      {canWrite ? (
+                      {isEditable ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -675,7 +800,7 @@ export default function SurveyBuilderDetailPage({
                                   number: recommended.length + index + 1,
                                 })}
                               </p>
-                              {canWrite ? (
+                              {isEditable ? (
                                 <div className="flex shrink-0 items-center gap-1">
                                   <button
                                     type="button"

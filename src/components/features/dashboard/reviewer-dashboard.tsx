@@ -27,6 +27,15 @@ function formatDate(iso: string): string {
   );
 }
 
+// AI Classification review happens on the Need workspace page; Survey
+// Approval review happens on the dedicated Review page — never the same
+// link (see the Reviewer Alerts page's own copy of this).
+function alertHref(alert: SlaAlert): string {
+  return alert.type === "survey_approval"
+    ? `/survey-builder/${alert.needId}/review`
+    : `/studies/${alert.studyId}/needs/${alert.needId}`;
+}
+
 /**
  * Human Reviewer's own dashboard — their work starts at the pending review
  * queue, not executive/org stats (they don't hold entityTeam/rolesPermissions
@@ -103,18 +112,18 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                 ))
               ) : alerts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-muted-foreground h-24 text-center">
+                  <TableCell
+                    colSpan={3}
+                    className="text-muted-foreground h-24 text-center"
+                  >
                     {t("noAlerts")}
                   </TableCell>
                 </TableRow>
               ) : (
                 alerts.slice(0, 5).map((alert) => (
-                  <TableRow key={alert.aiDecisionId}>
+                  <TableRow key={alert.id}>
                     <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                      <Link
-                        href={`/studies/${alert.studyId}/needs/${alert.needId}`}
-                        className="hover:underline"
-                      >
+                      <Link href={alertHref(alert)} className="hover:underline">
                         {alert.studyTitle}
                       </Link>
                     </TableCell>

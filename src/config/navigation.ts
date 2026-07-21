@@ -176,6 +176,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "dashboard",
     "studies",
     "reviewerSla",
+    "publicSurveys",
     "reports",
     "archive",
     "sharing",

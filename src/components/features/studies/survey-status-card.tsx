@@ -38,11 +38,15 @@ export function SurveyStatusCard({
   needStatus,
   domain,
   subDomain,
+  aiSuggestedDomain,
+  aiSuggestedSubDomain,
 }: {
   needId: string;
   needStatus: NeedStatus;
   domain: string | null | undefined;
   subDomain: string | null | undefined;
+  aiSuggestedDomain?: string | null;
+  aiSuggestedSubDomain?: string | null;
 }) {
   const t = useTranslations("app.studies.survey");
   const canWrite = usePermission("surveyBuilder", "write");
@@ -53,7 +57,7 @@ export function SurveyStatusCard({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mode, setMode] = useState<CreateMode>("ai");
   const [creating, setCreating] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,7 +68,17 @@ export function SurveyStatusCard({
       .finally(() => setLoadingSurvey(false));
   }, [needId]);
 
-  const domainApproved = Boolean(domain && subDomain);
+  const hasDomain = Boolean(domain && subDomain);
+  // Domain Category is set manually at Need creation (always present from
+  // then on), so it no longer signals AI Classification review — that's a
+  // separate condition Survey creation still requires: a human has to have
+  // reviewed and approved the AI's classification (see
+  // AiDecisionsService.review, SurveysService#assertClassificationApproved
+  // on the backend, which enforces this same rule server-side).
+  const classificationApproved =
+    needStatus === "reviewer_approved" ||
+    needStatus === "survey_created" ||
+    needStatus === "survey_published";
 
   async function createSurvey() {
     setCreating(true);
@@ -82,17 +96,17 @@ export function SurveyStatusCard({
     }
   }
 
-  async function publishNow() {
+  async function submitForApproval() {
     if (!survey) return;
-    setPublishing(true);
+    setSubmitting(true);
     setError(null);
     try {
-      await surveysService.saveDraft(survey.id, "PUBLISHED");
-      setSurvey({ ...survey, status: "PUBLISHED" });
+      const updated = await surveysService.submitForApproval(survey.id);
+      setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
-      setPublishing(false);
+      setSubmitting(false);
     }
   }
 
@@ -108,17 +122,14 @@ export function SurveyStatusCard({
           {t("heading")}
         </h2>
         {survey ? (
-          <Badge
-            className="border-transparent"
-            variant={survey.status === "PUBLISHED" ? "default" : "secondary"}
-          >
-            {survey.status === "PUBLISHED" ? t("statusPublished") : t("statusCreated")}
+          <Badge className="border-transparent" variant="secondary">
+            {t(`status.${survey.status}`)}
           </Badge>
         ) : null}
       </div>
 
       <div className="space-y-4 p-5">
-        {domainApproved ? (
+        {hasDomain ? (
           <div className="space-y-1.5">
             <p className="text-muted-foreground text-xs font-medium">
               {t("classifiedAsLabel")}
@@ -127,12 +138,28 @@ export function SurveyStatusCard({
               <p className="text-foreground text-sm font-medium">{domain}</p>
               <p className="text-muted-foreground text-sm">{subDomain}</p>
             </div>
+            {aiSuggestedDomain && aiSuggestedSubDomain ? (
+              <p className="text-muted-foreground text-xs">
+                {t("aiSuggestedNote", {
+                  domain: aiSuggestedDomain,
+                  subDomain: aiSuggestedSubDomain,
+                })}
+              </p>
+            ) : null}
           </div>
-        ) : needStatus === "ai_classified" ? (
-          <p className="text-muted-foreground text-sm">{t("awaitingReviewNote")}</p>
-        ) : (
-          <p className="text-muted-foreground text-sm">{t("notEligibleNote")}</p>
-        )}
+        ) : null}
+
+        {/* Survey creation still needs a *reviewed and approved* AI
+         * Classification, separately from the Domain Category above — see
+         * classificationApproved's own comment for why these are now two
+         * different conditions. */}
+        {!classificationApproved ? (
+          needStatus === "ai_classified" ? (
+            <p className="text-muted-foreground text-sm">{t("awaitingReviewNote")}</p>
+          ) : (
+            <p className="text-muted-foreground text-sm">{t("notEligibleNote")}</p>
+          )
+        ) : null}
 
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
@@ -146,13 +173,13 @@ export function SurveyStatusCard({
                 {t("editSurvey")}
               </Link>
             </Button>
-            {canWrite && survey.status !== "PUBLISHED" ? (
+            {canWrite && (survey.status === "DRAFT" || survey.status === "REJECTED") ? (
               <LoadingButton
                 size="sm"
-                isLoading={publishing}
-                onClick={publishNow}
+                isLoading={submitting}
+                onClick={submitForApproval}
                 className="gap-1.5"
-                text={publishing ? t("publishing") : t("publishSurvey")}
+                text={submitting ? t("submitting") : t("submitForApproval")}
               />
             ) : null}
           </div>
@@ -160,14 +187,14 @@ export function SurveyStatusCard({
           <div className="flex flex-wrap items-center gap-3">
             <Button
               size="sm"
-              disabled={!domainApproved}
+              disabled={!classificationApproved}
               onClick={() => setDialogOpen(true)}
               className="gap-1.5"
             >
               <ClipboardList className="size-3.5" />
               {t("createSurvey")}
             </Button>
-            {!domainApproved ? (
+            {!classificationApproved ? (
               <p className="text-muted-foreground text-xs">{t("domainRequiredNote")}</p>
             ) : null}
           </div>

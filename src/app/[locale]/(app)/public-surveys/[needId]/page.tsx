@@ -365,6 +365,10 @@ export default function PublicSurveyDetailPage({
   // flow rejects it with SURVEY_NOT_PUBLISHED), so link creation/sharing is
   // gated on the survey actually being published, not just existing.
   const surveyPublished = need?.status === "survey_published";
+  // "View Responses" leads to an aggregate/export view that's meaningless
+  // with nothing in it — disabled until at least one of this need's links
+  // has actually collected a response, not just once the survey is live.
+  const hasResponses = (links ?? []).some((link) => link.responseCount > 0);
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -376,12 +380,24 @@ export default function PublicSurveyDetailPage({
             <>
               <BackButton href="/public-surveys" label={t("backToList")} />
               {surveyPublished ? (
-                <Button asChild variant="outline" className="gap-2">
-                  <Link href={`/public-surveys/${needId}/responses`}>
+                hasResponses ? (
+                  <Button asChild variant="outline" className="gap-2">
+                    <Link href={`/public-surveys/${needId}/responses`}>
+                      <BarChart3 className="size-4" />
+                      {t("viewResponses")}
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    disabled
+                    title={t("viewResponsesDisabledHint")}
+                  >
                     <BarChart3 className="size-4" />
                     {t("viewResponses")}
-                  </Link>
-                </Button>
+                  </Button>
+                )
               ) : null}
               {canCreate && surveyPublished ? (
                 <Button onClick={() => setCreateOpen(true)} className="gap-2">
