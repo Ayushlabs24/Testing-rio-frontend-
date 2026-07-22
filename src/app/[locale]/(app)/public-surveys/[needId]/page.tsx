@@ -373,12 +373,14 @@ export default function PublicSurveyDetailPage({
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
+        <div className="mb-6 flex justify-start">
+          <BackButton href="/public-surveys" label={t("backToList")} />
+        </div>
         <PageHeader
           title={need?.title ?? ""}
           description={t("description")}
           actions={
             <>
-              <BackButton href="/public-surveys" label={t("backToList")} />
               {surveyPublished ? (
                 hasResponses ? (
                   <Button asChild variant="outline" className="gap-2">

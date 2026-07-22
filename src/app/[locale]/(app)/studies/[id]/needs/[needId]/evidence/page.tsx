@@ -439,16 +439,13 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
 
   return (
     <PageContainer>
-      <PageHeader
-        title={t("title")}
-        description={t("description")}
-        actions={
-          <BackButton
-            href={`/studies/${studyId}/needs/${needId}`}
-            label={t("backToStudy")}
-          />
-        }
-      />
+      <div className="mb-6 flex justify-start">
+        <BackButton
+          href={`/studies/${studyId}/needs/${needId}`}
+          label={t("backToStudy")}
+        />
+      </div>
+      <PageHeader title={t("title")} description={t("description")} />
 
       <div className="border-info/30 bg-info/10 mb-6 flex items-start gap-3 rounded-lg border p-4">
         <Info className="text-info mt-0.5 size-4 shrink-0" />

@@ -122,7 +122,7 @@ export default function PublicSurveysPage() {
                 ) : (
                   rows.map(({ need, studyTitle }) => (
                     <TableRow key={need.id}>
-                      <TableCell className="py-4 text-sm font-medium">
+                      <TableCell className="max-w-sm py-4 text-sm font-medium whitespace-normal">
                         {studyTitle} — {need.title}
                       </TableCell>
                       <TableCell className="py-4">

@@ -146,11 +146,10 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   return (
     <PermissionGuard module="dataCollection" action="create">
       <PageContainer>
-        <PageHeader
-          title={t("addTitle")}
-          description={t("pageDescription")}
-          actions={<BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />}
-        />
+        <div className="mb-6 flex justify-start">
+          <BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />
+        </div>
+        <PageHeader title={t("addTitle")} description={t("pageDescription")} />
 
         <Card>
           <CardContent className="p-6">

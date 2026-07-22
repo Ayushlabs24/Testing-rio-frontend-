@@ -156,14 +156,6 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canWrite = usePermission("studySurvey", "write");
   const canCaptureNeed = usePermission("dataCollection", "create");
   const canDeleteNeed = usePermission("dataCollection", "write");
-  // Reviewer/Approver — read-only on dataCollection, approve on aiReview
-  // (see role-matrix.ts) — their job starts once a Need reaches AI
-  // Classification, so a Need still in draft/evidence collection isn't
-  // theirs to look at yet. Everyone else (Research Officer, Admin) still
-  // sees every Need, since they own the whole pipeline including this
-  // earlier part of it.
-  const canApproveAi = usePermission("aiReview", "approve");
-  const isReviewerOnly = !canCaptureNeed && canApproveAi;
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
@@ -241,10 +233,10 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <PermissionGuard module="studySurvey" action="read">
         <PageContainer>
-          <PageHeader
-            title={tStudies("noResults")}
-            actions={<BackButton href="/studies" label={t("backToList")} />}
-          />
+          <div className="mb-6 flex justify-start">
+            <BackButton href="/studies" label={t("backToList")} />
+          </div>
+          <PageHeader title={tStudies("noResults")} />
         </PageContainer>
       </PermissionGuard>
     );
@@ -263,16 +255,13 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const visibleNeedRows = needRows
-    ? isReviewerOnly
-      ? needRows.filter(
-          ({ need }) => need.status !== "draft" && need.status !== "evidence_submitted",
-        )
-      : needRows
-    : null;
-
-  const filteredNeedRows = visibleNeedRows
-    ? visibleNeedRows.filter(({ need }) => {
+  // No role-based row filtering here anymore — AI classification and survey
+  // building are entirely the Researcher's own pipeline; the Approver's
+  // action point is the Survey Review page (reached via Reviewer SLA Alerts
+  // or Survey Builder), not this list, so everyone who can read a Study
+  // simply sees its full Need list.
+  const filteredNeedRows = needRows
+    ? needRows.filter(({ need }) => {
         const query = needQuery.trim().toLowerCase();
         const matchesQuery = !query || need.title.toLowerCase().includes(query);
         const matchesStatus = statusFilter === "all" || need.status === statusFilter;
@@ -283,39 +272,39 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
+        <div className="mb-6 flex justify-start">
+          <BackButton href="/studies" label={t("backToList")} />
+        </div>
         <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
           {t("eyebrow")}
         </p>
         <PageHeader
           title={study.title}
           actions={
-            <>
-              <BackButton href="/studies" label={t("backToList")} />
-              {canWrite ? (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/studies/${study.id}/edit`)}
-                    className="gap-2"
-                  >
-                    <Pencil className="size-4" />
-                    {t("edit")}
-                  </Button>
-                  <DeleteStudyDialog
-                    studyId={study.id}
-                    onDeleted={() => router.push("/studies")}
-                    trigger={
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="text-destructive gap-2">
-                          <Trash2 className="size-4" />
-                          {tStudies("delete.action")}
-                        </Button>
-                      </AlertDialogTrigger>
-                    }
-                  />
-                </>
-              ) : null}
-            </>
+            canWrite ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/studies/${study.id}/edit`)}
+                  className="gap-2"
+                >
+                  <Pencil className="size-4" />
+                  {t("edit")}
+                </Button>
+                <DeleteStudyDialog
+                  studyId={study.id}
+                  onDeleted={() => router.push("/studies")}
+                  trigger={
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" className="text-destructive gap-2">
+                        <Trash2 className="size-4" />
+                        {tStudies("delete.action")}
+                      </Button>
+                    </AlertDialogTrigger>
+                  }
+                />
+              </>
+            ) : undefined
           }
         />
 
@@ -387,10 +376,8 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                   <div className="bg-muted h-10 w-full rounded" />
                   <div className="bg-muted h-10 w-full rounded" />
                 </div>
-              ) : visibleNeedRows && visibleNeedRows.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  {isReviewerOnly ? t("needsEmptyForReviewer") : t("needsEmpty")}
-                </p>
+              ) : needRows && needRows.length === 0 ? (
+                <p className="text-muted-foreground text-sm">{t("needsEmpty")}</p>
               ) : filteredNeedRows.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
                   {t("needsNoSearchResults")}

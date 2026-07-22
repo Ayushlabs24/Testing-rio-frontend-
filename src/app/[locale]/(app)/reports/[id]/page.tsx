@@ -109,7 +109,7 @@ export default function ReportPreviewPage({
   return (
     <PermissionGuard module="reportsDashboards" action="read">
       <PageContainer>
-        <div className="mb-4 flex justify-end">
+        <div className="mb-6 flex justify-start">
           <BackButton href="/reports" label={tp("backToList")} />
         </div>
 

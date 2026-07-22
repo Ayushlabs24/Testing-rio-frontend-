@@ -71,7 +71,7 @@ export default function SurveyResponseSummaryPage({
   return (
     <PermissionGuard module="studySurvey" action="read">
       <PageContainer>
-        <div className="mb-4 flex justify-end">
+        <div className="mb-6 flex justify-start">
           <BackButton href={`/public-surveys/${needId}`} label={t("backToSurvey")} />
         </div>
 

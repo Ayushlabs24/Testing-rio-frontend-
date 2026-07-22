@@ -1165,8 +1165,8 @@
         "reviewError": "Couldn't save the review. Please try again.",
         "classificationApproved": "AI Classification Approved",
         "humanOverrideSaved": "Human Override Saved",
-        "sentForReviewTitle": "Sent for Review",
-        "sentForReviewDescription": "AI Classification is complete. This need has been sent to the Approver for review — you can continue with your other work in the meantime.",
+        "sentForReviewTitle": "Classification Complete",
+        "sentForReviewDescription": "AI Classification is complete. Review the suggestion below and approve or override it yourself before building the survey.",
         "sentForReviewContinue": "Continue"
       },
       "detail": {

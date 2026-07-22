@@ -162,10 +162,16 @@ export function AiClassificationSection({
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Shown the moment classify() resolves — same render pass, no page
-  // reload needed — so whoever ran it (Researcher) knows right away that
-  // it's now sitting with the Approver, without having to notice the
-  // status badge changing on its own.
+  // reload needed — as a small self-dismissing banner (not a blocking
+  // modal), so the researcher notices classification finished without
+  // having to stop and click through anything before reviewing it below.
   const [showSentForReview, setShowSentForReview] = useState(false);
+
+  useEffect(() => {
+    if (!showSentForReview) return;
+    const timer = setTimeout(() => setShowSentForReview(false), 5000);
+    return () => clearTimeout(timer);
+  }, [showSentForReview]);
   const [overriding, setOverriding] = useState(false);
   const [overrideDomains, setOverrideDomains] = useState<string[]>([]);
   const [overrideSubDomains, setOverrideSubDomains] = useState<string[]>([]);
@@ -335,6 +341,24 @@ export function AiClassificationSection({
       </div>
 
       <div className="space-y-5 p-5">
+        {showSentForReview ? (
+          <div
+            role="status"
+            className="bg-badge-success/10 text-badge-success-foreground border-badge-success/30 flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm"
+          >
+            <CheckCircle2 className="size-4 shrink-0" />
+            <span>{t("sentForReviewDescription")}</span>
+            <button
+              type="button"
+              onClick={() => setShowSentForReview(false)}
+              className="ml-auto shrink-0 opacity-70 hover:opacity-100"
+              aria-label={t("cancel")}
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        ) : null}
+
         {!isEligible ? (
           <p className="text-muted-foreground text-sm">
             {evidenceCount === 0 ? t("waitingForEvidence") : t("waitingForSubmit")}
@@ -591,29 +615,6 @@ export function AiClassificationSection({
               className="gap-1.5"
               text={isReviewing ? t("savingOverride") : t("saveOverride")}
             />
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation popup right after classify() resolves — the section
-       * below already updates in the same render (no refresh needed), but
-       * a passive badge/color change is easy to miss; this makes the
-       * hand-off to the Approver unambiguous. */}
-      <Dialog open={showSentForReview} onOpenChange={setShowSentForReview}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <div className="bg-badge-success mx-auto flex size-11 items-center justify-center rounded-full">
-              <CheckCircle2 className="text-badge-success-foreground size-5" />
-            </div>
-            <DialogTitle className="text-center">{t("sentForReviewTitle")}</DialogTitle>
-            <DialogDescription className="text-center">
-              {t("sentForReviewDescription")}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-center">
-            <Button type="button" onClick={() => setShowSentForReview(false)}>
-              {t("sentForReviewContinue")}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -459,10 +459,10 @@ export default function NeedWorkspacePage({
     return (
       <PermissionGuard module="dataCollection" action="read">
         <PageContainer>
-          <PageHeader
-            title={t("needNotFound")}
-            actions={<BackButton href={`/studies/${studyId}`} label={t("backToList")} />}
-          />
+          <div className="mb-6 flex justify-start">
+            <BackButton href={`/studies/${studyId}`} label={t("backToList")} />
+          </div>
+          <PageHeader title={t("needNotFound")} />
         </PageContainer>
       </PermissionGuard>
     );
@@ -491,13 +491,13 @@ export default function NeedWorkspacePage({
   return (
     <PermissionGuard module="dataCollection" action="read">
       <PageContainer>
+        <div className="mb-6 flex justify-start">
+          <BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />
+        </div>
         <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
           {t("needEyebrow")}
         </p>
-        <PageHeader
-          title={need.title}
-          actions={<BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />}
-        />
+        <PageHeader title={need.title} />
 
         <div className="mt-6 space-y-6">
           <NeedDetailsCard

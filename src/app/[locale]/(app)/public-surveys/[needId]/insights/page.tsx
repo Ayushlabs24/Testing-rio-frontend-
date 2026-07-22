@@ -164,7 +164,7 @@ export default function NeedInsightsPage({
   return (
     <PermissionGuard module="aiReview" action="read">
       <PageContainer>
-        <div className="mb-4 flex justify-end">
+        <div className="mb-6 flex justify-start">
           <BackButton href="/public-surveys" label={t("backToList")} />
         </div>
 
