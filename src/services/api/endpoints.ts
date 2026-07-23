@@ -160,8 +160,10 @@ export const endpoints = {
     list: "/reports",
     create: "/reports",
     byId: (id: string) => `/reports/${id}`,
+    confirm: (id: string) => `/reports/${id}/confirm`,
     approve: (id: string) => `/reports/${id}/approve`,
     reject: (id: string) => `/reports/${id}/reject`,
+    archive: (id: string) => `/reports/${id}/archive`,
     export: (id: string, format: "pdf" | "excel") =>
       `/reports/${id}/export?format=${format}`,
   },
@@ -198,6 +200,7 @@ export const endpoints = {
     config: "/reviewer-sla/config",
     alerts: "/reviewer-sla/alerts",
   },
+  collectiveDashboard: "/collective-dashboard",
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",

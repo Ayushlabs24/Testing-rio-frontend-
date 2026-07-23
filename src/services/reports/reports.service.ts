@@ -25,11 +25,17 @@ export const reportsService = {
   async getById(id: string): Promise<Report> {
     return apiClient.get<Report>(endpoints.reports.byId(id));
   },
+  async confirm(id: string): Promise<Report> {
+    return apiClient.patch<Report>(endpoints.reports.confirm(id));
+  },
   async approve(id: string): Promise<Report> {
     return apiClient.patch<Report>(endpoints.reports.approve(id));
   },
   async reject(id: string): Promise<Report> {
     return apiClient.patch<Report>(endpoints.reports.reject(id));
+  },
+  async archive(id: string): Promise<Report> {
+    return apiClient.patch<Report>(endpoints.reports.archive(id));
   },
   /**
    * Export returns a binary file, not JSON — bypasses apiClient (which
