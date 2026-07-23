@@ -197,7 +197,7 @@ export default function PriorityDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {entry.score?.gapType ?? "—"}
+                        {entry.score?.gapType || ""}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {entry.score ? formatDate(entry.score.scoredAt) : "—"}

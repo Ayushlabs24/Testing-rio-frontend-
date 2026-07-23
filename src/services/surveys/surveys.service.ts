@@ -134,20 +134,16 @@ export type SaveSurveyQuestionInput =
 
 /** Answer types an Additional (open-ended) question can take — distinct
  * from Question Bank answer types, since these are Survey Builder's own
- * vocabulary for study-specific questions. `single_choice`/`number`/`date`
- * were added for the AI Review screen's Add Custom Question dialog (see
- * CustomQuestionEditorDialog) — an options editor is only shown for
- * `multiple_choice`/`single_choice`. */
+ * vocabulary for study-specific questions: Free Text, Single Select, Multi
+ * Select, True/False, Scale, Number. An options editor is only shown for
+ * `multiple_choice`/`checkbox` (see CustomQuestionEditorDialog). */
 export const ADDITIONAL_QUESTION_ANSWER_TYPES = [
   "long_text",
-  "short_text",
   "multiple_choice",
-  "single_choice",
   "checkbox",
   "yes_no",
   "rating",
   "number",
-  "date",
 ] as const;
 export type AdditionalQuestionAnswerType =
   (typeof ADDITIONAL_QUESTION_ANSWER_TYPES)[number];

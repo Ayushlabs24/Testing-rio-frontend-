@@ -1,6 +1,23 @@
 import { apiConfig } from "@/services/api/config";
 import { ApiError, type QueryParams, type RequestOptions } from "@/services/api/types";
 
+const CSRF_COOKIE_NAME = "rio_csrf";
+const CSRF_HEADER_NAME = "x-csrf-token";
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+// Backend double-submit CSRF (see CsrfGuard): a mutating request while a
+// rio_session cookie is present must echo the readable rio_csrf cookie back
+// as this header, or it's rejected with CSRF_TOKEN_INVALID regardless of a
+// valid session. Only relevant browser-side — SSR/no-cookie contexts (and
+// GET/HEAD/OPTIONS, which the backend never checks) just send nothing.
+function readCsrfCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`),
+  );
+  return match ? decodeURIComponent(match[1]!) : undefined;
+}
+
 function buildUrl(path: string, params?: QueryParams): string {
   const url = new URL(path.replace(/^\//, ""), `${apiConfig.baseUrl}/`);
 
@@ -28,10 +45,12 @@ async function request<TResponse>(
   );
 
   try {
+    const csrfToken = SAFE_METHODS.has(method) ? undefined : readCsrfCookie();
     const response = await fetch(buildUrl(path, options.params), {
       method,
       headers: {
         "Content-Type": "application/json",
+        ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
         ...options.headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -94,6 +113,8 @@ function uploadForm<TResponse>(
     xhr.open("POST", buildUrl(path));
     xhr.withCredentials = true;
     xhr.timeout = apiConfig.timeoutMs;
+    const csrfToken = readCsrfCookie();
+    if (csrfToken) xhr.setRequestHeader(CSRF_HEADER_NAME, csrfToken);
 
     if (options.signal) {
       if (options.signal.aborted) {

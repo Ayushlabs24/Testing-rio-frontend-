@@ -27,12 +27,12 @@ import {
   type AdditionalQuestionAnswerType,
 } from "@/services/surveys/surveys.service";
 
-// Only these two answer types collect their own option list — Single Choice
-// and Multiple Choice both render as a fixed set of choices; the rest are
-// free-form (text/number/date).
+// Only these two answer types collect their own option list — Single Select
+// and Multi Select both render as a fixed set of choices; the rest are
+// free-form (text/number).
 const OPTIONS_ANSWER_TYPES = new Set<AdditionalQuestionAnswerType>([
   "multiple_choice",
-  "single_choice",
+  "checkbox",
 ]);
 
 export interface CustomQuestionValue {
@@ -53,8 +53,8 @@ interface CustomQuestionEditorDialogProps {
 
 // Shared Add/Edit Custom Question modal — extracted so both the Survey
 // Builder page and the AI Review screen use exactly the same question-type
-// vocabulary (Multiple Choice / Single Choice / Free Text / Number / Date)
-// and validation instead of two divergent copies.
+// vocabulary (Free Text / Single Select / Multi Select / True-False / Scale
+// / Number) and validation instead of two divergent copies.
 export function CustomQuestionEditorDialog({
   open,
   onOpenChange,

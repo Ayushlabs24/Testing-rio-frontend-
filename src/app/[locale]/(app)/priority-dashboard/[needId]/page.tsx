@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, Gauge, ListChecks, AlertTriangle } from "lucide-react";
+import { Gauge, ListChecks, AlertTriangle } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/common/back-button";
@@ -30,10 +30,7 @@ import { ApiError } from "@/services/api/types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
-import type {
-  AiSummary,
-  ResponseQualityResult,
-} from "@/services/response-quality/response-quality.types";
+import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
 import { needsService } from "@/services/needs/needs.service";
 import { surveysService } from "@/services/surveys/surveys.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,7 +41,6 @@ import {
 } from "@/services/priority/severity-scoring.service";
 import { AiPrioritySummaryPanel } from "@/components/features/insights/ai-priority-summary-panel";
 import { SupportingEvidencePanel } from "@/components/features/insights/supporting-evidence-panel";
-import { prioritySummaryService } from "@/services/reports/priority-summary.service";
 
 const CONSOLIDATED = "consolidated";
 
@@ -61,7 +57,6 @@ export default function PriorityDetailInsightsPage({
   const [scope, setScope] = useState<string>(CONSOLIDATED);
   const surveyLinkId = scope === CONSOLIDATED ? undefined : scope;
 
-  const [summary, setSummary] = useState<AiSummary | null>(null);
   const [qualityResults, setQualityResults] = useState<ResponseQualityResult[] | null>(
     null,
   );
@@ -72,7 +67,6 @@ export default function PriorityDetailInsightsPage({
   const [survey, setSurvey] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [generatingSummary, setGeneratingSummary] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [summaryKey, setSummaryKey] = useState(0);
@@ -102,10 +96,6 @@ export default function PriorityDetailInsightsPage({
       })
       .catch(() => undefined);
     responseQualityService
-      .getSummary(needId, surveyLinkId)
-      .then(setSummary)
-      .catch(() => undefined);
-    responseQualityService
       .list(needId, surveyLinkId)
       .then(setQualityResults)
       .catch(() => setQualityResults([]));
@@ -115,19 +105,6 @@ export default function PriorityDetailInsightsPage({
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needId, surveyLinkId]);
-
-  async function handleGenerateSummary() {
-    setGeneratingSummary(true);
-    setError(null);
-    try {
-      const result = await responseQualityService.generateSummary(needId, surveyLinkId);
-      setSummary(result);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to generate AI summary");
-    } finally {
-      setGeneratingSummary(false);
-    }
-  }
 
   async function handleAssess() {
     setAssessing(true);

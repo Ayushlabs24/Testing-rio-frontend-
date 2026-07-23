@@ -718,8 +718,8 @@
     },
     "priorityDashboard": {
       "title": "Priority Dashboard",
-      "description": "Every study in your organisation, ranked by placeholder priority score.",
-      "placeholderNote": "Initial rule-based scoring — response value x indicator weight, normalized to a 0-100 severity. See a Need's Insights page for the full factor breakdown.",
+      "description": "Every Need in your organisation, ranked by priority score.",
+      "placeholderNote": "Priority score is a weighted rollup of domain performance scores, per the org's configured methodology weights and critical-domain thresholds. See a Need's Insights page for the full domain breakdown.",
       "filterLevelLabel": "Priority level",
       "filterLevelAll": "All levels",
       "studyColumn": "Study",
@@ -1587,14 +1587,11 @@
       "remove": "Remove",
       "answerType": {
         "long_text": "Free Text",
-        "short_text": "Free Text",
-        "multiple_choice": "Multiple Choice",
-        "single_choice": "Single Choice",
-        "checkbox": "Multiple Choice",
-        "yes_no": "Single Choice",
-        "rating": "Number",
-        "number": "Number",
-        "date": "Date"
+        "multiple_choice": "Single Select",
+        "checkbox": "Multi Select",
+        "yes_no": "True/False (Yes/No)",
+        "rating": "Scale",
+        "number": "Number"
       }
     },
     "surveyBuilder": {

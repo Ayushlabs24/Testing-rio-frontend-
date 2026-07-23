@@ -25,11 +25,18 @@ export interface PriorityScore {
   approvedAt: string | null;
 }
 
-// Org-wide dashboard row — every Need, whether or not it's been scored (and
-// approved) yet.
+// Org-wide dashboard row — every Need, whether or not it's been scored yet.
+// Backed by the real village-priority pipeline (weighted domain rollup, per
+// the org's methodology config) — not the older per-indicator PriorityScore
+// above, which no screen writes to anymore.
 export interface PriorityDashboardEntry {
   studyId: string;
   studyTitle: string;
   needId: string;
-  score: PriorityScore | null;
+  score: {
+    overallScore: number;
+    level: "critical" | "high" | "medium" | "low";
+    gapType: string | null;
+    scoredAt: string;
+  } | null;
 }
