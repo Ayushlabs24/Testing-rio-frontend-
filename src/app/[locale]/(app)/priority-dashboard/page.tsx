@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -144,13 +145,14 @@ export default function PriorityDashboardPage() {
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
                   <TableHead className="w-32">{t("gapTypeColumn")}</TableHead>
                   <TableHead className="w-40">{t("scoredColumn")}</TableHead>
+                  <TableHead className="w-44 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {entries === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 5 }).map((__, cell) => (
+                      {Array.from({ length: 6 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -160,7 +162,7 @@ export default function PriorityDashboardPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -176,8 +178,8 @@ export default function PriorityDashboardPage() {
                     <TableRow key={entry.needId}>
                       <TableCell className="py-4 text-sm font-medium">
                         <Link
-                          href={`/public-surveys/${entry.needId}/insights`}
-                          className="hover:underline"
+                          href={`/priority-dashboard/${entry.needId}`}
+                          className="hover:underline text-primary"
                         >
                           {entry.studyTitle}
                         </Link>
@@ -199,6 +201,14 @@ export default function PriorityDashboardPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {entry.score ? formatDate(entry.score.scoredAt) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild size="sm" variant="outline" className="gap-1.5">
+                          <Link href={`/priority-dashboard/${entry.needId}`}>
+                            <Gauge className="size-3.5 text-primary" />
+                            View Matrix
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

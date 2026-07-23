@@ -38,6 +38,10 @@ export interface SharedReportSnapshot {
   generatedAt: string;
   ownerOrgName: string;
   generatedByName: string | null;
+  officerConfirmedBy: string | null;
+  officerConfirmedAt: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
 }
 
 export interface OrgLookupResult {

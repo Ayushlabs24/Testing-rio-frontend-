@@ -15,6 +15,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { CollectiveDashboard } from "@/components/features/dashboard/collective-dashboard";
 import { ResearchOfficerDashboard } from "@/components/features/dashboard/research-officer-dashboard";
 import { ReviewerDashboard } from "@/components/features/dashboard/reviewer-dashboard";
 import { StatCard } from "@/components/features/dashboard/stat-card";
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   // enforces, so no role is shown a card it cannot populate.
   const canReadUsers = usePermission("entityTeam", "read");
   const canReadRoles = usePermission("rolesPermissions", "read");
+  const canReadReports = usePermission("reportsDashboards", "read");
 
   const [organizationCount, setOrganizationCount] = useState<number | null>(null);
   const [userCount, setUserCount] = useState<number | null>(null);
@@ -158,6 +160,12 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {canReadReports ? (
+        <div className="mt-8">
+          <CollectiveDashboard />
+        </div>
+      ) : null}
     </PageContainer>
   );
 }

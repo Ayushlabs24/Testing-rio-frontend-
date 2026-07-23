@@ -609,11 +609,11 @@ export function AiClassificationSection({
         ) : null}
 
         {hasSurvey ? (
-          <div>
-            <Button asChild size="sm" variant="outline" className="gap-1.5">
+          <div className="pt-2">
+            <Button asChild size="sm" className="gap-2 font-medium">
               <Link href={`/survey-builder/${need.id}`}>
-                <ClipboardList className="size-3.5" />
-                {t("viewSuggestedQuestions")}
+                <ClipboardList className="size-4" />
+                Open Survey Builder (Build & Publish)
               </Link>
             </Button>
           </div>
