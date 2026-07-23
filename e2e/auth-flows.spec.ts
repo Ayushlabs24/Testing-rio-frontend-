@@ -1,4 +1,37 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+/**
+ * Signup also requires a Region, at least one Governorate (scoped to that
+ * region), and at least one Center (scoped to those governorates) — seeded
+ * KSA reference data, so this picks whatever the environment seeded rather
+ * than a fixed name.
+ */
+async function fillRequiredGeography(page: Page) {
+  await page.getByRole("button", { name: "Region", exact: true }).click();
+  await page.locator('[data-slot="popover-content"]').getByRole("button").first().click();
+
+  await page.locator('label:text-is("Governorate") + [role="combobox"]').click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole("checkbox")
+    .first()
+    .click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole("button", { name: "Done" })
+    .click();
+
+  await page.locator('label:text-is("Center") + [role="combobox"]').click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole("checkbox")
+    .first()
+    .click();
+  await page
+    .locator('[data-slot="popover-content"]')
+    .getByRole("button", { name: "Done" })
+    .click();
+}
 
 test("login with a seeded demo account reaches the dashboard", async ({ page }) => {
   await page.goto("/");
@@ -290,6 +323,7 @@ test("public signup creates an organization and its first NGO Admin, who must ch
   await page.getByRole("combobox", { name: "Sector" }).click();
   await page.getByRole("option", { name: "Other" }).click();
   await page.getByLabel("Please specify").fill("Community Health");
+  await fillRequiredGeography(page);
   await page.getByLabel("Registration number").fill(`REG-E2E-${unique}`);
   // Single email field — no separate admin name/email/password anymore;
   // the signup email itself becomes the NGO Admin account, and the backend
@@ -400,6 +434,7 @@ test("signing up with an already-registered registration number is blocked", asy
   await page.getByRole("combobox", { name: "Sector" }).click();
   await page.getByRole("option", { name: "Other" }).click();
   await page.getByLabel("Please specify").fill("Livelihoods");
+  await fillRequiredGeography(page);
   // Matches Demo NGO's seeded registration number.
   await page.getByLabel("Registration number").fill("REG-DEMO-0001");
   await page.getByLabel("Email").fill(`second-admin-${Date.now()}@demo.org`);

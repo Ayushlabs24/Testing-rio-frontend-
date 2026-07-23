@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../../messages/en.json";
 import { SignupForm } from "@/components/features/auth/signup-form";
 import { authService } from "@/services/auth/auth.service";
+import { geographyService } from "@/services/geography/geography.service";
 
 type Messages = Record<string, unknown>;
 
@@ -39,12 +40,39 @@ vi.mock("@/services/auth/auth.service", () => ({
   authService: { signup: vi.fn() },
 }));
 
-/** Radix Select needs these in jsdom — it isn't a real pointer/layout environment. */
+const REGION = { id: "r1", code: 1, name: "Riyadh", isoCode: "SA-01", capital: "Riyadh" };
+const GOVERNORATE = {
+  id: "g1",
+  code: "G1",
+  regionId: "r1",
+  name: "Riyadh Governorate",
+  category: "urban",
+};
+const CENTER = {
+  id: "c1",
+  code: "C1",
+  governorateId: "g1",
+  name: "Central Center",
+  category: "urban",
+};
+
+vi.mock("@/services/geography/geography.service", () => ({
+  geographyService: {
+    listRegions: vi.fn(),
+    listGovernorates: vi.fn(),
+    listCenters: vi.fn(),
+  },
+}));
+
+/** Radix Select/Popover need these in jsdom — it isn't a real pointer/layout environment. */
 beforeEach(() => {
   window.HTMLElement.prototype.hasPointerCapture = vi.fn();
   window.HTMLElement.prototype.releasePointerCapture = vi.fn();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
   vi.mocked(authService.signup).mockReset();
+  vi.mocked(geographyService.listRegions).mockResolvedValue([REGION]);
+  vi.mocked(geographyService.listGovernorates).mockResolvedValue([GOVERNORATE]);
+  vi.mocked(geographyService.listCenters).mockResolvedValue([CENTER]);
 });
 
 async function selectSector(name: string) {
@@ -52,6 +80,23 @@ async function selectSector(name: string) {
   await user.click(screen.getByRole("combobox", { name: en.auth.signup.sectorLabel }));
   await user.click(await screen.findByRole("option", { name }));
   return user;
+}
+
+/** Region/Governorate/Center are required alongside the sector — fills all
+ * three with the one seeded option so the sector-focused submit tests below
+ * don't get blocked by unrelated geography validation errors. */
+async function selectGeography(user: ReturnType<typeof userEvent.setup>) {
+  const geo = en.app.settings.organization;
+  await user.click(screen.getByRole("button", { name: geo.administrativeRegionLabel }));
+  await user.click(await screen.findByRole("button", { name: REGION.name }));
+
+  const governorateTrigger = screen.getByText(geo.governorateLabel).nextElementSibling;
+  await user.click(governorateTrigger as Element);
+  await user.click(await screen.findByText(GOVERNORATE.name));
+
+  const centerTrigger = screen.getByText(geo.centerLabel).nextElementSibling;
+  await user.click(centerTrigger as Element);
+  await user.click(await screen.findByText(CENTER.name));
 }
 
 describe("SignupForm sector field", () => {
@@ -108,6 +153,7 @@ describe("SignupForm sector field", () => {
     });
     render(<SignupForm />);
     const user = await selectSector("Health");
+    await selectGeography(user);
 
     await user.type(
       screen.getByLabelText(en.auth.signup.organizationNameLabel),
@@ -122,7 +168,13 @@ describe("SignupForm sector field", () => {
 
     await waitFor(() =>
       expect(authService.signup).toHaveBeenCalledWith(
-        expect.objectContaining({ sector: "Health", purpose: undefined }),
+        expect.objectContaining({
+          sector: "Health",
+          purpose: undefined,
+          regionId: REGION.id,
+          governorateIds: [GOVERNORATE.id],
+          centerIds: [CENTER.id],
+        }),
       ),
     );
   });
@@ -134,6 +186,7 @@ describe("SignupForm sector field", () => {
     });
     render(<SignupForm />);
     const user = await selectSector(en.app.settings.organization.sectors.other);
+    await selectGeography(user);
 
     await user.type(
       screen.getByLabelText(en.auth.signup.organizationNameLabel),
@@ -152,7 +205,13 @@ describe("SignupForm sector field", () => {
 
     await waitFor(() =>
       expect(authService.signup).toHaveBeenCalledWith(
-        expect.objectContaining({ sector: "other", purpose: "Community Health" }),
+        expect.objectContaining({
+          sector: "other",
+          purpose: "Community Health",
+          regionId: REGION.id,
+          governorateIds: [GOVERNORATE.id],
+          centerIds: [CENTER.id],
+        }),
       ),
     );
   });
