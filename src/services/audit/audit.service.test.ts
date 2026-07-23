@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { auditEvents } from "@/mocks/data/audit";
 import { mockSession } from "@/mocks/session";
 import { apiClient } from "@/services/api/client";
@@ -147,5 +147,144 @@ describe("auditService", () => {
         entityLabel: "x",
       }),
     ).toThrow();
+  });
+
+  describe("downloadCsv", () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => "blob:mock-url");
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+      vi.unstubAllGlobals();
+    });
+
+    function mockFetchResponse({
+      ok = true,
+      status = 200,
+      statusText = "OK",
+      disposition,
+      body,
+    }: {
+      ok?: boolean;
+      status?: number;
+      statusText?: string;
+      disposition?: string;
+      body?: unknown;
+    } = {}) {
+      const headers = new Headers();
+      if (disposition) headers.set("content-disposition", disposition);
+      const blob = new Blob(["field,value"], { type: "text/csv" });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok,
+          status,
+          statusText,
+          headers,
+          blob: vi.fn().mockResolvedValue(blob),
+          json: vi.fn().mockResolvedValue(body),
+        }),
+      );
+    }
+
+    /** Creates a real anchor (jsdom rejects `href`/`download` on a faked prototype) with `click` spied. */
+    function spyOnAnchorClick() {
+      const clickSpy = vi.fn();
+      const anchor = document.createElement("a");
+      anchor.click = clickSpy;
+      vi.spyOn(document, "createElement").mockReturnValueOnce(anchor);
+      return { anchor, clickSpy };
+    }
+
+    it("downloads the CSV and triggers a browser save via an anchor click", async () => {
+      mockFetchResponse({
+        disposition: 'attachment; filename="audit-log-2026-01-01.csv"',
+      });
+      const { anchor, clickSpy } = spyOnAnchorClick();
+
+      await auditService.downloadCsv();
+
+      const [calledUrl, calledInit] = vi.mocked(global.fetch).mock.calls[0];
+      expect((calledUrl as URL).pathname).toBe("/api/audit/export");
+      expect(calledInit).toEqual({ credentials: "include" });
+      expect(anchor.download).toBe("audit-log-2026-01-01.csv");
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+    });
+
+    it("falls back to a default filename when no content-disposition header is present", async () => {
+      mockFetchResponse({});
+      const { anchor, clickSpy } = spyOnAnchorClick();
+
+      await auditService.downloadCsv();
+
+      expect(anchor.download).toBe("audit-log.csv");
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("mirrors the active filters into the export query string", async () => {
+      mockFetchResponse({});
+      spyOnAnchorClick();
+
+      await auditService.downloadCsv({
+        action: "login",
+        dateFrom: "2026-01-01T00:00:00.000Z",
+        dateTo: "2026-01-31T23:59:59.999Z",
+        search: "alex",
+      });
+
+      const [calledUrl] = vi.mocked(global.fetch).mock.calls[0];
+      const url = calledUrl as URL;
+      expect(url.searchParams.get("action")).toBe("login");
+      expect(url.searchParams.get("dateFrom")).toBe("2026-01-01T00:00:00.000Z");
+      expect(url.searchParams.get("dateTo")).toBe("2026-01-31T23:59:59.999Z");
+      expect(url.searchParams.get("search")).toBe("alex");
+    });
+
+    it("omits empty filters rather than sending blank params", async () => {
+      mockFetchResponse({});
+      spyOnAnchorClick();
+
+      await auditService.downloadCsv({ action: undefined, search: "" });
+
+      const [calledUrl] = vi.mocked(global.fetch).mock.calls[0];
+      const url = calledUrl as URL;
+      expect(url.searchParams.has("action")).toBe(false);
+      expect(url.searchParams.has("search")).toBe(false);
+    });
+
+    it("throws with the server's error message when the export request fails", async () => {
+      mockFetchResponse({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        body: { error: { message: "Export failed." } },
+      });
+
+      await expect(auditService.downloadCsv()).rejects.toThrow("Export failed.");
+    });
+
+    it("falls back to the response status text when the error body can't be parsed", async () => {
+      const headers = new Headers();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+          statusText: "Internal Server Error",
+          headers,
+          json: vi.fn().mockRejectedValue(new Error("not json")),
+        }),
+      );
+
+      await expect(auditService.downloadCsv()).rejects.toThrow("Internal Server Error");
+    });
   });
 });

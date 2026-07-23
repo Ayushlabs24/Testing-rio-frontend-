@@ -284,7 +284,12 @@ test("public signup creates an organization and its first NGO Admin, who must ch
   await expect(page).toHaveURL(/\/signup$/);
 
   await page.getByLabel("Organization name").fill(orgName);
-  await page.getByLabel("Area of work").fill("Community Health");
+  // Sector is a live list of Methodology Configuration domains, seeded
+  // per-environment — "Other" is the one option the form itself always
+  // adds, so picking it keeps this test independent of the seed data.
+  await page.getByRole("combobox", { name: "Sector" }).click();
+  await page.getByRole("option", { name: "Other" }).click();
+  await page.getByLabel("Please specify").fill("Community Health");
   await page.getByLabel("Registration number").fill(`REG-E2E-${unique}`);
   // Single email field — no separate admin name/email/password anymore;
   // the signup email itself becomes the NGO Admin account, and the backend
@@ -355,13 +360,46 @@ test("public signup creates an organization and its first NGO Admin, who must ch
   await expect(page.getByText("Invalid email or password")).toBeVisible();
 });
 
+test("signup requires a sector and only shows the free-text field for Other", async ({
+  page,
+}) => {
+  await page.goto("/signup");
+
+  await page.getByLabel("Organization name").fill("Sector Validation Org");
+  await page.getByLabel("Registration number").fill(`REG-E2E-${Date.now()}`);
+  await page.getByLabel("Email").fill(`sector-check-${Date.now()}@demo.org`);
+  // No sector chosen yet — submitting must be blocked client-side.
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await expect(page.getByText("Please select a sector.")).toBeVisible();
+
+  // The free-text field is Other-only, not shown for a regular sector.
+  const sector = page.getByRole("combobox", { name: "Sector" });
+  await sector.click();
+  const firstOption = page.getByRole("option").first();
+  const firstOptionName = await firstOption.textContent();
+  await firstOption.click();
+  await expect(page.getByLabel("Please specify")).toHaveCount(0);
+
+  // Switching to Other reveals it.
+  await sector.click();
+  await page.getByRole("option", { name: "Other" }).click();
+  await expect(page.getByLabel("Please specify")).toBeVisible();
+
+  // Switching back off Other hides it again.
+  await sector.click();
+  await page.getByRole("option", { name: firstOptionName ?? "" }).click();
+  await expect(page.getByLabel("Please specify")).toHaveCount(0);
+});
+
 test("signing up with an already-registered registration number is blocked", async ({
   page,
 }) => {
   await page.goto("/signup");
 
   await page.getByLabel("Organization name").fill("Demo Nonprofit Alliance (duplicate)");
-  await page.getByLabel("Area of work").fill("Livelihoods");
+  await page.getByRole("combobox", { name: "Sector" }).click();
+  await page.getByRole("option", { name: "Other" }).click();
+  await page.getByLabel("Please specify").fill("Livelihoods");
   // Matches Demo NGO's seeded registration number.
   await page.getByLabel("Registration number").fill("REG-DEMO-0001");
   await page.getByLabel("Email").fill(`second-admin-${Date.now()}@demo.org`);
