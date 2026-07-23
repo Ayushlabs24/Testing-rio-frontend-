@@ -1,52 +1,118 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FileText, Upload, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { BackButton } from "@/components/common/back-button";
-import {
-  DomainCategoryPicker,
-  type DomainCategoryValue,
-} from "@/components/common/domain-category-picker";
 import { GovernoratePicker } from "@/components/common/governorate-picker";
 import { LoadingButton } from "@/components/common/loading-button";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
+import { useStudyGovernorates, useStudyCenters } from "@/hooks/use-study-geography";
 import { ApiError } from "@/services/api/types";
+import { evidenceService } from "@/services/evidence/evidence.service";
 import { needsService } from "@/services/needs/needs.service";
-import { organizationsService } from "@/services/organizations/organizations.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
-import { surveysService, type QuestionOption } from "@/services/surveys/surveys.service";
 
 interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
-  domain: string;
-  subDomain: string;
+  governorateIds: string[];
+  centerIds: string[];
+}
+
+let stagedFileIdCounter = 0;
+interface StagedFile {
+  localId: string;
+  file: File;
+}
+
+// Mirrors the Evidence page's own client-side allowlist/limits exactly (see
+// EvidenceStorageService on the backend) — rejecting here is just a faster,
+// friendlier version of the same server-side rule.
+const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".csv",
+  ".xls",
+  ".xlsx",
+  ".doc",
+  ".docx",
+  ".jpg",
+  ".jpeg",
+  ".png",
+];
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FILES_PER_STUDY = 10;
+
+function fileExtensionOf(fileName: string): string {
+  const idx = fileName.lastIndexOf(".");
+  return idx === -1 ? "" : fileName.slice(idx).toLowerCase();
 }
 
 export default function CreateNeedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: studyId } = use(params);
   const t = useTranslations("app.studies.need");
+  const tGeo = useTranslations("app.geography");
   const tValidation = useTranslations("app.studies.validation");
   const router = useRouter();
 
   const [study, setStudy] = useState<Study | null>(null);
-  const [orgVillages, setOrgVillages] = useState<string[]>([]);
-  const [domainOptions, setDomainOptions] = useState<QuestionOption[]>([]);
+  const studyGovernorates = useStudyGovernorates(study);
+  const studyCenters = useStudyCenters(study);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Evidence can't be uploaded until a Need exists (the backend's upload
+  // endpoint requires a real needId) — files picked here are staged
+  // client-side only and actually uploaded right after the Need is created,
+  // before navigating away.
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [stagedFileError, setStagedFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function addStagedFiles(files: FileList | File[]) {
+    setStagedFileError(null);
+    setStagedFiles((prev) => {
+      let runningTotal = prev.length;
+      const accepted: StagedFile[] = [];
+      for (const file of Array.from(files)) {
+        if (!ALLOWED_EXTENSIONS.includes(fileExtensionOf(file.name))) {
+          setStagedFileError(t("evidenceInvalidType", { name: file.name }));
+          continue;
+        }
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          setStagedFileError(t("evidenceFileTooLarge", { name: file.name }));
+          continue;
+        }
+        if (runningTotal + 1 > MAX_FILES_PER_STUDY) {
+          setStagedFileError(t("evidenceFileLimitReached", { max: MAX_FILES_PER_STUDY }));
+          break;
+        }
+        runningTotal += 1;
+        stagedFileIdCounter += 1;
+        accepted.push({ localId: `staged-${stagedFileIdCounter}`, file });
+      }
+      return [...prev, ...accepted];
+    });
+  }
+
+  function removeStagedFile(localId: string) {
+    setStagedFiles((prev) => prev.filter((f) => f.localId !== localId));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -62,38 +128,20 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       .finally(() => {
         if (!cancelled) setLoaded(true);
       });
-    organizationsService
-      .getCurrent()
-      .then((org) => {
-        if (!cancelled) setOrgVillages(org.villages);
-      })
-      .catch(() => {
-        // Non-fatal — the picker still works with free text if this fails.
-      });
-    surveysService
-      .getDomainOptions()
-      .then((options) => {
-        if (!cancelled) setDomainOptions(options);
-      })
-      .catch(() => {
-        // Non-fatal for page load — the field just has nothing to pick
-        // from yet; the required validation still blocks submission.
-      });
     return () => {
       cancelled = true;
     };
   }, [studyId]);
 
   const schema = z.object({
-    title: z
-      .string()
-      .trim()
-      .min(1, tValidation("titleRequired"))
-      .max(300, tValidation("titleTooLong")),
+    // Optional — a blank title falls back server-side to a snippet of the
+    // Statement (see NeedsService.create), so nothing is required here
+    // beyond the max length.
+    title: z.string().trim().max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
-    village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
-    domain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
-    subDomain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
+    village: z.array(z.string()),
+    governorateIds: z.array(z.string()),
+    centerIds: z.array(z.string()),
   });
 
   const {
@@ -104,33 +152,56 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
     formState: { errors, isSubmitting },
   } = useForm<NeedFormValues>({
     resolver: zodResolver(schema),
-    // A new Need starts from the villages configured on its Study; once the
-    // Need exists it owns its own list and the Study's is no longer imposed.
+    // A new Need starts from the villages configured on its Study; once
+    // the Need exists it owns its own values and the Study's are no
+    // longer imposed.
     values: {
       title: "",
       statement: "",
       village: study?.villages ?? [],
-      domain: "",
-      subDomain: "",
+      governorateIds: [],
+      centerIds: [],
     },
   });
 
   const village = useWatch({ control, name: "village" });
-  const domain = useWatch({ control, name: "domain" });
-  const subDomain = useWatch({ control, name: "subDomain" });
-  const domainValue: DomainCategoryValue | null =
-    domain && subDomain ? { domain, subDomain } : null;
+  const governorateIds = useWatch({ control, name: "governorateIds" });
+  const centerIds = useWatch({ control, name: "centerIds" });
+  const centerOptions = studyCenters.filter((c) =>
+    governorateIds.includes(c.governorateId),
+  );
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
       const created = await needsService.create(studyId, {
-        title: values.title,
+        // Blank stays blank here — the fallback-from-statement derivation
+        // happens server-side, not by pre-filling the field ourselves.
+        title: values.title || undefined,
         statement: values.statement,
         village: values.village,
-        domain: values.domain,
-        subDomain: values.subDomain,
+        governorateIds: values.governorateIds,
+        centerIds: values.centerIds,
       });
+      // The Need itself is already saved at this point — a failed upload
+      // must never block navigating to it (and definitely must never cause
+      // a second, duplicate Need to get created by leaving the form up for
+      // another submit). Failures are surfaced on the destination page
+      // instead of being silently swallowed here.
+      const uploadResults = await Promise.allSettled(
+        stagedFiles.map(({ file }) => evidenceService.upload(created.id, file)),
+      );
+      const failedNames = uploadResults
+        .map((result, index) =>
+          result.status === "rejected" ? stagedFiles[index].file.name : null,
+        )
+        .filter((name): name is string => name !== null);
+      if (failedNames.length > 0) {
+        sessionStorage.setItem(
+          `need-evidence-upload-failed:${created.id}`,
+          JSON.stringify(failedNames),
+        );
+      }
       router.push(`/studies/${studyId}/needs/${created.id}`);
       // router.push() enqueues the navigation but doesn't wait for it to
       // finish — returning here would let isSubmitting flip back to false
@@ -155,9 +226,9 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
           <CardContent className="p-6">
             {!loaded ? (
               <div className="space-y-4">
-                <div className="bg-muted h-24 w-full rounded" />
-                <div className="bg-muted h-10 w-full rounded" />
-                <div className="bg-muted h-10 w-full rounded" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
               </div>
             ) : notFound ? (
               <p className="text-muted-foreground text-sm">{t("studyNotFound")}</p>
@@ -176,12 +247,13 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="statement">{t("statementLabel")}</Label>
-                  <textarea
+                  <Label htmlFor="statement">
+                    {t("statementLabel")} <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
                     id="statement"
                     rows={5}
                     placeholder={t("statementPlaceholder")}
-                    className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
                     {...register("statement")}
                   />
                   {errors.statement ? (
@@ -189,11 +261,59 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                   ) : null}
                 </div>
 
+                {/* Governorates/Centers scoped to the Study's own selection
+                    (a subset of the Study's), side by side — each chip list
+                    still wraps to more rows within its own column once many
+                    are selected. */}
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{tGeo("governorateLabel")}</Label>
+                    <MultiSelect
+                      options={studyGovernorates.map((g) => ({
+                        value: g.id,
+                        label: g.name,
+                      }))}
+                      values={governorateIds}
+                      onChange={(next) =>
+                        setValue("governorateIds", next, { shouldValidate: true })
+                      }
+                      placeholder={tGeo("governoratePlaceholder")}
+                      searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+                      emptyText={tGeo("governorateEmpty")}
+                      removeAriaLabel={(governorate) =>
+                        tGeo("removeGovernorateSelection", { governorate })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{tGeo("centerLabel")}</Label>
+                    <MultiSelect
+                      options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
+                      values={centerIds}
+                      onChange={(next) =>
+                        setValue("centerIds", next, { shouldValidate: true })
+                      }
+                      placeholder={
+                        governorateIds.length > 0
+                          ? tGeo("centerPlaceholder")
+                          : tGeo("selectGovernorateFirst")
+                      }
+                      searchPlaceholder={tGeo("centerSearchPlaceholder")}
+                      emptyText={tGeo("centerEmpty")}
+                      removeAriaLabel={(center) =>
+                        tGeo("removeCenterSelection", { center })
+                      }
+                      disabled={governorateIds.length === 0}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="village">{t("villageLabel")}</Label>
                   <GovernoratePicker
                     values={village ?? []}
-                    options={orgVillages}
+                    options={[]}
                     onChange={(next) =>
                       setValue("village", next, { shouldValidate: true })
                     }
@@ -204,22 +324,66 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="domain">{t("domainCategoryLabel")}</Label>
-                  <DomainCategoryPicker
-                    value={domainValue}
-                    options={domainOptions}
-                    onChange={(next) => {
-                      setValue("domain", next.domain, { shouldValidate: true });
-                      setValue("subDomain", next.subDomain, { shouldValidate: true });
+                  <Label>{t("evidenceLabel")}</Label>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        fileInputRef.current?.click();
+                      }
                     }}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    {t("domainCategoryHint")}
-                  </p>
-                  {errors.domain || errors.subDomain ? (
-                    <p className="text-destructive text-sm">
-                      {errors.domain?.message ?? errors.subDomain?.message}
+                    className="border-input hover:bg-muted/30 flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-6 py-6 text-center"
+                  >
+                    <Upload className="text-muted-foreground size-6" />
+                    <p className="text-foreground text-sm font-medium">
+                      {t("evidenceAddFiles")}
                     </p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("evidenceAllowedTypesHint", { max: MAX_FILES_PER_STUDY })}
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept={ALLOWED_EXTENSIONS.join(",")}
+                      className="hidden"
+                      onChange={(event) => {
+                        if (event.target.files && event.target.files.length > 0) {
+                          addStagedFiles(event.target.files);
+                        }
+                        event.target.value = "";
+                      }}
+                    />
+                  </div>
+
+                  {stagedFileError ? (
+                    <p className="text-destructive text-sm">{stagedFileError}</p>
+                  ) : null}
+
+                  {stagedFiles.length > 0 ? (
+                    <ul className="max-h-56 space-y-2 overflow-y-auto pr-0.5">
+                      {stagedFiles.map(({ localId, file }) => (
+                        <li
+                          key={localId}
+                          className="border-border flex items-center gap-3 rounded-lg border p-3"
+                        >
+                          <FileText className="text-muted-foreground size-5 shrink-0" />
+                          <span className="text-foreground min-w-0 flex-1 truncate text-sm font-medium">
+                            {file.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeStagedFile(localId)}
+                            aria-label={t("evidenceRemoveFile")}
+                            className="text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                 </div>
 

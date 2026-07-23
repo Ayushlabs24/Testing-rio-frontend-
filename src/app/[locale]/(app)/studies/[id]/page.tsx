@@ -47,18 +47,25 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
+import { useStudyCenters, useStudyGovernorates } from "@/hooks/use-study-geography";
 import { useRouter } from "@/i18n/navigation";
 import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
 import { needsService } from "@/services/needs/needs.service";
-import type { Need, NeedStatus } from "@/services/needs/needs.types";
+import {
+  NEED_EDITABLE_STATUSES,
+  type Need,
+  type NeedStatus,
+} from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudyDetail } from "@/services/studies/studies.types";
 import { surveysService } from "@/services/surveys/surveys.service";
 
 const NEED_STATUSES: readonly NeedStatus[] = [
   "draft",
+  "pending_ai_classification",
   "evidence_submitted",
   "ai_classified",
+  "ai_classification_failed",
   "reviewer_approved",
   "survey_created",
   "survey_published",
@@ -117,6 +124,23 @@ function VillageChips({ villages }: { villages: string[] }) {
   );
 }
 
+// Plain truncated text instead of a badge pill per item — a Need can carry
+// many Governorates/Centers/Villages, and a row of colored badges per
+// column made the table read as cluttered once there were more than a
+// couple. Shows the first name, "+N" for the rest, and the full list in a
+// title tooltip.
+function CompactNameList({ names }: { names: string[] }) {
+  if (names.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="text-foreground truncate" title={names.join(", ")}>
+      {names[0]}
+      {names.length > 1 ? (
+        <span className="text-muted-foreground"> +{names.length - 1}</span>
+      ) : null}
+    </span>
+  );
+}
+
 type AiClassificationStatus = "not_started" | "classified" | "reviewed";
 type SurveyStatus = "not_started" | "draft" | "submitted" | "rejected" | "published";
 
@@ -158,6 +182,8 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canDeleteNeed = usePermission("dataCollection", "write");
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
+  const studyGovernorates = useStudyGovernorates(study);
+  const studyCenters = useStudyCenters(study);
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -389,6 +415,8 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("needTitleColumn")}</TableHead>
+                          <TableHead>{t("governorateColumn")}</TableHead>
+                          <TableHead>{t("centerColumn")}</TableHead>
                           <TableHead>{t("villageColumn")}</TableHead>
                           <TableHead>{t("statusColumn")}</TableHead>
                           <TableHead>{t("aiStatusColumn")}</TableHead>
@@ -408,20 +436,25 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                             <TableCell className="max-w-52 truncate text-sm font-medium">
                               {need.title}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {need.village.slice(0, 2).map((v) => (
-                                  <Badge key={v} variant="secondary" className="gap-1">
-                                    <MapPin className="size-3" />
-                                    {v}
-                                  </Badge>
-                                ))}
-                                {need.village.length > 2 ? (
-                                  <span className="text-muted-foreground text-xs">
-                                    +{need.village.length - 2}
-                                  </span>
-                                ) : null}
-                              </div>
+                            <TableCell className="max-w-40 text-sm">
+                              <CompactNameList
+                                names={need.governorateIds.map(
+                                  (id) =>
+                                    studyGovernorates.find((g) => g.id === id)?.name ??
+                                    id,
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="max-w-40 text-sm">
+                              <CompactNameList
+                                names={need.centerIds.map(
+                                  (id) =>
+                                    studyCenters.find((c) => c.id === id)?.name ?? id,
+                                )}
+                              />
+                            </TableCell>
+                            <TableCell className="max-w-32 text-sm">
+                              <CompactNameList names={need.village} />
                             </TableCell>
                             <TableCell>
                               <NeedStatusBadge status={need.status} />
@@ -438,7 +471,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                             </TableCell>
                             {canDeleteNeed ? (
                               <TableCell onClick={(event) => event.stopPropagation()}>
-                                {need.status === "draft" ? (
+                                {NEED_EDITABLE_STATUSES.includes(need.status) ? (
                                   <DeleteNeedDialog
                                     needId={need.id}
                                     onDeleted={() =>

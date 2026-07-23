@@ -13,6 +13,17 @@ export interface Study {
   id: string;
   title: string;
   villages: string[];
+  // Mandatory multi-select subsets of the owning Organization's own
+  // selected Governorates/Centers. No Region field here — it's derived live
+  // from the owning Organization's own single region.
+  governorateIds: string[];
+  centerIds: string[];
+  // Optional link to the real, status-gated MethodologyVersion master data
+  // — must be PUBLISHED when set, settable at creation or later.
+  methodologyVersionId: string | null;
+  // Sequential per-org counter (1, 2, 3... across every Study the org has
+  // ever created) — server-assigned at creation, never client-writable.
+  cycleNumber: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -35,11 +46,17 @@ export type StudySummary = Study;
 export interface CreateStudyPayload {
   title: string;
   villages?: string[];
+  governorateIds: string[];
+  centerIds: string[];
+  methodologyVersionId?: string | null;
 }
 
 export interface UpdateStudyPayload {
   title?: string;
   villages?: string[];
+  governorateIds?: string[];
+  centerIds?: string[];
+  methodologyVersionId?: string | null;
 }
 
 export interface ListStudiesParams {

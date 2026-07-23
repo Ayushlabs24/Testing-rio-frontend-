@@ -69,12 +69,13 @@ export function SurveyStatusCard({
   }, [needId]);
 
   const hasDomain = Boolean(domain && subDomain);
-  // Domain Category is set manually at Need creation (always present from
-  // then on), so it no longer signals AI Classification review — that's a
-  // separate condition Survey creation still requires: a human has to have
-  // reviewed and approved the AI's classification (see
-  // AiDecisionsService.review, SurveysService#assertClassificationApproved
-  // on the backend, which enforces this same rule server-side).
+  // Domain Category is no longer set manually at Need creation — it stays
+  // null until a reviewer approves (or overrides) an AI Classification (see
+  // AiDecisionsService.review on the backend, which now writes it there).
+  // `classificationApproved` below is the separate, authoritative gate
+  // Survey creation actually enforces (SurveysService#assertClassificationApproved
+  // checks the same rule server-side) — `hasDomain` only controls whether
+  // this card's own "classified as" summary has anything to show yet.
   const classificationApproved =
     needStatus === "reviewer_approved" ||
     needStatus === "survey_created" ||

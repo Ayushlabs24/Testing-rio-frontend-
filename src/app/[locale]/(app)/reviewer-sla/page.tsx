@@ -23,6 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/components/providers/auth-provider";
+import { markReviewerSlaAlertsSeen } from "@/hooks/use-reviewer-sla-badge";
 import { Link } from "@/i18n/navigation";
 import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
 import type {
@@ -57,6 +59,7 @@ function formatDate(iso: string): string {
 
 export default function ReviewerSlaPage() {
   const t = useTranslations("app.reviewerSla");
+  const { session } = useAuth();
   // No concept of assignment: every user with the Reviewer/Approver role
   // sees the same org-wide pending queue (see ReviewerSlaService.listAlerts)
   // — once anyone reviews an item, it disappears for everyone.
@@ -71,6 +74,10 @@ export default function ReviewerSlaPage() {
       .then((rows) => {
         setAlerts(rows);
         setLoadFailed(false);
+        // Mark every currently-loaded alert as seen — the topbar/sidebar
+        // unread badge (useReviewerSlaBadge) clears for these once the user
+        // has actually viewed this page while they were present.
+        if (session?.user.id) markReviewerSlaAlertsSeen(session.user.id, rows);
       })
       .catch(() => {
         setAlerts([]);
@@ -84,6 +91,10 @@ export default function ReviewerSlaPage() {
       .then(setConfig)
       .catch(() => undefined);
     loadAlerts();
+    // loadAlerts is redefined every render (it closes over `session`, which
+    // only ever grows more defined post-login, never meaningfully changes
+    // mid-session) — intentionally run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Poll interval is server-configurable (RIO-NFR-014) — the frontend never
@@ -94,6 +105,7 @@ export default function ReviewerSlaPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);
 
   const summary = useMemo(() => {
@@ -148,12 +160,12 @@ export default function ReviewerSlaPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-28">{t("typeColumn")}</TableHead>
-                    <TableHead className="w-[22%]">{t("studyColumn")}</TableHead>
-                    <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
-                    <TableHead className="w-32">{t("createdColumn")}</TableHead>
-                    <TableHead className="w-32">{t("dueColumn")}</TableHead>
+                    <TableHead className="w-[26%]">{t("studyColumn")}</TableHead>
+                    <TableHead className="w-[26%]">{t("needColumn")}</TableHead>
+                    <TableHead className="w-40">{t("createdColumn")}</TableHead>
+                    <TableHead className="w-40">{t("dueColumn")}</TableHead>
                     <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                    <TableHead className="w-28">{t("actionColumn")}</TableHead>
+                    <TableHead className="w-32">{t("actionColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -184,7 +196,7 @@ export default function ReviewerSlaPage() {
                   ) : (
                     alerts.map((alert) => (
                       <TableRow key={alert.id}>
-                        <TableCell className="py-4 align-top">
+                        <TableCell className="py-4 align-top whitespace-nowrap">
                           <Badge variant="outline" className="font-normal">
                             {t(`type.${alert.type}`)}
                           </Badge>
@@ -194,11 +206,11 @@ export default function ReviewerSlaPage() {
                             {alert.studyTitle}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                        <TableCell className="text-muted-foreground max-w-0 py-4 align-top text-sm">
                           {alert.needStatement ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <p className="line-clamp-3 cursor-default break-words">
+                                <p className="cursor-default truncate">
                                   {alert.needStatement}
                                 </p>
                               </TooltipTrigger>
@@ -210,18 +222,18 @@ export default function ReviewerSlaPage() {
                             t("noNeedStatement")
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
                           {formatDate(alert.createdAt)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
                           {formatDate(alert.dueAt)}
                         </TableCell>
-                        <TableCell className="py-4 align-top">
+                        <TableCell className="py-4 align-top whitespace-nowrap">
                           <Badge variant={STATUS_VARIANT[alert.status]}>
                             {t(`status.${alert.status}`)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-4 align-top">
+                        <TableCell className="py-4 align-top whitespace-nowrap">
                           <Button asChild size="sm" variant="outline">
                             <Link href={alertHref(alert)}>{t("reviewNow")}</Link>
                           </Button>

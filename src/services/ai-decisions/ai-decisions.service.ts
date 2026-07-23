@@ -4,6 +4,7 @@ import type {
   AiDecision,
   ReviewDecisionPayload,
 } from "@/services/ai-decisions/ai-decisions.types";
+import type { Survey } from "@/services/surveys/surveys.service";
 
 // A real Gemini generateContent call routinely takes longer than the app-wide
 // request timeout (see apiConfig.timeoutMs) — this only overrides it for the
@@ -11,6 +12,8 @@ import type {
 // const CLASSIFY_TIMEOUT_MS = 60_000;
 
 export const aiDecisionsService = {
+  /** Now the Retry action for a Need whose automatic classification failed —
+   * classification itself runs automatically right after Need creation. */
   async classify(needId: string): Promise<AiDecision> {
     return apiClient.post<AiDecision>(endpoints.aiDecisions.classify(needId));
   },
@@ -21,5 +24,43 @@ export const aiDecisionsService = {
 
   async review(id: string, payload: ReviewDecisionPayload): Promise<AiDecision> {
     return apiClient.patch<AiDecision>(endpoints.aiDecisions.review(id), payload);
+  },
+};
+
+export interface AiReviewApprovePayload {
+  domainOverride?: { domain: string; subDomain: string; reason: string };
+}
+
+/** The Approver's classification actions — Approve/Reject/Override/Retry,
+ * all scoped to one Need. Approve only decides the classification (sets the
+ * authoritative domain/subDomain) — it does not touch the survey's question
+ * list or publish it; that happens separately on the Survey Builder page
+ * once the Need reaches `reviewer_approved` (see
+ * AiDecisionsService.approveAiReview on the backend). */
+export const aiReviewService = {
+  async approve(needId: string, payload: AiReviewApprovePayload): Promise<void> {
+    await apiClient.post(endpoints.aiReview.approve(needId), payload);
+  },
+
+  async reject(needId: string, comments: string): Promise<void> {
+    await apiClient.post(endpoints.aiReview.reject(needId), { comments });
+  },
+
+  /** Preview only — does not write domain/subDomain onto the Need. Returns
+   * the refreshed Survey with questions regenerated for the candidate
+   * domain/subDomain. */
+  async overrideDomainPreview(
+    needId: string,
+    domain: string,
+    subDomain: string,
+  ): Promise<Survey> {
+    return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), {
+      domain,
+      subDomain,
+    });
+  },
+
+  async retryClassification(needId: string): Promise<AiDecision> {
+    return apiClient.post<AiDecision>(endpoints.aiReview.retry(needId));
   },
 };

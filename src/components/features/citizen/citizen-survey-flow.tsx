@@ -18,8 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { citizenService } from "@/services/citizen/citizen.service";
-import type { ResolvedSurvey } from "@/services/citizen/citizen.types";
+import type { Gender, ResolvedSurvey } from "@/services/citizen/citizen.types";
 import { ApiError } from "@/services/api/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type LoadState = "loading" | "notFound" | "ready";
 // "welcome" carries the study/organisation context that used to live on its
@@ -105,8 +112,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
 
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  // Set only when the backend couldn't email the code (no mailer configured
+  // — dev/test) and returned it directly instead, per RequestOtpResult's
+  // `code` field — the only way to proceed without a real inbox.
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   // Participant consent, collected on the details step before any personal
   // detail leaves the device. Same shape as the NGO Admin's own consent gate
@@ -155,6 +167,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       }
       const result = await citizenService.requestOtp(token, { contact });
       setChallengeId(result.challengeId);
+      setDevCode(result.codeEmailed ? null : (result.code ?? null));
       setPhase("otp");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -221,6 +234,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       await citizenService.submitResponse(token, {
         challengeId,
         contactName: name || undefined,
+        gender: gender || undefined,
         answers,
       });
       setTerminal("submitted");
@@ -399,6 +413,22 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               onChange={(e) => setContact(e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="citizen-gender">{t("details.genderLabel")}</Label>
+            <Select value={gender} onValueChange={(value) => setGender(value as Gender)}>
+              <SelectTrigger id="citizen-gender" className="w-full">
+                <SelectValue placeholder={t("details.genderPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">{t("details.genderMale")}</SelectItem>
+                <SelectItem value="female">{t("details.genderFemale")}</SelectItem>
+                <SelectItem value="other">{t("details.genderOther")}</SelectItem>
+                <SelectItem value="prefer_not_to_say">
+                  {t("details.genderPreferNotToSay")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="border-border space-y-3 border-t pt-5">
             <div className="space-y-1.5">
@@ -470,6 +500,14 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               {t("otp.description", { contact })}
             </p>
           </div>
+          {devCode ? (
+            <div className="border-warning/40 bg-warning/10 space-y-1 rounded-md border p-3">
+              <p className="text-foreground text-sm">{t("otp.codeNotEmailed")}</p>
+              <p className="border-border bg-background rounded-md border px-3 py-2 font-mono text-sm">
+                {devCode}
+              </p>
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="citizen-otp">{t("otp.codeLabel")}</Label>
             <Input

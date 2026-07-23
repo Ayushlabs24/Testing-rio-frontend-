@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -157,7 +158,7 @@ export default function StudiesPage() {
                     <TableRow key={index}>
                       {Array.from({ length: columnCount }).map((__, cell) => (
                         <TableCell key={cell} className="py-5">
-                          <div className="bg-muted h-4 w-28 rounded" />
+                          <Skeleton className="h-4 w-28" />
                         </TableCell>
                       ))}
                     </TableRow>

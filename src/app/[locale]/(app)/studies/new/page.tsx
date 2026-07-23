@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -11,25 +11,45 @@ import {
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
-import { organizationsService } from "@/services/organizations/organizations.service";
+import { useOrgGovernorates } from "@/hooks/use-org-governorates";
+import { useOrgRegionName } from "@/hooks/use-org-region-name";
+import {
+  severityScoringService,
+  type MethodologyVersion,
+} from "@/services/priority/severity-scoring.service";
 import { studiesService } from "@/services/studies/studies.service";
 
 export default function NewStudyPage() {
   const t = useTranslations("app.studies.form");
   const router = useRouter();
-  const [orgVillages, setOrgVillages] = useState<string[]>([]);
+  const orgGovernorates = useOrgGovernorates();
+  const regionName = useOrgRegionName();
+  const [methodologyVersions, setMethodologyVersions] = useState<MethodologyVersion[]>(
+    [],
+  );
 
   useEffect(() => {
-    organizationsService
-      .getCurrent()
-      .then((org) => setOrgVillages(org.villages))
-      .catch(() => undefined);
+    let cancelled = false;
+    severityScoringService
+      .listMethodologyVersions()
+      .then((versions) => {
+        if (!cancelled)
+          setMethodologyVersions(versions.filter((v) => v.status === "PUBLISHED"));
+      })
+      .catch(() => {
+        // Non-fatal — the Select just renders with no options.
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSubmit = async (values: StudyFormValues) => {
     const study = await studiesService.create({
       title: values.title,
-      villages: values.village,
+      governorateIds: values.governorateIds,
+      centerIds: values.centerIds,
+      methodologyVersionId: values.methodologyVersionId,
     });
     // Capturing the first Need is the next step of the workflow, so go
     // straight there rather than via the Study detail page.
@@ -49,7 +69,9 @@ export default function NewStudyPage() {
         <Card>
           <CardContent className="p-6">
             <StudyForm
-              orgVillages={orgVillages}
+              orgGovernorates={orgGovernorates}
+              regionName={regionName}
+              methodologyVersions={methodologyVersions}
               onSubmit={handleSubmit}
               onCancel={() => router.push("/studies")}
             />

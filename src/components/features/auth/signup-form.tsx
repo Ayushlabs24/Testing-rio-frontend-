@@ -3,13 +3,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Check, Copy, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -21,6 +23,8 @@ import { useSectorOptions } from "@/hooks/use-sector-options";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
+import { geographyService } from "@/services/geography/geography.service";
+import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 
 interface PendingConfirmation {
   temporaryPasswordEmailed: boolean;
@@ -115,11 +119,17 @@ export function SignupForm() {
   // Methodology Configuration domain name, displayed as-is (see
   // useSectorOptions).
   const tSectors = useTranslations("app.settings.organization.sectors");
+  // Reused rather than duplicated — Settings > Organization already has the
+  // exact Region/Governorate/Center picker copy this form needs.
+  const tGeo = useTranslations("app.settings.organization");
   const sectorOptions = useSectorOptions(false);
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] =
     useState<PendingConfirmation | null>(null);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  const [centers, setCenters] = useState<Center[]>([]);
 
   const signupSchema = z.object({
     organizationName: z
@@ -131,6 +141,11 @@ export function SignupForm() {
       .string()
       .min(1, { message: tValidation("registrationNumberRequired") }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
+    regionId: z.string().min(1, { message: tValidation("regionRequired") }),
+    governorateIds: z
+      .array(z.string())
+      .min(1, { message: tValidation("governorateIdsRequired") }),
+    centerIds: z.array(z.string()).min(1, { message: tValidation("centerIdsRequired") }),
   });
 
   type SignupValues = z.infer<typeof signupSchema>;
@@ -143,10 +158,78 @@ export function SignupForm() {
     formState: { errors, isSubmitting },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { sector: "", otherSector: "" },
+    defaultValues: {
+      sector: "",
+      otherSector: "",
+      regionId: "",
+      governorateIds: [],
+      centerIds: [],
+    },
   });
 
   const selectedSector = useWatch({ control, name: "sector" });
+  const regionId = useWatch({ control, name: "regionId" });
+  const governorateIds = useWatch({ control, name: "governorateIds" });
+  const centerIds = useWatch({ control, name: "centerIds" });
+
+  useEffect(() => {
+    geographyService
+      .listRegions()
+      .then(setRegions)
+      .catch(() => setRegions([]));
+  }, []);
+
+  // Governorate options are scoped to the single selected Region — there's
+  // no org yet to further scope against (this creates the org), unlike
+  // Settings > Organization's own cascade. A previously-selected Governorate
+  // no longer applies once the Region changes, so it's pruned once the new
+  // option list lands.
+  useEffect(() => {
+    const load = regionId
+      ? geographyService.listGovernorates(regionId)
+      : Promise.resolve([]);
+    load
+      .then((options) => {
+        setGovernorates(options);
+        const validIds = new Set(options.map((g) => g.id));
+        setValue(
+          "governorateIds",
+          governorateIds.filter((id) => validIds.has(id)),
+          { shouldValidate: false },
+        );
+      })
+      .catch(() => setGovernorates([]));
+    // governorateIds is read fresh via closure, not tracked as a dependency —
+    // this effect should only re-run when the Region selection itself
+    // changes, not on every Governorate toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regionId]);
+
+  // Center options are scoped to the union of all selected Governorates —
+  // same prune-stale-selection pattern as above.
+  useEffect(() => {
+    const load =
+      governorateIds.length === 0
+        ? Promise.resolve([])
+        : Promise.all(governorateIds.map((id) => geographyService.listCenters(id))).then(
+            (lists) => lists.flat(),
+          );
+    load
+      .then((options) => {
+        setCenters(options);
+        const validIds = new Set(options.map((c) => c.id));
+        setValue(
+          "centerIds",
+          centerIds.filter((id) => validIds.has(id)),
+          { shouldValidate: false },
+        );
+      })
+      .catch(() => setCenters([]));
+    // centerIds is read fresh via closure, not tracked as a dependency —
+    // this effect should only re-run when the Governorate selection itself
+    // changes, not on every Center toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [governorateIds]);
 
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
@@ -157,6 +240,9 @@ export function SignupForm() {
         purpose: values.sector === "other" ? values.otherSector : undefined,
         registrationNumber: values.registrationNumber,
         email: values.email,
+        regionId: values.regionId,
+        governorateIds: values.governorateIds,
+        centerIds: values.centerIds,
       });
       // Signup doesn't sign the admin in automatically — they confirm
       // either how they got their password (emailed) or the password
@@ -248,6 +334,68 @@ export function SignupForm() {
             />
           </div>
         ) : null}
+
+        {/* Stacked full-width, not a side-by-side grid — Governorate/Center
+            chip lists can wrap to several rows once many are selected. */}
+        <div className="space-y-2">
+          <Label htmlFor="region">{tGeo("administrativeRegionLabel")}</Label>
+          <Combobox
+            aria-label={tGeo("administrativeRegionLabel")}
+            items={regions.map((r) => ({ value: r.id, label: r.name }))}
+            value={regionId || null}
+            onSelect={(value) => setValue("regionId", value, { shouldValidate: true })}
+            placeholder={tGeo("administrativeRegionPlaceholder")}
+            searchPlaceholder={tGeo("administrativeRegionSearchPlaceholder")}
+            emptyText={tGeo("administrativeRegionEmpty")}
+          />
+          {errors.regionId ? (
+            <p className="text-destructive text-sm">{errors.regionId.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>{tGeo("governorateLabel")}</Label>
+          <MultiSelect
+            options={governorates.map((g) => ({ value: g.id, label: g.name }))}
+            values={governorateIds}
+            onChange={(next) =>
+              setValue("governorateIds", next, { shouldValidate: true })
+            }
+            placeholder={
+              regionId ? tGeo("governoratePlaceholder") : tGeo("selectRegionFirst")
+            }
+            searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+            emptyText={tGeo("governorateEmpty")}
+            removeAriaLabel={(governorate) =>
+              tGeo("removeGovernorateSelection", { governorate })
+            }
+            disabled={!regionId}
+          />
+          {errors.governorateIds ? (
+            <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>{tGeo("centerLabel")}</Label>
+          <MultiSelect
+            options={centers.map((c) => ({ value: c.id, label: c.name }))}
+            values={centerIds}
+            onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
+            placeholder={
+              governorateIds.length > 0
+                ? tGeo("centerPlaceholder")
+                : tGeo("selectGovernorateFirst")
+            }
+            searchPlaceholder={tGeo("centerSearchPlaceholder")}
+            emptyText={tGeo("centerEmpty")}
+            removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
+            disabled={governorateIds.length === 0}
+          />
+          {errors.centerIds ? (
+            <p className="text-destructive text-sm">{errors.centerIds.message}</p>
+          ) : null}
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="email">{t("emailLabel")}</Label>

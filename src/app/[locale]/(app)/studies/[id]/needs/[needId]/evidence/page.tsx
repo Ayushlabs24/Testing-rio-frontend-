@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Check,
   FileText,
   Info,
   Loader2,
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LoadingButton } from "@/components/common/loading-button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -46,11 +44,13 @@ import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import type { Evidence } from "@/services/evidence/evidence.types";
 import { needsService } from "@/services/needs/needs.service";
+import { EVIDENCE_EDITABLE_STATUSES } from "@/services/needs/needs.types";
 
 // RIO-FR-Add-01: mirrors the backend's own allowlist/limits exactly (see
 // EvidenceStorageService) — rejecting client-side is just a faster,
@@ -387,11 +387,17 @@ function DeleteEvidenceAlert({
 function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: string }) {
   const t = useTranslations("app.evidence");
   const locale = useLocale();
+  // A Reviewer/Approver only holds `dataCollection: read` (see role-matrix.ts)
+  // — they can see what's been uploaded but never add/replace/remove it,
+  // regardless of the Need's own status-based lock below.
+  const canWrite = usePermission("dataCollection", "write");
   const [evidence, setEvidence] = useState<Evidence[] | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  // Evidence stays editable slightly longer than the Need itself (see
+  // EVIDENCE_EDITABLE_STATUSES's doc comment) — through ai_classified, not
+  // just up to it. An Approver must Reject on the AI Review screen to
+  // re-open editing once locked.
+  const [locked, setLocked] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   // Names of files the backend flagged as duplicates as they were uploaded.
   // Advisory only — those uploads succeeded and their rows are in the list.
   // Held here rather than on the row because the flag exists only on the
@@ -404,7 +410,7 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
       .then(([list, need]) => {
         if (cancelled) return;
         setEvidence(list);
-        setIsSubmitted(need.status !== "draft");
+        setLocked(!EVIDENCE_EDITABLE_STATUSES.includes(need.status));
       })
       .catch((error) => {
         if (cancelled) return;
@@ -423,19 +429,6 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
       ),
     [evidence],
   );
-
-  const handleSubmit = async () => {
-    setSubmitError(null);
-    setIsSubmitting(true);
-    try {
-      await evidenceService.submit(needId);
-      setIsSubmitted(true);
-    } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t("submitError"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <PageContainer>
@@ -456,18 +449,34 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
 
       <Card>
         <CardContent className="space-y-6">
-          <DropzoneAndQueue
-            needId={needId}
-            existingCount={sortedEvidence.length}
-            onUploaded={(created) => {
-              setEvidence((prev) => [created, ...(prev ?? [])]);
-              if (created.isDuplicate) {
-                setDuplicateNames((prev) =>
-                  prev.includes(created.fileName) ? prev : [...prev, created.fileName],
-                );
-              }
-            }}
-          />
+          {!canWrite ? (
+            <div
+              role="status"
+              className="bg-muted text-muted-foreground rounded-md border p-3 text-sm"
+            >
+              {t("readOnlyNotice")}
+            </div>
+          ) : locked ? (
+            <div
+              role="status"
+              className="bg-muted text-muted-foreground rounded-md border p-3 text-sm"
+            >
+              {t("lockedNotice")}
+            </div>
+          ) : (
+            <DropzoneAndQueue
+              needId={needId}
+              existingCount={sortedEvidence.length}
+              onUploaded={(created) => {
+                setEvidence((prev) => [created, ...(prev ?? [])]);
+                if (created.isDuplicate) {
+                  setDuplicateNames((prev) =>
+                    prev.includes(created.fileName) ? prev : [...prev, created.fileName],
+                  );
+                }
+              }}
+            />
+          )}
 
           {duplicateNames.length > 0 ? (
             <div
@@ -548,16 +557,16 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
                           <Badge
                             className={cn(
                               "border-transparent",
-                              isSubmitted
+                              locked
                                 ? "bg-badge-success text-badge-success-foreground"
                                 : "bg-muted text-muted-foreground",
                             )}
                           >
-                            {isSubmitted ? t("statusSubmitted") : t("statusUploaded")}
+                            {locked ? t("statusSubmitted") : t("statusUploaded")}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {isSubmitted ? (
+                          {!canWrite ? null : locked ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 {/* Wrapper span: a disabled button emits no
@@ -595,30 +604,6 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
               </TooltipProvider>
             )}
           </div>
-
-          {sortedEvidence.length > 0 ? (
-            <div className="border-border flex flex-col items-start gap-2 border-t pt-4">
-              {isSubmitted ? (
-                <p className="text-foreground flex items-center gap-1.5 text-sm">
-                  <Check className="text-success size-4" />
-                  {t("submitted")}
-                </p>
-              ) : (
-                <>
-                  <LoadingButton
-                    type="button"
-                    onClick={handleSubmit}
-                    isLoading={isSubmitting}
-                    text={isSubmitting ? t("submitting") : t("submitEvidence")}
-                  />
-                  <p className="text-muted-foreground text-xs">{t("submitHint")}</p>
-                </>
-              )}
-              {submitError ? (
-                <p className="text-destructive text-sm">{submitError}</p>
-              ) : null}
-            </div>
-          ) : null}
         </CardContent>
       </Card>
     </PageContainer>
@@ -633,7 +618,7 @@ export default function EvidenceUploadPage({
   const { id: studyId, needId } = use(params);
 
   return (
-    <PermissionGuard module="dataCollection" action="write">
+    <PermissionGuard module="dataCollection" action="read">
       <EvidenceUploadScreen studyId={studyId} needId={needId} />
     </PermissionGuard>
   );

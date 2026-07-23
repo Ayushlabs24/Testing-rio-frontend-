@@ -25,6 +25,11 @@ export const endpoints = {
     list: "/organizations",
     byId: (id: string) => `/organizations/${id}`,
   },
+  geography: {
+    regions: "/regions",
+    governorates: "/governorates",
+    centers: "/centers",
+  },
   studies: {
     list: "/studies",
     create: "/studies",
@@ -87,9 +92,17 @@ export const endpoints = {
     byId: (needId: string) => `/needs/${needId}`,
   },
   aiDecisions: {
+    // Now the Retry action for a Need whose automatic classification
+    // failed — classification itself runs automatically at Need creation.
     classify: (needId: string) => `/needs/${needId}/ai-decisions/classify`,
     forNeed: (needId: string) => `/needs/${needId}/ai-decisions`,
     review: (id: string) => `/ai-decisions/${id}/review`,
+  },
+  aiReview: {
+    approve: (needId: string) => `/needs/${needId}/ai-review/approve`,
+    reject: (needId: string) => `/needs/${needId}/ai-review/reject`,
+    overrideDomain: (needId: string) => `/needs/${needId}/ai-review/override-domain`,
+    retry: (needId: string) => `/needs/${needId}/ai-review/retry-classification`,
   },
   domains: {
     public: "/domains/public",
@@ -166,6 +179,20 @@ export const endpoints = {
       `/sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
     lookupStudiesForOrg: (orgId: string) =>
       `/sharing-requests/lookup/organizations/${orgId}/studies`,
+  },
+  reportSharing: {
+    list: "/report-sharing-requests",
+    create: "/report-sharing-requests",
+    byId: (id: string) => `/report-sharing-requests/${id}`,
+    approve: (id: string) => `/report-sharing-requests/${id}/approve`,
+    reject: (id: string) => `/report-sharing-requests/${id}/reject`,
+    sharedReport: (id: string) => `/report-sharing-requests/${id}/shared-report`,
+    export: (id: string, format: string) =>
+      `/report-sharing-requests/${id}/export?format=${encodeURIComponent(format)}`,
+    lookupOrganizations: (query: string) =>
+      `/report-sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
+    lookupReportsForOrg: (orgId: string) =>
+      `/report-sharing-requests/lookup/organizations/${orgId}/reports`,
   },
   reviewerSla: {
     config: "/reviewer-sla/config",

@@ -10,7 +10,14 @@ import {
   Share2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { QRCodeSVG } from "qrcode.react";
+import dynamic from "next/dynamic";
+
+// A genuinely heavy, below-the-fold, conditionally-rendered widget (only
+// shown inside the "View QR" dialog, not on initial page load) — code-split
+// into its own chunk instead of bundled into this route's main chunk.
+const QRCodeSVG = dynamic(() => import("qrcode.react").then((mod) => mod.QRCodeSVG), {
+  ssr: false,
+});
 import { use, useEffect, useState } from "react";
 import {
   AlertDialog,

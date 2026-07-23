@@ -18,6 +18,14 @@ export interface Organization {
    * "other" (paired with `purpose` for free text) — never a fixed enum. */
   sector: string | null;
   villages: string[];
+  // Optional link into the KSA Geographic Reference master data
+  // (Region -> Governorate -> Center) — additive alongside the free-text
+  // `region`/`villages` above, not a replacement for them. An org has
+  // exactly *one* Region (single-select), but can span *many*
+  // Governorates and *many* Centers (both many-to-many).
+  regionId: string | null;
+  governorateIds: string[];
+  centerIds: string[];
   isActive: boolean;
   createdAt: string;
 }
@@ -30,6 +38,10 @@ export interface UpdateOrganizationPayload {
   sector?: string | null;
   purpose?: string | null;
   villages?: string[];
+  regionId?: string | null;
+  // Replaces the *entire* set when provided (not a merge/append).
+  governorateIds?: string[];
+  centerIds?: string[];
   isActive?: boolean;
 }
 

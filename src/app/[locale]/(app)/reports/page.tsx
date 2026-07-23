@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -327,7 +328,7 @@ export default function ReportsPage() {
                     <TableRow key={index}>
                       {Array.from({ length: 5 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
-                          <div className="bg-muted h-4 w-20 rounded" />
+                          <Skeleton className="h-4 w-20" />
                         </TableCell>
                       ))}
                     </TableRow>

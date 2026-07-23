@@ -47,8 +47,8 @@ function formatDateTime(iso: string): string {
 }
 
 /** Read-only — no reorder/edit/remove affordances anywhere on this page.
- * The Approver reviews exactly what the Researcher submitted; any change
- * they want has to go back through Reject -> Researcher edits -> resubmit. */
+ * The Approver reviews exactly what was submitted; any change they want has
+ * to go back through Reject -> edits on the Survey Builder page -> resubmit. */
 function QuestionSummary({
   question,
   number,

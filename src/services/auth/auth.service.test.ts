@@ -96,6 +96,9 @@ describe("authService", () => {
       sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
+      regionId: "r1",
+      governorateIds: ["g1"],
+      centerIds: ["c1"],
     };
     const result = await authService.signup(payload);
 
@@ -117,6 +120,9 @@ describe("authService", () => {
       sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
+      regionId: "r1",
+      governorateIds: ["g1"],
+      centerIds: ["c1"],
     });
 
     expect(result.temporaryPasswordEmailed).toBe(true);
@@ -134,6 +140,9 @@ describe("authService", () => {
       sector: "healthcare",
       registrationNumber: "REG-1",
       email: "priya@demo.org",
+      regionId: "r1",
+      governorateIds: ["g1"],
+      centerIds: ["c1"],
     });
 
     expect(result.temporaryPasswordEmailed).toBe(false);

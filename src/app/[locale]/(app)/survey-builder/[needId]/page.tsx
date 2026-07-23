@@ -21,15 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -48,14 +39,16 @@ import type { MethodologyVersionOption } from "@/services/methodology-config/met
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import {
-  ADDITIONAL_QUESTION_ANSWER_TYPES,
   surveysService,
-  type AdditionalQuestionAnswerType,
   type Question,
   type SaveSurveyQuestionInput,
   type Survey,
   type SurveyQuestionItem,
 } from "@/services/surveys/surveys.service";
+import {
+  CustomQuestionEditorDialog,
+  type CustomQuestionValue,
+} from "@/components/features/studies/custom-question-editor-dialog";
 
 const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
   DRAFT: undefined,
@@ -69,11 +62,6 @@ function nextTempId(prefix: string): string {
   tempIdCounter += 1;
   return `${prefix}-${tempIdCounter}`;
 }
-
-const OPTIONS_ANSWER_TYPES = new Set<AdditionalQuestionAnswerType>([
-  "multiple_choice",
-  "checkbox",
-]);
 
 export default function SurveyBuilderDetailPage({
   params,
@@ -121,12 +109,11 @@ export default function SurveyBuilderDetailPage({
   // instead of the page growing with an ever-longer inline editable list.
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draftText, setDraftText] = useState("");
-  const [draftAnswerType, setDraftAnswerType] =
-    useState<AdditionalQuestionAnswerType>("long_text");
-  const [draftOptions, setDraftOptions] = useState<string[]>(["", ""]);
-  const [draftRequired, setDraftRequired] = useState(true);
-  const [modalError, setModalError] = useState<string | null>(null);
+  const [editingInitialValue, setEditingInitialValue] =
+    useState<CustomQuestionValue | null>(null);
+  // Bumped every time the modal opens so CustomQuestionEditorDialog remounts
+  // fresh instead of needing an internal effect to reset its draft state.
+  const [modalKey, setModalKey] = useState(0);
 
   function loadDraftFromSurvey(s: Survey | null) {
     setRecommended((s?.questions ?? []).filter((q) => !q.isCustom));
@@ -222,55 +209,36 @@ export default function SurveyBuilderDetailPage({
     setDirty(true);
   }
 
-  function resetModalDraft() {
-    setDraftText("");
-    setDraftAnswerType("long_text");
-    setDraftOptions(["", ""]);
-    setDraftRequired(true);
-    setModalError(null);
-  }
-
   function openAddModal() {
     setEditingId(null);
-    resetModalDraft();
+    setEditingInitialValue(null);
+    setModalKey((k) => k + 1);
     setModalOpen(true);
   }
 
   function openEditModal(item: SurveyQuestionItem) {
     setEditingId(item.id);
-    setDraftText(item.questionText);
-    setDraftAnswerType((item.answerType as AdditionalQuestionAnswerType) || "long_text");
-    setDraftOptions(
-      item.answerOptions && item.answerOptions.length > 0 ? item.answerOptions : ["", ""],
-    );
-    setDraftRequired(item.isRequired);
-    setModalError(null);
+    setModalKey((k) => k + 1);
+    setEditingInitialValue({
+      questionText: item.questionText,
+      answerType: (item.answerType as CustomQuestionValue["answerType"]) || "long_text",
+      answerOptions: item.answerOptions,
+      isRequired: item.isRequired,
+    });
     setModalOpen(true);
   }
 
-  function saveModalQuestion() {
-    const text = draftText.trim();
-    if (!text) {
-      setModalError(t("openEndedTextRequired"));
-      return;
-    }
-    const needsOptions = OPTIONS_ANSWER_TYPES.has(draftAnswerType);
-    const cleanedOptions = draftOptions.map((o) => o.trim()).filter(Boolean);
-    if (needsOptions && cleanedOptions.length < 2) {
-      setModalError(t("openEndedOptionsRequired"));
-      return;
-    }
-
+  function saveModalQuestion(value: CustomQuestionValue) {
     setAdditional((prev) => {
       if (editingId) {
         return prev.map((q) =>
           q.id === editingId
             ? {
                 ...q,
-                questionText: text,
-                answerType: draftAnswerType,
-                answerOptions: needsOptions ? cleanedOptions : null,
-                isRequired: draftRequired,
+                questionText: value.questionText,
+                answerType: value.answerType,
+                answerOptions: value.answerOptions,
+                isRequired: value.isRequired,
               }
             : q,
         );
@@ -281,38 +249,25 @@ export default function SurveyBuilderDetailPage({
           id: nextTempId("custom"),
           bankQuestionId: null,
           questionCode: null,
-          questionText: text,
-          answerType: draftAnswerType,
-          answerOptions: needsOptions ? cleanedOptions : null,
+          questionText: value.questionText,
+          answerType: value.answerType,
+          answerOptions: value.answerOptions,
           indicator: null,
           kpi: null,
           isCustom: true,
           order: recommended.length + prev.length + 1,
-          isRequired: draftRequired,
+          isRequired: value.isRequired,
         },
       ];
     });
     setDirty(true);
-    setModalOpen(false);
-    resetModalDraft();
     setEditingId(null);
+    setEditingInitialValue(null);
   }
 
   function removeAdditional(id: string) {
     setAdditional((prev) => prev.filter((q) => q.id !== id));
     setDirty(true);
-  }
-
-  function updateDraftOption(index: number, value: string) {
-    setDraftOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
-  }
-
-  function addDraftOption() {
-    setDraftOptions((prev) => [...prev, ""]);
-  }
-
-  function removeDraftOption(index: number) {
-    setDraftOptions((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function save() {
@@ -360,7 +315,44 @@ export default function SurveyBuilderDetailPage({
     }
   }
 
-  const needsOptionsEditor = OPTIONS_ANSWER_TYPES.has(draftAnswerType);
+  // When the same user holds both surveyBuilder write and approve (the
+  // Reviewer/Approver role does both — see role-matrix.ts), routing them
+  // through Submit for Approval and then over to a separate Review page to
+  // approve their own submission is pure friction, not a real handoff.
+  // Saves, submits, and publishes in one action instead.
+  async function saveAndPublish() {
+    if (!survey) return;
+    setSubmitting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const payload: SaveSurveyQuestionInput[] = [
+        ...recommended.map((q, index) => ({
+          questionId: q.bankQuestionId as string,
+          order: index + 1,
+          isRequired: q.isRequired,
+        })),
+        ...additional.map((q, index) => ({
+          customText: q.questionText.trim(),
+          customAnswerType: q.answerType,
+          customOptions: q.answerOptions ?? undefined,
+          order: recommended.length + index + 1,
+          isRequired: q.isRequired,
+        })),
+      ];
+      const saved = await surveysService.updateQuestions(survey.id, payload);
+      const submitted = await surveysService.submitForApproval(saved.id);
+      await surveysService.approveAndPublish(submitted.id);
+      const published = await surveysService.getSurveyByNeedId(needId);
+      setSurvey(published);
+      loadDraftFromSurvey(published);
+      setMessage(t("publishedMessage"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <PermissionGuard module="surveyBuilder" action="read">
@@ -411,7 +403,20 @@ export default function SurveyBuilderDetailPage({
                         {saving ? t("saving") : t("saveDraft")}
                       </Button>
                     ) : null}
-                    {isEditable ? (
+                    {isEditable && canApprove ? (
+                      <Button
+                        size="sm"
+                        onClick={saveAndPublish}
+                        disabled={submitting || !survey.methodologyVersion}
+                        title={
+                          !survey.methodologyVersion
+                            ? t("methodologyVersionRequiredNote")
+                            : undefined
+                        }
+                      >
+                        {submitting ? t("publishing") : t("saveAndPublish")}
+                      </Button>
+                    ) : isEditable ? (
                       <Button
                         size="sm"
                         onClick={submitForApproval}
@@ -872,111 +877,13 @@ export default function SurveyBuilderDetailPage({
           </>
         )}
 
-        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingId ? t("editOpenEndedQuestion") : t("addOpenEndedQuestion")}
-              </DialogTitle>
-              <DialogDescription>{t("openEndedDialogDescription")}</DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="open-ended-question">
-                  {t("questionLabel")} <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="open-ended-question"
-                  value={draftText}
-                  onChange={(e) => setDraftText(e.target.value)}
-                  placeholder={t("openEndedPlaceholder")}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="open-ended-answer-type">
-                  {t("answerTypeLabel")} <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={draftAnswerType}
-                  onValueChange={(v) =>
-                    setDraftAnswerType(v as AdditionalQuestionAnswerType)
-                  }
-                >
-                  <SelectTrigger id="open-ended-answer-type" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ADDITIONAL_QUESTION_ANSWER_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {titleCase(type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {needsOptionsEditor ? (
-                <div className="space-y-1.5">
-                  <Label>{t("optionsLabel")}</Label>
-                  <div className="space-y-2">
-                    {draftOptions.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={option}
-                          onChange={(e) => updateDraftOption(index, e.target.value)}
-                          placeholder={t("optionPlaceholder", { number: index + 1 })}
-                        />
-                        {draftOptions.length > 2 ? (
-                          <button
-                            type="button"
-                            onClick={() => removeDraftOption(index)}
-                            className="text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
-                            aria-label={t("remove")}
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addDraftOption}
-                      className="gap-1.5"
-                    >
-                      <Plus className="size-3.5" />
-                      {t("addOption")}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
-                <Checkbox
-                  checked={draftRequired}
-                  onCheckedChange={(v) => setDraftRequired(v === true)}
-                />
-                {t("requiredLabel")}
-              </label>
-
-              {modalError ? (
-                <p className="text-destructive text-sm">{modalError}</p>
-              ) : null}
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                {t("cancel")}
-              </Button>
-              <Button type="button" onClick={saveModalQuestion}>
-                {editingId ? t("saveQuestion") : t("addQuestion")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CustomQuestionEditorDialog
+          key={modalKey}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          initialValue={editingInitialValue}
+          onSave={saveModalQuestion}
+        />
       </PageContainer>
     </PermissionGuard>
   );

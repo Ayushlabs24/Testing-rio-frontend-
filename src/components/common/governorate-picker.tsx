@@ -103,6 +103,7 @@ export function GovernoratePicker({ values, onChange, options }: GovernoratePick
                   } else if (canAddQuery) {
                     commitQuery();
                   }
+                  setOpen(false);
                 }
               }}
               placeholder={t("villageSearchPlaceholder")}
@@ -138,7 +139,7 @@ export function GovernoratePicker({ values, onChange, options }: GovernoratePick
             ) : null}
             {filtered.length === 0 && !canAddQuery ? (
               <p className="text-muted-foreground px-2.5 py-4 text-center text-sm">
-                {t("noMoreGovernorates")}
+                {t("villageEmptyHint")}
               </p>
             ) : null}
           </div>

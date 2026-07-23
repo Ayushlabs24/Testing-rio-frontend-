@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck, Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
+import { Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,14 +9,10 @@ import { z } from "zod";
 import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
-import { SurveyStatusCard } from "@/components/features/studies/survey-status-card";
 import { BackButton } from "@/components/common/back-button";
-import {
-  DomainCategoryPicker,
-  type DomainCategoryValue,
-} from "@/components/common/domain-category-picker";
 import { GovernoratePicker } from "@/components/common/governorate-picker";
 import { LoadingButton } from "@/components/common/loading-button";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -27,25 +23,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePermission } from "@/hooks/use-permission";
+import { useStudyGovernorates, useStudyCenters } from "@/hooks/use-study-geography";
 import { cn } from "@/lib/utils";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import { needsService } from "@/services/needs/needs.service";
-import type { Need } from "@/services/needs/needs.types";
-import { organizationsService } from "@/services/organizations/organizations.service";
-import {
-  surveysService,
-  type QuestionOption,
-  type Survey,
-} from "@/services/surveys/surveys.service";
+import { NEED_EDITABLE_STATUSES, type Need } from "@/services/needs/needs.types";
+import type { Governorate, Center } from "@/services/geography/geography.types";
+import { studiesService } from "@/services/studies/studies.service";
+import type { Study } from "@/services/studies/studies.types";
 
 interface NeedFormValues {
   title: string;
   statement: string;
   village: string[];
-  domain: string;
-  subDomain: string;
+  governorateIds: string[];
+  centerIds: string[];
 }
 
 function formatDateTime(iso: string): string {
@@ -141,19 +135,20 @@ function WorkflowStep({
 function NeedDetailsCard({
   need,
   canEdit,
-  orgVillages,
-  domainOptions,
+  studyGovernorates,
+  studyCenters,
   onSaved,
   onDeleted,
 }: {
   need: Need;
   canEdit: boolean;
-  orgVillages: string[];
-  domainOptions: QuestionOption[];
+  studyGovernorates: Governorate[];
+  studyCenters: Center[];
   onSaved: (need: Need) => void;
   onDeleted: () => void;
 }) {
   const t = useTranslations("app.studies.need");
+  const tGeo = useTranslations("app.geography");
   const tSource = useTranslations("app.studies.source");
   const tDelete = useTranslations("app.studies.need.delete");
   const tValidation = useTranslations("app.studies.validation");
@@ -167,9 +162,9 @@ function NeedDetailsCard({
       .min(1, tValidation("titleRequired"))
       .max(300, tValidation("titleTooLong")),
     statement: z.string().trim().min(1, tValidation("needStatementRequired")),
-    village: z.array(z.string()).min(1, tValidation("needVillageRequired")),
-    domain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
-    subDomain: z.string().trim().min(1, tValidation("domainCategoryRequired")),
+    village: z.array(z.string()),
+    governorateIds: z.array(z.string()),
+    centerIds: z.array(z.string()),
   });
 
   const {
@@ -184,16 +179,17 @@ function NeedDetailsCard({
       title: need.title,
       statement: need.statement,
       village: need.village,
-      domain: need.domain ?? "",
-      subDomain: need.subDomain ?? "",
+      governorateIds: need.governorateIds,
+      centerIds: need.centerIds,
     },
   });
 
   const village = useWatch({ control, name: "village" });
-  const domain = useWatch({ control, name: "domain" });
-  const subDomain = useWatch({ control, name: "subDomain" });
-  const domainValue: DomainCategoryValue | null =
-    domain && subDomain ? { domain, subDomain } : null;
+  const governorateIds = useWatch({ control, name: "governorateIds" });
+  const centerIds = useWatch({ control, name: "centerIds" });
+  const centerOptions = studyCenters.filter((c) =>
+    governorateIds.includes(c.governorateId),
+  );
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -202,8 +198,8 @@ function NeedDetailsCard({
         title: values.title,
         statement: values.statement,
         village: values.village,
-        domain: values.domain,
-        subDomain: values.subDomain,
+        governorateIds: values.governorateIds,
+        centerIds: values.centerIds,
       });
       onSaved(updated);
       setEditing(false);
@@ -212,7 +208,7 @@ function NeedDetailsCard({
     }
   });
 
-  const locked = need.status !== "draft";
+  const locked = !NEED_EDITABLE_STATUSES.includes(need.status);
 
   return (
     <Card className="shadow-md">
@@ -293,33 +289,60 @@ function NeedDetailsCard({
                 <p className="text-destructive text-sm">{errors.statement.message}</p>
               ) : null}
             </div>
+
+            {/* Governorates/Centers scoped to the Study's own selection,
+                side by side; Village (free text) comes after Center. */}
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{tGeo("governorateLabel")}</Label>
+                <MultiSelect
+                  options={studyGovernorates.map((g) => ({ value: g.id, label: g.name }))}
+                  values={governorateIds}
+                  onChange={(next) =>
+                    setValue("governorateIds", next, { shouldValidate: true })
+                  }
+                  placeholder={tGeo("governoratePlaceholder")}
+                  searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+                  emptyText={tGeo("governorateEmpty")}
+                  removeAriaLabel={(governorate) =>
+                    tGeo("removeGovernorateSelection", { governorate })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{tGeo("centerLabel")}</Label>
+                <MultiSelect
+                  options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
+                  values={centerIds}
+                  onChange={(next) =>
+                    setValue("centerIds", next, { shouldValidate: true })
+                  }
+                  placeholder={
+                    governorateIds.length > 0
+                      ? tGeo("centerPlaceholder")
+                      : tGeo("selectGovernorateFirst")
+                  }
+                  searchPlaceholder={tGeo("centerSearchPlaceholder")}
+                  emptyText={tGeo("centerEmpty")}
+                  removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
+                  disabled={governorateIds.length === 0}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="village">{t("villageLabel")}</Label>
               <GovernoratePicker
                 values={village ?? []}
-                options={orgVillages}
+                options={[]}
                 onChange={(next) => setValue("village", next, { shouldValidate: true })}
               />
               {errors.village ? (
                 <p className="text-destructive text-sm">{errors.village.message}</p>
               ) : null}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="domain">{t("domainCategoryLabel")}</Label>
-              <DomainCategoryPicker
-                value={domainValue}
-                options={domainOptions}
-                onChange={(next) => {
-                  setValue("domain", next.domain, { shouldValidate: true });
-                  setValue("subDomain", next.subDomain, { shouldValidate: true });
-                }}
-              />
-              {errors.domain || errors.subDomain ? (
-                <p className="text-destructive text-sm">
-                  {errors.domain?.message ?? errors.subDomain?.message}
-                </p>
-              ) : null}
-            </div>
+
             {submitError ? (
               <p className="text-destructive text-sm">{submitError}</p>
             ) : null}
@@ -348,17 +371,34 @@ function NeedDetailsCard({
               <FilledTextBlock>{need.statement}</FilledTextBlock>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
+              <FilledField label={tGeo("governorateLabel")}>
+                {need.governorateIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {need.governorateIds.map((id) => (
+                      <Badge key={id} variant="secondary">
+                        {studyGovernorates.find((g) => g.id === id)?.name ?? id}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </FilledField>
+              <FilledField label={tGeo("centerLabel")}>
+                {need.centerIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {need.centerIds.map((id) => (
+                      <Badge key={id} variant="secondary">
+                        {studyCenters.find((c) => c.id === id)?.name ?? id}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </FilledField>
               <FilledField label={t("villageLabel")}>
                 <VillageChips villages={need.village} />
-              </FilledField>
-              <FilledField label={t("domainCategoryLabel")}>
-                {need.domain && need.subDomain ? (
-                  `${need.domain} / ${need.subDomain}`
-                ) : (
-                  <span className="text-muted-foreground">
-                    {t("domainCategoryPlaceholder")}
-                  </span>
-                )}
               </FilledField>
               <FilledField label={t("sourceLabel")}>{tSource(need.source)}</FilledField>
               <FilledField label={t("enteredByLabel")}>
@@ -367,13 +407,6 @@ function NeedDetailsCard({
               <FilledField label={t("captureDateLabel")}>
                 {formatDateTime(need.createdAt)}
               </FilledField>
-              {need.aiSuggestedDomain && need.aiSuggestedSubDomain ? (
-                <FilledField label={t("aiSuggestedDomainLabel")}>
-                  <span className="text-muted-foreground">
-                    {need.aiSuggestedDomain} / {need.aiSuggestedSubDomain}
-                  </span>
-                </FilledField>
-              ) : null}
             </div>
           </div>
         )}
@@ -392,28 +425,34 @@ export default function NeedWorkspacePage({
   const router = useRouter();
   const canEdit = usePermission("dataCollection", "write");
   const canViewEvidence = usePermission("dataCollection", "read");
-  // `write`, not `read` — this section is the Researcher's own "create
-  // survey / edit / submit for approval" workflow tool (see
-  // SurveyStatusCard's own doc comment), not a general survey viewer. The
-  // Approver also holds `surveyBuilder` read (so they can view a survey's
-  // content while reviewing it), but their actual review happens on the
-  // dedicated Review page — this card has no business showing up for them
-  // here, since every action on it is something they're not allowed to do.
-  const canUseSurveyBuilder = usePermission("surveyBuilder", "write");
-  // Approver's own counterpart to canUseSurveyBuilder above — they don't get
-  // the Researcher's create/edit card, but if a survey on this need is
-  // sitting SUBMITTED, they still need a way to reach the Review page from
-  // here (this is where they'd naturally land after opening a Need from the
-  // Studies list, not just via Reviewer Alerts).
-  const canApproveSurvey =
-    usePermission("surveyBuilder", "approve") && !canUseSurveyBuilder;
 
   const [need, setNeed] = useState<Need | null>(null);
-  const [orgVillages, setOrgVillages] = useState<string[]>([]);
-  const [domainOptions, setDomainOptions] = useState<QuestionOption[]>([]);
+  const [study, setStudy] = useState<Study | null>(null);
+  // Distinct from `study` itself — a failed fetch must still let the page
+  // render (with governorates/centers falling back to empty) instead of
+  // leaving the skeleton up forever waiting for a `study` that never arrives.
+  const [studyLoadFailed, setStudyLoadFailed] = useState(false);
+  const studyGovernorates = useStudyGovernorates(study);
+  const studyCenters = useStudyCenters(study);
   const [evidenceCount, setEvidenceCount] = useState(0);
   const [notFound, setNotFound] = useState(false);
-  const [survey, setSurvey] = useState<Survey | null>(null);
+  // One-time notice for the Create Need form's best-effort evidence upload
+  // (see studies/[id]/needs/new/page.tsx) — a failed upload there never
+  // blocks navigating here, so it's surfaced here instead of being lost.
+  // Read via a lazy initializer (not an effect) since this only needs to
+  // happen once, synchronously, at mount — needId is already known by then.
+  const [failedEvidenceNames] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    const key = `need-evidence-upload-failed:${needId}`;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return [];
+    sessionStorage.removeItem(key);
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  });
 
   const refreshNeed = () => {
     needsService
@@ -430,30 +469,18 @@ export default function NeedWorkspacePage({
   }, [needId]);
 
   useEffect(() => {
+    studiesService
+      .getById(studyId)
+      .then(setStudy)
+      .catch(() => setStudyLoadFailed(true));
+  }, [studyId]);
+
+  useEffect(() => {
     evidenceService
       .listByNeed(needId)
       .then((list) => setEvidenceCount(list.length))
       .catch(() => undefined);
   }, [needId]);
-
-  useEffect(() => {
-    if (!canApproveSurvey) return;
-    surveysService
-      .getSurveyByNeedId(needId)
-      .then(setSurvey)
-      .catch(() => undefined);
-  }, [needId, canApproveSurvey]);
-
-  useEffect(() => {
-    organizationsService
-      .getCurrent()
-      .then((org) => setOrgVillages(org.villages))
-      .catch(() => undefined);
-    surveysService
-      .getDomainOptions()
-      .then(setDomainOptions)
-      .catch(() => undefined);
-  }, []);
 
   if (notFound) {
     return (
@@ -468,7 +495,11 @@ export default function NeedWorkspacePage({
     );
   }
 
-  if (need === null) {
+  if (need === null || (study === null && !studyLoadFailed)) {
+    // Wait for both before rendering real content — Need and Study/
+    // Governorates/Centers load independently, and rendering as soon as
+    // just `need` arrived would flash the Governorate/Center chips empty
+    // (still resolving from `study`) before they populate a beat later.
     return (
       <PermissionGuard module="dataCollection" action="read">
         <PageContainer>
@@ -484,7 +515,7 @@ export default function NeedWorkspacePage({
   const evidenceState: StepState =
     evidenceCount === 0
       ? "not_started"
-      : need.status === "draft"
+      : NEED_EDITABLE_STATUSES.includes(need.status)
         ? "in_progress"
         : "completed";
 
@@ -499,12 +530,30 @@ export default function NeedWorkspacePage({
         </p>
         <PageHeader title={need.title} />
 
+        {failedEvidenceNames.length > 0 ? (
+          <div
+            role="alert"
+            className="border-destructive/40 bg-destructive/5 mt-4 flex items-start gap-2.5 rounded-md border p-3.5"
+          >
+            <div className="space-y-1">
+              <p className="text-destructive text-sm font-medium">
+                {t("evidenceUploadFailedTitle")}
+              </p>
+              <p className="text-foreground text-sm">
+                {t("evidenceUploadFailedNames", {
+                  names: failedEvidenceNames.join(", "),
+                })}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-6 space-y-6">
           <NeedDetailsCard
             need={need}
             canEdit={canEdit}
-            orgVillages={orgVillages}
-            domainOptions={domainOptions}
+            studyGovernorates={studyGovernorates}
+            studyCenters={studyCenters}
             onSaved={setNeed}
             onDeleted={() => router.push(`/studies/${studyId}`)}
           />
@@ -547,46 +596,7 @@ export default function NeedWorkspacePage({
             </WorkflowStep>
           ) : null}
 
-          <AiClassificationSection
-            needId={need.id}
-            needStatus={need.status}
-            evidenceCount={evidenceCount}
-            onReviewed={refreshNeed}
-          />
-
-          {canUseSurveyBuilder ? (
-            <SurveyStatusCard
-              needId={need.id}
-              needStatus={need.status}
-              domain={need.domain}
-              subDomain={need.subDomain}
-              aiSuggestedDomain={need.aiSuggestedDomain}
-              aiSuggestedSubDomain={need.aiSuggestedSubDomain}
-            />
-          ) : null}
-
-          {canApproveSurvey && survey && survey.status === "SUBMITTED" ? (
-            <Card>
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-6">
-                <div className="flex items-start gap-2.5">
-                  <ClipboardCheck className="text-primary mt-0.5 size-4 shrink-0" />
-                  <div>
-                    <p className="text-foreground text-sm font-medium">
-                      {t("surveyPendingReviewTitle")}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {t("surveyPendingReviewDescription")}
-                    </p>
-                  </div>
-                </div>
-                <Button asChild size="sm">
-                  <Link href={`/survey-builder/${need.id}/review`}>
-                    {t("reviewSurvey")}
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
+          <AiClassificationSection need={need} onNeedUpdated={setNeed} />
         </div>
       </PageContainer>
     </PermissionGuard>

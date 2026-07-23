@@ -2,6 +2,7 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
   CreateSharingRequestPayload,
+  DecideSharingRequestPayload,
   OrgLookupResult,
   SharedStudySnapshot,
   SharingRequest,
@@ -18,11 +19,17 @@ export const sharingService = {
   async getById(id: string): Promise<SharingRequest> {
     return apiClient.get<SharingRequest>(endpoints.sharing.byId(id));
   },
-  async approve(id: string): Promise<SharingRequest> {
-    return apiClient.patch<SharingRequest>(endpoints.sharing.approve(id));
+  async approve(
+    id: string,
+    payload: DecideSharingRequestPayload = {},
+  ): Promise<SharingRequest> {
+    return apiClient.patch<SharingRequest>(endpoints.sharing.approve(id), payload);
   },
-  async reject(id: string): Promise<SharingRequest> {
-    return apiClient.patch<SharingRequest>(endpoints.sharing.reject(id));
+  async reject(
+    id: string,
+    payload: DecideSharingRequestPayload = {},
+  ): Promise<SharingRequest> {
+    return apiClient.patch<SharingRequest>(endpoints.sharing.reject(id), payload);
   },
   async getSharedStudy(id: string): Promise<SharedStudySnapshot> {
     return apiClient.get<SharedStudySnapshot>(endpoints.sharing.sharedStudy(id));

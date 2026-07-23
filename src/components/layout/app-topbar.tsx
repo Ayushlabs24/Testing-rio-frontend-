@@ -1,10 +1,11 @@
 "use client";
 
-import { LogOut, Menu, PanelLeft } from "lucide-react";
+import { Bell, LogOut, Menu, PanelLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { OrgBrandMark } from "@/components/common/org-brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { appNav } from "@/config/navigation";
 import { siteConfig } from "@/config/site";
+import { useReviewerSlaBadge } from "@/hooks/use-reviewer-sla-badge";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -121,12 +123,21 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   const t = useTranslations("app.topbar");
   const tSidebar = useTranslations("app.sidebar");
   const pathname = usePathname();
+  const reviewerSlaUnread = useReviewerSlaBadge();
 
   if (!session) return null;
 
   const currentNavItem = appNav.find((item) =>
     item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href),
   );
+
+  // Same permission gate as the Reviewer SLA nav item itself (see
+  // config/navigation.ts's `module: "aiReview"` entry, and MobileNav's
+  // identical `visibleNav` filter above) — the bell only ever shows for a
+  // role that can actually see that page.
+  const canSeeReviewerSla =
+    session.role.enabled &&
+    (session.role.permissions.find((p) => p.module === "aiReview")?.read ?? false);
 
   return (
     <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6 lg:px-8">
@@ -175,6 +186,21 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {canSeeReviewerSla ? (
+          <Button variant="ghost" size="icon" className="relative" asChild>
+            <Link href="/reviewer-sla" aria-label={t("reviewerSlaAlerts")}>
+              <Bell className="size-4" />
+              {reviewerSlaUnread > 0 ? (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] tabular-nums"
+                >
+                  {reviewerSlaUnread > 99 ? "99+" : reviewerSlaUnread}
+                </Badge>
+              ) : null}
+            </Link>
+          </Button>
+        ) : null}
         <ThemeToggle />
       </div>
     </header>

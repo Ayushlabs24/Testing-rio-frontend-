@@ -9,8 +9,10 @@ type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
 /** Workflow tone: quiet until captured, builds toward the published end state. */
 const STATUS_VARIANT: Record<NeedStatus, BadgeVariant> = {
   draft: "outline",
+  pending_ai_classification: "outline",
   evidence_submitted: "secondary",
   ai_classified: "secondary",
+  ai_classification_failed: "destructive",
   reviewer_approved: "default",
   survey_created: "default",
   survey_published: "default",

@@ -49,19 +49,36 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
   const [recentlyReviewed, setRecentlyReviewed] = useState<StudySummary[] | null>(null);
 
   useEffect(() => {
+    // "Recently Reviewed" must never show a Study that still has something
+    // pending — the alerts list is the one source of truth for "not yet
+    // acted on," so it's fetched first and used to filter the Studies list
+    // below, rather than treating "recently touched" (updatedAt) as if it
+    // meant "recently reviewed."
     reviewerSlaService
       .listAlerts()
-      .then(setAlerts)
-      .catch(() => setAlerts([]));
-    studiesService
-      .list({ limit: 20 })
-      .then((rows) => {
-        const sorted = [...rows].sort(
-          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-        );
-        setRecentlyReviewed(sorted.slice(0, 5));
+      .then((list) => {
+        setAlerts(list);
+        return list;
       })
-      .catch(() => setRecentlyReviewed([]));
+      .catch(() => {
+        setAlerts([]);
+        return [];
+      })
+      .then((currentAlerts) => {
+        const pendingStudyIds = new Set(currentAlerts.map((a) => a.studyId));
+        studiesService
+          .list({ limit: 20 })
+          .then((rows) => {
+            const sorted = [...rows]
+              .filter((study) => !pendingStudyIds.has(study.id))
+              .sort(
+                (a, b) =>
+                  new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+              );
+            setRecentlyReviewed(sorted.slice(0, 5));
+          })
+          .catch(() => setRecentlyReviewed([]));
+      });
   }, []);
 
   const pendingCount = alerts?.length ?? 0;
