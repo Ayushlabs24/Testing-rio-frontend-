@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   MapPin,
   RefreshCw,
@@ -57,6 +58,7 @@ export function SeverityDashboard({
   surveyId,
   villages,
 }: SeverityDashboardProps) {
+  const t = useTranslations("PriorityDashboard.severityDashboard");
   const canRecalculate = usePermission("priorityScoring", "create");
 
   const [selectedVillage, setSelectedVillage] = useState<string>("consolidated");
@@ -197,7 +199,7 @@ export function SeverityDashboard({
         <div className="flex items-center space-x-3">
           <MapPin className="text-muted-foreground size-5" />
           <Label htmlFor="village-filter" className="text-sm font-semibold">
-            Governorate Filter
+            {t("filterLabel")}
           </Label>
           <select
             id="village-filter"
@@ -205,7 +207,7 @@ export function SeverityDashboard({
             onChange={(e) => setSelectedVillage(e.target.value)}
             className="border-input bg-background focus-visible:ring-ring h-9 w-60 rounded-md border px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
           >
-            <option value="consolidated">Consolidated (All Governorates)</option>
+            <option value="consolidated">{t("consolidatedOption")}</option>
             {villages.map((v) => (
               <option key={v} value={v}>
                 {v}
@@ -222,7 +224,7 @@ export function SeverityDashboard({
             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/10 gap-2 shadow-lg"
           >
             <RefreshCw className={cn("size-4", recalculating && "animate-spin")} />
-            {recalculating ? "Recalculating..." : "Recalculate Scores"}
+            {recalculating ? t("recalculating") : t("recalculateButton")}
           </Button>
         )}
       </div>
@@ -237,7 +239,7 @@ export function SeverityDashboard({
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="text-primary mb-2 size-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading dashboard data...</p>
+          <p className="text-muted-foreground text-sm">{t("loading")}</p>
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -259,12 +261,8 @@ export function SeverityDashboard({
                 )}
               />
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-bold">
-                  Governorate Development Needs Index
-                </CardTitle>
-                <CardDescription>
-                  Consolidated severity level for this assessment.
-                </CardDescription>
+                <CardTitle className="text-base font-bold">{t("indexTitle")}</CardTitle>
+                <CardDescription>{t("indexDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center py-6 text-center">
                 <div
@@ -287,7 +285,7 @@ export function SeverityDashboard({
                         : "—"}
                     </span>
                     <span className="text-muted-foreground mt-1 text-[10px] font-bold tracking-widest uppercase">
-                      Severity
+                      {t("severity")}
                     </span>
                   </div>
                 </div>
@@ -295,7 +293,7 @@ export function SeverityDashboard({
                 <div className="mt-6 flex w-full flex-col space-y-3">
                   <div className="flex items-center justify-between px-1 text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Confidence Level:
+                      {t("confidenceLevel")}
                     </span>
                     <Badge
                       variant={
@@ -308,7 +306,7 @@ export function SeverityDashboard({
                   </div>
                   <div className="flex items-center justify-between px-1 text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Valid Responses:
+                      {t("validResponses")}
                     </span>
                     <span className="text-foreground font-bold">
                       {overall?.validResponseCount ?? 0}
@@ -316,7 +314,7 @@ export function SeverityDashboard({
                   </div>
                   <div className="flex items-center justify-between px-1 text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Don&apos;t Know Rate:
+                      {t("dontKnowRate")}
                     </span>
                     <span className="text-foreground font-bold">
                       {overall?.dontKnowRate
@@ -327,9 +325,10 @@ export function SeverityDashboard({
                 </div>
 
                 <div className="text-muted-foreground mt-6 w-full border-t pt-4 text-left text-xs leading-relaxed">
-                  <p className="text-foreground mb-1 font-semibold">Index Definition:</p>0
-                  = fully met / no unmet need. 100 = completely unmet / maximum need.
-                  Higher score indicates worse community need.
+                  <p className="text-foreground mb-1 font-semibold">
+                    {t("indexDefinition")}
+                  </p>
+                  {t("indexDefinitionDesc")}
                 </div>
               </CardContent>
             </Card>
@@ -339,7 +338,9 @@ export function SeverityDashboard({
           <div className="space-y-6 lg:col-span-2">
             {/* Domain Cards */}
             <div>
-              <h3 className="text-foreground mb-4 text-base font-bold">Domains</h3>
+              <h3 className="text-foreground mb-4 text-base font-bold">
+                {t("domainsTitle")}
+              </h3>
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {dashboardData?.domains.map((dom) => {
                   const colors = getScoreColorClass(dom.severityScore);
@@ -409,14 +410,14 @@ export function SeverityDashboard({
               <Card className="border-primary/20 bg-primary/5 backdrop-blur-md">
                 <CardHeader className="px-4 py-3">
                   <CardTitle className="flex items-center justify-between text-sm font-bold">
-                    <span>{selectedDomain} Sub-domains & Indicators</span>
+                    <span>{t("subDomainsTitle", { domain: selectedDomain })}</span>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="text-primary h-7 text-xs"
                       onClick={() => setSelectedDomain(null)}
                     >
-                      Close
+                      {t("close")}
                     </Button>
                   </CardTitle>
                 </CardHeader>
@@ -495,7 +496,7 @@ export function SeverityDashboard({
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-bold">
-                      Governorate Priority Status
+                      {t("priorityStatusTitle")}
                     </CardTitle>
                     <Badge
                       className={cn(
@@ -508,15 +509,13 @@ export function SeverityDashboard({
                       )}
                     >
                       {priorityData.priorityStatus === "HIGH"
-                        ? "High Priority"
+                        ? t("highPriority")
                         : priorityData.priorityStatus === "MEDIUM"
-                          ? "Medium Priority"
-                          : "Low Priority"}
+                          ? t("mediumPriority")
+                          : t("lowPriority")}
                     </Badge>
                   </div>
-                  <CardDescription>
-                    Lower performance score means higher intervention priority.
-                  </CardDescription>
+                  <CardDescription>{t("priorityStatusDesc")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Override alert */}
@@ -525,7 +524,7 @@ export function SeverityDashboard({
                       <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
                       <div className="text-sm">
                         <p className="text-destructive font-bold">
-                          High Priority — Critical Domain Override
+                          {t("criticalOverrideTitle")}
                         </p>
                         <p className="text-muted-foreground mt-0.5 text-xs">
                           {priorityData.overrideReason}
@@ -537,7 +536,7 @@ export function SeverityDashboard({
                   {/* Score display */}
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground text-sm font-medium">
-                      Governorate Priority Score
+                      {t("priorityScoreLabel")}
                     </span>
                     <span
                       className={cn(
@@ -558,9 +557,11 @@ export function SeverityDashboard({
 
                   {/* Metadata */}
                   <div className="text-muted-foreground flex items-center justify-between text-xs">
-                    <span>Methodology: {priorityData.methodologyVersion}</span>
                     <span>
-                      Calculated:{" "}
+                      {t("methodology")} {priorityData.methodologyVersion}
+                    </span>
+                    <span>
+                      {t("calculated")}{" "}
                       {new Date(priorityData.calculatedAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -569,30 +570,32 @@ export function SeverityDashboard({
                   {priorityData.domainComponents.length > 0 && (
                     <div>
                       <h4 className="text-foreground mt-2 mb-2 text-xs font-bold tracking-wider uppercase">
-                        Domain Priority Contributions
+                        {t("domainContributionsTitle")}
                       </h4>
                       <div className="overflow-x-auto rounded-md border">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted/40">
-                              <TableHead className="py-2 text-xs">Domain</TableHead>
-                              <TableHead className="py-2 text-right text-xs">
-                                Severity
+                              <TableHead className="py-2 text-xs">
+                                {t("tableHeaders.domain")}
                               </TableHead>
                               <TableHead className="py-2 text-right text-xs">
-                                Performance
+                                {t("tableHeaders.severity")}
                               </TableHead>
                               <TableHead className="py-2 text-right text-xs">
-                                Weight
+                                {t("tableHeaders.performance")}
                               </TableHead>
                               <TableHead className="py-2 text-right text-xs">
-                                Contribution
+                                {t("tableHeaders.weight")}
+                              </TableHead>
+                              <TableHead className="py-2 text-right text-xs">
+                                {t("tableHeaders.contribution")}
                               </TableHead>
                               <TableHead className="py-2 text-center text-xs">
-                                Critical?
+                                {t("tableHeaders.critical")}
                               </TableHead>
                               <TableHead className="py-2 text-center text-xs">
-                                Override?
+                                {t("tableHeaders.override")}
                               </TableHead>
                             </TableRow>
                           </TableHeader>
@@ -669,22 +672,26 @@ export function SeverityDashboard({
             <Card className="border-border bg-card/60 backdrop-blur-md">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold">
-                  KPI Severity Rankings
+                  {t("kpiRankingsTitle")}
                 </CardTitle>
-                <CardDescription>
-                  All KPIs sorted from highest severity to lowest.
-                </CardDescription>
+                <CardDescription>{t("kpiRankingsDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12 text-center">Rank</TableHead>
-                        <TableHead>KPI</TableHead>
-                        <TableHead>Domain</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
-                        <TableHead className="text-center">Confidence</TableHead>
+                        <TableHead className="w-12 text-center">
+                          {t("tableHeaders.rank")}
+                        </TableHead>
+                        <TableHead>{t("tableHeaders.kpi")}</TableHead>
+                        <TableHead>{t("tableHeaders.domain")}</TableHead>
+                        <TableHead className="text-right">
+                          {t("tableHeaders.score")}
+                        </TableHead>
+                        <TableHead className="text-center">
+                          {t("tableHeaders.confidence")}
+                        </TableHead>
                         <TableHead className="w-12"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -775,7 +782,7 @@ export function SeverityDashboard({
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="text-primary size-8 animate-spin" />
               <p className="text-muted-foreground mt-2 text-xs">
-                Loading question detail...
+                {t("questionDetail.loading")}
               </p>
             </div>
           ) : questionDetail ? (
@@ -786,7 +793,7 @@ export function SeverityDashboard({
                     {questionDetail.questionId}
                   </Badge>
                   <span className="text-muted-foreground text-xs font-normal">
-                    Methodology: {questionDetail.methodologyVersion}
+                    {t("questionDetail.methodology")} {questionDetail.methodologyVersion}
                   </span>
                 </DialogTitle>
                 <DialogDescription className="text-foreground pt-2 text-sm font-medium">
@@ -799,7 +806,7 @@ export function SeverityDashboard({
                 <div className="bg-muted/40 grid grid-cols-2 gap-4 rounded-lg border px-4 py-3 text-center sm:grid-cols-4">
                   <div>
                     <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                      Severity
+                      {t("questionDetail.severity")}
                     </span>
                     <p className="text-foreground mt-0.5 text-lg font-black tabular-nums">
                       {questionDetail.averageSeverity !== null
@@ -809,7 +816,7 @@ export function SeverityDashboard({
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                      Valid
+                      {t("questionDetail.valid")}
                     </span>
                     <p className="text-foreground mt-0.5 text-lg font-bold tabular-nums">
                       {questionDetail.validCount}
@@ -817,7 +824,7 @@ export function SeverityDashboard({
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                      Don&apos;t Know
+                      {t("questionDetail.dontKnow")}
                     </span>
                     <p className="text-foreground mt-0.5 text-lg font-bold tabular-nums">
                       {questionDetail.dontKnowCount}
@@ -825,7 +832,7 @@ export function SeverityDashboard({
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
-                      N/A
+                      {t("questionDetail.na")}
                     </span>
                     <p className="text-foreground mt-0.5 text-lg font-bold tabular-nums">
                       {questionDetail.notApplicableCount}
@@ -836,7 +843,7 @@ export function SeverityDashboard({
                 {/* Answers distribution progress bars */}
                 <div>
                   <h4 className="text-foreground mb-3 text-xs font-bold tracking-wider uppercase">
-                    Response Distribution
+                    {t("questionDetail.distributionTitle")}
                   </h4>
                   <div className="space-y-3">
                     {questionDetail.optionsDistribution.map((opt) => {
@@ -870,13 +877,17 @@ export function SeverityDashboard({
                 {/* Lookup Weights config */}
                 <div>
                   <h4 className="text-foreground mb-2 text-xs font-bold tracking-wider uppercase">
-                    Scoring Lookup Settings
+                    {t("questionDetail.scoringLookupTitle")}
                   </h4>
                   <div className="divide-y overflow-hidden rounded-md border text-xs">
                     <div className="bg-muted/60 text-muted-foreground grid grid-cols-3 gap-2 p-2 font-semibold">
-                      <span>Answer Option</span>
-                      <span className="text-center">Severity Score</span>
-                      <span className="text-right">Exclusion Status</span>
+                      <span>{t("questionDetail.tableHeaders.option")}</span>
+                      <span className="text-center">
+                        {t("questionDetail.tableHeaders.severityScore")}
+                      </span>
+                      <span className="text-right">
+                        {t("questionDetail.tableHeaders.exclusionStatus")}
+                      </span>
                     </div>
                     {questionDetail.lookups.map((l, i) => (
                       <div
@@ -884,7 +895,7 @@ export function SeverityDashboard({
                         className="hover:bg-muted/10 grid grid-cols-3 gap-2 p-2"
                       >
                         <span className="text-foreground truncate font-medium">
-                          {l.optionId || "Numeric Range"}
+                          {l.optionId || t("questionDetail.numericRange")}
                         </span>
                         <span className="text-primary text-center font-bold tabular-nums">
                           {l.severityScore !== null ? l.severityScore : "—"}
@@ -892,10 +903,12 @@ export function SeverityDashboard({
                         <span className="text-right">
                           {l.isExcluded ? (
                             <Badge variant="destructive" className="px-1 py-0 text-[9px]">
-                              {l.exclusionReason || "EXCLUDED"}
+                              {l.exclusionReason || t("questionDetail.excluded")}
                             </Badge>
                           ) : (
-                            <span className="text-muted-foreground">None</span>
+                            <span className="text-muted-foreground">
+                              {t("questionDetail.none")}
+                            </span>
                           )}
                         </span>
                       </div>

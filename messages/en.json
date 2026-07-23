@@ -1804,5 +1804,203 @@
         "done": "Done"
       }
     }
+  },
+  "PriorityDashboard": {
+    "generateModal": {
+      "title": "Generate AI Summary",
+      "description": "Select the summary level and scope filters to create a frozen snapshot and generate an executive summary.",
+      "step1": "Step 1: Select Summary Level (Scope)",
+      "step2": "Step 2: Configure Scope Filters",
+      "previewTitle": "Frozen Snapshot Preview",
+      "noData": "No Data Available",
+      "readyForAi": "Ready for AI",
+      "noDataWarning": "⚠️ No survey responses or scoring data available for the selected village/scope. Collect survey responses and calculate scores before generating AI Summary.",
+      "submittedResponses": "Submitted Responses",
+      "validResponses": "Valid Responses",
+      "confidence": "Confidence",
+      "overallIndex": "Overall Index",
+      "na": "N/A",
+      "previewButton": "Preview Included Data",
+      "cancelButton": "Cancel",
+      "generatingButton": "Generating...",
+      "generateButton": "Generate AI Summary",
+      "selectVillageLabel": "Select Village:",
+      "allVillagesConsolidated": "All Villages (Consolidated)",
+      "targetSectorLabel": "Target Sector / Domain:",
+      "selectDomainPlaceholder": "Select Domain",
+      "villageContextLabel": "Village Context:",
+      "allVillages": "All Villages",
+      "targetRegionLabel": "Target Region:",
+      "selectRegionPlaceholder": "Select Region",
+      "subVillageFilterLabel": "Sub-Village Filter:",
+      "allRegionVillages": "All Region Villages",
+      "executiveNote": "Executive Scope will aggregate all {count} surveyed village(s) and permitted entity regions.",
+      "errors": {
+        "previewFailed": "Failed to load data preview",
+        "generateFailed": "Failed to generate AI summary"
+      },
+      "scopes": {
+        "village": {
+          "title": "Village Summary",
+          "desc": "Executive summary for a specific village, focusing on local KPIs, domain severity, and urgent needs."
+        },
+        "sector": {
+          "title": "Sector Summary",
+          "desc": "Cross-village analysis filtered by a specific domain/sector (e.g. Water & Sanitation)."
+        },
+        "region": {
+          "title": "Region Summary",
+          "desc": "Aggregated summary for all villages within an administrative region or province."
+        },
+        "executive": {
+          "title": "Executive Summary",
+          "desc": "High-level strategic briefing combining overall village indices, critical overrides, and top priority domains."
+        }
+      }
+    },
+    "summaryPanel": {
+      "generatorTitle": "AI Priority Summary Generator",
+      "workspaceTitle": "AI Priority Summary Workspace",
+      "savedTitle": "Saved Organization AI Summaries",
+      "savedSubtitle": "Archived summaries saved for this organization under multi-tenant isolation.",
+      "checklistTitle": "Pre-generation Validation Checklist:",
+      "severityComplete": "Severity Scoring Complete: Yes",
+      "priorityComplete": "Priority Scoring Complete: Yes",
+      "snapshotReady": "ReportData Snapshot Ready: Yes",
+      "approvedSelected": "Approved Evidence Selected: {count} items",
+      "generateButton": "Generate AI Summary",
+      "regenerateButton": "Regenerate",
+      "historyButton": "History",
+      "editButton": "Edit",
+      "saveButton": "Save",
+      "savingButton": "Saving...",
+      "confirmButton": "Confirm Summary",
+      "generateReportButton": "Generate {scope} Report",
+      "staleAlertTitle": "Scoring or evidence changed.",
+      "staleAlertDesc": "Regenerate a new AI Summary to reflect latest priority data.",
+      "executiveSummaryTitle": "Executive Summary Narrative",
+      "priorityExplanationTitle": "Why this village/scope has Priority Status",
+      "keyFindingsTitle": "Key Findings",
+      "severityLabel": "Severity",
+      "domainLabel": "Domain",
+      "kpiLabel": "KPI",
+      "promptLabel": "Prompt",
+      "generatedLabel": "Generated",
+      "savedCount": "{count} Saved Record(s)",
+      "tableHeaders": {
+        "scope": "Scope",
+        "target": "Target / Filter",
+        "status": "Status",
+        "snippet": "Executive Summary Snippet",
+        "savedDate": "Saved Date",
+        "actions": "Actions"
+      },
+      "levelBadge": "{scope} LEVEL"
+    },
+    "saveModal": {
+      "title": "Save Confirmed Report to Repository?",
+      "description": "Would you like to save this confirmed {scope} REPORT to the organization report repository for permanent archiving and team sharing?",
+      "includedBox": "Officer Confirmed Summary Included",
+      "includedDesc": "Saving will archive the frozen data snapshot, evidence list, and confirmed narrative under your Organization Reports dashboard.",
+      "previewOnly": "Preview Only (Do Not Save)",
+      "saving": "Saving Report...",
+      "saveAndOpen": "Save & Open Report"
+    },
+    "evidencePanel": {
+      "title": "Supporting Community Evidence & Field Data",
+      "subtitle": "Select approved field evidence to contextualize the AI Priority Summary narrative. (Evidence supports the narrative but does not alter scores).",
+      "approvedIncluded": "{included} of {approved} Approved Included",
+      "noEvidence": "No supporting evidence files uploaded for this assessment yet.",
+      "approvedBadge": "Approved",
+      "includeInSummary": "Include in AI Summary",
+      "defaultDomain": "General Community Feedback",
+      "defaultDesc": "Approved community evidence artifact."
+    },
+    "detailPage": {
+      "title": "Priority Dashboard & Needs Insights",
+      "recalculateButton": "Recalculate Priority",
+      "recalculating": "Recalculating...",
+      "priorityMatrixTitle": "Priority Score & Status Matrix",
+      "villagePriorityStatus": "Village Priority Status",
+      "priorityScoreIndex": "Priority Score Index",
+      "overrideStatus": "Override Status",
+      "criticalOverrides": "Critical Overrides",
+      "criticalOverride": "Critical Override",
+      "standardRollup": "Standard Rollup",
+      "criticalOverrideTriggered": "Critical Domain Override Triggered",
+      "criticalOverrideNote": "The following domains exceeded the critical threshold, overriding overall score:",
+      "domainPerformanceBreakdown": "Domain Performance Breakdown",
+      "tableHeaders": {
+        "domain": "Domain",
+        "severityScore": "Severity Score",
+        "performanceScore": "Performance Score",
+        "weight": "Weight",
+        "weightedContribution": "Weighted Contribution"
+      },
+      "noAssessment": "No response quality assessment run yet. Click \"Run Quality Assessment\" above to run checks.",
+      "noPublishedSurvey": "No published survey for this need yet.",
+      "noPriorityCalculated": "No priority score calculated for this need yet. Click \"Recalculate Priority\" above to compute."
+    },
+    "severityDashboard": {
+      "filterLabel": "Governorate Filter",
+      "consolidatedOption": "Consolidated (All Governorates)",
+      "recalculateButton": "Recalculate Scores",
+      "recalculating": "Recalculating...",
+      "loading": "Loading dashboard data...",
+      "indexTitle": "Governorate Development Needs Index",
+      "indexDesc": "Consolidated severity level for this assessment.",
+      "severity": "Severity",
+      "confidenceLevel": "Confidence Level:",
+      "validResponses": "Valid Responses:",
+      "dontKnowRate": "Don't Know Rate:",
+      "indexDefinition": "Index Definition:",
+      "indexDefinitionDesc": "0 = fully met / no unmet need. 100 = completely unmet / maximum need. Higher score indicates worse community need.",
+      "domainsTitle": "Domains",
+      "subDomainsTitle": "{domain} Sub-domains & Indicators",
+      "close": "Close",
+      "priorityStatusTitle": "Governorate Priority Status",
+      "highPriority": "High Priority",
+      "mediumPriority": "Medium Priority",
+      "lowPriority": "Low Priority",
+      "priorityStatusDesc": "Lower performance score means higher intervention priority.",
+      "criticalOverrideTitle": "High Priority — Critical Domain Override",
+      "priorityScoreLabel": "Governorate Priority Score",
+      "methodology": "Methodology:",
+      "calculated": "Calculated:",
+      "domainContributionsTitle": "Domain Priority Contributions",
+      "kpiRankingsTitle": "KPI Severity Rankings",
+      "kpiRankingsDesc": "All KPIs sorted from highest severity to lowest.",
+      "tableHeaders": {
+        "domain": "Domain",
+        "severity": "Severity",
+        "performance": "Performance",
+        "weight": "Weight",
+        "contribution": "Contribution",
+        "critical": "Critical?",
+        "override": "Override?",
+        "rank": "Rank",
+        "kpi": "KPI",
+        "score": "Score",
+        "confidence": "Confidence"
+      },
+      "questionDetail": {
+        "loading": "Loading question detail...",
+        "methodology": "Methodology:",
+        "severity": "Severity",
+        "valid": "Valid",
+        "dontKnow": "Don't Know",
+        "na": "N/A",
+        "distributionTitle": "Response Distribution",
+        "scoringLookupTitle": "Scoring Lookup Settings",
+        "tableHeaders": {
+          "option": "Answer Option",
+          "severityScore": "Severity Score",
+          "exclusionStatus": "Exclusion Status"
+        },
+        "numericRange": "Numeric Range",
+        "excluded": "EXCLUDED",
+        "none": "None"
+      }
+    }
   }
 }

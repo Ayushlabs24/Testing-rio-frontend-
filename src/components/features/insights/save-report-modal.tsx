@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Save, Eye, Loader2, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Save, Eye, Loader2, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ export function SaveReportModal({
   studyId: string;
   scope: string;
 }) {
+  const t = useTranslations("PriorityDashboard.saveModal");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
@@ -35,12 +37,12 @@ export function SaveReportModal({
       setSaving(true);
       const report = await prioritySummaryService.saveReportFromSummary(summaryId);
       onOpenChange(false);
-      if (report && report.id) {
-        router.push(`/reports/${report.id}`);
+      if (report && (report as Record<string, unknown>).id) {
+        router.push(`/reports/${(report as Record<string, unknown>).id}`);
       } else {
         router.push(`/reports/${studyId}?scope=${scope}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       router.push(`/reports/${studyId}?scope=${scope}`);
     } finally {
@@ -57,36 +59,34 @@ export function SaveReportModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold flex items-center gap-2">
-            <Save className="size-5 text-primary" />
-            Save Confirmed Report to Repository?
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+            <Save className="text-primary size-5" />
+            {t("title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Would you like to save this confirmed <strong className="text-foreground">{scope} REPORT</strong> to the organization report repository for permanent archiving and team sharing?
+            {t("description", { scope })}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-muted/30 border border-border p-4 rounded-lg text-xs space-y-2 py-3 my-2">
-          <div className="flex items-center gap-2 text-foreground font-semibold">
-            <CheckCircle2 className="size-4 text-success" />
-            Officer Confirmed Summary Included
+        <div className="bg-muted/30 border-border my-2 space-y-2 rounded-lg border p-4 py-3 text-xs">
+          <div className="text-foreground flex items-center gap-2 font-semibold">
+            <CheckCircle2 className="text-success size-4" />
+            {t("includedBox")}
           </div>
-          <p className="text-muted-foreground text-[11px]">
-            Saving will archive the frozen data snapshot, evidence list, and confirmed narrative under your Organization Reports dashboard.
-          </p>
+          <p className="text-muted-foreground text-[11px]">{t("includedDesc")}</p>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row items-center justify-end gap-2">
+        <DialogFooter className="flex flex-col items-center justify-end gap-2 sm:flex-row">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handlePreviewOnly}
             disabled={saving}
-            className="w-full sm:w-auto gap-1.5 text-xs"
+            className="w-full gap-1.5 text-xs sm:w-auto"
           >
             <Eye className="size-3.5" />
-            Preview Only (Do Not Save)
+            {t("previewOnly")}
           </Button>
 
           <Button
@@ -94,17 +94,17 @@ export function SaveReportModal({
             size="sm"
             onClick={handleSaveAndOpen}
             disabled={saving}
-            className="w-full sm:w-auto gap-1.5 text-xs"
+            className="w-full gap-1.5 text-xs sm:w-auto"
           >
             {saving ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Saving Report...
+                {t("saving")}
               </>
             ) : (
               <>
                 <Save className="size-3.5" />
-                Save & Open Report
+                {t("saveAndOpen")}
               </>
             )}
           </Button>
