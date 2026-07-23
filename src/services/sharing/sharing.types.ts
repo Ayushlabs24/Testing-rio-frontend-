@@ -20,7 +20,8 @@ export interface SharingRequest {
 export interface CreateSharingRequestPayload {
   ownerOrgId: string;
   studyId: string;
-  note?: string;
+  /** "Purpose" in the UI — required. */
+  note: string;
 }
 
 export interface DecideSharingRequestPayload {

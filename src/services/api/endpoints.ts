@@ -187,8 +187,6 @@ export const endpoints = {
     approve: (id: string) => `/report-sharing-requests/${id}/approve`,
     reject: (id: string) => `/report-sharing-requests/${id}/reject`,
     sharedReport: (id: string) => `/report-sharing-requests/${id}/shared-report`,
-    export: (id: string, format: string) =>
-      `/report-sharing-requests/${id}/export?format=${encodeURIComponent(format)}`,
     lookupOrganizations: (query: string) =>
       `/report-sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
     lookupReportsForOrg: (orgId: string) =>
@@ -197,6 +195,9 @@ export const endpoints = {
   reviewerSla: {
     config: "/reviewer-sla/config",
     alerts: "/reviewer-sla/alerts",
+  },
+  sharingAlerts: {
+    list: "/sharing-alerts",
   },
   methodologyConfig: {
     get: "/methodology-config",

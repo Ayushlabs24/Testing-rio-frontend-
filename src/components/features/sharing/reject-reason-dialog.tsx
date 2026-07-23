@@ -15,33 +15,43 @@ import { Textarea } from "@/components/ui/textarea";
 interface RejectReasonDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (reason: string | undefined) => Promise<void>;
+  onConfirm: (reason: string) => Promise<void>;
   title: string;
   reasonLabel: string;
+  reasonRequiredError: string;
   cancelLabel: string;
   confirmLabel: string;
 }
 
-/** Shared by both Study-sharing and Report-sharing's reject action — a
- * small optional-reason prompt, since rejecting used to be a single click
- * with no explanation on either module. */
+/** Shared by both Study-sharing and Report-sharing's reject action — the
+ * requesting org otherwise has no idea what to change before asking again,
+ * so a reason is mandatory here (both client-side and re-enforced by
+ * SharingService/ReportSharingService.decide() on the backend). */
 export function RejectReasonDialog({
   open,
   onOpenChange,
   onConfirm,
   title,
   reasonLabel,
+  reasonRequiredError,
   cancelLabel,
   confirmLabel,
 }: RejectReasonDialogProps) {
   const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleConfirm() {
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      setError(reasonRequiredError);
+      return;
+    }
     setSubmitting(true);
     try {
-      await onConfirm(reason.trim() || undefined);
+      await onConfirm(trimmed);
       setReason("");
+      setError(null);
     } finally {
       setSubmitting(false);
     }
@@ -51,7 +61,10 @@ export function RejectReasonDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setReason("");
+        if (!next) {
+          setReason("");
+          setError(null);
+        }
         onOpenChange(next);
       }}
     >
@@ -60,12 +73,19 @@ export function RejectReasonDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="reject-reason">{reasonLabel}</Label>
+          <Label htmlFor="reject-reason">
+            {reasonLabel} <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="reject-reason"
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              if (error) setError(null);
+            }}
+            aria-invalid={error ? true : undefined}
           />
+          {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
         <DialogFooter>
           <Button

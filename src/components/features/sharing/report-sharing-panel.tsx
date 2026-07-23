@@ -1,10 +1,11 @@
 "use client";
 
-import { Download, Plus, Share2 } from "lucide-react";
+import { Plus, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
+import type { SharingInnerTab } from "@/components/features/sharing/study-sharing-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -27,15 +36,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { SHARING_PAGE_SIZE, SHARING_ROWS_PER_PAGE_OPTIONS } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
-import { flattenReportContent } from "@/lib/report-content-flatten";
+import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { reportSharingService } from "@/services/report-sharing/report-sharing.service";
 import type {
   OrgLookupResult,
   ReportLookupResult,
   ReportSharingRequest,
-  SharedReportSnapshot,
   SharingStatus,
 } from "@/services/report-sharing/report-sharing.types";
 
@@ -75,6 +84,7 @@ function CreateReportSharingRequestDialog({
   const [reportId, setReportId] = useState<string | null>(null);
 
   const [note, setNote] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,18 +129,24 @@ function CreateReportSharingRequestDialog({
 
   async function submit() {
     if (!ownerOrgId || !reportId) return;
+    const trimmedNote = note.trim();
+    if (!trimmedNote) {
+      setNoteError(t("purposeRequired"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       await reportSharingService.create({
         ownerOrgId,
         reportId,
-        note: note || undefined,
+        note: trimmedNote,
       });
       onOpenChange(false);
       setOwnerOrgId(null);
       setReportId(null);
       setNote("");
+      setNoteError(null);
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -175,12 +191,20 @@ function CreateReportSharingRequestDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="report-sharing-note">{t("noteLabel")}</Label>
+            <Label htmlFor="report-sharing-note">
+              {t("noteLabel")} <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="report-sharing-note"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => {
+                setNote(e.target.value);
+                if (noteError) setNoteError(null);
+              }}
+              placeholder={t("notePlaceholder")}
+              aria-invalid={noteError ? true : undefined}
             />
+            {noteError ? <p className="text-destructive text-sm">{noteError}</p> : null}
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
@@ -197,93 +221,9 @@ function CreateReportSharingRequestDialog({
   );
 }
 
-function SharedReportDialog({
-  requestId,
-  snapshot,
-  onOpenChange,
-}: {
-  requestId: string | null;
-  snapshot: SharedReportSnapshot | null;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const t = useTranslations("app.reportSharing.sharedReport");
-  const tParent = useTranslations("app.reportSharing");
-  const flattened = snapshot ? flattenReportContent(snapshot.content) : null;
-  const [downloading, setDownloading] = useState<"pdf" | "excel" | null>(null);
-
-  async function handleDownload(format: "pdf" | "excel") {
-    if (!requestId) return;
-    setDownloading(format);
-    try {
-      await reportSharingService.download(requestId, format);
-    } finally {
-      setDownloading(null);
-    }
-  }
-
-  return (
-    <Dialog open={snapshot !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{snapshot?.title ?? t("title")}</DialogTitle>
-        </DialogHeader>
-        {snapshot ? (
-          <div className="space-y-4 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs">{t("generatedAtLabel")}</p>
-              <p>{formatDate(snapshot.generatedAt)}</p>
-            </div>
-            {flattened?.narrative ? (
-              <p className="whitespace-pre-wrap">{flattened.narrative}</p>
-            ) : null}
-            {flattened && flattened.summaryRows.length > 0 ? (
-              <div className="divide-border divide-y">
-                {flattened.summaryRows.map((row) => (
-                  <div key={row.field} className="flex justify-between gap-4 py-1.5">
-                    <span className="text-muted-foreground">{row.field}</span>
-                    <span className="text-right">{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {!flattened?.narrative && (flattened?.summaryRows.length ?? 0) === 0 ? (
-              <p className="text-muted-foreground">{t("noContent")}</p>
-            ) : null}
-            <div className="flex gap-2 pt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                disabled={downloading !== null}
-                onClick={() => handleDownload("pdf")}
-              >
-                <Download className="size-3.5" />
-                {tParent("exportPdf")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                disabled={downloading !== null}
-                onClick={() => handleDownload("excel")}
-              >
-                <Download className="size-3.5" />
-                {tParent("exportExcel")}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t("close")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function ReportSharingPanel() {
+export function ReportSharingPanel({
+  initialTab,
+}: { initialTab?: SharingInnerTab } = {}) {
   const t = useTranslations("app.reportSharing");
   const { session } = useAuth();
   const canCreate = usePermission("archiveSharingAudit", "create");
@@ -292,10 +232,16 @@ export function ReportSharingPanel() {
   const [requests, setRequests] = useState<ReportSharingRequest[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [snapshotRequestId, setSnapshotRequestId] = useState<string | null>(null);
-  const [snapshot, setSnapshot] = useState<SharedReportSnapshot | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<SharingInnerTab>(initialTab ?? "incoming");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(SHARING_PAGE_SIZE);
+
+  function handleTabChange(next: string) {
+    setActiveTab(next as SharingInnerTab);
+    setPage(1);
+  }
 
   function load() {
     reportSharingService
@@ -336,7 +282,7 @@ export function ReportSharingPanel() {
     }
   }
 
-  async function handleReject(id: string, reason: string | undefined) {
+  async function handleReject(id: string, reason: string) {
     setActionError(null);
     try {
       await reportSharingService.reject(id, { note: reason });
@@ -347,25 +293,25 @@ export function ReportSharingPanel() {
     }
   }
 
-  async function handleViewShared(id: string) {
-    setActionError(null);
-    try {
-      const result = await reportSharingService.getSharedReport(id);
-      setSnapshotRequestId(id);
-      setSnapshot(result);
-    } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : t("sharedReport.genericError"),
-      );
-    }
-  }
-
   function renderTable(
     rows: ReportSharingRequest[],
     emptyLabel: string,
-    options: { showRole?: boolean; showDecision?: boolean; showView?: boolean },
+    options: {
+      showRole?: boolean;
+      showDecision?: boolean;
+      showView?: boolean;
+      showPurpose?: boolean;
+      showRejectReason?: boolean;
+    },
   ) {
-    const columnCount = 5 + (options.showRole ? 1 : 0);
+    const columnCount =
+      5 +
+      (options.showRole ? 1 : 0) +
+      (options.showPurpose ? 1 : 0) +
+      (options.showRejectReason ? 1 : 0);
+    const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     return (
       <Card>
         <CardContent className="p-0">
@@ -376,6 +322,12 @@ export function ReportSharingPanel() {
                 <TableHead>{t("orgColumn")}</TableHead>
                 {options.showRole ? (
                   <TableHead className="w-28">{t("roleColumn")}</TableHead>
+                ) : null}
+                {options.showPurpose ? (
+                  <TableHead className="w-64">{t("purposeColumn")}</TableHead>
+                ) : null}
+                {options.showRejectReason ? (
+                  <TableHead className="w-64">{t("rejectReasonColumn")}</TableHead>
                 ) : null}
                 <TableHead className="w-28">{t("statusColumn")}</TableHead>
                 <TableHead className="w-44">{t("requestedColumn")}</TableHead>
@@ -408,7 +360,7 @@ export function ReportSharingPanel() {
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((request) => {
+                pagedRows.map((request) => {
                   const isOwnerView = request.ownerOrgId === myOrgId;
                   return (
                     <TableRow key={request.id}>
@@ -421,6 +373,16 @@ export function ReportSharingPanel() {
                       {options.showRole ? (
                         <TableCell className="text-sm">
                           {isOwnerView ? t("roleOwner") : t("roleRequester")}
+                        </TableCell>
+                      ) : null}
+                      {options.showPurpose ? (
+                        <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          {request.note ?? "—"}
+                        </TableCell>
+                      ) : null}
+                      {options.showRejectReason ? (
+                        <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          {request.decisionNote ?? "—"}
                         </TableCell>
                       ) : null}
                       <TableCell>
@@ -453,12 +415,10 @@ export function ReportSharingPanel() {
                             </>
                           ) : null}
                           {options.showView ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewShared(request.id)}
-                            >
-                              {t("view")}
+                            <Button size="sm" variant="outline" asChild>
+                              <Link href={`/sharing/reports/${request.id}`}>
+                                {t("view")}
+                              </Link>
                             </Button>
                           ) : null}
                         </div>
@@ -469,6 +429,41 @@ export function ReportSharingPanel() {
               )}
             </TableBody>
           </Table>
+
+          {rows.length > 0 ? (
+            <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-40"
+                  aria-label={t("rowsPerPageLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHARING_ROWS_PER_PAGE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {t("rowsPerPageLabel")}: {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Pagination
+                page={currentPage}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                previousLabel={t("pagination.previous")}
+                nextLabel={t("pagination.next")}
+                pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                className="sm:w-auto"
+              />
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     );
@@ -487,7 +482,7 @@ export function ReportSharingPanel() {
 
       {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
 
-      <Tabs defaultValue="incoming">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="overflow-x-auto">
           <TabsList variant="line" size="lg">
             <TabsTrigger value="incoming" size="lg">
@@ -508,16 +503,22 @@ export function ReportSharingPanel() {
           </TabsList>
         </div>
         <TabsContent value="incoming" className="mt-6">
-          {renderTable(incoming, t("noIncoming"), { showDecision: true })}
+          {renderTable(incoming, t("noIncoming"), {
+            showDecision: true,
+            showPurpose: true,
+          })}
         </TabsContent>
         <TabsContent value="outgoing" className="mt-6">
-          {renderTable(outgoing, t("noOutgoing"), {})}
+          {renderTable(outgoing, t("noOutgoing"), { showPurpose: true })}
         </TabsContent>
         <TabsContent value="approved" className="mt-6">
           {renderTable(approved, t("noApproved"), { showRole: true })}
         </TabsContent>
         <TabsContent value="rejected" className="mt-6">
-          {renderTable(rejected, t("noRejected"), { showRole: true })}
+          {renderTable(rejected, t("noRejected"), {
+            showRole: true,
+            showRejectReason: true,
+          })}
         </TabsContent>
         <TabsContent value="sharedReports" className="mt-6">
           {renderTable(sharedReports, t("noSharedReports"), { showView: true })}
@@ -529,22 +530,13 @@ export function ReportSharingPanel() {
         onOpenChange={setCreateOpen}
         onCreated={load}
       />
-      <SharedReportDialog
-        requestId={snapshotRequestId}
-        snapshot={snapshot}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSnapshot(null);
-            setSnapshotRequestId(null);
-          }
-        }}
-      />
       <RejectReasonDialog
         open={rejectTargetId !== null}
         onOpenChange={(open) => !open && setRejectTargetId(null)}
         onConfirm={(reason) => handleReject(rejectTargetId as string, reason)}
         title={t("rejectDialog.title")}
         reasonLabel={t("rejectDialog.reasonLabel")}
+        reasonRequiredError={t("rejectDialog.reasonRequired")}
         cancelLabel={t("rejectDialog.cancel")}
         confirmLabel={t("rejectDialog.confirm")}
       />

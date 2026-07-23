@@ -7,3 +7,6 @@ export const SURVEY_RESPONSES_PAGE_SIZE = 10;
 // survey response tables — see the "View All Responses" and per-question
 // responses pages.
 export const SURVEY_RESPONSES_PAGE_SIZE_OPTIONS = [10, 15, 20, 50, 100] as const;
+export const SHARING_PAGE_SIZE = 10;
+export const SHARING_ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100] as const;
+export const SHARED_REPORT_TABLE_PAGE_SIZE = 10;

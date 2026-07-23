@@ -29,19 +29,38 @@ export function markReviewerSlaAlertsSeen(userId: string, alerts: SlaAlert[]): v
   }
 }
 
-/** Unread Reviewer SLA alert count for the topbar/sidebar badge — an alert
- * is "unread" until the user has actually visited the Alerts page while it
- * was present (see markReviewerSlaAlertsSeen). Polls at the same
- * server-configured interval the Alerts page itself uses (RIO-NFR-014). */
-export function useReviewerSlaBadge(): number {
+export interface ReviewerSlaBadgeState {
+  count: number;
+  /** Highest severity among the *unread* alerts — drives the bell's color
+   * so a reviewer sees escalation (amber -> red) ahead of an actual breach,
+   * not just a flat number. `null` when there's nothing unread. */
+  severity: "breached" | "at_risk" | "pending" | null;
+  /** The full last-fetched list (not just unread) — lets a combined
+   * notifications dropdown call markReviewerSlaAlertsSeen directly on
+   * "mark all as read" without a second fetch. */
+  alerts: SlaAlert[];
+}
+
+/** Unread Reviewer SLA alert count (+ severity) for the topbar/sidebar
+ * badge — an alert is "unread" until the user has actually visited the
+ * Alerts page while it was present (see markReviewerSlaAlertsSeen). Polls
+ * at the same server-configured interval the Alerts page itself uses
+ * (RIO-NFR-014). In-app only by design (RIO-FR-Add-04: client confirmed no
+ * email channel is needed) — this poll + severity escalation is the whole
+ * "fires ahead of breach" mechanism. */
+export function useReviewerSlaBadge(): ReviewerSlaBadgeState {
   const { session } = useAuth();
   const userId = session?.user.id;
-  const [count, setCount] = useState(0);
+  const [state, setState] = useState<ReviewerSlaBadgeState>({
+    count: 0,
+    severity: null,
+    alerts: [],
+  });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!userId) {
-      Promise.resolve().then(() => setCount(0));
+      Promise.resolve().then(() => setState({ count: 0, severity: null, alerts: [] }));
       return;
     }
     const uid = userId;
@@ -51,7 +70,17 @@ export function useReviewerSlaBadge(): number {
         .listAlerts()
         .then((alerts) => {
           const seen = readSeenIds(uid);
-          setCount(alerts.filter((a) => !seen.has(a.id)).length);
+          const unread = alerts.filter((a) => !seen.has(a.id));
+          const severity: ReviewerSlaBadgeState["severity"] = unread.some(
+            (a) => a.status === "breached",
+          )
+            ? "breached"
+            : unread.some((a) => a.status === "at_risk")
+              ? "at_risk"
+              : unread.length > 0
+                ? "pending"
+                : null;
+          setState({ count: unread.length, severity, alerts });
         })
         .catch(() => undefined);
     }
@@ -69,5 +98,5 @@ export function useReviewerSlaBadge(): number {
     };
   }, [userId]);
 
-  return count;
+  return state;
 }

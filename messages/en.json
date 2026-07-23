@@ -229,7 +229,20 @@
     "topbar": {
       "menu": "Menu",
       "logout": "Log out",
-      "reviewerSlaAlerts": "Reviewer SLA alerts"
+      "notifications": "Notifications",
+      "reviewerSlaAlerts": "Reviewer SLA alerts",
+      "reviewerSlaPendingCount": "{count} review item(s) awaiting action",
+      "sharingAlerts": "Sharing notifications",
+      "sharingSectionTitle": "Sharing requests",
+      "sharingAlertsEmpty": "No sharing notifications",
+      "sharingAlertsMarkAllSeen": "Mark all as read",
+      "sharingAlertCreatedStudy": "{orgName} requested access to \"{title}\"",
+      "sharingAlertCreatedReport": "{orgName} requested access to \"{title}\"",
+      "sharingAlertApprovedStudy": "Your request for \"{title}\" has been approved",
+      "sharingAlertApprovedReport": "Your request for \"{title}\" has been approved",
+      "sharingAlertRejectedStudy": "Your request for \"{title}\" was rejected",
+      "sharingAlertRejectedReport": "Your request for \"{title}\" was rejected",
+      "sharingAlertReasonPrefix": "Reason: {reason}"
     },
     "footer": {
       "rightsReserved": "All rights reserved.",
@@ -675,7 +688,8 @@
           "survey_response": "Survey response",
           "evidence": "Evidence",
           "report": "Report",
-          "sharing_request": "Sharing request"
+          "sharing_request": "Sharing request",
+          "report_sharing_request": "Report sharing request"
         }
       }
     },
@@ -803,12 +817,12 @@
       "description": "Request read-only access to another organisation's studies or reports, or decide requests made to yours.",
       "entityStudies": "Studies",
       "entityReports": "Reports",
-      "newRequest": "New request",
+      "newRequest": "New study request",
       "tabIncoming": "Incoming Requests",
       "tabOutgoing": "Outgoing Requests",
       "tabApproved": "Approved",
       "tabRejected": "Rejected",
-      "tabSharedReports": "Shared Reports",
+      "tabSharedReports": "Shared Studies",
       "noIncoming": "No requests awaiting your decision.",
       "noOutgoing": "You haven't requested access to any studies.",
       "noApproved": "No approved sharing requests yet.",
@@ -817,9 +831,11 @@
       "loadError": "Couldn't load sharing requests. Please try again.",
       "studyColumn": "Study",
       "orgColumn": "Organisation",
-      "roleColumn": "Role",
+      "roleColumn": "Relationship",
       "roleOwner": "Owner",
       "roleRequester": "Requester",
+      "purposeColumn": "Purpose",
+      "rejectReasonColumn": "Reject Reason",
       "statusColumn": "Status",
       "requestedColumn": "Requested",
       "status": {
@@ -832,7 +848,7 @@
       "reject": "Reject",
       "view": "View shared study",
       "create": {
-        "title": "Request access",
+        "title": "Request access to a study",
         "ownerOrgLabel": "Organization",
         "ownerOrgPlaceholder": "Search organization...",
         "ownerOrgSearchPlaceholder": "Search by name",
@@ -842,7 +858,9 @@
         "studySearchPlaceholder": "Search studies",
         "studyEmpty": "This organization has no completed studies yet.",
         "studySelectOrgFirst": "Select an organization first.",
-        "noteLabel": "Note (optional)",
+        "noteLabel": "Purpose",
+        "notePlaceholder": "Why are you requesting this study? e.g. \"We are conducting a similar assessment and would like to reuse your survey as a reference.\"",
+        "purposeRequired": "Purpose is required.",
         "cancel": "Cancel",
         "submit": "Send request",
         "submitting": "Sending...",
@@ -859,7 +877,8 @@
       },
       "rejectDialog": {
         "title": "Reject request",
-        "reasonLabel": "Reason (optional)",
+        "reasonLabel": "Reject Reason",
+        "reasonRequired": "A reason is required when rejecting a request.",
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
@@ -868,7 +887,7 @@
     "reportSharing": {
       "title": "Report Sharing",
       "description": "Request read-only access to another organisation's approved report, or decide requests made to yours.",
-      "newRequest": "New request",
+      "newRequest": "New report request",
       "tabIncoming": "Incoming Requests",
       "tabOutgoing": "Outgoing Requests",
       "tabApproved": "Approved",
@@ -880,11 +899,19 @@
       "noRejected": "No rejected sharing requests.",
       "noSharedReports": "No reports have been shared with you yet.",
       "loadError": "Couldn't load report sharing requests. Please try again.",
+      "rowsPerPageLabel": "Rows per page",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
       "reportColumn": "Report",
       "orgColumn": "Organisation",
-      "roleColumn": "Role",
+      "roleColumn": "Relationship",
       "roleOwner": "Owner",
       "roleRequester": "Requester",
+      "purposeColumn": "Purpose",
+      "rejectReasonColumn": "Reject Reason",
       "statusColumn": "Status",
       "requestedColumn": "Requested",
       "status": {
@@ -896,10 +923,8 @@
       "approve": "Approve",
       "reject": "Reject",
       "view": "View shared report",
-      "exportPdf": "Export PDF",
-      "exportExcel": "Export Excel",
       "create": {
-        "title": "Request access",
+        "title": "Request access to a report",
         "ownerOrgLabel": "Organization",
         "ownerOrgPlaceholder": "Search organization...",
         "ownerOrgSearchPlaceholder": "Search by name",
@@ -909,7 +934,9 @@
         "reportSearchPlaceholder": "Search reports",
         "reportEmpty": "This organization has no approved reports yet.",
         "reportSelectOrgFirst": "Select an organization first.",
-        "noteLabel": "Note (optional)",
+        "noteLabel": "Purpose",
+        "notePlaceholder": "Why are you requesting this report? e.g. \"We are conducting a similar electricity infrastructure assessment and would like to reuse your survey as a reference.\"",
+        "purposeRequired": "Purpose is required.",
         "cancel": "Cancel",
         "submit": "Send request",
         "submitting": "Sending...",
@@ -919,12 +946,23 @@
         "title": "Shared report (read-only)",
         "generatedAtLabel": "Generated at",
         "noContent": "No content to display.",
+        "viewOnlyNote": "Shared reports are view-only. Download and export aren't available for reports shared with your organization.",
         "close": "Close",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "backLabel": "Back to Shared Reports",
+        "viewOnlyBadge": "View Only",
+        "generatedByLabel": "Generated By",
+        "generatedDateLabel": "Generated Date",
+        "ownerOrgLabel": "Owner Organization",
+        "summarySectionTitle": "Summary",
+        "tablesSectionTitle": "Data Tables",
+        "footerNote": "This report is shared read-only. Download and export are not available.",
+        "loadError": "Couldn't load this shared report. It may no longer be available to your organization."
       },
       "rejectDialog": {
         "title": "Reject request",
-        "reasonLabel": "Reason (optional)",
+        "reasonLabel": "Reject Reason",
+        "reasonRequired": "A reason is required when rejecting a request.",
         "cancel": "Cancel",
         "confirm": "Reject request"
       },

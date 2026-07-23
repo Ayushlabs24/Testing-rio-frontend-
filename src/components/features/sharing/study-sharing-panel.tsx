@@ -74,6 +74,7 @@ function CreateRequestDialog({
   const [studyId, setStudyId] = useState<string | null>(null);
 
   const [note, setNote] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,14 +119,20 @@ function CreateRequestDialog({
 
   async function submit() {
     if (!ownerOrgId || !studyId) return;
+    const trimmedNote = note.trim();
+    if (!trimmedNote) {
+      setNoteError(t("purposeRequired"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await sharingService.create({ ownerOrgId, studyId, note: note || undefined });
+      await sharingService.create({ ownerOrgId, studyId, note: trimmedNote });
       onOpenChange(false);
       setOwnerOrgId(null);
       setStudyId(null);
       setNote("");
+      setNoteError(null);
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -170,12 +177,20 @@ function CreateRequestDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sharing-note">{t("noteLabel")}</Label>
+            <Label htmlFor="sharing-note">
+              {t("noteLabel")} <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="sharing-note"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => {
+                setNote(e.target.value);
+                if (noteError) setNoteError(null);
+              }}
+              placeholder={t("notePlaceholder")}
+              aria-invalid={noteError ? true : undefined}
             />
+            {noteError ? <p className="text-destructive text-sm">{noteError}</p> : null}
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
@@ -238,7 +253,10 @@ function SharedStudyDialog({
   );
 }
 
-export function StudySharingPanel() {
+export type SharingInnerTab =
+  "incoming" | "outgoing" | "approved" | "rejected" | "sharedReports";
+
+export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab } = {}) {
   const t = useTranslations("app.sharing");
   const { session } = useAuth();
   const canCreate = usePermission("archiveSharingAudit", "create");
@@ -290,7 +308,7 @@ export function StudySharingPanel() {
     }
   }
 
-  async function handleReject(id: string, reason: string | undefined) {
+  async function handleReject(id: string, reason: string) {
     setActionError(null);
     try {
       await sharingService.reject(id, { note: reason });
@@ -316,9 +334,19 @@ export function StudySharingPanel() {
   function renderTable(
     rows: SharingRequest[],
     emptyLabel: string,
-    options: { showRole?: boolean; showDecision?: boolean; showView?: boolean },
+    options: {
+      showRole?: boolean;
+      showDecision?: boolean;
+      showView?: boolean;
+      showPurpose?: boolean;
+      showRejectReason?: boolean;
+    },
   ) {
-    const columnCount = 5 + (options.showRole ? 1 : 0);
+    const columnCount =
+      5 +
+      (options.showRole ? 1 : 0) +
+      (options.showPurpose ? 1 : 0) +
+      (options.showRejectReason ? 1 : 0);
     return (
       <Card>
         <CardContent className="p-0">
@@ -329,6 +357,12 @@ export function StudySharingPanel() {
                 <TableHead>{t("orgColumn")}</TableHead>
                 {options.showRole ? (
                   <TableHead className="w-28">{t("roleColumn")}</TableHead>
+                ) : null}
+                {options.showPurpose ? (
+                  <TableHead className="w-64">{t("purposeColumn")}</TableHead>
+                ) : null}
+                {options.showRejectReason ? (
+                  <TableHead className="w-64">{t("rejectReasonColumn")}</TableHead>
                 ) : null}
                 <TableHead className="w-28">{t("statusColumn")}</TableHead>
                 <TableHead className="w-44">{t("requestedColumn")}</TableHead>
@@ -374,6 +408,16 @@ export function StudySharingPanel() {
                       {options.showRole ? (
                         <TableCell className="text-sm">
                           {isOwnerView ? t("roleOwner") : t("roleRequester")}
+                        </TableCell>
+                      ) : null}
+                      {options.showPurpose ? (
+                        <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          {request.note ?? "—"}
+                        </TableCell>
+                      ) : null}
+                      {options.showRejectReason ? (
+                        <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          {request.decisionNote ?? "—"}
                         </TableCell>
                       ) : null}
                       <TableCell>
@@ -440,7 +484,7 @@ export function StudySharingPanel() {
 
       {actionError ? <p className="text-destructive text-sm">{actionError}</p> : null}
 
-      <Tabs defaultValue="incoming">
+      <Tabs defaultValue={initialTab ?? "incoming"}>
         <div className="overflow-x-auto">
           <TabsList variant="line" size="lg">
             <TabsTrigger value="incoming" size="lg">
@@ -461,16 +505,22 @@ export function StudySharingPanel() {
           </TabsList>
         </div>
         <TabsContent value="incoming" className="mt-6">
-          {renderTable(incoming, t("noIncoming"), { showDecision: true })}
+          {renderTable(incoming, t("noIncoming"), {
+            showDecision: true,
+            showPurpose: true,
+          })}
         </TabsContent>
         <TabsContent value="outgoing" className="mt-6">
-          {renderTable(outgoing, t("noOutgoing"), {})}
+          {renderTable(outgoing, t("noOutgoing"), { showPurpose: true })}
         </TabsContent>
         <TabsContent value="approved" className="mt-6">
           {renderTable(approved, t("noApproved"), { showRole: true })}
         </TabsContent>
         <TabsContent value="rejected" className="mt-6">
-          {renderTable(rejected, t("noRejected"), { showRole: true })}
+          {renderTable(rejected, t("noRejected"), {
+            showRole: true,
+            showRejectReason: true,
+          })}
         </TabsContent>
         <TabsContent value="sharedReports" className="mt-6">
           {renderTable(sharedReports, t("noSharedReports"), { showView: true })}
@@ -492,6 +542,7 @@ export function StudySharingPanel() {
         onConfirm={(reason) => handleReject(rejectTargetId as string, reason)}
         title={t("rejectDialog.title")}
         reasonLabel={t("rejectDialog.reasonLabel")}
+        reasonRequiredError={t("rejectDialog.reasonRequired")}
         cancelLabel={t("rejectDialog.cancel")}
         confirmLabel={t("rejectDialog.confirm")}
       />

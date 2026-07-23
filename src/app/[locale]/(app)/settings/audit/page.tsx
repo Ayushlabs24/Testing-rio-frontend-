@@ -433,9 +433,9 @@ export default function AuditSettingsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="py-5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex flex-col space-y-0.5">
-                            <span className="text-foreground text-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 flex-col space-y-0.5">
+                            <span className="text-foreground text-sm break-words whitespace-normal">
                               {event.entityLabel}
                             </span>
                             <span className="text-muted-foreground text-xs">
