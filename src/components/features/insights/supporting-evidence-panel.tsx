@@ -1,7 +1,6 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { FileText, CheckCircle2, XCircle, ShieldCheck, Tag } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { FileText, ShieldCheck, Tag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,45 +24,49 @@ export interface SupportingEvidenceItem {
 
 export function SupportingEvidencePanel({
   needId,
-  studyId,
+  _studyId,
   onEvidenceToggled,
 }: {
   needId: string;
-  studyId: string;
+  _studyId?: string;
   onEvidenceToggled?: () => void;
 }) {
+  const t = useTranslations("PriorityDashboard.evidencePanel");
   const [evidenceList, setEvidenceList] = useState<SupportingEvidenceItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  function load() {
+  const load = useCallback(() => {
     setLoading(true);
     evidenceService
       .listByNeed(needId)
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       .then((items: any[]) => {
         setEvidenceList(
           items.map((item) => ({
-            id: item.id,
-            fileName: item.fileName,
-            title: item.title || item.fileName,
-            fileType: item.fileType,
-            sourceReferenceId: item.sourceReferenceId || item.id.slice(0, 8),
-            linkedDomainOrKpi: item.linkedDomainOrKpi || "General Community Feedback",
-            description: item.description || "Approved community evidence artifact.",
-            collectedAt: item.collectedAt || item.uploadedAt,
-            uploadedAt: item.uploadedAt,
-            reviewStatus: item.reviewStatus || "APPROVED",
+            id: String(item.id || ""),
+            fileName: String(item.fileName || ""),
+            title: String(item.title || item.fileName || ""),
+            fileType: String(item.fileType || ""),
+            sourceReferenceId: String(
+              item.sourceReferenceId || String(item.id || "").slice(0, 8),
+            ),
+            linkedDomainOrKpi: String(item.linkedDomainOrKpi || t("defaultDomain")),
+            description: String(item.description || t("defaultDesc")),
+            collectedAt: String(item.collectedAt || item.uploadedAt || ""),
+            uploadedAt: String(item.uploadedAt || ""),
+            reviewStatus: String(item.reviewStatus || "APPROVED"),
             isIncludedInReport: item.isIncludedInReport !== false,
           })),
         );
       })
       .catch(() => setEvidenceList([]))
       .finally(() => setLoading(false));
-  }
+  }, [needId, t]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needId]);
+  }, [load]);
 
   const handleToggleInclusion = async (evidenceId: string, currentVal: boolean) => {
     try {
@@ -81,22 +84,22 @@ export function SupportingEvidencePanel({
   };
 
   const approvedCount = evidenceList.filter((e) => e.reviewStatus === "APPROVED").length;
-  const includedCount = evidenceList.filter((e) => e.isIncludedInReport && e.reviewStatus === "APPROVED").length;
+  const includedCount = evidenceList.filter(
+    (e) => e.isIncludedInReport && e.reviewStatus === "APPROVED",
+  ).length;
 
   return (
     <Card className="border-border shadow-sm">
-      <CardHeader className="py-4 px-6 bg-muted/20 border-b border-border flex flex-row items-center justify-between">
+      <CardHeader className="bg-muted/20 border-border flex flex-row items-center justify-between border-b px-6 py-4">
         <div>
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <FileText className="size-4 text-primary" />
-            Supporting Community Evidence & Field Data
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <FileText className="text-primary size-4" />
+            {t("title")}
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Select approved field evidence to contextualize the AI Priority Summary narrative. (Evidence supports the narrative but does not alter scores).
-          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{t("subtitle")}</p>
         </div>
         <Badge variant="outline" className="text-xs font-normal">
-          {includedCount} of {approvedCount} Approved Included
+          {t("approvedIncluded", { included: includedCount, approved: approvedCount })}
         </Badge>
       </CardHeader>
       <CardContent className="p-6">
@@ -106,15 +109,15 @@ export function SupportingEvidencePanel({
             <div className="bg-muted h-12 w-full animate-pulse rounded-md" />
           </div>
         ) : evidenceList.length === 0 ? (
-          <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-md border border-dashed">
-            No supporting evidence files uploaded for this assessment yet.
+          <div className="text-muted-foreground bg-muted/20 rounded-md border border-dashed p-6 text-center text-xs">
+            {t("noEvidence")}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {evidenceList.map((item) => (
               <div
                 key={item.id}
-                className={`p-4 rounded-lg border transition-colors space-y-3 ${
+                className={`space-y-3 rounded-lg border p-4 transition-colors ${
                   item.isIncludedInReport && item.reviewStatus === "APPROVED"
                     ? "bg-card border-primary/30 shadow-xs"
                     : "bg-muted/30 border-border opacity-70"
@@ -122,11 +125,11 @@ export function SupportingEvidencePanel({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <FileText className="size-3.5 text-primary" />
+                    <p className="text-foreground flex items-center gap-1.5 text-xs font-semibold">
+                      <FileText className="text-primary size-3.5" />
                       {item.title}
                     </p>
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-2">
+                    <p className="text-muted-foreground flex items-center gap-2 text-[11px]">
                       <span>Ref: {item.sourceReferenceId}</span>
                       <span>•</span>
                       <span>Type: {item.fileType}</span>
@@ -137,9 +140,9 @@ export function SupportingEvidencePanel({
                     className="text-[10px]"
                   >
                     {item.reviewStatus === "APPROVED" ? (
-                      <span className="flex items-center gap-1 text-success">
+                      <span className="text-success flex items-center gap-1">
                         <ShieldCheck className="size-3" />
-                        Approved
+                        {t("approvedBadge")}
                       </span>
                     ) : (
                       item.reviewStatus
@@ -147,12 +150,14 @@ export function SupportingEvidencePanel({
                   </Badge>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/40 p-2 rounded">
-                  <Tag className="size-3 text-primary" />
-                  <span className="font-medium text-foreground">{item.linkedDomainOrKpi}</span>
+                <div className="text-muted-foreground bg-muted/40 flex items-center gap-1.5 rounded p-2 text-[11px]">
+                  <Tag className="text-primary size-3" />
+                  <span className="text-foreground font-medium">
+                    {item.linkedDomainOrKpi}
+                  </span>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-border/50 pt-2.5">
+                <div className="border-border/50 flex items-center justify-between border-t pt-2.5">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id={`inc-${item.id}`}
@@ -164,12 +169,12 @@ export function SupportingEvidencePanel({
                     />
                     <Label
                       htmlFor={`inc-${item.id}`}
-                      className="text-xs cursor-pointer select-none font-medium"
+                      className="cursor-pointer text-xs font-medium select-none"
                     >
-                      Include in AI Summary
+                      {t("includeInSummary")}
                     </Label>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-muted-foreground text-[10px]">
                     {new Date(item.uploadedAt).toLocaleDateString()}
                   </span>
                 </div>

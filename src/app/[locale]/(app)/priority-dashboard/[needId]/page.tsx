@@ -1,7 +1,8 @@
 "use client";
 
-import { Sparkles, Gauge, ListChecks, AlertTriangle } from "lucide-react";
+import { Gauge, ListChecks, AlertTriangle } from "lucide-react";
 import { use, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
@@ -30,10 +31,7 @@ import { ApiError } from "@/services/api/types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
-import type {
-  AiSummary,
-  ResponseQualityResult,
-} from "@/services/response-quality/response-quality.types";
+import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
 import { needsService } from "@/services/needs/needs.service";
 import { surveysService } from "@/services/surveys/surveys.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,7 +42,6 @@ import {
 } from "@/services/priority/severity-scoring.service";
 import { AiPrioritySummaryPanel } from "@/components/features/insights/ai-priority-summary-panel";
 import { SupportingEvidencePanel } from "@/components/features/insights/supporting-evidence-panel";
-import { prioritySummaryService } from "@/services/reports/priority-summary.service";
 
 const CONSOLIDATED = "consolidated";
 
@@ -54,6 +51,7 @@ export default function PriorityDetailInsightsPage({
   params: Promise<{ needId: string }>;
 }) {
   const { needId } = use(params);
+  const t = useTranslations("PriorityDashboard.detailPage");
   const canWrite = usePermission("aiReview", "write");
   const canScore = usePermission("priorityScoring", "create");
 
@@ -61,7 +59,6 @@ export default function PriorityDetailInsightsPage({
   const [scope, setScope] = useState<string>(CONSOLIDATED);
   const surveyLinkId = scope === CONSOLIDATED ? undefined : scope;
 
-  const [summary, setSummary] = useState<AiSummary | null>(null);
   const [qualityResults, setQualityResults] = useState<ResponseQualityResult[] | null>(
     null,
   );
@@ -72,7 +69,6 @@ export default function PriorityDetailInsightsPage({
   const [survey, setSurvey] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [generatingSummary, setGeneratingSummary] = useState(false);
   const [assessing, setAssessing] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [summaryKey, setSummaryKey] = useState(0);
@@ -102,10 +98,6 @@ export default function PriorityDetailInsightsPage({
       })
       .catch(() => undefined);
     responseQualityService
-      .getSummary(needId, surveyLinkId)
-      .then(setSummary)
-      .catch(() => undefined);
-    responseQualityService
       .list(needId, surveyLinkId)
       .then(setQualityResults)
       .catch(() => setQualityResults([]));
@@ -116,19 +108,6 @@ export default function PriorityDetailInsightsPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needId, surveyLinkId]);
 
-  async function handleGenerateSummary() {
-    setGeneratingSummary(true);
-    setError(null);
-    try {
-      const result = await responseQualityService.generateSummary(needId, surveyLinkId);
-      setSummary(result);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to generate AI summary");
-    } finally {
-      setGeneratingSummary(false);
-    }
-  }
-
   async function handleAssess() {
     setAssessing(true);
     setError(null);
@@ -136,7 +115,9 @@ export default function PriorityDetailInsightsPage({
       const results = await responseQualityService.assess(needId, surveyLinkId);
       setQualityResults(results);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to assess response quality");
+      setError(
+        err instanceof ApiError ? err.message : "Failed to assess response quality",
+      );
     } finally {
       setAssessing(false);
     }
@@ -156,7 +137,9 @@ export default function PriorityDetailInsightsPage({
       setPriorityV2(result);
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to recalculate priority score");
+      setError(
+        err instanceof ApiError ? err.message : "Failed to recalculate priority score",
+      );
     } finally {
       setScoring(false);
     }
@@ -174,8 +157,16 @@ export default function PriorityDetailInsightsPage({
         </div>
 
         <PageHeader
-          title={need?.title ? `${need.title} — Insights & Scoring` : "Priority & Severity Insights"}
-          description={need?.domain ? `Domain: ${need.domain}` : "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights."}
+          title={
+            need?.title
+              ? `${need.title} — Insights & Scoring`
+              : "Priority & Severity Insights"
+          }
+          description={
+            need?.domain
+              ? `Domain: ${need.domain}`
+              : "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights."
+          }
           actions={
             <div className="space-y-1.5">
               <span className="text-muted-foreground text-xs font-medium">
@@ -224,15 +215,21 @@ export default function PriorityDetailInsightsPage({
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                          <ListChecks className="size-4 text-primary" />
+                          <ListChecks className="text-primary size-4" />
                           Response Quality Results
                         </h2>
-                        <p className="text-muted-foreground text-xs mt-0.5">
-                          Completeness check, confidence level flags, and duplicate detection for submitted survey responses.
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          Completeness check, confidence level flags, and duplicate
+                          detection for submitted survey responses.
                         </p>
                       </div>
                       {canWrite ? (
-                        <Button size="sm" variant="outline" onClick={handleAssess} disabled={assessing}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAssess}
+                          disabled={assessing}
+                        >
                           {assessing ? "Assessing..." : "Run Quality Assessment"}
                         </Button>
                       ) : null}
@@ -251,10 +248,20 @@ export default function PriorityDetailInsightsPage({
                         <TableBody>
                           {qualityResults.map((r) => (
                             <TableRow key={r.id}>
-                              <TableCell className="font-medium">{r.surveyResponseId}</TableCell>
-                              <TableCell>{(r.completenessScore * 100).toFixed(0)}%</TableCell>
+                              <TableCell className="font-medium">
+                                {r.surveyResponseId}
+                              </TableCell>
                               <TableCell>
-                                <Badge variant={r.confidenceFlag === "low" ? "destructive" : "secondary"}>
+                                {(r.completenessScore * 100).toFixed(0)}%
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    r.confidenceFlag === "low"
+                                      ? "destructive"
+                                      : "secondary"
+                                  }
+                                >
                                   {r.confidenceFlag.toUpperCase()}
                                 </Badge>
                               </TableCell>
@@ -266,17 +273,13 @@ export default function PriorityDetailInsightsPage({
                         </TableBody>
                       </Table>
                     ) : (
-                      <p className="text-muted-foreground text-sm">
-                        No response quality assessment run yet. Click "Run Quality Assessment" above to run checks.
-                      </p>
+                      <p className="text-muted-foreground text-sm">{t("noAssessment")}</p>
                     )}
                   </CardContent>
                 </Card>
               </>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                No published survey for this need yet.
-              </p>
+              <p className="text-muted-foreground text-sm">{t("noPublishedSurvey")}</p>
             )}
           </TabsContent>
 
@@ -300,11 +303,11 @@ export default function PriorityDetailInsightsPage({
                 <div className="flex items-center justify-between">
                   <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
                     <Gauge className="size-4" />
-                    Priority Score & Status Matrix
+                    {t("priorityMatrixTitle")}
                   </h2>
                   {canScore ? (
                     <Button size="sm" onClick={handleScore} disabled={scoring}>
-                      {scoring ? "Recalculating..." : "Recalculate Priority"}
+                      {scoring ? t("recalculating") : t("recalculateButton")}
                     </Button>
                   ) : null}
                 </div>
@@ -314,7 +317,7 @@ export default function PriorityDetailInsightsPage({
                     {/* Status Badge */}
                     <div className="flex items-center justify-between border-b pb-4">
                       <span className="text-muted-foreground text-sm font-semibold">
-                        Village Priority Status
+                        {t("villagePriorityStatus")}
                       </span>
                       <Badge
                         variant={
@@ -334,7 +337,7 @@ export default function PriorityDetailInsightsPage({
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <div className="bg-muted/40 rounded-lg p-4">
                         <p className="text-muted-foreground text-xs font-semibold uppercase">
-                          Priority Score Index
+                          {t("priorityScoreIndex")}
                         </p>
                         <p className="text-foreground mt-1 text-2xl font-bold">
                           {priorityV2.priorityScore}
@@ -342,15 +345,17 @@ export default function PriorityDetailInsightsPage({
                       </div>
                       <div className="bg-muted/40 rounded-lg p-4">
                         <p className="text-muted-foreground text-xs font-semibold uppercase">
-                          Override Status
+                          {t("overrideStatus")}
                         </p>
                         <p className="text-foreground mt-1 text-2xl font-bold capitalize">
-                          {priorityV2.overrideApplied ? "Critical Override" : "Standard Rollup"}
+                          {priorityV2.overrideApplied
+                            ? t("criticalOverride")
+                            : t("standardRollup")}
                         </p>
                       </div>
                       <div className="bg-muted/40 rounded-lg p-4">
                         <p className="text-muted-foreground text-xs font-semibold uppercase">
-                          Critical Overrides
+                          {t("criticalOverrides")}
                         </p>
                         <p className="text-foreground mt-1 text-2xl font-bold">
                           {criticalOverrides.length}
@@ -361,17 +366,18 @@ export default function PriorityDetailInsightsPage({
                     {/* Critical Domain Override Alert */}
                     {criticalOverrides.length > 0 && (
                       <div className="border-destructive/40 bg-destructive/10 rounded-lg border p-4 text-xs">
-                        <div className="flex items-center gap-2 font-semibold text-destructive">
+                        <div className="text-destructive flex items-center gap-2 font-semibold">
                           <AlertTriangle className="size-4" />
-                          Critical Domain Override Triggered
+                          {t("criticalOverrideTriggered")}
                         </div>
-                        <p className="mt-1 text-foreground">
-                          The following domains exceeded the critical threshold, overriding overall score:
+                        <p className="text-foreground mt-1">
+                          {t("criticalOverrideNote")}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {criticalOverrides.map((override, i) => (
                             <Badge key={i} variant="destructive">
-                              {override.domainNameSnapshot}: {override.domainSeverityScore}
+                              {override.domainNameSnapshot}:{" "}
+                              {override.domainSeverityScore}
                             </Badge>
                           ))}
                         </div>
@@ -380,25 +386,35 @@ export default function PriorityDetailInsightsPage({
 
                     {/* Domain Score / Weight / Contribution Table */}
                     <div>
-                      <h3 className="mb-3 text-sm font-semibold">Domain Performance Breakdown</h3>
+                      <h3 className="mb-3 text-sm font-semibold">
+                        {t("domainPerformanceBreakdown")}
+                      </h3>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Domain</TableHead>
-                            <TableHead>Severity Score</TableHead>
-                            <TableHead>Performance Score</TableHead>
-                            <TableHead>Weight</TableHead>
-                            <TableHead>Weighted Contribution</TableHead>
+                            <TableHead>{t("tableHeaders.domain")}</TableHead>
+                            <TableHead>{t("tableHeaders.severityScore")}</TableHead>
+                            <TableHead>{t("tableHeaders.performanceScore")}</TableHead>
+                            <TableHead>{t("tableHeaders.weight")}</TableHead>
+                            <TableHead>
+                              {t("tableHeaders.weightedContribution")}
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {(priorityV2.domainComponents || []).map((domain) => (
                             <TableRow key={domain.domainKey}>
-                              <TableCell className="font-medium">{domain.domainNameSnapshot}</TableCell>
+                              <TableCell className="font-medium">
+                                {domain.domainNameSnapshot}
+                              </TableCell>
                               <TableCell>{domain.domainSeverityScore}</TableCell>
                               <TableCell>{domain.domainPerformanceScore}</TableCell>
-                              <TableCell>{(domain.domainWeight * 100).toFixed(0)}%</TableCell>
-                              <TableCell className="font-bold">{domain.weightedContribution.toFixed(2)}</TableCell>
+                              <TableCell>
+                                {(domain.domainWeight * 100).toFixed(0)}%
+                              </TableCell>
+                              <TableCell className="font-bold">
+                                {domain.weightedContribution.toFixed(2)}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -407,7 +423,7 @@ export default function PriorityDetailInsightsPage({
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-sm">
-                    No priority score calculated for this need yet. Click "Recalculate Priority" above to compute.
+                    {t("noPriorityCalculated")}
                   </p>
                 )}
               </CardContent>
@@ -417,7 +433,7 @@ export default function PriorityDetailInsightsPage({
             {survey ? (
               <SupportingEvidencePanel
                 needId={needId}
-                studyId={survey.studyId}
+                _studyId={survey.studyId}
                 onEvidenceToggled={() => setSummaryKey((prev) => prev + 1)}
               />
             ) : null}

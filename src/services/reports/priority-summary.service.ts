@@ -68,7 +68,7 @@ export interface PrioritySummaryRecord {
 
 export interface PrioritySummaryResponse {
   summary: PrioritySummaryRecord | null;
-  snapshot: any;
+  snapshot: Record<string, unknown>;
 }
 
 export const prioritySummaryService = {
@@ -77,7 +77,7 @@ export const prioritySummaryService = {
     surveyId: string,
     scope: SummaryScopeType = "VILLAGE",
     scopeFilters: ScopeFilters = {},
-  ): Promise<{ snapshot: any }> {
+  ): Promise<{ snapshot: Record<string, unknown> }> {
     return apiClient.post(
       `/studies/${studyId}/surveys/${surveyId}/priority-summary/preview-snapshot`,
       { scope, scopeFilters },
@@ -112,10 +112,9 @@ export const prioritySummaryService = {
     summaryId: string,
     editedOutputJson: PrioritySummaryOutput,
   ): Promise<PrioritySummaryRecord> {
-    return apiClient.patch<PrioritySummaryRecord>(
-      `/priority-summaries/${summaryId}`,
-      { editedOutputJson },
-    );
+    return apiClient.patch<PrioritySummaryRecord>(`/priority-summaries/${summaryId}`, {
+      editedOutputJson,
+    });
   },
 
   async confirmSummary(summaryId: string): Promise<PrioritySummaryRecord> {
@@ -138,13 +137,13 @@ export const prioritySummaryService = {
   async toggleEvidenceInclusion(
     evidenceId: string,
     isIncludedInReport: boolean,
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     return apiClient.patch(`/evidence/${evidenceId}/toggle-inclusion`, {
       isIncludedInReport,
     });
   },
 
-  async saveReportFromSummary(summaryId: string): Promise<any> {
+  async saveReportFromSummary(summaryId: string): Promise<Record<string, unknown>> {
     return apiClient.post(`/priority-summaries/${summaryId}/save-report`);
   },
 
@@ -167,7 +166,7 @@ export const prioritySummaryService = {
     );
   },
 
-  async deleteSavedSummary(summaryId: string): Promise<any> {
+  async deleteSavedSummary(summaryId: string): Promise<Record<string, unknown>> {
     return apiClient.delete(`/priority-summaries/${summaryId}`);
   },
 };
