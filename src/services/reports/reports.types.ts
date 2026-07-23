@@ -60,7 +60,7 @@ export const REPORT_TYPE_META: Record<
   RPT04: {
     name: "Domain-wise Needs",
     exportFormats: ["pdf", "excel"],
-    requiresStudyId: false,
+    requiresStudyId: true,
   },
   RPT05: {
     name: "Governorate-wise Needs",
@@ -70,7 +70,7 @@ export const REPORT_TYPE_META: Record<
   RPT06: {
     name: "Region/Governorate Filtering",
     exportFormats: ["pdf", "excel"],
-    requiresStudyId: false,
+    requiresStudyId: true,
   },
   RPT07: {
     name: "Gender-wise Needs",
