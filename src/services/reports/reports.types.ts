@@ -26,8 +26,6 @@ export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT04", // Sector (Domain-wise Needs)
   "RPT06", // Region / Governorate
   "RPT13", // Executive Summary
-  "RPT02", // Collective Report / Dashboard
-  "RPT12", // Report Sharing Status
 ];
 
 export type ReportStatus = "draft" | "rejected" | "released" | "archived";
