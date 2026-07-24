@@ -26,8 +26,6 @@ export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT04", // Sector (Domain-wise Needs)
   "RPT06", // Region / Governorate
   "RPT13", // Executive Summary
-  "RPT02", // Collective Report / Dashboard
-  "RPT12", // Report Sharing Status
 ];
 
 export type ReportStatus = "draft" | "rejected" | "released" | "archived";
@@ -115,10 +113,13 @@ export interface Report {
   filters: Record<string, unknown>;
   content: Record<string, unknown>;
   generatedBy: string;
+  generatedByName: string | null;
   generatedAt: string;
   officerConfirmedBy: string | null;
+  officerConfirmedByName: string | null;
   officerConfirmedAt: string | null;
   reviewedBy: string | null;
+  reviewedByName: string | null;
   reviewedAt: string | null;
   archivedAt: string | null;
   exportFormats: ExportFormat[];

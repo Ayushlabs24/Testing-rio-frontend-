@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Plus } from "lucide-react";
+import { BarChart3, Eye, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
@@ -20,6 +20,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -386,10 +392,24 @@ export default function ReportsPage() {
                         {formatDate(report.generatedAt)}
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/reports/${report.id}`}>{t("view")}</Link>
-                          </Button>
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  asChild
+                                  size="icon-sm"
+                                  variant="outline"
+                                  aria-label={t("tooltip.view")}
+                                >
+                                  <Link href={`/reports/${report.id}`}>
+                                    <Eye />
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t("tooltip.view")}</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <ReportActions
                             report={report}
                             onChanged={load}

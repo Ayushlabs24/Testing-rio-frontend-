@@ -344,7 +344,7 @@ export default function PriorityDetailInsightsPage({
                           {t("priorityScoreIndex")}
                         </p>
                         <p className="text-foreground mt-1 text-2xl font-bold">
-                          {priorityV2.priorityScore}
+                          {Math.round(priorityV2.priorityScore)}
                         </p>
                       </div>
                       <div className="bg-muted/40 rounded-lg p-4">

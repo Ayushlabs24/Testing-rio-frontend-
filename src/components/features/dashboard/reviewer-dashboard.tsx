@@ -2,10 +2,11 @@
 
 import { AlarmClock, CheckCircle2, Clock3, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -17,7 +18,10 @@ import {
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
-import type { SlaAlert } from "@/services/reviewer-sla/reviewer-sla.types";
+import type {
+  SlaAlert,
+  SlaAlertStatus,
+} from "@/services/reviewer-sla/reviewer-sla.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 
@@ -27,13 +31,57 @@ function formatDate(iso: string): string {
   );
 }
 
-// AI Classification review happens on the Need workspace page; Survey
-// Approval review happens on the dedicated Review page — never the same
-// link (see the Reviewer Alerts page's own copy of this).
-function alertHref(alert: SlaAlert): string {
-  return alert.type === "survey_approval"
-    ? `/survey-builder/${alert.needId}/review`
-    : `/studies/${alert.studyId}/needs/${alert.needId}`;
+// Worst-case wins when several of a Study's Needs are each awaiting review —
+// a single Study row showing "breached" if even one of its items has, rather
+// than whichever alert happened to sort last.
+const STATUS_RANK: Record<SlaAlertStatus, number> = {
+  breached: 2,
+  at_risk: 1,
+  pending: 0,
+};
+
+interface StudyAwaitingReview {
+  studyId: string;
+  studyTitle: string;
+  pendingCount: number;
+  earliestDueAt: string;
+  worstStatus: SlaAlertStatus;
+}
+
+// A Study can hold several Needs, each with its own pending alert — grouping
+// by Study here (unlike the full Reviewer Alerts page, which legitimately
+// lists one row per Need alongside its own Need statement/type/dates) avoids
+// the same Study title appearing several times over with nothing to tell
+// the rows apart, which read as a rendering bug rather than "3 separate
+// Needs in this one Study need review."
+function groupAlertsByStudy(alerts: SlaAlert[]): StudyAwaitingReview[] {
+  const byStudy = new Map<string, SlaAlert[]>();
+  for (const alert of alerts) {
+    const existing = byStudy.get(alert.studyId);
+    if (existing) existing.push(alert);
+    else byStudy.set(alert.studyId, [alert]);
+  }
+  return [...byStudy.values()]
+    .map((group) => {
+      const earliestDueAt = group.reduce(
+        (min, a) => (new Date(a.dueAt) < new Date(min) ? a.dueAt : min),
+        group[0]!.dueAt,
+      );
+      const worstStatus = group.reduce(
+        (worst, a) => (STATUS_RANK[a.status] > STATUS_RANK[worst] ? a.status : worst),
+        group[0]!.status,
+      );
+      return {
+        studyId: group[0]!.studyId,
+        studyTitle: group[0]!.studyTitle,
+        pendingCount: group.length,
+        earliestDueAt,
+        worstStatus,
+      };
+    })
+    .sort(
+      (a, b) => new Date(a.earliestDueAt).getTime() - new Date(b.earliestDueAt).getTime(),
+    );
 }
 
 /**
@@ -84,6 +132,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
   const pendingCount = alerts?.length ?? 0;
   const atRiskCount = alerts?.filter((a) => a.status === "at_risk").length ?? 0;
   const breachedCount = alerts?.filter((a) => a.status === "breached").length ?? 0;
+  const studyRows = useMemo(() => (alerts ? groupAlertsByStudy(alerts) : null), [alerts]);
 
   return (
     <PageContainer>
@@ -117,7 +166,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {alerts === null ? (
+              {studyRows === null ? (
                 Array.from({ length: 3 }).map((_, index) => (
                   <TableRow key={index}>
                     {Array.from({ length: 3 }).map((__, cell) => (
@@ -127,7 +176,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                     ))}
                   </TableRow>
                 ))
-              ) : alerts.length === 0 ? (
+              ) : studyRows.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={3}
@@ -137,18 +186,23 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                   </TableCell>
                 </TableRow>
               ) : (
-                alerts.slice(0, 5).map((alert) => (
-                  <TableRow key={alert.id}>
+                studyRows.slice(0, 5).map((row) => (
+                  <TableRow key={row.studyId}>
                     <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                      <Link href={alertHref(alert)} className="hover:underline">
-                        {alert.studyTitle}
+                      <Link href={`/studies/${row.studyId}`} className="hover:underline">
+                        {row.studyTitle}
                       </Link>
+                      {row.pendingCount > 1 ? (
+                        <Badge variant="secondary" className="ml-2 font-normal">
+                          {t("pendingCount", { count: row.pendingCount })}
+                        </Badge>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(alert.dueAt)}
+                      {formatDate(row.earliestDueAt)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {t(`status.${alert.status}`)}
+                      {t(`status.${row.worstStatus}`)}
                     </TableCell>
                   </TableRow>
                 ))

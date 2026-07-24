@@ -8,7 +8,6 @@ import {
   Loader2,
   RotateCw,
   Sparkles,
-  XCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
@@ -43,6 +42,11 @@ import { ApiError } from "@/services/api/types";
 import { domainsService } from "@/services/domains/domains.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need, NeedStatus } from "@/services/needs/needs.types";
+import { surveysService, type Survey } from "@/services/surveys/surveys.service";
+import {
+  readStoredPendingOverride,
+  writeStoredPendingOverride,
+} from "@/services/ai-decisions/pending-override-storage";
 
 const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -57,59 +61,13 @@ const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
 
 const POLL_INTERVAL_MS = 3000;
 
-// The staged Override (pairs + reason) lives only in this component's local
-// state — nothing is written to the Need until Approve, by design (a
-// browser refresh mid-override must never half-decide the Need). But
-// "View Suggested Questions" navigates to a whole separate route (Survey
-// Builder) to let the Approver inspect the questions that preview just
-// regenerated, which unmounts this component and previously lost the
-// staged selection entirely on the way back. sessionStorage survives that
-// round trip without persisting anything server-side — it's still just a
-// draft, gone entirely on tab close, and never treated as authoritative.
-function pendingOverrideStorageKey(needId: string): string {
-  return `rio:pending-override:${needId}`;
-}
-
-function readStoredPendingOverride(
-  needId: string,
-): { pairs: DomainSubDomainPair[]; reason: string } | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(pendingOverrideStorageKey(needId));
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      Array.isArray((parsed as { pairs?: unknown }).pairs) &&
-      typeof (parsed as { reason?: unknown }).reason === "string"
-    ) {
-      return parsed as { pairs: DomainSubDomainPair[]; reason: string };
-    }
-  } catch {
-    // Malformed/foreign sessionStorage value — treat as no staged override.
-  }
-  return null;
-}
-
-function writeStoredPendingOverride(
-  needId: string,
-  value: { pairs: DomainSubDomainPair[]; reason: string } | null,
-): void {
-  if (typeof window === "undefined") return;
-  const key = pendingOverrideStorageKey(needId);
-  if (value) {
-    window.sessionStorage.setItem(key, JSON.stringify(value));
-  } else {
-    window.sessionStorage.removeItem(key);
-  }
-}
-
-// AI Classification status + the Approver's Override/Approve/Reject actions,
-// all in one place on the Need workspace page. Curating the suggested
-// question list itself still happens on the existing Survey Builder page
-// (reached via the button below) — this section only surfaces classification
-// and the approve/reject decision, it doesn't duplicate the question editor.
+// AI Classification status + staging a Domain Override, on the Need
+// workspace page. The actual Approve/Reject decision — and curating the
+// suggested question list — both happen on the Survey Builder page now (its
+// "Approve & Publish" reads back whatever Override is staged here via
+// sessionStorage, see pending-override-storage.ts), so an Approver has just
+// one place to Override, curate questions, and Approve & Publish or Reject,
+// instead of two disconnected screens/actions.
 export function AiClassificationSection({
   need,
   onNeedUpdated,
@@ -123,13 +81,6 @@ export function AiClassificationSection({
   const t = useTranslations("app.studies.classification");
   const canReview = usePermission("aiReview", "approve");
   const { session } = useAuth();
-  // Both role_ngo_research_officer and role_human_reviewer hold
-  // aiReview:approve now (full parity — see role-matrix.ts), but the
-  // Approve/Reject buttons specifically stay hidden for the Researcher on
-  // this panel — a UI-only restriction, not a permission change. Override
-  // still shows for both (Researcher can stage a candidate domain change),
-  // just not the button that actually commits/rejects the decision.
-  const canApproveReject = canReview && session?.role.key !== "ngo_research_officer";
   const router = useRouter();
 
   const [latest, setLatest] = useState<AiDecision | null>(null);
@@ -167,11 +118,7 @@ export function AiClassificationSection({
     writeStoredPendingOverride(need.id, pendingOverride);
   }, [need.id, pendingOverride]);
 
-  const [approving, setApproving] = useState(false);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
-  const [comments, setComments] = useState("");
-  const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [survey, setSurvey] = useState<Survey | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -204,6 +151,35 @@ export function AiClassificationSection({
     need.status === "reviewer_approved" ||
     need.status === "survey_created" ||
     need.status === "survey_published";
+
+  // Survey.status is tracked separately from Need.status — submitting a
+  // survey for approval doesn't require the Need's own classification to be
+  // Approved first (SurveysService.submitForApproval has no such check), so
+  // a Researcher can reach SUBMITTED while still isReadyForReview here.
+  // Staging/committing a domain Override at that point would move the
+  // ground out from under a Survey already sitting in the Approver's queue
+  // for content review — see overrideDisabledForResearcher below.
+  useEffect(() => {
+    let cancelled = false;
+    surveysService
+      .getSurveyByNeedId(need.id)
+      .then((result) => {
+        if (!cancelled) setSurvey(result);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [need.id, need.status]);
+
+  // The Research Officer specifically loses the Override button once the
+  // Survey they curated has been submitted for the Approver's review — an
+  // Approver can still Override regardless (they're the one who'd action
+  // the resulting refreshed questions anyway). Re-enabled the moment the
+  // Approver rejects the Survey's content (with comments, via the Review
+  // page) and it drops back to DRAFT.
+  const overrideDisabledForResearcher =
+    session?.role.key === "ngo_research_officer" && survey?.status === "SUBMITTED";
 
   useEffect(() => {
     domainsService
@@ -425,60 +401,6 @@ export function AiClassificationSection({
       setError(err instanceof ApiError ? err.message : t("overrideError"));
     } finally {
       setOverridePreviewLoading(false);
-    }
-  }
-
-  async function approve() {
-    setApproving(true);
-    setError(null);
-    try {
-      // Approve only decides the classification here — curating questions,
-      // picking a Methodology Version, and Submit for Approval / Approve &
-      // Publish all happen separately on the Survey Builder page (see the
-      // "View Suggested Questions" button below), once this Need reaches
-      // reviewer_approved.
-      await aiReviewService.approve(need.id, {
-        domainOverride: pendingOverride ?? undefined,
-      });
-      // Committed — the staged draft (and its sessionStorage backup) no
-      // longer applies to whatever the Need's state is from here on.
-      setPendingOverride(null);
-      const updated = await needsService.getById(need.id);
-      onNeedUpdated?.(updated);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("reviewError"));
-    } finally {
-      setApproving(false);
-    }
-  }
-
-  function openRejectDialog() {
-    setComments("");
-    setCommentsError(null);
-    setRejectOpen(true);
-  }
-
-  async function confirmReject() {
-    const trimmed = comments.trim();
-    if (!trimmed) {
-      setCommentsError(t("commentsRequired"));
-      return;
-    }
-    setRejecting(true);
-    setError(null);
-    try {
-      await aiReviewService.reject(need.id, trimmed);
-      setRejectOpen(false);
-      // The Need resets to pending_ai_classification for fresh re-
-      // classification — whatever was staged against the now-superseded
-      // classification no longer applies.
-      setPendingOverride(null);
-      const updated = await needsService.getById(need.id);
-      onNeedUpdated?.(updated);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("reviewError"));
-    } finally {
-      setRejecting(false);
     }
   }
 
@@ -850,6 +772,12 @@ export function AiClassificationSection({
                     variant="outline"
                     className="w-full flex-1"
                     onClick={startOverride}
+                    disabled={overrideDisabledForResearcher}
+                    title={
+                      overrideDisabledForResearcher
+                        ? t("overrideDisabledSurveySubmitted")
+                        : undefined
+                    }
                   >
                     {t("override")}
                   </Button>
@@ -869,45 +797,21 @@ export function AiClassificationSection({
 
                 {pendingOverride ? (
                   <p className="text-muted-foreground text-xs">
-                    {/* The Researcher can stage an Override but has no
-                        Approve button on this panel (see canApproveReject)
-                        — telling them it's "saved only when you Approve"
-                        would be misleading, since they can't be the one to
-                        do that. */}
-                    {canApproveReject
-                      ? t("overridePendingNote")
-                      : t("overridePendingNoteResearcher")}
+                    {t("overridePendingNote")}
                   </p>
                 ) : null}
 
-                {canApproveReject ? (
-                  <div className="flex flex-col gap-2.5 sm:flex-row">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="text-destructive hover:text-destructive w-full flex-1 gap-1.5"
-                      onClick={openRejectDialog}
-                      disabled={approving || rejecting}
-                    >
-                      <XCircle className="size-4" />
-                      {t("reject")}
-                    </Button>
-                    <LoadingButton
-                      type="button"
-                      isLoading={approving}
-                      onClick={approve}
-                      disabled={rejecting}
-                      className="w-full flex-1 gap-1.5"
-                      startIcon={<CheckCircle2 className="size-4" />}
-                      text={approving ? t("approving") : t("approve")}
-                    />
-                  </div>
+                {overrideDisabledForResearcher ? (
+                  <p className="text-muted-foreground text-xs">
+                    {t("overrideDisabledSurveySubmitted")}
+                  </p>
                 ) : null}
               </div>
             ) : (
-              // Researchers/other viewers can see the classification but the
-              // Approve/Override/Reject decision is entirely the Reviewer/
-              // Approver's job — this replaces those controls for them.
+              // Viewers without aiReview:approve can see the classification,
+              // but Override/Approve & Publish/Reject are entirely the
+              // Reviewer/Approver's job, done on the Survey Builder page —
+              // this replaces those controls for them here.
               <div
                 title={t("sentForApprovalTooltip")}
                 className="text-muted-foreground flex items-center gap-1.5 text-xs"
@@ -996,55 +900,6 @@ export function AiClassificationSection({
               disabled={pairsFromSelections().length === 0 || !overrideReason.trim()}
               isLoading={overridePreviewLoading}
               text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
-            />
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject */}
-      <Dialog
-        open={rejectOpen}
-        onOpenChange={(open) => !rejecting && setRejectOpen(open)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("rejectDialogTitle")}</DialogTitle>
-            <DialogDescription>{t("rejectDialogDescription")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="reject-comments">
-              {t("commentsLabel")} <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="reject-comments"
-              rows={5}
-              value={comments}
-              onChange={(e) => {
-                setComments(e.target.value);
-                if (commentsError) setCommentsError(null);
-              }}
-              placeholder={t("commentsPlaceholder")}
-              aria-invalid={commentsError ? true : undefined}
-            />
-            {commentsError ? (
-              <p className="text-destructive text-sm">{commentsError}</p>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setRejectOpen(false)}
-              disabled={rejecting}
-            >
-              {t("cancel")}
-            </Button>
-            <LoadingButton
-              type="button"
-              variant="destructive"
-              isLoading={rejecting}
-              onClick={confirmReject}
-              text={rejecting ? t("rejecting") : t("confirmReject")}
             />
           </DialogFooter>
         </DialogContent>

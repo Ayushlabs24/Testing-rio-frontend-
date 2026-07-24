@@ -143,7 +143,6 @@ export default function PriorityDashboardPage() {
                   <TableHead>{t("studyColumn")}</TableHead>
                   <TableHead className="w-28">{t("scoreColumn")}</TableHead>
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
-                  <TableHead className="w-32">{t("gapTypeColumn")}</TableHead>
                   <TableHead className="w-40">{t("scoredColumn")}</TableHead>
                   <TableHead className="w-44 text-right">Actions</TableHead>
                 </TableRow>
@@ -152,7 +151,7 @@ export default function PriorityDashboardPage() {
                 {entries === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 6 }).map((__, cell) => (
+                      {Array.from({ length: 5 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -162,7 +161,7 @@ export default function PriorityDashboardPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={5}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -179,13 +178,13 @@ export default function PriorityDashboardPage() {
                       <TableCell className="py-4 text-sm font-medium">
                         <Link
                           href={`/priority-dashboard/${entry.needId}`}
-                          className="hover:underline text-primary"
+                          className="text-primary hover:underline"
                         >
                           {entry.studyTitle}
                         </Link>
                       </TableCell>
                       <TableCell className="text-sm tabular-nums">
-                        {entry.score?.overallScore ?? "—"}
+                        {entry.score ? Math.round(entry.score.overallScore) : "—"}
                       </TableCell>
                       <TableCell>
                         {entry.score ? (
@@ -197,15 +196,12 @@ export default function PriorityDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {entry.score?.gapType || ""}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
                         {entry.score ? formatDate(entry.score.scoredAt) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild size="sm" variant="outline" className="gap-1.5">
                           <Link href={`/priority-dashboard/${entry.needId}`}>
-                            <Gauge className="size-3.5 text-primary" />
+                            <Gauge className="text-primary size-3.5" />
                             View Matrix
                           </Link>
                         </Button>

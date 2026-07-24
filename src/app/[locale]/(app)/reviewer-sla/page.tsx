@@ -39,15 +39,13 @@ const STATUS_VARIANT: Record<SlaAlertStatus, "default" | "secondary" | "destruct
   breached: "destructive",
 };
 
-// AI Classification review happens on the Need workspace page; Survey
-// Approval review happens on the dedicated Review page (see
-// SurveysService's state machine / the Survey Builder Review page) — never
-// the same link, since these are two different queues on two different
-// screens.
+// Every alert here is survey_approval now (see ReviewerSlaService — a Need
+// reaching ai_classified no longer produces its own alert), and it links
+// straight to the Need detail page rather than the separate Survey Builder
+// Review page — one destination for the Approver to Override the domain,
+// curate questions, and Approve & Publish, instead of two different screens.
 function alertHref(alert: SlaAlert): string {
-  return alert.type === "survey_approval"
-    ? `/survey-builder/${alert.needId}/review`
-    : `/studies/${alert.studyId}/needs/${alert.needId}`;
+  return `/studies/${alert.studyId}/needs/${alert.needId}`;
 }
 
 function formatDate(iso: string): string {

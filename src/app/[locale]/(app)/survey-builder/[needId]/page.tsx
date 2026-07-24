@@ -10,10 +10,12 @@ import {
   Pencil,
   Plus,
   Trash2,
+  XCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
+import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -21,6 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -30,11 +40,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
 import { cn, formatDomainSummary, titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { aiReviewService } from "@/services/ai-decisions/ai-decisions.service";
+import {
+  readStoredPendingOverride,
+  writeStoredPendingOverride,
+} from "@/services/ai-decisions/pending-override-storage";
 import { domainsService } from "@/services/domains/domains.service";
 import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
 import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
@@ -101,6 +116,16 @@ export default function SurveyBuilderDetailPage({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Reject the classification decision itself (aiReviewService.reject),
+  // resetting the Need to pending_ai_classification for fresh
+  // reclassification — the Approver's other option here besides Approve &
+  // Publish, now that both live on this one page instead of a separate
+  // panel/screen.
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [comments, setComments] = useState("");
+  const [commentsError, setCommentsError] = useState<string | null>(null);
+
   // TEMPORARY — see MethodologyVersionOption's doc comment. Mandatory
   // before Submit for Approval; the Researcher picks it here, the Approver
   // only ever reviews/publishes whatever was chosen (see the Review page).
@@ -150,14 +175,35 @@ export default function SurveyBuilderDetailPage({
 
   // The Question Bank browse tab's source pairs — not gated on Approval the
   // way `need.domain`/`need.subDomain` are (those only get set once an
-  // Approver actually reviews). Prefers the real, multi-valued NeedDomain
-  // pairs once approved; else, pre-approval, falls back to the AI's own
-  // single suggested pair so the tab isn't empty the entire time a Need
-  // awaits review; empty array (allDomainsSelected) fetches every active
-  // Question Bank entry, same convention as the backend.
+  // Approver actually reviews), and NOT stale against a staged-but-not-yet-
+  // approved Override either. An Override Preview already regenerates the
+  // Survey's real recommended (bank-linked) questions immediately (see
+  // AiDecisionsService.overrideDomainPreview) — those questions' own
+  // domain/subDomain are the actual current scope, whatever it's currently
+  // staged as, so deriving pairs from them keeps this tab in sync with the
+  // Recommended tab instead of re-deriving a possibly-outdated scope from
+  // the Need's own (pre-override) classification fields. Falls back to the
+  // Need-based logic only when there are no recommended bank questions yet
+  // to read pairs from (e.g. a brand new "Build Manually" survey).
   function questionBankPairsFor(
     needResult: Need,
+    surveyResult: Survey | null,
   ): Array<{ domain: string; subDomain: string }> | null {
+    const recommendedPairs = (surveyResult?.questions ?? [])
+      .filter(
+        (q): q is SurveyQuestionItem & { domain: string; subDomain: string } =>
+          !q.isCustom && Boolean(q.domain) && Boolean(q.subDomain),
+      )
+      .map((q) => ({ domain: q.domain, subDomain: q.subDomain }));
+    if (recommendedPairs.length > 0) {
+      const seen = new Set<string>();
+      return recommendedPairs.filter((p) => {
+        const key = `${p.domain} ${p.subDomain}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
     if (needResult.needDomains.length > 0) {
       return needResult.needDomains.map((d) => ({
         domain: d.domain,
@@ -182,7 +228,7 @@ export default function SurveyBuilderDetailPage({
         setNeed(needResult);
         setSurvey(surveyResult);
         loadDraftFromSurvey(surveyResult);
-        const pairs = questionBankPairsFor(needResult);
+        const pairs = questionBankPairsFor(needResult, surveyResult);
         if (pairs !== null) {
           surveysService
             .getQuestions(pairs)
@@ -456,9 +502,12 @@ export default function SurveyBuilderDetailPage({
   // Reviewer/Approver role does both — see role-matrix.ts), routing them
   // through Submit for Approval and then over to a separate Review page to
   // approve their own submission is pure friction, not a real handoff.
-  // Saves, submits, and publishes in one action instead.
+  // "Approve & Publish" is the one Approver action for everything: commit
+  // the classification decision (as-is, or with whatever Domain Override
+  // was staged on the Need workspace page — see pending-override-storage.ts),
+  // save the current question list, then submit and publish the Survey.
   async function saveAndPublish() {
-    if (!survey) return;
+    if (!survey || !need) return;
     if (!survey.methodologyVersion) {
       setError(t("methodologyVersionRequiredNote"));
       return;
@@ -467,6 +516,19 @@ export default function SurveyBuilderDetailPage({
     setError(null);
     setMessage(null);
     try {
+      // The classification decision itself is still exactly one AiDecision
+      // review — only meaningful while the Need hasn't been reviewed yet.
+      // Once reviewer_approved+ (a second visit here, e.g. after Reject sent
+      // it back and it was reclassified+approved again through some other
+      // path), this step is a no-op rather than an error.
+      if (need.status === "ai_classified") {
+        const pendingOverride = readStoredPendingOverride(needId);
+        await aiReviewService.approve(needId, {
+          domainOverride: pendingOverride ?? undefined,
+        });
+        writeStoredPendingOverride(needId, null);
+      }
+
       const payload: SaveSurveyQuestionInput[] = [
         ...recommended.map((q, index) => ({
           questionId: q.bankQuestionId as string,
@@ -487,14 +549,47 @@ export default function SurveyBuilderDetailPage({
       const saved = await surveysService.updateQuestions(survey.id, payload);
       const submitted = await surveysService.submitForApproval(saved.id);
       await surveysService.approveAndPublish(submitted.id);
-      const published = await surveysService.getSurveyByNeedId(needId);
+      const [published, updatedNeed] = await Promise.all([
+        surveysService.getSurveyByNeedId(needId),
+        needsService.getById(needId),
+      ]);
       setSurvey(published);
       loadDraftFromSurvey(published);
+      setNeed(updatedNeed);
       setMessage(t("publishedMessage"));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openRejectDialog() {
+    setComments("");
+    setCommentsError(null);
+    setRejectOpen(true);
+  }
+
+  async function confirmReject() {
+    const trimmed = comments.trim();
+    if (!trimmed) {
+      setCommentsError(t("rejectCommentsRequired"));
+      return;
+    }
+    setRejecting(true);
+    setError(null);
+    try {
+      await aiReviewService.reject(needId, trimmed);
+      // The classification decision this Override was staged against is
+      // gone — the Need resets to pending_ai_classification for a fresh
+      // reclassification.
+      writeStoredPendingOverride(needId, null);
+      setRejectOpen(false);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setRejecting(false);
     }
   }
 
@@ -554,9 +649,21 @@ export default function SurveyBuilderDetailPage({
                       </Button>
                     ) : null}
                     {isEditable && canApprove ? (
-                      <Button size="sm" onClick={saveAndPublish} disabled={submitting}>
-                        {submitting ? t("publishing") : t("saveAndPublish")}
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive gap-1.5"
+                          onClick={openRejectDialog}
+                          disabled={submitting}
+                        >
+                          <XCircle className="size-3.5" />
+                          {t("reject")}
+                        </Button>
+                        <Button size="sm" onClick={saveAndPublish} disabled={submitting}>
+                          {submitting ? t("publishing") : t("saveAndPublish")}
+                        </Button>
+                      </>
                     ) : isEditable ? (
                       <Button
                         size="sm"
@@ -1183,6 +1290,54 @@ export default function SurveyBuilderDetailPage({
           initialValue={editingInitialValue}
           onSave={saveModalQuestion}
         />
+
+        <Dialog
+          open={rejectOpen}
+          onOpenChange={(open) => !rejecting && setRejectOpen(open)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("rejectDialogTitle")}</DialogTitle>
+              <DialogDescription>{t("rejectDialogDescription")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="reject-comments">
+                {t("commentsLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="reject-comments"
+                rows={5}
+                value={comments}
+                onChange={(e) => {
+                  setComments(e.target.value);
+                  if (commentsError) setCommentsError(null);
+                }}
+                placeholder={t("rejectCommentsPlaceholder")}
+                aria-invalid={commentsError ? true : undefined}
+              />
+              {commentsError ? (
+                <p className="text-destructive text-sm">{commentsError}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRejectOpen(false)}
+                disabled={rejecting}
+              >
+                {t("cancel")}
+              </Button>
+              <LoadingButton
+                type="button"
+                variant="destructive"
+                isLoading={rejecting}
+                onClick={confirmReject}
+                text={rejecting ? t("rejecting") : t("confirmReject")}
+              />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageContainer>
     </PermissionGuard>
   );
