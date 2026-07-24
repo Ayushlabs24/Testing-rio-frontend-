@@ -41,15 +41,10 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
 import { cn, formatDomainSummary, titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { aiReviewService } from "@/services/ai-decisions/ai-decisions.service";
-import {
-  readStoredPendingOverride,
-  writeStoredPendingOverride,
-} from "@/services/ai-decisions/pending-override-storage";
 import { domainsService } from "@/services/domains/domains.service";
 import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
 import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
@@ -115,12 +110,20 @@ export default function SurveyBuilderDetailPage({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Approve/Reject a survey the Researcher already explicitly submitted
+  // (Survey.status === SUBMITTED) — a plain decision on exactly what was
+  // submitted, no editing (the backend's assertEditable blocks
+  // updateQuestions/setMethodologyVersion while SUBMITTED, same as it
+  // always has). Separate from saveAndPublish below, which curates + decides
+  // + publishes in one action but only applies while the Survey is still
+  // DRAFT (need.status === "ai_classified").
+  const [approvingSubmitted, setApprovingSubmitted] = useState(false);
 
-  // Reject the classification decision itself (aiReviewService.reject),
-  // resetting the Need to pending_ai_classification for fresh
-  // reclassification — the Approver's other option here besides Approve &
-  // Publish, now that both live on this one page instead of a separate
-  // panel/screen.
+  // Reject — either the classification decision itself
+  // (aiReviewService.reject, while still ai_classified/DRAFT) or the
+  // submitted Survey's content (surveysService.rejectSurvey, once
+  // SUBMITTED) — confirmReject below picks whichever applies. One dialog
+  // covers both since they're mutually exclusive states.
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [comments, setComments] = useState("");
@@ -135,11 +138,20 @@ export default function SurveyBuilderDetailPage({
   const [savingMethodologyVersion, setSavingMethodologyVersion] = useState(false);
 
   // The Researcher only edits/saves/submits from DRAFT or REJECTED — once
-  // SUBMITTED, content is frozen for the Approver's review; once PUBLISHED,
-  // it's frozen for good. The backend enforces this too (SURVEY_NOT_EDITABLE);
-  // this just keeps the UI from offering actions that would 409.
+  // SUBMITTED, content is frozen for the Researcher; once PUBLISHED, it's
+  // frozen for good. Governs the Researcher-only action row (Save Draft/
+  // Submit for Approval) and the Methodology Version picker, which the
+  // Approver never touches (see setMethodologyVersion on the backend —
+  // still unconditionally locked once SUBMITTED for everyone).
   const isEditable =
     canWrite && (survey?.status === "DRAFT" || survey?.status === "REJECTED");
+  // The Approver curates the question list (add/remove/reorder, add
+  // custom) while reviewing a SUBMITTED survey too — approveSubmittedSurvey
+  // below saves whatever's in `recommended`/`additional` before publishing.
+  // The backend's updateQuestions now allows this for anyone except the
+  // Research Officer (see SurveysService.assertEditable's allowWhileSubmitted
+  // param) — same role split as overrideDomainPreview.
+  const canEditQuestions = isEditable || (canApprove && survey?.status === "SUBMITTED");
 
   // Additional Question modal — add or edit one question at a time,
   // instead of the page growing with an ever-longer inline editable list.
@@ -173,53 +185,58 @@ export default function SurveyBuilderDetailPage({
     setDirty(false);
   }
 
-  // The Question Bank browse tab's source pairs — not gated on Approval the
-  // way `need.domain`/`need.subDomain` are (those only get set once an
-  // Approver actually reviews), and NOT stale against a staged-but-not-yet-
-  // approved Override either. An Override Preview already regenerates the
-  // Survey's real recommended (bank-linked) questions immediately (see
-  // AiDecisionsService.overrideDomainPreview) — those questions' own
-  // domain/subDomain are the actual current scope, whatever it's currently
-  // staged as, so deriving pairs from them keeps this tab in sync with the
-  // Recommended tab instead of re-deriving a possibly-outdated scope from
-  // the Need's own (pre-override) classification fields. Falls back to the
-  // Need-based logic only when there are no recommended bank questions yet
-  // to read pairs from (e.g. a brand new "Build Manually" survey).
+  // The Question Bank browse tab's source pairs — which field is
+  // authoritative depends on what stage the Need is at, not one fixed
+  // fallback chain:
+  //  - ai_classified (pending decision): a staged-but-not-yet-approved
+  //    Override (need.proposedDomains) is the live signal — read it
+  //    directly rather than inferring it through the Survey's regenerated
+  //    bank-linked questions, which are legitimately empty when the
+  //    newly-chosen sub-domain has zero Question Bank matches (that empty
+  //    case used to silently fall back to the OLD, pre-override domain).
+  //    No staged Override falls back to allDomainsSelected, then the AI's
+  //    own single suggested pair.
+  //  - reviewer_approved and everything downstream (survey_created,
+  //    survey_published): the domain is final and proposedDomains is
+  //    already cleared (see AiDecisionsService.review) — needDomains is
+  //    the only thing that matters, falling back to allDomainsSelected.
+  //  - anything earlier (draft, pending_ai_classification,
+  //    evidence_submitted, ai_classification_failed): no Survey/Question
+  //    Bank tab exists yet.
   function questionBankPairsFor(
     needResult: Need,
-    surveyResult: Survey | null,
   ): Array<{ domain: string; subDomain: string }> | null {
-    const recommendedPairs = (surveyResult?.questions ?? [])
-      .filter(
-        (q): q is SurveyQuestionItem & { domain: string; subDomain: string } =>
-          !q.isCustom && Boolean(q.domain) && Boolean(q.subDomain),
-      )
-      .map((q) => ({ domain: q.domain, subDomain: q.subDomain }));
-    if (recommendedPairs.length > 0) {
-      const seen = new Set<string>();
-      return recommendedPairs.filter((p) => {
-        const key = `${p.domain} ${p.subDomain}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+    switch (needResult.status) {
+      case "ai_classified":
+        if (needResult.proposedDomains && needResult.proposedDomains.length > 0) {
+          return needResult.proposedDomains;
+        }
+        if (needResult.allDomainsSelected) return [];
+        if (needResult.aiSuggestedDomain && needResult.aiSuggestedSubDomain) {
+          return [
+            {
+              domain: needResult.aiSuggestedDomain,
+              subDomain: needResult.aiSuggestedSubDomain,
+            },
+          ];
+        }
+        return null;
+
+      case "reviewer_approved":
+      case "survey_created":
+      case "survey_published":
+        if (needResult.needDomains.length > 0) {
+          return needResult.needDomains.map((d) => ({
+            domain: d.domain,
+            subDomain: d.subDomain,
+          }));
+        }
+        if (needResult.allDomainsSelected) return [];
+        return null;
+
+      default:
+        return null;
     }
-    if (needResult.needDomains.length > 0) {
-      return needResult.needDomains.map((d) => ({
-        domain: d.domain,
-        subDomain: d.subDomain,
-      }));
-    }
-    if (needResult.allDomainsSelected) return [];
-    if (needResult.aiSuggestedDomain && needResult.aiSuggestedSubDomain) {
-      return [
-        {
-          domain: needResult.aiSuggestedDomain,
-          subDomain: needResult.aiSuggestedSubDomain,
-        },
-      ];
-    }
-    return null;
   }
 
   function load() {
@@ -228,11 +245,29 @@ export default function SurveyBuilderDetailPage({
         setNeed(needResult);
         setSurvey(surveyResult);
         loadDraftFromSurvey(surveyResult);
-        const pairs = questionBankPairsFor(needResult, surveyResult);
+        const pairs = questionBankPairsFor(needResult);
+        // TEMP diagnostic logging (RIO-debug: research-officer override ->
+        // Question Bank tab not showing new sub-domain's questions) — remove
+        // once root cause is confirmed.
+        console.debug("[QB-DEBUG] survey-builder load()", {
+          needId,
+          needStatus: needResult.status,
+          needDomains: needResult.needDomains,
+          surveyQuestionsBankPairs: (surveyResult?.questions ?? [])
+            .filter((q) => !q.isCustom)
+            .map((q) => ({ domain: q.domain, subDomain: q.subDomain })),
+          questionBankPairsForResult: pairs,
+        });
         if (pairs !== null) {
           surveysService
             .getQuestions(pairs)
-            .then(setEligibleQuestions)
+            .then((questions) => {
+              console.debug("[QB-DEBUG] survey-builder getQuestions() returned", {
+                pairs,
+                count: questions.length,
+              });
+              setEligibleQuestions(questions);
+            })
             .catch(() => setEligibleQuestions([]));
         }
       })
@@ -522,11 +557,17 @@ export default function SurveyBuilderDetailPage({
       // it back and it was reclassified+approved again through some other
       // path), this step is a no-op rather than an error.
       if (need.status === "ai_classified") {
-        const pendingOverride = readStoredPendingOverride(needId);
-        await aiReviewService.approve(needId, {
-          domainOverride: pendingOverride ?? undefined,
-        });
-        writeStoredPendingOverride(needId, null);
+        // The staged Override (if any) now lives on the Need itself
+        // (proposedDomains/proposedReason) rather than sessionStorage, so
+        // it's whatever was actually staged last — by this Approver or by
+        // the Researcher who submitted it — regardless of whose session
+        // this is. The backend clears both fields once this Approve call
+        // consumes them (see AiDecisionsService.review).
+        const domainOverride =
+          need.proposedDomains && need.proposedDomains.length > 0
+            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? "" }
+            : undefined;
+        await aiReviewService.approve(needId, { domainOverride });
       }
 
       const payload: SaveSurveyQuestionInput[] = [
@@ -564,6 +605,47 @@ export default function SurveyBuilderDetailPage({
     }
   }
 
+  // Saves whatever the Approver curated (add/remove/reorder/custom — see
+  // canEditQuestions above) then publishes. Distinct from saveAndPublish,
+  // which additionally decides the classification and calls
+  // submitForApproval — neither applies here since the Survey is already
+  // SUBMITTED (submitForApproval requires DRAFT/REJECTED and would 409).
+  async function approveSubmittedSurvey() {
+    if (!survey) return;
+    setApprovingSubmitted(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const payload: SaveSurveyQuestionInput[] = [
+        ...recommended.map((q, index) => ({
+          questionId: q.bankQuestionId as string,
+          order: index + 1,
+          isRequired: q.isRequired,
+        })),
+        ...additional.map((q, index) => ({
+          customText: q.questionText.trim(),
+          customAnswerType: q.answerType,
+          customOptions: q.answerOptions ?? undefined,
+          domain: q.domain ?? undefined,
+          subDomain: q.subDomain ?? undefined,
+          kpi: q.kpi ?? undefined,
+          order: recommended.length + index + 1,
+          isRequired: q.isRequired,
+        })),
+      ];
+      await surveysService.updateQuestions(survey.id, payload);
+      await surveysService.approveAndPublish(survey.id);
+      const published = await surveysService.getSurveyByNeedId(needId);
+      setSurvey(published);
+      loadDraftFromSurvey(published);
+      setMessage(t("publishedMessage"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setApprovingSubmitted(false);
+    }
+  }
+
   function openRejectDialog() {
     setComments("");
     setCommentsError(null);
@@ -579,11 +661,19 @@ export default function SurveyBuilderDetailPage({
     setRejecting(true);
     setError(null);
     try {
-      await aiReviewService.reject(needId, trimmed);
-      // The classification decision this Override was staged against is
-      // gone — the Need resets to pending_ai_classification for a fresh
-      // reclassification.
-      writeStoredPendingOverride(needId, null);
+      if (survey?.status === "SUBMITTED") {
+        // The Survey's content itself is what's being rejected here (it was
+        // explicitly submitted) — sends it back to REJECTED so the
+        // Researcher can edit and resubmit. The Need's own domain/subDomain
+        // decision is untouched.
+        await surveysService.rejectSurvey(survey.id, trimmed);
+      } else {
+        // Rejecting the classification decision itself — the Need resets to
+        // pending_ai_classification for a fresh reclassification. The
+        // backend clears proposedDomains/proposedReason itself (see
+        // AiDecisionsService.review's rejected branch).
+        await aiReviewService.reject(needId, trimmed);
+      }
       setRejectOpen(false);
       load();
     } catch (err) {
@@ -629,12 +719,34 @@ export default function SurveyBuilderDetailPage({
                     >
                       {t(`status.${survey.status}`)}
                     </Badge>
-                    {canApprove && !canWrite && survey.status === "SUBMITTED" ? (
-                      <Button asChild size="sm" className="gap-1.5">
-                        <Link href={`/survey-builder/${needId}/review`}>
-                          {t("goToReview")}
-                        </Link>
-                      </Button>
+                    {/* isEditable (below) requires DRAFT/REJECTED, so once a
+                        Researcher explicitly submits, these are the
+                        Approver's decision actions — Approve & Publish here
+                        also saves whatever they curated via canEditQuestions
+                        above first (see approveSubmittedSurvey). No role
+                        holds surveyBuilder:approve without :write (see
+                        role-matrix.ts), so canApprove alone already excludes
+                        the Research Officer correctly. */}
+                    {canApprove && survey.status === "SUBMITTED" ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive gap-1.5"
+                          onClick={openRejectDialog}
+                          disabled={approvingSubmitted}
+                        >
+                          <XCircle className="size-3.5" />
+                          {t("reject")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={approveSubmittedSurvey}
+                          disabled={approvingSubmitted}
+                        >
+                          {approvingSubmitted ? t("publishing") : t("saveAndPublish")}
+                        </Button>
+                      </>
                     ) : null}
                     {isEditable ? (
                       <Button
@@ -686,7 +798,7 @@ export default function SurveyBuilderDetailPage({
               >
                 <Clock className="text-badge-warning-foreground mt-0.5 size-4 shrink-0" />
                 <p className="text-badge-warning-foreground text-sm">
-                  {t("submittedNotice")}
+                  {canApprove ? t("submittedNoticeApprover") : t("submittedNotice")}
                 </p>
               </div>
             ) : null}
@@ -922,7 +1034,7 @@ export default function SurveyBuilderDetailPage({
                                     <p className="text-foreground text-sm">
                                       {q.questionText}
                                     </p>
-                                    {isEditable ? (
+                                    {canEditQuestions ? (
                                       <Button
                                         type="button"
                                         size="icon"
@@ -1053,7 +1165,7 @@ export default function SurveyBuilderDetailPage({
                                   <p className="text-foreground text-sm font-semibold">
                                     {t("questionNumber", { number: index + 1 })}
                                   </p>
-                                  {isEditable ? (
+                                  {canEditQuestions ? (
                                     <div className="flex shrink-0 items-center gap-1">
                                       <button
                                         type="button"
@@ -1139,7 +1251,7 @@ export default function SurveyBuilderDetailPage({
                                 <label className="flex w-fit cursor-pointer items-center gap-2 pt-1 text-sm">
                                   <Checkbox
                                     checked={q.isRequired}
-                                    disabled={!isEditable}
+                                    disabled={!canEditQuestions}
                                     onCheckedChange={() =>
                                       toggleRecommendedRequired(q.id)
                                     }
@@ -1178,7 +1290,7 @@ export default function SurveyBuilderDetailPage({
                       <h2 className="text-foreground text-sm font-semibold">
                         {t("additionalHeading")}
                       </h2>
-                      {isEditable ? (
+                      {canEditQuestions ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -1211,7 +1323,7 @@ export default function SurveyBuilderDetailPage({
                                   number: recommended.length + index + 1,
                                 })}
                               </p>
-                              {isEditable ? (
+                              {canEditQuestions ? (
                                 <div className="flex shrink-0 items-center gap-1">
                                   <button
                                     type="button"
@@ -1297,8 +1409,16 @@ export default function SurveyBuilderDetailPage({
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t("rejectDialogTitle")}</DialogTitle>
-              <DialogDescription>{t("rejectDialogDescription")}</DialogDescription>
+              <DialogTitle>
+                {survey?.status === "SUBMITTED"
+                  ? t("rejectSurveyDialogTitle")
+                  : t("rejectDialogTitle")}
+              </DialogTitle>
+              <DialogDescription>
+                {survey?.status === "SUBMITTED"
+                  ? t("rejectSurveyDialogDescription")
+                  : t("rejectDialogDescription")}
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
               <Label htmlFor="reject-comments">

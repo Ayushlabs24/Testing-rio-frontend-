@@ -93,6 +93,14 @@ export interface Need {
   classifiedAt: string | null;
   /** Populated only while status = ai_classification_failed. */
   classificationError: string | null;
+  /** A staged (not-yet-decided) Override — set by whoever last clicked
+   * "Preview Override" (any session, any device), cleared once approved or
+   * rejected. Deliberately separate from domain/subDomain/needDomains above
+   * (the authoritative, final classification) — nothing else reads this,
+   * it exists purely so a staged proposal is visible to whoever reviews
+   * next, not just the browser tab that staged it. */
+  proposedDomains: { domain: string; subDomain: string }[] | null;
+  proposedReason: string | null;
   createdBy: string;
   /** Resolved display name for Entered By — null if the creating user has
    * since been removed. */

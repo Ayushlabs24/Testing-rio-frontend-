@@ -49,12 +49,19 @@ export const aiReviewService = {
 
   /** Preview only — does not write domain/subDomain onto the Need. Returns
    * the refreshed Survey with questions regenerated (merged+deduped) across
-   * every candidate pair. */
+   * every candidate pair. Does persist `pairs`/`reason` onto the Need's
+   * proposedDomains/proposedReason (see backend's overrideDomainPreview),
+   * so the staged proposal is visible to whoever reviews next, in any
+   * session — not just this browser tab. */
   async overrideDomainPreview(
     needId: string,
     pairs: DomainSubDomainPair[],
+    reason: string,
   ): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), { pairs });
+    return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), {
+      pairs,
+      reason,
+    });
   },
 
   async retryClassification(needId: string): Promise<AiDecision> {

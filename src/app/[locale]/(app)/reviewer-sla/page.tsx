@@ -24,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/providers/auth-provider";
+import { usePermission } from "@/hooks/use-permission";
 import { markReviewerSlaAlertsSeen } from "@/hooks/use-reviewer-sla-badge";
 import { Link } from "@/i18n/navigation";
 import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
@@ -39,11 +40,12 @@ const STATUS_VARIANT: Record<SlaAlertStatus, "default" | "secondary" | "destruct
   breached: "destructive",
 };
 
-// Every alert here is survey_approval now (see ReviewerSlaService — a Need
-// reaching ai_classified no longer produces its own alert), and it links
-// straight to the Need detail page rather than the separate Survey Builder
-// Review page — one destination for the Approver to Override the domain,
-// curate questions, and Approve & Publish, instead of two different screens.
+// Links straight to the Need detail page rather than the separate Survey
+// Builder Review page — one destination for the Approver to Override the
+// domain, curate questions, and Approve & Publish, instead of two different
+// screens. Same destination works for a Research Officer's own resolved
+// alerts (survey_approved/survey_rejected) — the Need workspace page shows
+// the Survey's current state either way.
 function alertHref(alert: SlaAlert): string {
   return `/studies/${alert.studyId}/needs/${alert.needId}`;
 }
@@ -58,9 +60,14 @@ function formatDate(iso: string): string {
 export default function ReviewerSlaPage() {
   const t = useTranslations("app.reviewerSla");
   const { session } = useAuth();
-  // No concept of assignment: every user with the Reviewer/Approver role
-  // sees the same org-wide pending queue (see ReviewerSlaService.listAlerts)
-  // — once anyone reviews an item, it disappears for everyone.
+  // Which of the two queues ReviewerSlaService.listAlerts returns depends
+  // entirely on this — a Reviewer/Approver gets the org-wide "awaiting your
+  // decision" queue (no concept of assignment: once anyone reviews an item,
+  // it disappears for everyone); anyone else with access here (a Research
+  // Officer) gets their OWN submitted surveys' resolved status instead —
+  // already-decided, so the SLA due/breach concept below doesn't apply to
+  // their rows at all.
+  const canApprove = usePermission("surveyBuilder", "approve");
   const [config, setConfig] = useState<SlaConfig | null>(null);
   const [alerts, setAlerts] = useState<SlaAlert[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -113,43 +120,47 @@ export default function ReviewerSlaPage() {
   }, [alerts]);
 
   return (
-    <PermissionGuard module="aiReview" action="read">
+    <PermissionGuard module="surveyBuilder" action="read">
       <PageContainer>
         <PageHeader
-          title={t("title")}
+          title={canApprove ? t("title") : t("titleOwn")}
           description={
-            config
-              ? `${t("description")} ${t("slaNote", { hours: config.slaHours, seconds: Math.round(config.pollIntervalMs / 1000) })}`
-              : t("description")
+            canApprove
+              ? config
+                ? `${t("description")} ${t("slaNote", { hours: config.slaHours, seconds: Math.round(config.pollIntervalMs / 1000) })}`
+                : t("description")
+              : t("descriptionOwn")
           }
         />
 
-        <div className="mb-6 grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-xs">{t("summaryPending")}</p>
-              <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
-                {summary.pending}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-xs">{t("summaryAtRisk")}</p>
-              <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
-                {summary.at_risk}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-muted-foreground text-xs">{t("summaryBreached")}</p>
-              <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
-                {summary.breached}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {canApprove ? (
+          <div className="mb-6 grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-muted-foreground text-xs">{t("summaryPending")}</p>
+                <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
+                  {summary.pending}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-muted-foreground text-xs">{t("summaryAtRisk")}</p>
+                <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
+                  {summary.at_risk}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-muted-foreground text-xs">{t("summaryBreached")}</p>
+                <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums">
+                  {summary.breached}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
 
         <Card>
           <CardContent className="p-0">
@@ -161,8 +172,15 @@ export default function ReviewerSlaPage() {
                     <TableHead className="w-[26%]">{t("studyColumn")}</TableHead>
                     <TableHead className="w-[26%]">{t("needColumn")}</TableHead>
                     <TableHead className="w-40">{t("createdColumn")}</TableHead>
-                    <TableHead className="w-40">{t("dueColumn")}</TableHead>
-                    <TableHead className="w-28">{t("statusColumn")}</TableHead>
+                    {/* Due/breach only applies to the still-open Approver
+                        queue — a Research Officer's alerts are already
+                        resolved, there's nothing left to be "at risk" of. */}
+                    {canApprove ? (
+                      <TableHead className="w-40">{t("dueColumn")}</TableHead>
+                    ) : null}
+                    {canApprove ? (
+                      <TableHead className="w-28">{t("statusColumn")}</TableHead>
+                    ) : null}
                     <TableHead className="w-32">{t("actionColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -170,7 +188,7 @@ export default function ReviewerSlaPage() {
                   {alerts === null ? (
                     Array.from({ length: 3 }).map((_, index) => (
                       <TableRow key={index}>
-                        {Array.from({ length: 7 }).map((__, cell) => (
+                        {Array.from({ length: canApprove ? 7 : 5 }).map((__, cell) => (
                           <TableCell key={cell} className="py-4">
                             <div className="bg-muted h-4 w-24 rounded" />
                           </TableCell>
@@ -180,14 +198,20 @@ export default function ReviewerSlaPage() {
                   ) : alerts.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={canApprove ? 7 : 5}
                         className="text-muted-foreground h-32 text-center"
                       >
                         <div className="flex flex-col items-center gap-2.5">
                           <div className="bg-muted flex size-10 items-center justify-center rounded-full">
                             <AlarmClock className="size-5" />
                           </div>
-                          <p>{loadFailed ? t("loadError") : t("noAlerts")}</p>
+                          <p>
+                            {loadFailed
+                              ? t("loadError")
+                              : canApprove
+                                ? t("noAlerts")
+                                : t("noAlertsOwn")}
+                          </p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -205,15 +229,24 @@ export default function ReviewerSlaPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="text-muted-foreground max-w-0 py-4 align-top text-sm">
-                          {alert.needStatement ? (
+                          {alert.needStatement || alert.comments ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <p className="cursor-default truncate">
-                                  {alert.needStatement}
+                                  {alert.comments ?? alert.needStatement}
                                 </p>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-sm text-wrap">
                                 {alert.needStatement}
+                                {alert.comments ? (
+                                  <>
+                                    <br />
+                                    <span className="font-medium">
+                                      {t("commentsLabel")}:{" "}
+                                    </span>
+                                    {alert.comments}
+                                  </>
+                                ) : null}
                               </TooltipContent>
                             </Tooltip>
                           ) : (
@@ -223,17 +256,23 @@ export default function ReviewerSlaPage() {
                         <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
                           {formatDate(alert.createdAt)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
-                          {formatDate(alert.dueAt)}
-                        </TableCell>
-                        <TableCell className="py-4 align-top whitespace-nowrap">
-                          <Badge variant={STATUS_VARIANT[alert.status]}>
-                            {t(`status.${alert.status}`)}
-                          </Badge>
-                        </TableCell>
+                        {canApprove ? (
+                          <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
+                            {formatDate(alert.dueAt)}
+                          </TableCell>
+                        ) : null}
+                        {canApprove ? (
+                          <TableCell className="py-4 align-top whitespace-nowrap">
+                            <Badge variant={STATUS_VARIANT[alert.status]}>
+                              {t(`status.${alert.status}`)}
+                            </Badge>
+                          </TableCell>
+                        ) : null}
                         <TableCell className="py-4 align-top whitespace-nowrap">
                           <Button asChild size="sm" variant="outline">
-                            <Link href={alertHref(alert)}>{t("reviewNow")}</Link>
+                            <Link href={alertHref(alert)}>
+                              {canApprove ? t("reviewNow") : t("viewNow")}
+                            </Link>
                           </Button>
                         </TableCell>
                       </TableRow>

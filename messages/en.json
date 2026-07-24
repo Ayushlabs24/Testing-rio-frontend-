@@ -235,6 +235,7 @@
       "notifications": "Notifications",
       "reviewerSlaAlerts": "Reviewer SLA alerts",
       "reviewerSlaPendingCount": "{count} review item(s) awaiting action",
+      "surveyStatusUpdateCount": "{count} survey status update(s)",
       "sharingAlerts": "Sharing notifications",
       "sharingSectionTitle": "Sharing requests",
       "sharingAlertsEmpty": "No sharing notifications",
@@ -1101,6 +1102,7 @@
       },
       "needColumn": "Need",
       "noNeedStatement": "No need statement recorded",
+      "commentsLabel": "Reviewer comments",
       "actionColumn": "Action",
       "reviewNow": "Review now",
       "summaryPending": "Pending Review",
@@ -1109,8 +1111,14 @@
       "typeColumn": "Type",
       "type": {
         "ai_classification": "AI Classification",
-        "survey_approval": "Survey Approval"
-      }
+        "survey_approval": "Survey Approval",
+        "survey_approved": "Approved & Published",
+        "survey_rejected": "Changes Requested"
+      },
+      "titleOwn": "My Survey Status",
+      "descriptionOwn": "Surveys you've submitted, and whether they were approved or sent back for changes.",
+      "noAlertsOwn": "No survey status updates yet.",
+      "viewNow": "View"
     },
     "publicSurveys": {
       "title": "Public Surveys",
@@ -1714,11 +1722,14 @@
         "publishedMessage": "Survey saved and published.",
         "saveBeforeSubmit": "Save your changes before submitting for approval.",
         "submittedNotice": "This survey has been submitted and is awaiting approval. Editing is disabled until it is reviewed.",
+        "submittedNoticeApprover": "This survey has been submitted for your review. You can add, remove, or reorder questions before you Approve & Publish or Reject.",
         "rejectedNoticeTitle": "Changes requested",
         "goToReview": "Go to Review",
         "reject": "Reject",
         "rejectDialogTitle": "Reject this classification",
         "rejectDialogDescription": "The need returns to Pending AI Classification so it can be edited and re-classified.",
+        "rejectSurveyDialogTitle": "Reject this survey",
+        "rejectSurveyDialogDescription": "Explain what needs to change — the Researcher will see these comments and can resubmit once addressed.",
         "commentsLabel": "Comments",
         "rejectCommentsPlaceholder": "Explain what needs to change...",
         "rejectCommentsRequired": "Enter a comment explaining the rejection.",

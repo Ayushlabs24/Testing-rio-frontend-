@@ -164,6 +164,12 @@ function NotificationsBell({
 
   const reviewerSlaCount = canSeeReviewerSla ? reviewerSla.count : 0;
   const sharingCount = canSeeSharing ? sharingUnreadCount : 0;
+  // Decides the summary row's wording below — a Reviewer/Approver's count
+  // is surveys awaiting THEIR decision; anyone else seeing this bell (a
+  // Research Officer) is looking at their OWN submitted surveys' resolved
+  // status instead (see ReviewerSlaService.listAlerts).
+  const canApproveSurveys =
+    session?.role.permissions.find((p) => p.module === "surveyBuilder")?.approve ?? false;
   const totalCount = reviewerSlaCount + sharingCount;
 
   // Same color language as the Reviewer SLA Alerts page's own status
@@ -264,7 +270,9 @@ function NotificationsBell({
                 )}
               />
               <span className="text-sm">
-                {t("reviewerSlaPendingCount", { count: reviewerSlaCount })}
+                {canApproveSurveys
+                  ? t("reviewerSlaPendingCount", { count: reviewerSlaCount })
+                  : t("surveyStatusUpdateCount", { count: reviewerSlaCount })}
               </span>
             </Link>
           </DropdownMenuItem>
@@ -330,12 +338,13 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   );
 
   // Same permission gate as the Reviewer SLA nav item itself (see
-  // config/navigation.ts's `module: "aiReview"` entry, and MobileNav's
+  // config/navigation.ts's `module: "surveyBuilder"` entry, and MobileNav's
   // identical `visibleNav` filter above) — the bell only ever shows for a
-  // role that can actually see that page.
+  // role that can actually see that page (Research Officer or
+  // Reviewer/Approver — see ReviewerSlaService.listAlerts).
   const canSeeReviewerSla =
     session.role.enabled &&
-    (session.role.permissions.find((p) => p.module === "aiReview")?.read ?? false);
+    (session.role.permissions.find((p) => p.module === "surveyBuilder")?.read ?? false);
   const canSeeSharing =
     session.role.enabled &&
     (session.role.permissions.find((p) => p.module === "archiveSharingAudit")?.read ??

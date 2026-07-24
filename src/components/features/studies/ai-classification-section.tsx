@@ -43,10 +43,6 @@ import { domainsService } from "@/services/domains/domains.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need, NeedStatus } from "@/services/needs/needs.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
-import {
-  readStoredPendingOverride,
-  writeStoredPendingOverride,
-} from "@/services/ai-decisions/pending-override-storage";
 
 const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -65,9 +61,10 @@ const POLL_INTERVAL_MS = 3000;
 // workspace page. The actual Approve/Reject decision — and curating the
 // suggested question list — both happen on the Survey Builder page now (its
 // "Approve & Publish" reads back whatever Override is staged here via
-// sessionStorage, see pending-override-storage.ts), so an Approver has just
-// one place to Override, curate questions, and Approve & Publish or Reject,
-// instead of two disconnected screens/actions.
+// Need.proposedDomains/proposedReason — see AiDecisionsService.
+// overrideDomainPreview — visible across sessions, not just this browser
+// tab), so an Approver has just one place to Override, curate questions,
+// and Approve & Publish or Reject, instead of two disconnected screens/actions.
 export function AiClassificationSection({
   need,
   onNeedUpdated,
@@ -105,18 +102,16 @@ export function AiClassificationSection({
     Record<string, string[]>
   >({});
   const [overrideReason, setOverrideReason] = useState("");
-  const [pendingOverride, setPendingOverride] = useState<{
-    pairs: DomainSubDomainPair[];
-    reason: string;
-  } | null>(() => readStoredPendingOverride(need.id));
   const [overridePreviewLoading, setOverridePreviewLoading] = useState(false);
 
-  // Keep sessionStorage in sync with whatever's actually staged, so the
-  // round trip to Survey Builder's "View Suggested Questions" and back
-  // doesn't lose it (see readStoredPendingOverride's own comment above).
-  useEffect(() => {
-    writeStoredPendingOverride(need.id, pendingOverride);
-  }, [need.id, pendingOverride]);
+  // A staged (not-yet-decided) Override, read straight off the Need itself
+  // (Need.proposedDomains/proposedReason — see schema.prisma) rather than
+  // sessionStorage, so it's visible to whoever's viewing this Need next,
+  // regardless of session/device — not just the browser tab that staged it.
+  const pendingOverride =
+    need.proposedDomains && need.proposedDomains.length > 0
+      ? { pairs: need.proposedDomains, reason: need.proposedReason ?? "" }
+      : null;
 
   const [survey, setSurvey] = useState<Survey | null>(null);
 
@@ -359,14 +354,21 @@ export function AiClassificationSection({
   }
 
   function startOverride() {
-    // Seed the dropdowns from whatever's already known: the real,
-    // multi-valued NeedDomain pairs if any exist; else, when AI couldn't
-    // classify at all (allDomainsSelected), every active Domain/Sub-domain
-    // is already implicitly in scope — so pre-select all of them, matching
-    // what "All Domains" actually means, rather than opening the dialog
-    // empty; else fall back to the AI's own single suggested pair.
+    // Seed the dropdowns from whatever's already known — a staged proposal
+    // (pendingOverride, from Need.proposedDomains) takes priority over
+    // everything else, so re-opening Override shows what was already staged
+    // instead of reverting to the AI's original suggestion (which is what
+    // happened before this read from the Need directly). Falls back to: the
+    // real, multi-valued NeedDomain pairs if any exist; else, when AI
+    // couldn't classify at all (allDomainsSelected), every active
+    // Domain/Sub-domain (matching what "All Domains" actually means); else
+    // the AI's own single suggested pair.
     const initial: Record<string, string[]> = {};
-    if (need.needDomains.length > 0) {
+    if (pendingOverride) {
+      for (const pair of pendingOverride.pairs) {
+        initial[pair.domain] = [...(initial[pair.domain] ?? []), pair.subDomain];
+      }
+    } else if (need.needDomains.length > 0) {
       for (const pair of need.needDomains) {
         initial[pair.domain] = [...(initial[pair.domain] ?? []), pair.subDomain];
       }
@@ -379,23 +381,25 @@ export function AiClassificationSection({
     }
     setOverrideDomains(Object.keys(initial));
     setOverrideSubDomainsByDomain(initial);
-    setOverrideReason("");
+    setOverrideReason(pendingOverride?.reason ?? "");
     setOverriding(true);
   }
 
   async function previewOverride() {
     const pairs = pairsFromSelections();
-    if (pairs.length === 0 || !overrideReason.trim()) return;
+    const reason = overrideReason.trim();
+    if (pairs.length === 0 || !reason) return;
     setOverridePreviewLoading(true);
     setError(null);
     try {
       // Refreshes the suggested questions on the Survey Builder page for the
-      // candidate pairs — nothing is written to the Need until Approve.
-      await aiReviewService.overrideDomainPreview(need.id, pairs);
-      setPendingOverride({
-        pairs,
-        reason: overrideReason.trim(),
-      });
+      // candidate pairs, AND persists {pairs, reason} onto the Need itself
+      // (proposedDomains/proposedReason) — nothing is written to the
+      // authoritative domain/subDomain until Approve, but the proposal is
+      // now visible to whoever reviews next, in any session.
+      await aiReviewService.overrideDomainPreview(need.id, pairs, reason);
+      const updated = await needsService.getById(need.id);
+      onNeedUpdated?.(updated);
       setOverriding(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("overrideError"));
