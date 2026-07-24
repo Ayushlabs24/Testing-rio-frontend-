@@ -38,6 +38,8 @@ export interface SurveyQuestionItem {
   questionText: string;
   answerType: string;
   answerOptions: string[] | null;
+  domain: string | null;
+  subDomain: string | null;
   indicator: string | null;
   kpi: string | null;
   isCustom: boolean;
@@ -128,6 +130,9 @@ export type SaveSurveyQuestionInput =
       customText: string;
       customAnswerType?: string;
       customOptions?: string[];
+      domain?: string;
+      subDomain?: string;
+      kpi?: string;
       order: number;
       isRequired: boolean;
     };
@@ -153,9 +158,22 @@ export const surveysService = {
     return apiClient.get<QuestionOption[]>(endpoints.questionBank.domainOptions);
   },
 
-  async getQuestions(domain: string, subDomain: string): Promise<Question[]> {
+  /** Distinct KPI values already in use across the Question Bank — free-text
+   * suggestions for the Custom Question Editor's KPI field, not a fixed list
+   * (see QuestionsService.getKpiOptions on the backend). */
+  async getKpiOptions(): Promise<string[]> {
+    return apiClient.get<string[]>(endpoints.questionBank.kpiOptions);
+  },
+
+  /** Empty `pairs` means "every active Question Bank entry" — the
+   * allDomainsSelected case, where there's no specific Domain/Sub-domain to
+   * filter by. Non-empty `pairs` matches any of them (a single classified
+   * pair, or an already-approved multi-domain Need's several pairs). */
+  async getQuestions(
+    pairs: Array<{ domain: string; subDomain: string }>,
+  ): Promise<Question[]> {
     return apiClient.get<Question[]>(endpoints.questionBank.questions, {
-      params: { domain, subDomain },
+      params: pairs.length > 0 ? { pairs: JSON.stringify(pairs) } : {},
     });
   },
 

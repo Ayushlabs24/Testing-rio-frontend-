@@ -73,6 +73,15 @@ export interface Need {
    * Distinct from aiSuggestedDomain below, which never changes once set. */
   domain: string | null;
   subDomain: string | null;
+  /** True when AI couldn't confidently classify this Need at all — every
+   * active Domain/Sub-domain is implicitly in scope rather than one
+   * specific pair, until a human narrows it down via Override. */
+  allDomainsSelected: boolean;
+  /** The real, multi-valued source of truth for this Need's classification
+   * — domain/subDomain above always mirror needDomains[0]. Empty while
+   * allDomainsSelected is true, or before any Approver review has happened
+   * yet. */
+  needDomains: { domain: string; subDomain: string }[];
   /** AI Classification's own original prediction — written once when
    * classification completes and never overwritten again, including on
    * Approver override, so it always reflects what the AI actually

@@ -3,6 +3,7 @@
 import { FileQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { DomainChips } from "@/components/common/domain-chips";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -41,6 +42,7 @@ const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
  * running its own independent survey. */
 export default function SurveyBuilderPage() {
   const t = useTranslations("app.surveyBuilder");
+  const tClassification = useTranslations("app.studies.classification");
   const canWrite = usePermission("surveyBuilder", "write");
   const canApprove = usePermission("surveyBuilder", "approve");
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -137,7 +139,19 @@ export default function SurveyBuilderPage() {
                         {need.title}
                       </TableCell>
                       <TableCell className="align-middle text-sm whitespace-normal">
-                        {need.domain && need.subDomain ? (
+                        {need.allDomainsSelected ? (
+                          <DomainChips
+                            items={[tClassification("allDomainsChip")]}
+                            variant="secondary"
+                          />
+                        ) : need.needDomains.length > 0 ? (
+                          <DomainChips
+                            items={need.needDomains.map(
+                              (d) => `${d.domain} / ${d.subDomain}`,
+                            )}
+                            variant="secondary"
+                          />
+                        ) : need.domain && need.subDomain ? (
                           <span className="text-muted-foreground break-words">
                             {need.domain} / {need.subDomain}
                           </span>

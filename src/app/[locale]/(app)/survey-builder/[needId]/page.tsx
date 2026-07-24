@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -32,8 +32,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
-import { cn, titleCase } from "@/lib/utils";
+import { cn, formatDomainSummary, titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
+import { aiReviewService } from "@/services/ai-decisions/ai-decisions.service";
+import { domainsService } from "@/services/domains/domains.service";
 import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
 import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
 import { needsService } from "@/services/needs/needs.service";
@@ -57,6 +59,8 @@ const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
   PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
 };
 
+const LIST_PREVIEW_COUNT = 5;
+
 let tempIdCounter = 0;
 function nextTempId(prefix: string): string {
   tempIdCounter += 1;
@@ -77,6 +81,13 @@ export default function SurveyBuilderDetailPage({
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [eligibleQuestions, setEligibleQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
+
+  // Both the Recommended and Question Bank lists can run into the hundreds
+  // (e.g. an allDomainsSelected Need matches every active Question Bank
+  // entry) — show a handful up front and let the Approver/Researcher expand
+  // into a scrollable list instead of dumping everything onto the page.
+  const [showAllRecommended, setShowAllRecommended] = useState(false);
+  const [showAllEligible, setShowAllEligible] = useState(false);
 
   // Draft — the two sections editable locally, only persisted on Save. Kept
   // apart (rather than one array) since the UI, save-validation, and
@@ -115,10 +126,54 @@ export default function SurveyBuilderDetailPage({
   // fresh instead of needing an internal effect to reset its draft state.
   const [modalKey, setModalKey] = useState(0);
 
+  // Manual classification entry path — only rendered when the Need is
+  // ai_classification_failed (see the render below). A pure gate in front
+  // of the rest of this page: once submitted, `load()` re-fetches the Need
+  // (now reviewer_approved, with domain/subDomain set — see
+  // AiDecisionsService.manualClassify on the backend) and everything below
+  // renders exactly as it already does for an AI-classified Need. No
+  // separate Question Bank/Survey Builder logic duplicated here.
+  const [domainOptions, setDomainOptions] = useState<
+    Array<{ name: string; subDomains: string[] }>
+  >([]);
+  const [manualDomain, setManualDomain] = useState<string | null>(null);
+  const [manualSubDomain, setManualSubDomain] = useState<string | null>(null);
+  const [manualClassifying, setManualClassifying] = useState(false);
+  const subDomainOptionsFor = (domain: string | null): string[] =>
+    domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
+
   function loadDraftFromSurvey(s: Survey | null) {
     setRecommended((s?.questions ?? []).filter((q) => !q.isCustom));
     setAdditional((s?.questions ?? []).filter((q) => q.isCustom));
     setDirty(false);
+  }
+
+  // The Question Bank browse tab's source pairs — not gated on Approval the
+  // way `need.domain`/`need.subDomain` are (those only get set once an
+  // Approver actually reviews). Prefers the real, multi-valued NeedDomain
+  // pairs once approved; else, pre-approval, falls back to the AI's own
+  // single suggested pair so the tab isn't empty the entire time a Need
+  // awaits review; empty array (allDomainsSelected) fetches every active
+  // Question Bank entry, same convention as the backend.
+  function questionBankPairsFor(
+    needResult: Need,
+  ): Array<{ domain: string; subDomain: string }> | null {
+    if (needResult.needDomains.length > 0) {
+      return needResult.needDomains.map((d) => ({
+        domain: d.domain,
+        subDomain: d.subDomain,
+      }));
+    }
+    if (needResult.allDomainsSelected) return [];
+    if (needResult.aiSuggestedDomain && needResult.aiSuggestedSubDomain) {
+      return [
+        {
+          domain: needResult.aiSuggestedDomain,
+          subDomain: needResult.aiSuggestedSubDomain,
+        },
+      ];
+    }
+    return null;
   }
 
   function load() {
@@ -127,9 +182,10 @@ export default function SurveyBuilderDetailPage({
         setNeed(needResult);
         setSurvey(surveyResult);
         loadDraftFromSurvey(surveyResult);
-        if (needResult.domain && needResult.subDomain) {
+        const pairs = questionBankPairsFor(needResult);
+        if (pairs !== null) {
           surveysService
-            .getQuestions(needResult.domain, needResult.subDomain)
+            .getQuestions(pairs)
             .then(setEligibleQuestions)
             .catch(() => setEligibleQuestions([]));
         }
@@ -149,6 +205,62 @@ export default function SurveyBuilderDetailPage({
       .then(setMethodologyOptions)
       .catch(() => undefined);
   }, []);
+
+  // Auto-select the currently published Methodology Version (the only
+  // option this list ever contains now — see
+  // MethodologyConfigService.listVersionOptions) the first time a Survey
+  // with none chosen yet sees it load, rather than leaving the placeholder
+  // for the Researcher to notice and pick manually. If nothing is published
+  // (still `draft`), methodologyOptions is empty and the placeholder stays,
+  // same as before. Guarded to fire at most once per Survey — without this,
+  // a re-render after the auto-save completes (survey.methodologyVersion now
+  // set) would just be a no-op anyway, but the guard makes that explicit
+  // rather than relying on it.
+  const autoSelectedMethodologyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!survey || !isEditable) return;
+    if (survey.methodologyVersion) return;
+    if (autoSelectedMethodologyRef.current === survey.id) return;
+    const published = methodologyOptions[0];
+    if (!published) return;
+    autoSelectedMethodologyRef.current = survey.id;
+    changeMethodologyVersion(published.version);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [survey, isEditable, methodologyOptions]);
+
+  // Same fetch-once, filter-active pattern AiClassificationSection's own
+  // Override-Domain dialog already uses — only actually rendered when the
+  // manual-classification gate below is shown, but cheap enough to just
+  // always fetch on mount rather than conditioning it on `need.status`.
+  useEffect(() => {
+    domainsService
+      .listWithSubDomains()
+      .then((domains) =>
+        setDomainOptions(
+          domains
+            .filter((d) => d.isActive)
+            .map((d) => ({
+              name: d.name,
+              subDomains: d.subDomains.filter((sd) => sd.isActive).map((sd) => sd.name),
+            })),
+        ),
+      )
+      .catch(() => setDomainOptions([]));
+  }, []);
+
+  async function submitManualClassification() {
+    if (!manualDomain || !manualSubDomain) return;
+    setManualClassifying(true);
+    setError(null);
+    try {
+      await aiReviewService.manualClassify(needId, manualDomain, manualSubDomain);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setManualClassifying(false);
+    }
+  }
 
   async function changeMethodologyVersion(version: string) {
     if (!survey) return;
@@ -199,6 +311,8 @@ export default function SurveyBuilderDetailPage({
         questionText: question.questionText,
         answerType: question.answerType,
         answerOptions: question.answerOptions ?? null,
+        domain: question.domain,
+        subDomain: question.subDomain,
         indicator: question.indicator ?? null,
         kpi: question.kpi ?? null,
         isCustom: false,
@@ -223,6 +337,14 @@ export default function SurveyBuilderDetailPage({
       questionText: item.questionText,
       answerType: (item.answerType as CustomQuestionValue["answerType"]) || "long_text",
       answerOptions: item.answerOptions,
+      // A legacy custom question saved before Domain/Sub-domain/KPI were
+      // captured opens with these blank — the dialog requires them to be
+      // filled in before its own Save, same as a brand new question (see
+      // CustomQuestionEditorDialog), but nothing here forces that just from
+      // opening this page or saving the survey's other questions.
+      domain: item.domain,
+      subDomain: item.subDomain,
+      kpi: item.kpi,
       isRequired: item.isRequired,
     });
     setModalOpen(true);
@@ -238,6 +360,9 @@ export default function SurveyBuilderDetailPage({
                 questionText: value.questionText,
                 answerType: value.answerType,
                 answerOptions: value.answerOptions,
+                domain: value.domain,
+                subDomain: value.subDomain,
+                kpi: value.kpi,
                 isRequired: value.isRequired,
               }
             : q,
@@ -252,8 +377,10 @@ export default function SurveyBuilderDetailPage({
           questionText: value.questionText,
           answerType: value.answerType,
           answerOptions: value.answerOptions,
+          domain: value.domain,
+          subDomain: value.subDomain,
           indicator: null,
-          kpi: null,
+          kpi: value.kpi,
           isCustom: true,
           order: recommended.length + prev.length + 1,
           isRequired: value.isRequired,
@@ -286,6 +413,9 @@ export default function SurveyBuilderDetailPage({
           customText: q.questionText.trim(),
           customAnswerType: q.answerType,
           customOptions: q.answerOptions ?? undefined,
+          domain: q.domain ?? undefined,
+          subDomain: q.subDomain ?? undefined,
+          kpi: q.kpi ?? undefined,
           order: recommended.length + index + 1,
           isRequired: q.isRequired,
         })),
@@ -303,6 +433,13 @@ export default function SurveyBuilderDetailPage({
 
   async function submitForApproval() {
     if (!survey) return;
+    // Buttons stay clickable rather than silently disabled — a validation
+    // message the user actually sees is more discoverable than a disabled
+    // button whose reason only shows on hover.
+    if (!survey.methodologyVersion) {
+      setError(t("methodologyVersionRequiredNote"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -322,6 +459,10 @@ export default function SurveyBuilderDetailPage({
   // Saves, submits, and publishes in one action instead.
   async function saveAndPublish() {
     if (!survey) return;
+    if (!survey.methodologyVersion) {
+      setError(t("methodologyVersionRequiredNote"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setMessage(null);
@@ -336,6 +477,9 @@ export default function SurveyBuilderDetailPage({
           customText: q.questionText.trim(),
           customAnswerType: q.answerType,
           customOptions: q.answerOptions ?? undefined,
+          domain: q.domain ?? undefined,
+          subDomain: q.subDomain ?? undefined,
+          kpi: q.kpi ?? undefined,
           order: recommended.length + index + 1,
           isRequired: q.isRequired,
         })),
@@ -371,9 +515,15 @@ export default function SurveyBuilderDetailPage({
             <PageHeader
               title={need?.title ?? ""}
               description={
-                need?.domain && need?.subDomain
-                  ? `${need.domain} / ${need.subDomain}`
-                  : undefined
+                need?.allDomainsSelected
+                  ? "All Domains"
+                  : need && need.needDomains.length > 0
+                    ? formatDomainSummary(
+                        need.needDomains.map((d) => `${d.domain} / ${d.subDomain}`),
+                      )
+                    : need?.domain && need?.subDomain
+                      ? `${need.domain} / ${need.subDomain}`
+                      : undefined
               }
               actions={
                 survey ? (
@@ -404,30 +554,15 @@ export default function SurveyBuilderDetailPage({
                       </Button>
                     ) : null}
                     {isEditable && canApprove ? (
-                      <Button
-                        size="sm"
-                        onClick={saveAndPublish}
-                        disabled={submitting || !survey.methodologyVersion}
-                        title={
-                          !survey.methodologyVersion
-                            ? t("methodologyVersionRequiredNote")
-                            : undefined
-                        }
-                      >
+                      <Button size="sm" onClick={saveAndPublish} disabled={submitting}>
                         {submitting ? t("publishing") : t("saveAndPublish")}
                       </Button>
                     ) : isEditable ? (
                       <Button
                         size="sm"
                         onClick={submitForApproval}
-                        disabled={submitting || dirty || !survey.methodologyVersion}
-                        title={
-                          dirty
-                            ? t("saveBeforeSubmit")
-                            : !survey.methodologyVersion
-                              ? t("methodologyVersionRequiredNote")
-                              : undefined
-                        }
+                        disabled={submitting || dirty}
+                        title={dirty ? t("saveBeforeSubmit") : undefined}
                       >
                         {submitting ? t("submitting") : t("submitForApproval")}
                       </Button>
@@ -476,7 +611,87 @@ export default function SurveyBuilderDetailPage({
               <p className="text-badge-success-foreground mb-4 text-sm">{message}</p>
             ) : null}
 
-            {!survey ? (
+            {need?.status === "ai_classification_failed" ? (
+              // Manual-classification gate — AI could not classify this
+              // Need, so the Researcher picks Domain/Sub-domain here
+              // instead. Purely a gate: everything below (Question Bank,
+              // custom questions, Save/Submit) is the exact same UI an
+              // AI-classified Need already uses, unlocked only once this
+              // submits successfully and `load()` re-fetches the Need at
+              // reviewer_approved with domain/subDomain set.
+              <Card>
+                <CardContent className="space-y-4 p-6">
+                  <div>
+                    <h2 className="text-foreground text-sm font-semibold">
+                      {t("manualClassificationTitle")}
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t("manualClassificationDescription")}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t("manualClassificationDomainLabel")}</Label>
+                    <Select
+                      value={manualDomain ?? undefined}
+                      onValueChange={(v) => {
+                        setManualDomain(v);
+                        setManualSubDomain(null);
+                      }}
+                      disabled={!canWrite || manualClassifying}
+                    >
+                      <SelectTrigger className="w-full sm:w-96">
+                        <SelectValue
+                          placeholder={t("manualClassificationSelectDomain")}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {domainOptions.map((d) => (
+                          <SelectItem key={d.name} value={d.name}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t("manualClassificationSubDomainLabel")}</Label>
+                    <Select
+                      value={manualSubDomain ?? undefined}
+                      onValueChange={setManualSubDomain}
+                      disabled={!canWrite || !manualDomain || manualClassifying}
+                    >
+                      <SelectTrigger className="w-full sm:w-96">
+                        <SelectValue
+                          placeholder={t("manualClassificationSelectSubDomain")}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subDomainOptionsFor(manualDomain).map((sd) => (
+                          <SelectItem key={sd} value={sd}>
+                            {sd}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {canWrite ? (
+                    <Button
+                      size="sm"
+                      onClick={submitManualClassification}
+                      disabled={!manualDomain || !manualSubDomain || manualClassifying}
+                      className="gap-1.5"
+                    >
+                      {manualClassifying ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : null}
+                      {manualClassifying
+                        ? t("manualClassificationSubmitting")
+                        : t("manualClassificationSubmit")}
+                    </Button>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : !survey ? (
               <Card>
                 <CardContent className="text-muted-foreground p-6 text-center text-sm">
                   {t("noSurveyYet")}
@@ -506,7 +721,14 @@ export default function SurveyBuilderDetailPage({
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-muted-foreground text-xs">
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isEditable && !survey.methodologyVersion
+                          ? "text-warning font-medium"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {isEditable
                         ? t("methodologyVersionHint")
                         : t("methodologyVersionLockedHint")}
@@ -529,17 +751,34 @@ export default function SurveyBuilderDetailPage({
                       </div>
 
                       <TabsContent value="questionBank" className="mt-6 space-y-4">
-                        {/* Every Question Bank row for this Need's classified
-                            domain/sub-domain — the same `eligibleQuestions` the
+                        {/* Every Question Bank row matching this Need's
+                            classification — the same `eligibleQuestions` the
                             combobox draws from, browsable in full rather than
-                            one search-and-select at a time. */}
+                            one search-and-select at a time. Available before
+                            Approval too (using the AI's own suggested pair,
+                            or "every active question" when
+                            allDomainsSelected), not gated on the Approved
+                            domain/subDomain fields the way it used to be. */}
                         <p className="text-muted-foreground text-xs">
-                          {need?.domain && need?.subDomain
-                            ? t("questionBankDescription", {
-                                domain: need.domain,
-                                subDomain: need.subDomain,
-                              })
-                            : t("questionBankNoDomain")}
+                          {need?.allDomainsSelected
+                            ? t("questionBankDescriptionAllDomains")
+                            : need && need.needDomains.length > 0
+                              ? t("questionBankDescription", {
+                                  scope: formatDomainSummary(
+                                    need.needDomains.map(
+                                      (d) => `${d.domain} / ${d.subDomain}`,
+                                    ),
+                                  ),
+                                })
+                              : need?.domain && need?.subDomain
+                                ? t("questionBankDescription", {
+                                    scope: `${need.domain} / ${need.subDomain}`,
+                                  })
+                                : need?.aiSuggestedDomain && need?.aiSuggestedSubDomain
+                                  ? t("questionBankDescriptionSuggested", {
+                                      scope: `${need.aiSuggestedDomain} / ${need.aiSuggestedSubDomain}`,
+                                    })
+                                  : t("questionBankNoDomain")}
                         </p>
 
                         {eligibleQuestions.length === 0 ? (
@@ -547,8 +786,18 @@ export default function SurveyBuilderDetailPage({
                             {t("questionBankEmpty")}
                           </p>
                         ) : (
-                          <div className="space-y-3">
-                            {eligibleQuestions.map((q) => {
+                          <div
+                            className={cn(
+                              "space-y-3",
+                              showAllEligible &&
+                                eligibleQuestions.length > LIST_PREVIEW_COUNT &&
+                                "max-h-[36rem] overflow-y-auto pr-1",
+                            )}
+                          >
+                            {(showAllEligible
+                              ? eligibleQuestions
+                              : eligibleQuestions.slice(0, LIST_PREVIEW_COUNT)
+                            ).map((q) => {
                               const added = recommended.some(
                                 (included) => included.bankQuestionId === q.id,
                               );
@@ -646,6 +895,23 @@ export default function SurveyBuilderDetailPage({
                             })}
                           </div>
                         )}
+                        {eligibleQuestions.length > LIST_PREVIEW_COUNT ? (
+                          <div className="flex justify-center pt-1">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="w-full sm:w-auto"
+                              onClick={() => setShowAllEligible((v) => !v)}
+                            >
+                              {showAllEligible
+                                ? t("showLess")
+                                : t("showMore", {
+                                    count: eligibleQuestions.length - LIST_PREVIEW_COUNT,
+                                  })}
+                            </Button>
+                          </div>
+                        ) : null}
                       </TabsContent>
 
                       <TabsContent value="recommended" className="mt-6 space-y-4">
@@ -654,8 +920,24 @@ export default function SurveyBuilderDetailPage({
                             {t("noRecommendedQuestions")}
                           </p>
                         ) : (
-                          <div className="space-y-3">
-                            {recommended.map((q, index) => (
+                          <div
+                            className={cn(
+                              "space-y-3",
+                              showAllRecommended &&
+                                recommended.length > LIST_PREVIEW_COUNT &&
+                                "max-h-[36rem] overflow-y-auto pr-1",
+                            )}
+                          >
+                            {/* Preserve each question's true position
+                                (needed by move up/down and remove, which act
+                                on `recommended` itself) even when the visible
+                                list is truncated to a preview slice. */}
+                            {(showAllRecommended
+                              ? recommended.map((q, index) => ({ q, index }))
+                              : recommended
+                                  .map((q, index) => ({ q, index }))
+                                  .slice(0, LIST_PREVIEW_COUNT)
+                            ).map(({ q, index }) => (
                               <div
                                 key={q.id}
                                 className="border-border space-y-2.5 rounded-lg border p-4"
@@ -761,6 +1043,23 @@ export default function SurveyBuilderDetailPage({
                             ))}
                           </div>
                         )}
+                        {recommended.length > LIST_PREVIEW_COUNT ? (
+                          <div className="flex justify-center pt-1">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="w-full sm:w-auto"
+                              onClick={() => setShowAllRecommended((v) => !v)}
+                            >
+                              {showAllRecommended
+                                ? t("showLess")
+                                : t("showMore", {
+                                    count: recommended.length - LIST_PREVIEW_COUNT,
+                                  })}
+                            </Button>
+                          </div>
+                        ) : null}
                       </TabsContent>
                     </Tabs>
                   </CardContent>

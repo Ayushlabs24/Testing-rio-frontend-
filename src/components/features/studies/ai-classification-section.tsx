@@ -14,7 +14,9 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DomainChips } from "@/components/common/domain-chips";
 import { LoadingButton } from "@/components/common/loading-button";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Dialog,
   DialogContent,
@@ -24,54 +26,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import {
   aiDecisionsService,
   aiReviewService,
 } from "@/services/ai-decisions/ai-decisions.service";
-import type { AiDecision } from "@/services/ai-decisions/ai-decisions.types";
+import type {
+  AiDecision,
+  DomainSubDomainPair,
+} from "@/services/ai-decisions/ai-decisions.types";
 import { ApiError } from "@/services/api/types";
 import { domainsService } from "@/services/domains/domains.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need, NeedStatus } from "@/services/needs/needs.types";
-
-export function DomainChips({
-  items,
-  variant,
-  border = false,
-}: {
-  items: string[];
-  variant: "primary" | "secondary";
-  border?: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map((item) => (
-        <Badge
-          key={item}
-          className={cn(
-            border && `border border-${variant === "primary" ? "primary" : "secondary"}`,
-            variant === "primary"
-              ? "bg-badge-primary text-badge-primary-foreground"
-              : "bg-badge-secondary text-badge-secondary-foreground",
-          )}
-        >
-          {item}
-        </Badge>
-      ))}
-    </div>
-  );
-}
 
 const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -85,6 +56,54 @@ const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
 };
 
 const POLL_INTERVAL_MS = 3000;
+
+// The staged Override (pairs + reason) lives only in this component's local
+// state — nothing is written to the Need until Approve, by design (a
+// browser refresh mid-override must never half-decide the Need). But
+// "View Suggested Questions" navigates to a whole separate route (Survey
+// Builder) to let the Approver inspect the questions that preview just
+// regenerated, which unmounts this component and previously lost the
+// staged selection entirely on the way back. sessionStorage survives that
+// round trip without persisting anything server-side — it's still just a
+// draft, gone entirely on tab close, and never treated as authoritative.
+function pendingOverrideStorageKey(needId: string): string {
+  return `rio:pending-override:${needId}`;
+}
+
+function readStoredPendingOverride(
+  needId: string,
+): { pairs: DomainSubDomainPair[]; reason: string } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(pendingOverrideStorageKey(needId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      Array.isArray((parsed as { pairs?: unknown }).pairs) &&
+      typeof (parsed as { reason?: unknown }).reason === "string"
+    ) {
+      return parsed as { pairs: DomainSubDomainPair[]; reason: string };
+    }
+  } catch {
+    // Malformed/foreign sessionStorage value — treat as no staged override.
+  }
+  return null;
+}
+
+function writeStoredPendingOverride(
+  needId: string,
+  value: { pairs: DomainSubDomainPair[]; reason: string } | null,
+): void {
+  if (typeof window === "undefined") return;
+  const key = pendingOverrideStorageKey(needId);
+  if (value) {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } else {
+    window.sessionStorage.removeItem(key);
+  }
+}
 
 // AI Classification status + the Approver's Override/Approve/Reject actions,
 // all in one place on the Need workspace page. Curating the suggested
@@ -103,6 +122,15 @@ export function AiClassificationSection({
 }) {
   const t = useTranslations("app.studies.classification");
   const canReview = usePermission("aiReview", "approve");
+  const { session } = useAuth();
+  // Both role_ngo_research_officer and role_human_reviewer hold
+  // aiReview:approve now (full parity — see role-matrix.ts), but the
+  // Approve/Reject buttons specifically stay hidden for the Researcher on
+  // this panel — a UI-only restriction, not a permission change. Override
+  // still shows for both (Researcher can stage a candidate domain change),
+  // just not the button that actually commits/rejects the decision.
+  const canApproveReject = canReview && session?.role.key !== "ngo_research_officer";
+  const router = useRouter();
 
   const [latest, setLatest] = useState<AiDecision | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -118,15 +146,26 @@ export function AiClassificationSection({
     { name: string; subDomains: string[] }[]
   >([]);
   const [overriding, setOverriding] = useState(false);
-  const [overrideDomain, setOverrideDomain] = useState<string | null>(null);
-  const [overrideSubDomain, setOverrideSubDomain] = useState<string | null>(null);
+  // Multi-select dropdown for Domains, no limit on how many. Each selected
+  // Domain gets its own Sub-domain multi-select dropdown below it, keyed by
+  // domain name — a Need can span multiple Sub-domains within one Domain.
+  const [overrideDomains, setOverrideDomains] = useState<string[]>([]);
+  const [overrideSubDomainsByDomain, setOverrideSubDomainsByDomain] = useState<
+    Record<string, string[]>
+  >({});
   const [overrideReason, setOverrideReason] = useState("");
   const [pendingOverride, setPendingOverride] = useState<{
-    domain: string;
-    subDomain: string;
+    pairs: DomainSubDomainPair[];
     reason: string;
-  } | null>(null);
+  } | null>(() => readStoredPendingOverride(need.id));
   const [overridePreviewLoading, setOverridePreviewLoading] = useState(false);
+
+  // Keep sessionStorage in sync with whatever's actually staged, so the
+  // round trip to Survey Builder's "View Suggested Questions" and back
+  // doesn't lose it (see readStoredPendingOverride's own comment above).
+  useEffect(() => {
+    writeStoredPendingOverride(need.id, pendingOverride);
+  }, [need.id, pendingOverride]);
 
   const [approving, setApproving] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -224,11 +263,110 @@ export function AiClassificationSection({
     previousStatusRef.current = need.status;
   }, [need.status]);
 
-  const workingDomain = pendingOverride?.domain ?? need.aiSuggestedDomain ?? null;
-  const workingSubDomain =
-    pendingOverride?.subDomain ?? need.aiSuggestedSubDomain ?? null;
-  const subDomainOptionsFor = (domain: string | null): string[] =>
+  // Deduped — a staged override can carry several sub-domains under the
+  // same domain, and each domain/sub-domain should only appear once here.
+  const workingDomains = pendingOverride
+    ? [...new Set(pendingOverride.pairs.map((p) => p.domain))]
+    : [];
+  const workingSubDomains = pendingOverride
+    ? [...new Set(pendingOverride.pairs.map((p) => p.subDomain))]
+    : [];
+  const workingSubDomainGroups = pendingOverride
+    ? Object.entries(
+        pendingOverride.pairs.reduce(
+          (acc, { domain, subDomain }) => {
+            const set = acc[domain] ?? new Set<string>();
+            set.add(subDomain);
+            acc[domain] = set;
+            return acc;
+          },
+          {} as Record<string, Set<string>>,
+        ),
+      )
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([domain, subDomains]) => ({
+          domain,
+          subDomains: [...subDomains].sort((a, b) => a.localeCompare(b)),
+        }))
+    : [];
+  // The real, multi-valued Approved classification once one exists (see
+  // NeedDomain on the backend) — falls back to the single domain/subDomain
+  // columns for a Need reviewed before this existed.
+  const approvedDomains =
+    need.needDomains.length > 0
+      ? [...new Set(need.needDomains.map((d) => d.domain))]
+      : need.domain
+        ? [need.domain]
+        : [];
+  const approvedSubDomains =
+    need.needDomains.length > 0
+      ? [...new Set(need.needDomains.map((d) => d.subDomain))]
+      : need.subDomain
+        ? [need.subDomain]
+        : [];
+
+  const subDomainOptionsFor = (domain: string): string[] =>
     domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
+
+  function pairsFromSelections(): DomainSubDomainPair[] {
+    return overrideDomains.flatMap((domain) =>
+      (overrideSubDomainsByDomain[domain] ?? []).map((subDomain) => ({
+        domain,
+        subDomain,
+      })),
+    );
+  }
+
+  // A stack of one Sub-domain dropdown per selected Domain grows the dialog
+  // past the screen once several Domains are picked (e.g. the
+  // allDomainsSelected case, which pre-selects all of them) — so every
+  // selected Domain's Sub-domains are combined into ONE multi-select
+  // instead, grouped by Domain (MultiSelect's `group` option). JSON-encode
+  // [domain, subDomain] as the option value rather than a joined string, so
+  // a "::"-style separator can never collide with a real Domain/Sub-domain
+  // name.
+  function subDomainOptionValue(domain: string, subDomain: string): string {
+    return JSON.stringify([domain, subDomain]);
+  }
+
+  function parseSubDomainOptionValue(value: string): [string, string] {
+    return JSON.parse(value) as [string, string];
+  }
+
+  const subDomainOptions = overrideDomains.flatMap((domain) =>
+    subDomainOptionsFor(domain).map((subDomain) => ({
+      value: subDomainOptionValue(domain, subDomain),
+      label: subDomain,
+      group: domain,
+    })),
+  );
+  const subDomainSelectedValues = overrideDomains.flatMap((domain) =>
+    (overrideSubDomainsByDomain[domain] ?? []).map((subDomain) =>
+      subDomainOptionValue(domain, subDomain),
+    ),
+  );
+
+  function handleSubDomainSelectionChange(next: string[]) {
+    const byDomain: Record<string, string[]> = {};
+    for (const domain of overrideDomains) byDomain[domain] = [];
+    for (const raw of next) {
+      const [domain, subDomain] = parseSubDomainOptionValue(raw);
+      byDomain[domain] = [...(byDomain[domain] ?? []), subDomain];
+    }
+    setOverrideSubDomainsByDomain(byDomain);
+  }
+
+  // Dropping a Domain from the multi-select drops its staged Sub-domains
+  // too — otherwise they'd linger invisibly and still count toward the
+  // final pairs list.
+  function handleOverrideDomainsChange(next: string[]) {
+    setOverrideDomains(next);
+    setOverrideSubDomainsByDomain((prev) => {
+      const nextMap: Record<string, string[]> = {};
+      for (const domain of next) nextMap[domain] = prev[domain] ?? [];
+      return nextMap;
+    });
+  }
 
   async function retry() {
     setError(null);
@@ -245,27 +383,41 @@ export function AiClassificationSection({
   }
 
   function startOverride() {
-    setOverrideDomain(need.aiSuggestedDomain ?? null);
-    setOverrideSubDomain(need.aiSuggestedSubDomain ?? null);
+    // Seed the dropdowns from whatever's already known: the real,
+    // multi-valued NeedDomain pairs if any exist; else, when AI couldn't
+    // classify at all (allDomainsSelected), every active Domain/Sub-domain
+    // is already implicitly in scope — so pre-select all of them, matching
+    // what "All Domains" actually means, rather than opening the dialog
+    // empty; else fall back to the AI's own single suggested pair.
+    const initial: Record<string, string[]> = {};
+    if (need.needDomains.length > 0) {
+      for (const pair of need.needDomains) {
+        initial[pair.domain] = [...(initial[pair.domain] ?? []), pair.subDomain];
+      }
+    } else if (need.allDomainsSelected) {
+      for (const d of domainOptions) {
+        initial[d.name] = [...d.subDomains];
+      }
+    } else if (need.aiSuggestedDomain && need.aiSuggestedSubDomain) {
+      initial[need.aiSuggestedDomain] = [need.aiSuggestedSubDomain];
+    }
+    setOverrideDomains(Object.keys(initial));
+    setOverrideSubDomainsByDomain(initial);
     setOverrideReason("");
     setOverriding(true);
   }
 
   async function previewOverride() {
-    if (!overrideDomain || !overrideSubDomain || !overrideReason.trim()) return;
+    const pairs = pairsFromSelections();
+    if (pairs.length === 0 || !overrideReason.trim()) return;
     setOverridePreviewLoading(true);
     setError(null);
     try {
       // Refreshes the suggested questions on the Survey Builder page for the
-      // candidate domain — nothing is written to the Need until Approve.
-      await aiReviewService.overrideDomainPreview(
-        need.id,
-        overrideDomain,
-        overrideSubDomain,
-      );
+      // candidate pairs — nothing is written to the Need until Approve.
+      await aiReviewService.overrideDomainPreview(need.id, pairs);
       setPendingOverride({
-        domain: overrideDomain,
-        subDomain: overrideSubDomain,
+        pairs,
         reason: overrideReason.trim(),
       });
       setOverriding(false);
@@ -288,6 +440,9 @@ export function AiClassificationSection({
       await aiReviewService.approve(need.id, {
         domainOverride: pendingOverride ?? undefined,
       });
+      // Committed — the staged draft (and its sessionStorage backup) no
+      // longer applies to whatever the Need's state is from here on.
+      setPendingOverride(null);
       const updated = await needsService.getById(need.id);
       onNeedUpdated?.(updated);
     } catch (err) {
@@ -314,6 +469,10 @@ export function AiClassificationSection({
     try {
       await aiReviewService.reject(need.id, trimmed);
       setRejectOpen(false);
+      // The Need resets to pending_ai_classification for fresh re-
+      // classification — whatever was staged against the now-superseded
+      // classification no longer applies.
+      setPendingOverride(null);
       const updated = await needsService.getById(need.id);
       onNeedUpdated?.(updated);
     } catch (err) {
@@ -395,15 +554,27 @@ export function AiClassificationSection({
               </div>
             </div>
             {error ? <p className="text-destructive text-sm">{error}</p> : null}
-            <LoadingButton
-              type="button"
-              variant="outline"
-              onClick={retry}
-              isLoading={retrying}
-              className="gap-1.5"
-              startIcon={<RotateCw className="size-3.5" />}
-              text={retrying ? t("retrying") : t("retry")}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <LoadingButton
+                type="button"
+                variant="outline"
+                onClick={retry}
+                isLoading={retrying}
+                className="gap-1.5"
+                startIcon={<RotateCw className="size-3.5" />}
+                text={retrying ? t("retrying") : t("retry")}
+              />
+              {/* The only way off ai_classification_failed besides Retry —
+                  links straight to Survey Builder's manual-classification
+                  gate (see that page), which shows every Domain, then its
+                  Sub-domains, then the usual Question Bank flow once picked. */}
+              <Button asChild size="sm" className="gap-1.5">
+                <Link href={`/survey-builder/${need.id}`}>
+                  <ClipboardList className="size-4" />
+                  {t("classifyManually")}
+                </Link>
+              </Button>
+            </div>
           </div>
         ) : null}
 
@@ -418,18 +589,28 @@ export function AiClassificationSection({
                   {t("aiSuggestedDomainLabel")}
                 </p>
                 <DomainChips
-                  items={need.aiSuggestedDomain ? [need.aiSuggestedDomain] : []}
+                  items={
+                    need.allDomainsSelected
+                      ? [t("allDomainsChip")]
+                      : need.aiSuggestedDomain
+                        ? [need.aiSuggestedDomain]
+                        : []
+                  }
                   variant="secondary"
                   border
                 />
               </div>
-              {need.aiSuggestedSubDomain ? (
+              {need.allDomainsSelected || need.aiSuggestedSubDomain ? (
                 <div className="space-y-1.5">
                   <p className="text-muted-foreground text-xs font-medium">
                     {t("aiSuggestedSubDomainLabel")}
                   </p>
                   <DomainChips
-                    items={[need.aiSuggestedSubDomain]}
+                    items={
+                      need.allDomainsSelected
+                        ? [t("allSubDomainsChip")]
+                        : [need.aiSuggestedSubDomain!]
+                    }
                     variant="secondary"
                     border
                   />
@@ -443,7 +624,7 @@ export function AiClassificationSection({
             </div>
 
             <div className="space-y-3">
-              {need.domain && need.subDomain ? (
+              {approvedDomains.length > 0 ? (
                 <div className="bg-badge-success/10 border-badge-success/30 flex items-start gap-2 rounded-lg border p-4">
                   <CheckCircle2 className="text-badge-success-foreground mt-0.5 size-4 shrink-0" />
                   <div className="w-full space-y-2">
@@ -454,13 +635,45 @@ export function AiClassificationSection({
                       <p className="text-muted-foreground text-xs font-medium">
                         {t("approvedDomainLabel")}
                       </p>
-                      <DomainChips items={[need.domain]} variant="primary" border />
+                      <DomainChips items={approvedDomains} variant="primary" border />
                     </div>
                     <div className="space-y-1.5">
                       <p className="text-muted-foreground text-xs font-medium">
                         {t("approvedSubDomainLabel")}
                       </p>
-                      <DomainChips items={[need.subDomain]} variant="primary" border />
+                      <DomainChips items={approvedSubDomains} variant="primary" border />
+                    </div>
+                  </div>
+                </div>
+              ) : need.allDomainsSelected ? (
+                // Approved as-is with no override — every active Domain/
+                // Sub-domain stays implicitly in scope, same "All Domains"
+                // framing as the AI Suggestion panel above.
+                <div className="bg-badge-success/10 border-badge-success/30 flex items-start gap-2 rounded-lg border p-4">
+                  <CheckCircle2 className="text-badge-success-foreground mt-0.5 size-4 shrink-0" />
+                  <div className="w-full space-y-2">
+                    <p className="text-badge-success-foreground text-xs font-semibold">
+                      {t("approvedStatusTitle")}
+                    </p>
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {t("approvedDomainLabel")}
+                      </p>
+                      <DomainChips
+                        items={[t("allDomainsChip")]}
+                        variant="primary"
+                        border
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {t("approvedSubDomainLabel")}
+                      </p>
+                      <DomainChips
+                        items={[t("allSubDomainsChip")]}
+                        variant="primary"
+                        border
+                      />
                     </div>
                   </div>
                 </div>
@@ -495,18 +708,28 @@ export function AiClassificationSection({
                     {t("aiSuggestedDomainLabel")}
                   </p>
                   <DomainChips
-                    items={need.aiSuggestedDomain ? [need.aiSuggestedDomain] : []}
+                    items={
+                      need.allDomainsSelected
+                        ? [t("allDomainsChip")]
+                        : need.aiSuggestedDomain
+                          ? [need.aiSuggestedDomain]
+                          : []
+                    }
                     variant="secondary"
                     border
                   />
                 </div>
-                {need.aiSuggestedSubDomain ? (
+                {need.allDomainsSelected || need.aiSuggestedSubDomain ? (
                   <div className="space-y-1.5">
                     <p className="text-muted-foreground text-xs font-medium">
                       {t("aiSuggestedSubDomainLabel")}
                     </p>
                     <DomainChips
-                      items={[need.aiSuggestedSubDomain]}
+                      items={
+                        need.allDomainsSelected
+                          ? [t("allSubDomainsChip")]
+                          : [need.aiSuggestedSubDomain!]
+                      }
                       variant="secondary"
                       border
                     />
@@ -561,42 +784,130 @@ export function AiClassificationSection({
                     staged — otherwise it's identical to AI Suggested Domain
                     above and just duplicates it. */}
                 {pendingOverride ? (
-                  <div className="space-y-1.5">
-                    <p className="text-muted-foreground text-xs font-medium">
-                      {t("workingDomainLabel")}
-                    </p>
-                    <DomainChips
-                      items={workingDomain ? [workingDomain] : []}
-                      variant="primary"
-                      border
-                    />
-                    {workingSubDomain ? (
-                      <p className="text-muted-foreground text-xs">{workingSubDomain}</p>
-                    ) : null}
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {t("workingDomainLabel")}
+                      </p>
+                      <DomainChips
+                        items={workingDomains}
+                        variant="primary"
+                        border
+                        expandDialogTitle={t("workingDomainLabel")}
+                        expandDialogContent={
+                          <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                            {workingDomains.map((domain) => (
+                              <li key={domain} className="text-foreground">
+                                {domain}
+                              </li>
+                            ))}
+                          </ul>
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {t("workingSubDomainLabel")}
+                      </p>
+                      <DomainChips
+                        items={workingSubDomains}
+                        variant="primary"
+                        border
+                        expandDialogTitle={t("workingSubDomainLabel")}
+                        expandDialogContent={
+                          <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
+                            {workingSubDomainGroups.map(({ domain, subDomains }) => (
+                              <div key={domain} className="space-y-1.5">
+                                <p className="text-muted-foreground text-xs font-semibold">
+                                  {domain}
+                                </p>
+                                <ul className="space-y-1 text-sm">
+                                  {subDomains.map((subDomain) => (
+                                    <li key={subDomain} className="text-foreground">
+                                      {subDomain}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        }
+                      />
+                    </div>
                   </div>
                 ) : null}
               </div>
             </div>
 
             {canReview ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" size="sm" onClick={startOverride}>
-                  {t("override")}
-                </Button>
+              <div className="space-y-3 border-t pt-4">
+                {/* Match the review hierarchy from the reference: the broad
+                    Override action leads the row, while Suggested Questions
+                    stays beside it as the narrower navigation action. */}
+                <div className="flex flex-col gap-2.5 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full flex-1"
+                    onClick={startOverride}
+                  >
+                    {t("override")}
+                  </Button>
+                  {hasSurvey ? (
+                    <Button
+                      type="button"
+                      className="w-full flex-1 gap-2 font-medium"
+                      onClick={() => router.push(`/survey-builder/${need.id}`)}
+                    >
+                      <ClipboardList className="size-4" />
+                      {isReadyForReview
+                        ? t("viewSuggestedQuestions")
+                        : t("openSurveyBuilder")}
+                    </Button>
+                  ) : null}
+                </div>
+
                 {pendingOverride ? (
                   <p className="text-muted-foreground text-xs">
-                    {t("overridePendingNote")}
+                    {/* The Researcher can stage an Override but has no
+                        Approve button on this panel (see canApproveReject)
+                        — telling them it's "saved only when you Approve"
+                        would be misleading, since they can't be the one to
+                        do that. */}
+                    {canApproveReject
+                      ? t("overridePendingNote")
+                      : t("overridePendingNoteResearcher")}
                   </p>
+                ) : null}
+
+                {canApproveReject ? (
+                  <div className="flex flex-col gap-2.5 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive w-full flex-1 gap-1.5"
+                      onClick={openRejectDialog}
+                      disabled={approving || rejecting}
+                    >
+                      <XCircle className="size-4" />
+                      {t("reject")}
+                    </Button>
+                    <LoadingButton
+                      type="button"
+                      isLoading={approving}
+                      onClick={approve}
+                      disabled={rejecting}
+                      className="w-full flex-1 gap-1.5"
+                      startIcon={<CheckCircle2 className="size-4" />}
+                      text={approving ? t("approving") : t("approve")}
+                    />
+                  </div>
                 ) : null}
               </div>
             ) : (
               // Researchers/other viewers can see the classification but the
               // Approve/Override/Reject decision is entirely the Reviewer/
-              // Approver's job — this replaces those controls for them. A
-              // `div` (block-level, own line) with no border/pill styling —
-              // plain informational text, deliberately not shaped like the
-              // "View Suggested Questions" button below so the two aren't
-              // mistaken for a pair of equivalent actions.
+              // Approver's job — this replaces those controls for them.
               <div
                 title={t("sentForApprovalTooltip")}
                 className="text-muted-foreground flex items-center gap-1.5 text-xs"
@@ -608,38 +919,14 @@ export function AiClassificationSection({
           </>
         ) : null}
 
-        {hasSurvey ? (
+        {hasSurvey && !canReview ? (
           <div className="pt-2">
             <Button asChild size="sm" className="gap-2 font-medium">
               <Link href={`/survey-builder/${need.id}`}>
                 <ClipboardList className="size-4" />
-                Open Survey Builder (Build & Publish)
+                {isReadyForReview ? t("viewSuggestedQuestions") : t("openSurveyBuilder")}
               </Link>
             </Button>
-          </div>
-        ) : null}
-
-        {isReadyForReview && canReview ? (
-          <div className="flex items-center justify-end gap-2.5 border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="text-destructive hover:text-destructive gap-1.5"
-              onClick={openRejectDialog}
-              disabled={approving || rejecting}
-            >
-              <XCircle className="size-4" />
-              {t("reject")}
-            </Button>
-            <LoadingButton
-              type="button"
-              isLoading={approving}
-              onClick={approve}
-              disabled={rejecting}
-              className="gap-1.5"
-              startIcon={<CheckCircle2 className="size-4" />}
-              text={approving ? t("approving") : t("approve")}
-            />
           </div>
         ) : null}
       </div>
@@ -654,44 +941,35 @@ export function AiClassificationSection({
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>{t("domainLabel")}</Label>
-              <Select
-                value={overrideDomain ?? undefined}
-                onValueChange={(v) => {
-                  setOverrideDomain(v);
-                  setOverrideSubDomain(null);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("selectDomain")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {domainOptions.map((d) => (
-                    <SelectItem key={d.name} value={d.name}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelect
+                options={domainOptions.map((d) => ({ value: d.name, label: d.name }))}
+                values={overrideDomains}
+                onChange={handleOverrideDomainsChange}
+                placeholder={t("selectDomain")}
+                searchPlaceholder={t("searchDomain")}
+                emptyText={t("noDomainsFound")}
+                removeAriaLabel={(domain) => t("removeDomainAria", { domain })}
+              />
             </div>
-            <div className="space-y-1.5">
-              <Label>{t("subDomainLabel")}</Label>
-              <Select
-                value={overrideSubDomain ?? undefined}
-                onValueChange={setOverrideSubDomain}
-                disabled={!overrideDomain}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("selectSubDomain")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {subDomainOptionsFor(overrideDomain).map((sd) => (
-                    <SelectItem key={sd} value={sd}>
-                      {sd}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* One combined Sub-domain multi-select across every selected
+                Domain, grouped by Domain — a stack of one dropdown per
+                Domain pushed the dialog past the screen once several were
+                selected (e.g. the allDomainsSelected case, which
+                pre-selects all of them). */}
+            {overrideDomains.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label>{t("subDomainLabel")}</Label>
+                <MultiSelect
+                  options={subDomainOptions}
+                  values={subDomainSelectedValues}
+                  onChange={handleSubDomainSelectionChange}
+                  placeholder={t("selectSubDomain")}
+                  searchPlaceholder={t("searchSubDomain")}
+                  emptyText={t("noSubDomainsFound")}
+                  removeAriaLabel={(subDomain) => t("removeSubDomainAria", { subDomain })}
+                />
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label htmlFor="override-reason">{t("overrideReasonLabel")}</Label>
               <Textarea
@@ -715,7 +993,7 @@ export function AiClassificationSection({
             <LoadingButton
               type="button"
               onClick={previewOverride}
-              disabled={!overrideDomain || !overrideSubDomain || !overrideReason.trim()}
+              disabled={pairsFromSelections().length === 0 || !overrideReason.trim()}
               isLoading={overridePreviewLoading}
               text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
             />

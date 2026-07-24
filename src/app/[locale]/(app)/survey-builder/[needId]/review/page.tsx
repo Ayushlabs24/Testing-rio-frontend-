@@ -10,6 +10,7 @@ import {
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
+import { DomainChips } from "@/components/common/domain-chips";
 import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -107,6 +108,7 @@ export default function SurveyReviewPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.surveyBuilder.review");
+  const tClassification = useTranslations("app.studies.classification");
 
   const [need, setNeed] = useState<Need | null>(null);
   const [study, setStudy] = useState<Study | null>(null);
@@ -297,7 +299,19 @@ export default function SurveyReviewPage({
                       <p className="text-muted-foreground text-xs font-medium">
                         {t("aiClassificationLabel")}
                       </p>
-                      {need?.domain && need?.subDomain ? (
+                      {need?.allDomainsSelected ? (
+                        <DomainChips
+                          items={[tClassification("allDomainsChip")]}
+                          variant="secondary"
+                        />
+                      ) : need && need.needDomains.length > 0 ? (
+                        <DomainChips
+                          items={need.needDomains.map(
+                            (d) => `${d.domain} / ${d.subDomain}`,
+                          )}
+                          variant="secondary"
+                        />
+                      ) : need?.domain && need?.subDomain ? (
                         <p className="text-foreground text-sm">
                           {need.domain} / {need.subDomain}
                         </p>

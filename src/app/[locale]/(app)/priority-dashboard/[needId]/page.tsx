@@ -3,7 +3,7 @@
 import { Gauge, ListChecks, AlertTriangle } from "lucide-react";
 import { use, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
+import { cn, formatDomainSummary } from "@/lib/utils";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -163,9 +163,13 @@ export default function PriorityDetailInsightsPage({
               : "Priority & Severity Insights"
           }
           description={
-            need?.domain
-              ? `Domain: ${need.domain}`
-              : "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights."
+            need?.allDomainsSelected
+              ? "Domain: All Domains"
+              : need && need.needDomains.length > 0
+                ? `Domain: ${formatDomainSummary(need.needDomains.map((d: { domain: string }) => d.domain))}`
+                : need?.domain
+                  ? `Domain: ${need.domain}`
+                  : "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights."
           }
           actions={
             <div className="space-y-1.5">

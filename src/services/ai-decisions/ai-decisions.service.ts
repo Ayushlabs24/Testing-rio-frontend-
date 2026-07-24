@@ -2,6 +2,7 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
   AiDecision,
+  DomainSubDomainPair,
   ReviewDecisionPayload,
 } from "@/services/ai-decisions/ai-decisions.types";
 import type { Survey } from "@/services/surveys/surveys.service";
@@ -28,7 +29,7 @@ export const aiDecisionsService = {
 };
 
 export interface AiReviewApprovePayload {
-  domainOverride?: { domain: string; subDomain: string; reason: string };
+  domainOverride?: { pairs: DomainSubDomainPair[]; reason: string };
 }
 
 /** The Approver's classification actions — Approve/Reject/Override/Retry,
@@ -47,20 +48,30 @@ export const aiReviewService = {
   },
 
   /** Preview only — does not write domain/subDomain onto the Need. Returns
-   * the refreshed Survey with questions regenerated for the candidate
-   * domain/subDomain. */
+   * the refreshed Survey with questions regenerated (merged+deduped) across
+   * every candidate pair. */
   async overrideDomainPreview(
     needId: string,
-    domain: string,
-    subDomain: string,
+    pairs: DomainSubDomainPair[],
   ): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), {
-      domain,
-      subDomain,
-    });
+    return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), { pairs });
   },
 
   async retryClassification(needId: string): Promise<AiDecision> {
     return apiClient.post<AiDecision>(endpoints.aiReview.retry(needId));
+  },
+
+  /** Researcher-driven manual classification — only reachable while the
+   * Need is `ai_classification_failed`. Unlike overrideDomainPreview, this
+   * persists immediately (there's no AI suggestion to preview against) and
+   * moves the Need straight to `reviewer_approved`, same as an Approver's
+   * decision — see AiDecisionsService.manualClassify on the backend. Only
+   * honors a single pair (the backend method itself is effectively
+   * unreachable via the automatic path now — see that method's own
+   * comment). */
+  async manualClassify(needId: string, domain: string, subDomain: string): Promise<void> {
+    await apiClient.post(endpoints.aiReview.manualClassify(needId), {
+      pairs: [{ domain, subDomain }],
+    });
   },
 };
