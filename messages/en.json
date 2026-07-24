@@ -269,13 +269,39 @@
           "needs": "Needs Identified",
           "sla": "SLA Compliance",
           "breaches": "SLA Breaches",
-          "studies": "Studies Covered"
+          "studies": "Studies Covered",
+          "highPriority": "High Priority",
+          "scored": "Needs Scored"
+        },
+        "quickNav": {
+          "title": "Quick Actions",
+          "priority": "Priority Dashboard",
+          "priorityDesc": "Drill into scored needs",
+          "reports": "Reports",
+          "reportsDesc": "Generate & export reports",
+          "studies": "Studies",
+          "studiesDesc": "Manage studies & needs",
+          "reviewer": "Reviewer Alerts",
+          "reviewerDesc": "SLA review queue",
+          "sharing": "Sharing",
+          "sharingDesc": "Cross-org report access"
         },
         "scoringHeading": "Scoring Distribution",
+        "scoringSubtitle": "{scored} of {total} needs scored",
+        "scoringEmpty": "No scored needs yet",
+        "scoringEmptyHint": "Priority scores appear here once needs are scored and approved.",
+        "scoringTotal": "scored",
+        "band": {
+          "High": "High",
+          "Medium": "Medium",
+          "Low": "Low"
+        },
         "execHeading": "Executive Summary",
         "topPriorities": "Top Priorities",
+        "topPrioritiesEmpty": "No prioritised needs yet.",
         "trends": "Trends",
         "anomalies": "Anomalies Flagged by AI",
+        "anomaliesEmpty": "No anomalies flagged.",
         "reviewerNotes": "Reviewer Notes",
         "col": {
           "need": "Need",
@@ -768,6 +794,15 @@
       "archive": "Archive",
       "exportPdf": "Export PDF",
       "exportExcel": "Export Excel",
+      "tooltip": {
+        "view": "View full report",
+        "confirm": "Confirm report — Officer sign-off",
+        "approve": "Approve & release report",
+        "reject": "Reject report",
+        "archive": "Archive report",
+        "exportPdf": "Download as PDF",
+        "exportExcel": "Download as Excel spreadsheet"
+      },
       "actionError": "Something went wrong. Please try again.",
       "create": {
         "title": "Generate Report",
