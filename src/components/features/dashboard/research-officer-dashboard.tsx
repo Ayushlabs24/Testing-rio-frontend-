@@ -6,9 +6,10 @@ import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/features/dashboard/stat-card";
-import { StudyStatusBadge } from "@/components/features/studies/study-status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
+import { needsService } from "@/services/needs/needs.service";
+import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 
@@ -24,31 +25,42 @@ function formatDate(iso: string): string {
  * directly instead of the generic org-stats tiles (Users/Roles/Modules
  * count), which this role has no read access to populate anyway (no
  * entityTeam/rolesPermissions) and aren't meaningful to this job either way.
+ * A Study has no status of its own now — every stat here is per-Need.
  */
 export function ResearchOfficerDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.researchOfficer");
-  const [studies, setStudies] = useState<StudySummary[] | null>(null);
+  const [needs, setNeeds] = useState<Need[] | null>(null);
+  // "Recent" is Study-level, one row per Study — a Study can hold several
+  // Needs, and the old version of this listed one row per Need, so the same
+  // Study title could repeat up to N times. Clicking through to a specific
+  // Need belongs on the Study detail page's own Need list, not here.
+  const [recentStudies, setRecentStudies] = useState<StudySummary[] | null>(null);
 
   useEffect(() => {
     studiesService
       .list({ limit: 100 })
-      .then(setStudies)
-      .catch(() => setStudies([]));
+      .then(async (studies) => {
+        setRecentStudies(
+          [...studies]
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+            .slice(0, 5),
+        );
+        const needsByStudy = await Promise.all(
+          studies.map((study) => needsService.listByStudy(study.id).catch(() => [])),
+        );
+        setNeeds(needsByStudy.flat());
+      })
+      .catch(() => {
+        setNeeds([]);
+        setRecentStudies([]);
+      });
   }, []);
 
-  const awaitingEvidence =
-    studies?.filter((s) => s.status === "draft" || s.status === "need_captured").length ??
-    0;
+  const awaitingEvidence = needs?.filter((n) => n.status === "draft").length ?? 0;
   const readyToClassify =
-    studies?.filter((s) => s.status === "evidence_submitted").length ?? 0;
-  const awaitingReview = studies?.filter((s) => s.status === "ai_classified").length ?? 0;
-  const completed = studies?.filter((s) => s.status === "human_reviewed").length ?? 0;
-
-  const recentStudies = studies
-    ? [...studies]
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-        .slice(0, 5)
-    : null;
+    needs?.filter((n) => n.status === "evidence_submitted").length ?? 0;
+  const awaitingReview = needs?.filter((n) => n.status === "ai_classified").length ?? 0;
+  const completed = needs?.filter((n) => n.status === "survey_published").length ?? 0;
 
   return (
     <PageContainer>
@@ -95,11 +107,8 @@ export function ResearchOfficerDashboard({ userName }: { userName: string }) {
                   className="hover:bg-muted/50 flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
                 >
                   <span className="truncate font-medium">{study.title}</span>
-                  <span className="flex shrink-0 items-center gap-3">
-                    <StudyStatusBadge status={study.status} />
-                    <span className="text-muted-foreground text-xs">
-                      {formatDate(study.updatedAt)}
-                    </span>
+                  <span className="text-muted-foreground shrink-0 text-xs">
+                    {formatDate(study.updatedAt)}
                   </span>
                 </Link>
               ))}

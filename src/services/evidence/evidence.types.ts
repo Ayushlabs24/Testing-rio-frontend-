@@ -1,5 +1,6 @@
 export interface Evidence {
   id: string;
+  needId: string;
   studyId: string;
   fileName: string;
   fileType: string;

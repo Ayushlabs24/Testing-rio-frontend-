@@ -5,12 +5,14 @@ import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { PasswordInput } from "@/components/features/auth/password-input";
+import { PasswordRequirements } from "@/components/features/auth/password-requirements";
 import { LoadingButton } from "@/components/common/loading-button";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
+import { newPasswordSchema } from "@/lib/password-policy";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
 
@@ -24,8 +26,8 @@ export function ResetPasswordForm() {
 
   const schema = z
     .object({
-      password: z.string().min(8, { message: tValidation("passwordMin") }),
-      confirmPassword: z.string().min(8, { message: tValidation("passwordMin") }),
+      password: newPasswordSchema(tValidation),
+      confirmPassword: z.string().min(1, { message: tValidation("passwordMin") }),
     })
     .refine((values) => values.password === values.confirmPassword, {
       message: tValidation("passwordsMustMatch"),
@@ -37,8 +39,12 @@ export function ResetPasswordForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<Values>({ resolver: zodResolver(schema) });
+
+  // Drives the live rule checklist under the field.
+  const password = useWatch({ control, name: "password" }) ?? "";
 
   const onSubmit = async (values: Values) => {
     setFormError(null);
@@ -80,9 +86,9 @@ export function ResetPasswordForm() {
             placeholder={t("passwordPlaceholder")}
             {...register("password")}
           />
-          {errors.password ? (
-            <p className="text-destructive text-sm">{errors.password.message}</p>
-          ) : null}
+          {/* The checklist already names every unmet rule, so repeating
+              the resolver's message here would just duplicate it. */}
+          <PasswordRequirements value={password} />
         </div>
 
         <div className="space-y-2.5">

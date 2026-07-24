@@ -13,12 +13,20 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { citizenService } from "@/services/citizen/citizen.service";
-import type { ResolvedSurvey } from "@/services/citizen/citizen.types";
+import type { Gender, ResolvedSurvey } from "@/services/citizen/citizen.types";
 import { ApiError } from "@/services/api/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type LoadState = "loading" | "notFound" | "ready";
 // "welcome" carries the study/organisation context that used to live on its
@@ -104,9 +112,18 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
 
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  // Set only when the backend couldn't email the code (no mailer configured
+  // — dev/test) and returned it directly instead, per RequestOtpResult's
+  // `code` field — the only way to proceed without a real inbox.
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Participant consent, collected on the details step before any personal
+  // detail leaves the device. Same shape as the NGO Admin's own consent gate
+  // (see ConsentGuard): notice, checkbox, explicit must-agree error.
+  const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -134,6 +151,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   // their contact details — before any OTP challenge (or any other record)
   // is created. Nothing is persisted until the final Submit.
   async function submitDetails() {
+    // An unticked box is a validation failure to name, not a silently
+    // disabled button — mirrors the admin consent gate.
+    if (!consented) {
+      setError(t("details.consentRequired"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -144,6 +167,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       }
       const result = await citizenService.requestOtp(token, { contact });
       setChallengeId(result.challengeId);
+      setDevCode(result.codeEmailed ? null : (result.code ?? null));
       setPhase("otp");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -159,7 +183,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     try {
       await citizenService.verifyOtp(token, { challengeId, code });
       setQuestionIndex(0);
-      setPhase("questions");
+      // A survey with zero questions has nothing to show on the "questions"
+      // phase (which unconditionally renders `questions[questionIndex]`) —
+      // go straight to Review instead of crashing. Publishing an empty
+      // survey is now blocked server-side, but this protects anyone who
+      // already has a link to one published before that guard existed.
+      setPhase(questions.length === 0 ? "review" : "questions");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
@@ -205,6 +234,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       await citizenService.submitResponse(token, {
         challengeId,
         contactName: name || undefined,
+        gender: gender || undefined,
         answers,
       });
       setTerminal("submitted");
@@ -383,6 +413,63 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               onChange={(e) => setContact(e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="citizen-gender">{t("details.genderLabel")}</Label>
+            <Select value={gender} onValueChange={(value) => setGender(value as Gender)}>
+              <SelectTrigger id="citizen-gender" className="w-full">
+                <SelectValue placeholder={t("details.genderPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">{t("details.genderMale")}</SelectItem>
+                <SelectItem value="female">{t("details.genderFemale")}</SelectItem>
+                <SelectItem value="other">{t("details.genderOther")}</SelectItem>
+                <SelectItem value="prefer_not_to_say">
+                  {t("details.genderPreferNotToSay")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="border-border space-y-3 border-t pt-5">
+            <div className="space-y-1.5">
+              <h2 className="text-foreground text-sm font-semibold">
+                {t("details.consentTitle")}
+              </h2>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {t("details.consentBody", {
+                  organization: survey.organizationName || t("details.consentThisOrg"),
+                })}
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="citizen-consent"
+                checked={consented}
+                aria-invalid={Boolean(error) && !consented}
+                onCheckedChange={(checked) => {
+                  setConsented(checked === true);
+                  if (checked === true) setError(null);
+                }}
+                className="mt-0.5"
+              />
+              <Label
+                htmlFor="citizen-consent"
+                className="text-muted-foreground text-xs leading-relaxed font-normal"
+              >
+                {t("details.consentAgreeLabel")}
+              </Label>
+            </div>
+          </div>
+
+          {/* RIO-NFR-002: a privacy notice before any personal contact
+           * detail is collected — this data is used analytically (aggregate
+           * needs assessment), never to open an individual case/ticket. */}
+          {/* <div className="border-border bg-muted/40 flex items-start gap-2.5 rounded-lg border p-3.5">
+            <ShieldCheck className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {t("details.privacyNotice")}
+            </p>
+          </div> */}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
         <Button
@@ -413,6 +500,14 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               {t("otp.description", { contact })}
             </p>
           </div>
+          {devCode ? (
+            <div className="border-warning/40 bg-warning/10 space-y-1 rounded-md border p-3">
+              <p className="text-foreground text-sm">{t("otp.codeNotEmailed")}</p>
+              <p className="border-border bg-background rounded-md border px-3 py-2 font-mono text-sm">
+                {devCode}
+              </p>
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="citizen-otp">{t("otp.codeLabel")}</Label>
             <Input
@@ -438,7 +533,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     );
   }
 
-  if (phase === "questions") {
+  if (phase === "questions" && questions[questionIndex]) {
     const question = questions[questionIndex];
     return (
       <Shell>
@@ -527,6 +622,10 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       />
       <BackButton
         onClick={() => {
+          if (questions.length === 0) {
+            setPhase("otp");
+            return;
+          }
           setQuestionIndex(questions.length - 1);
           setPhase("questions");
         }}

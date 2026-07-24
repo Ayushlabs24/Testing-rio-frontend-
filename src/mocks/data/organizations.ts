@@ -1,5 +1,3 @@
-import type { Sector } from "@/config/sectors";
-
 export interface MockOrganization {
   id: string;
   name: string;
@@ -8,7 +6,7 @@ export interface MockOrganization {
   logoUrl: string | null;
   region: string[];
   email: string;
-  sector: Sector | null;
+  sector: string | null;
   villages: string[];
   isActive: boolean;
   createdAt: string;

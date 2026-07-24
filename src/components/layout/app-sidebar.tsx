@@ -92,7 +92,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
           </Avatar>
           {!collapsed ? (
             <span className="min-w-0 flex-1">
-              <span className="text-sidebar-foreground group-hover:text-sidebar-accent-foreground group-aria-expanded:text-sidebar-accent-foreground block truncate text-sm font-medium">
+              <span className="text-sidebar-foreground group-hover:text-sidebar-accent-foreground group-aria-expanded:text-sidebar-accent-foreground block text-sm font-medium break-words">
                 {session.user.name}
               </span>
               <span className="text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground/80 group-aria-expanded:text-sidebar-accent-foreground/80 block truncate text-xs">

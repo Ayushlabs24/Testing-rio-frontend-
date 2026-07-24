@@ -18,17 +18,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
+import { usePermission } from "@/hooks/use-permission";
+import { needsService } from "@/services/needs/needs.service";
+import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
-import type { Study } from "@/services/studies/studies.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
 
 interface Row {
-  study: Study;
-  survey: Survey | null;
+  need: Need;
+  studyTitle: string;
+  survey: Survey;
 }
 
+const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
+  DRAFT: undefined,
+  SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
+  REJECTED: "bg-destructive/10 text-destructive border-transparent",
+  PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
+};
+
+/** One row per Need, not per Study — a Study can hold many Needs now, each
+ * running its own independent survey. */
 export default function SurveyBuilderPage() {
   const t = useTranslations("app.surveyBuilder");
+  const canWrite = usePermission("surveyBuilder", "write");
+  const canApprove = usePermission("surveyBuilder", "approve");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -36,12 +50,33 @@ export default function SurveyBuilderPage() {
     studiesService
       .list()
       .then(async (studies) => {
+        const needsByStudy = await Promise.all(
+          studies.map((study) => needsService.listByStudy(study.id).catch(() => [])),
+        );
+        const needs = studies.flatMap((study, index) =>
+          needsByStudy[index].map((need) => ({ need, studyTitle: study.title })),
+        );
         const surveys = await Promise.all(
-          studies.map((study) =>
-            surveysService.getSurveyByStudyId(study.id).catch(() => null),
+          needs.map(({ need }) =>
+            surveysService.getSurveyByNeedId(need.id).catch(() => null),
           ),
         );
-        setRows(studies.map((study, index) => ({ study, survey: surveys[index] })));
+        // Survey Builder is for reviewing/curating surveys, DRAFT or
+        // PUBLISHED — a Need with no survey yet has nothing to curate here
+        // (that starts from the Need's own Survey section instead), but a
+        // DRAFT survey belongs on this list just as much as a PUBLISHED one;
+        // this is exactly where someone would come to open and finish it.
+        setRows(
+          needs
+            .map(({ need, studyTitle }, index) => ({
+              need,
+              studyTitle,
+              survey: surveys[index],
+            }))
+            // Loose check — a 204/empty response for "no survey yet" can
+            // come back as `undefined`, not `null`; either means "skip".
+            .filter((row): row is Row => row.survey != null),
+        );
         setLoadFailed(false);
       })
       .catch(() => {
@@ -57,20 +92,21 @@ export default function SurveyBuilderPage() {
 
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("studyColumn")}</TableHead>
+                  <TableHead>{t("needColumn")}</TableHead>
                   <TableHead>{t("domainColumn")}</TableHead>
-                  <TableHead className="w-36">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-24" />
+                  <TableHead>{t("statusColumn")}</TableHead>
+                  <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 4 }).map((__, cell) => (
+                      {Array.from({ length: 5 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -80,7 +116,7 @@ export default function SurveyBuilderPage() {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -92,42 +128,43 @@ export default function SurveyBuilderPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map(({ study, survey }) => (
-                    <TableRow key={study.id}>
-                      <TableCell className="py-4 text-sm font-medium">
-                        {study.title}
+                  rows.map(({ need, studyTitle, survey }) => (
+                    <TableRow key={need.id}>
+                      <TableCell className="py-4 align-middle text-sm font-medium break-words whitespace-normal">
+                        {studyTitle}
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {study.domain && study.subDomain ? (
-                          <span className="text-muted-foreground">
-                            {study.domain} / {study.subDomain}
+                      <TableCell className="align-middle text-sm break-words whitespace-normal">
+                        {need.title}
+                      </TableCell>
+                      <TableCell className="align-middle text-sm whitespace-normal">
+                        {need.domain && need.subDomain ? (
+                          <span className="text-muted-foreground break-words">
+                            {need.domain} / {need.subDomain}
                           </span>
                         ) : (
                           <Badge variant="outline">{t("noDomain")}</Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {survey ? (
-                          <Badge
-                            variant={survey.status === "DRAFT" ? "outline" : "default"}
-                            className={
-                              survey.status !== "DRAFT"
-                                ? "bg-badge-success text-badge-success-foreground border-transparent"
-                                : undefined
-                            }
-                          >
-                            {survey.status}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            {t("noSurvey")}
-                          </span>
-                        )}
+                      <TableCell className="align-middle">
+                        <Badge
+                          variant="outline"
+                          className={STATUS_BADGE_CLASS[survey.status]}
+                        >
+                          {t(`status.${survey.status}`)}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/survey-builder/${study.id}`}>{t("open")}</Link>
-                        </Button>
+                      <TableCell className="text-right align-middle">
+                        {canApprove && !canWrite && survey.status === "SUBMITTED" ? (
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/survey-builder/${need.id}/review`}>
+                              {t("review")}
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/survey-builder/${need.id}`}>{t("open")}</Link>
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

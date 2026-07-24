@@ -11,6 +11,12 @@ import {
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
+import { useOrgGovernorates } from "@/hooks/use-org-governorates";
+import { useOrgRegionName } from "@/hooks/use-org-region-name";
+import {
+  severityScoringService,
+  type MethodologyVersion,
+} from "@/services/priority/severity-scoring.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
 
@@ -19,6 +25,11 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
   const t = useTranslations("app.studies.form");
   const tStudies = useTranslations("app.studies");
   const router = useRouter();
+  const orgGovernorates = useOrgGovernorates();
+  const regionName = useOrgRegionName();
+  const [methodologyVersions, setMethodologyVersions] = useState<MethodologyVersion[]>(
+    [],
+  );
 
   const [study, setStudy] = useState<Study | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -30,8 +41,29 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
       .catch(() => setNotFound(true));
   }, [id]);
 
+  useEffect(() => {
+    let cancelled = false;
+    severityScoringService
+      .listMethodologyVersions()
+      .then((versions) => {
+        if (!cancelled)
+          setMethodologyVersions(versions.filter((v) => v.status === "PUBLISHED"));
+      })
+      .catch(() => {
+        // Non-fatal — the Select just renders with no options.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubmit = async (values: StudyFormValues) => {
-    await studiesService.update(id, { title: values.title });
+    await studiesService.update(id, {
+      title: values.title,
+      governorateIds: values.governorateIds,
+      centerIds: values.centerIds,
+      methodologyVersionId: values.methodologyVersionId,
+    });
     router.push(`/studies/${id}`);
   };
 
@@ -52,6 +84,9 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
             ) : (
               <StudyForm
                 study={study}
+                orgGovernorates={orgGovernorates}
+                regionName={regionName}
+                methodologyVersions={methodologyVersions}
                 onSubmit={handleSubmit}
                 onCancel={() => router.push(`/studies/${id}`)}
               />

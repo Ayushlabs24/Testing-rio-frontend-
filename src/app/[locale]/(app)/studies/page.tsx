@@ -6,20 +6,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
-import { StudyStatusBadge } from "@/components/features/studies/study-status-badge";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -33,13 +26,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { Link, useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
 import { studiesService } from "@/services/studies/studies.service";
-import {
-  STUDY_STATUSES,
-  type StudyStatus,
-  type StudySummary,
-} from "@/services/studies/studies.types";
-
-const ALL = "all";
+import type { StudySummary } from "@/services/studies/studies.types";
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
@@ -54,15 +41,13 @@ export default function StudiesPage() {
   const canWrite = usePermission("studySurvey", "write");
 
   const [studies, setStudies] = useState<StudySummary[] | null>(null);
-  // Village lives on a study's Need, not the Study itself — resolved per
-  // row, keyed by study id. `undefined` = not fetched yet, `null` = no need
-  // captured, string[] = the need's villages (can be more than one).
-  const [villageByStudy, setVillageByStudy] = useState<Record<string, string[] | null>>(
-    {},
-  );
+  // Villages live on a study's Needs (a Study can hold many now), not the
+  // Study itself — resolved per row, keyed by study id, as the union of
+  // every Need's own village list.
+  const [villagesByStudy, setVillagesByStudy] = useState<Record<string, string[]>>({});
+  const [needCountByStudy, setNeedCountByStudy] = useState<Record<string, number>>({});
   const [loadFailed, setLoadFailed] = useState(false);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StudyStatus | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
 
   // No synchronous setState here: doing that inside the effect would trigger a
@@ -76,11 +61,23 @@ export default function StudiesPage() {
         Promise.all(
           rows.map((study) =>
             needsService
-              .getByStudy(study.id)
-              .then((need) => [study.id, need?.village ?? null] as const)
-              .catch(() => [study.id, null] as const),
+              .listByStudy(study.id)
+              .then((needs) => [study.id, needs] as const)
+              .catch(() => [study.id, []] as const),
           ),
-        ).then((entries) => setVillageByStudy(Object.fromEntries(entries)));
+        ).then((entries) => {
+          setVillagesByStudy(
+            Object.fromEntries(
+              entries.map(([id, needs]) => [
+                id,
+                [...new Set(needs.flatMap((n) => n.village))],
+              ]),
+            ),
+          );
+          setNeedCountByStudy(
+            Object.fromEntries(entries.map(([id, needs]) => [id, needs.length])),
+          );
+        });
       })
       .catch(() => {
         setStudies([]);
@@ -98,11 +95,10 @@ export default function StudiesPage() {
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return (studies ?? []).filter((study) => {
-      if (status !== ALL && study.status !== status) return false;
       if (!normalized) return true;
       return study.title.toLowerCase().includes(normalized);
     });
-  }, [studies, query, status]);
+  }, [studies, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / STUDIES_PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -144,38 +140,15 @@ export default function StudiesPage() {
                   className="h-8 pl-9"
                 />
               </div>
-
-              <Select
-                value={status}
-                onValueChange={(value) => {
-                  setStatus(value as StudyStatus | typeof ALL);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger
-                  className="h-8 w-full sm:w-48"
-                  aria-label={t("filterStatusLabel")}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>{t("filterStatusAll")}</SelectItem>
-                  {STUDY_STATUSES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {t(`status.${value}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-3">{t("titleColumn")}</TableHead>
                   <TableHead className="py-3">{t("villageColumn")}</TableHead>
-                  <TableHead className="w-40 py-3">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-40 py-3">{t("updatedColumn")}</TableHead>
+                  <TableHead className="py-3">{t("needsColumn")}</TableHead>
+                  <TableHead className="py-3">{t("updatedColumn")}</TableHead>
                   <TableHead className="w-16 py-3" />
                 </TableRow>
               </TableHeader>
@@ -185,7 +158,7 @@ export default function StudiesPage() {
                     <TableRow key={index}>
                       {Array.from({ length: columnCount }).map((__, cell) => (
                         <TableCell key={cell} className="py-5">
-                          <div className="bg-muted h-4 w-28 rounded" />
+                          <Skeleton className="h-4 w-28" />
                         </TableCell>
                       ))}
                     </TableRow>
@@ -210,24 +183,26 @@ export default function StudiesPage() {
                 ) : (
                   paged.map((study) => (
                     <TableRow key={study.id}>
-                      <TableCell className="py-4">
+                      <TableCell className="py-4 align-middle whitespace-normal">
                         <Link
                           href={`/studies/${study.id}`}
-                          className="text-foreground text-sm font-medium hover:underline"
+                          className="text-foreground block text-sm font-medium break-words hover:underline"
                         >
                           {study.title}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-muted-foreground py-4 text-sm">
-                        {villageByStudy[study.id]?.join(", ") || t("villageNotDefined")}
+                      <TableCell className="text-muted-foreground py-4 align-middle text-sm break-words whitespace-normal">
+                        {villagesByStudy[study.id]?.length
+                          ? villagesByStudy[study.id].join(", ")
+                          : t("villageNotDefined")}
                       </TableCell>
-                      <TableCell className="py-4">
-                        <StudyStatusBadge status={study.status} />
+                      <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
+                        {needCountByStudy[study.id] ?? 0}
                       </TableCell>
-                      <TableCell className="text-muted-foreground py-4 text-sm tabular-nums">
+                      <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
                         {formatDate(study.updatedAt)}
                       </TableCell>
-                      <TableCell className="py-4 text-right">
+                      <TableCell className="py-4 text-right align-middle">
                         {canWrite ? (
                           <DeleteStudyDialog
                             studyId={study.id}

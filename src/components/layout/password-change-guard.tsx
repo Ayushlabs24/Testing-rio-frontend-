@@ -5,14 +5,16 @@ import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AuthShell } from "@/components/layout/auth-shell";
 import { PasswordInput } from "@/components/features/auth/password-input";
+import { PasswordRequirements } from "@/components/features/auth/password-requirements";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { newPasswordSchema } from "@/lib/password-policy";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
 
@@ -45,7 +47,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
   const schema = z
     .object({
       currentPassword: z.string().min(1, { message: tValidation("passwordMin") }),
-      newPassword: z.string().min(8, { message: tValidation("passwordMin") }),
+      newPassword: newPasswordSchema(tValidation),
       confirmPassword: z.string().min(1, { message: tValidation("passwordMin") }),
     })
     .refine((values) => values.newPassword === values.confirmPassword, {
@@ -58,8 +60,12 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  // Drives the live rule checklist under the field.
+  const newPassword = useWatch({ control, name: "newPassword" }) ?? "";
 
   if (!session) return null;
   if (!session.mustChangePassword) return <>{children}</>;
@@ -108,9 +114,9 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
               placeholder={t("newPasswordPlaceholder")}
               {...register("newPassword")}
             />
-            {errors.newPassword ? (
-              <p className="text-destructive text-sm">{errors.newPassword.message}</p>
-            ) : null}
+            {/* The checklist already names every unmet rule, so repeating
+                the resolver's message here would just duplicate it. */}
+            <PasswordRequirements value={newPassword} />
           </div>
 
           <div className="space-y-2.5">

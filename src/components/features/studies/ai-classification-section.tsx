@@ -1,8 +1,17 @@
 "use client";
 
-import { CheckCircle2, Sparkles, UserCheck, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
+  Info,
+  Loader2,
+  RotateCw,
+  Sparkles,
+  XCircle,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
@@ -14,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,97 +31,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Link } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { domainsService } from "@/services/domains/domains.service";
-import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
+import {
+  aiDecisionsService,
+  aiReviewService,
+} from "@/services/ai-decisions/ai-decisions.service";
 import type { AiDecision } from "@/services/ai-decisions/ai-decisions.types";
 import { ApiError } from "@/services/api/types";
-import type { StudyStatus } from "@/services/studies/studies.types";
-
-/**
- * Editable chip list for the reviewer's domain/sub-domain override. `options`
- * is always the live, active Domain/SubDomain master list (see
- * domainsService) — a reviewer can only pick from that list, never type an
- * ad-hoc value, since Domain/SubDomain already has its own master-data
- * screen (Settings → Methodology) for adding new ones.
- */
-function ChipEditor({
-  values,
-  onChange,
-  options,
-  loading = false,
-}: {
-  values: string[];
-  onChange: (values: string[]) => void;
-  options: string[];
-  loading?: boolean;
-}) {
-  const t = useTranslations("app.studies.classification");
-  const addFromOptions = (value: string) => {
-    if (value && !values.includes(value)) onChange([...values, value]);
-  };
-  const remaining = options.filter((option) => !values.includes(option));
-
-  return (
-    <div className="space-y-1.5">
-      {values.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {values.map((v) => (
-            <Badge key={v} variant="secondary" className="gap-1">
-              {v}
-              <button
-                type="button"
-                onClick={() => onChange(values.filter((x) => x !== v))}
-              >
-                <X className="size-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-
-      <Select value="" onValueChange={addFromOptions} disabled={loading}>
-        <SelectTrigger className="h-8 w-full">
-          <SelectValue
-            placeholder={loading ? t("loadingMethodology") : t("selectFromMethodology")}
-            className="truncate"
-          />
-        </SelectTrigger>
-        <SelectContent>
-          {remaining.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-/** Confidence read as a tiered progress bar, not just a number — green/amber/red
- * mirrors how a reviewer should weigh trusting the suggestion at a glance. */
-function ConfidenceMeter({ value }: { value: number }) {
-  const t = useTranslations("app.studies.classification");
-  const pct = Math.round(value * 100);
-  const tone =
-    value >= 0.7 ? "bg-success" : value >= 0.4 ? "bg-warning" : "bg-destructive";
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground font-medium">{t("confidence")}</span>
-        <span className="text-foreground font-semibold tabular-nums">{pct}%</span>
-      </div>
-      <div className="bg-background/60 h-2 w-full overflow-hidden rounded-full">
-        <div
-          className={cn("h-full rounded-full transition-all", tone)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+import { domainsService } from "@/services/domains/domains.service";
+import { needsService } from "@/services/needs/needs.service";
+import type { Need, NeedStatus } from "@/services/needs/needs.types";
 
 export function DomainChips({
   items,
@@ -141,46 +73,71 @@ export function DomainChips({
   );
 }
 
+const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
+  draft: "bg-muted text-muted-foreground",
+  pending_ai_classification: "bg-muted text-muted-foreground",
+  evidence_submitted: "bg-muted text-muted-foreground",
+  ai_classified: "bg-badge-primary text-badge-primary-foreground",
+  ai_classification_failed: "bg-destructive/10 text-destructive",
+  reviewer_approved: "bg-badge-success text-badge-success-foreground",
+  survey_created: "bg-badge-success text-badge-success-foreground",
+  survey_published: "bg-badge-success text-badge-success-foreground",
+};
+
+const POLL_INTERVAL_MS = 3000;
+
+// AI Classification status + the Approver's Override/Approve/Reject actions,
+// all in one place on the Need workspace page. Curating the suggested
+// question list itself still happens on the existing Survey Builder page
+// (reached via the button below) — this section only surfaces classification
+// and the approve/reject decision, it doesn't duplicate the question editor.
 export function AiClassificationSection({
-  studyId,
-  studyStatus,
-  hasNeed,
-  evidenceCount,
-  onReviewed,
+  need,
+  onNeedUpdated,
 }: {
-  studyId: string;
-  studyStatus: StudyStatus;
-  hasNeed: boolean;
-  evidenceCount: number;
-  /** Fires after an approved/modified review — Study.domain/subDomain just
-   * changed server-side, so the parent should refetch the Study. */
-  onReviewed?: () => void;
+  need: Need;
+  /** Fires whenever this section learns of a newer Need state — after a
+   * manual Retry, a poll picking up classification completing, or an
+   * Approve/Reject. */
+  onNeedUpdated?: (need: Need) => void;
 }) {
   const t = useTranslations("app.studies.classification");
-  const canRun = usePermission("aiReview", "write");
   const canReview = usePermission("aiReview", "approve");
 
   const [latest, setLatest] = useState<AiDecision | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [overriding, setOverriding] = useState(false);
-  const [overrideDomains, setOverrideDomains] = useState<string[]>([]);
-  const [overrideSubDomains, setOverrideSubDomains] = useState<string[]>([]);
-  const [overrideReason, setOverrideReason] = useState("");
-  const [isReviewing, setIsReviewing] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false);
+  const previousStatusRef = useRef(need.status);
+  // Guards the draft self-heal kick-off (below) to at most once per Need —
+  // without this, a re-render while the kick-off's own request is still in
+  // flight (status hasn't moved off "draft" yet) would fire it again.
+  const draftKickedOffRef = useRef<string | null>(null);
 
-  // Same source (and same active-only filter) as the backend's Gemini
-  // candidate list (AiDecisionsService.runClassification) — the override
-  // modal must only ever offer domains/sub-domains the AI was actually
-  // allowed to pick from, never a separate hardcoded list.
   const [domainOptions, setDomainOptions] = useState<
-    { name: string; subDomains: string[] }[] | null
-  >(null);
+    { name: string; subDomains: string[] }[]
+  >([]);
+  const [overriding, setOverriding] = useState(false);
+  const [overrideDomain, setOverrideDomain] = useState<string | null>(null);
+  const [overrideSubDomain, setOverrideSubDomain] = useState<string | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [pendingOverride, setPendingOverride] = useState<{
+    domain: string;
+    subDomain: string;
+    reason: string;
+  } | null>(null);
+  const [overridePreviewLoading, setOverridePreviewLoading] = useState(false);
+
+  const [approving, setApproving] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [comments, setComments] = useState("");
+  const [commentsError, setCommentsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     aiDecisionsService
-      .listByStudy(studyId)
+      .listByNeed(need.id)
       .then((list) => {
         if (!cancelled) setLatest(list[0] ?? null);
       })
@@ -188,17 +145,31 @@ export function AiClassificationSection({
     return () => {
       cancelled = true;
     };
-  }, [studyId]);
+  }, [need.id, need.status]);
+
+  // A rejected Need sits at `pending_ai_classification` too — same status
+  // value a fresh Need starts at — but nothing is actually running here:
+  // the last thing that happened is a human rejection, and the backend
+  // deliberately does NOT re-classify until the Researcher actually edits
+  // the Need and saves (see NeedsService.update()'s fire-and-forget
+  // re-classification, gated on the patch actually changing something).
+  // Showing the generic "in progress" spinner in this state is what read as
+  // "rejecting immediately re-runs AI" — it doesn't, but looked like it did.
+  const isAwaitingRevision =
+    need.status === "pending_ai_classification" &&
+    latest?.humanDecision?.decision === "rejected";
+
+  const isReadyForReview = need.status === "ai_classified" && !latest?.humanDecision;
+  const hasSurvey =
+    isReadyForReview ||
+    need.status === "reviewer_approved" ||
+    need.status === "survey_created" ||
+    need.status === "survey_published";
 
   useEffect(() => {
-    let cancelled = false;
-    // One request for every active domain's active sub-domains, nested —
-    // not one listSubDomains() call per domain (that N+1 pattern was ~10
-    // network round trips just to open this section).
     domainsService
       .listWithSubDomains()
-      .then((domains) => {
-        if (cancelled) return;
+      .then((domains) =>
         setDomainOptions(
           domains
             .filter((d) => d.isActive)
@@ -206,106 +177,160 @@ export function AiClassificationSection({
               name: d.name,
               subDomains: d.subDomains.filter((sd) => sd.isActive).map((sd) => sd.name),
             })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setDomainOptions([]);
-      });
-    return () => {
-      cancelled = true;
-    };
+        ),
+      )
+      .catch(() => setDomainOptions([]));
   }, []);
 
-  const domainOptionsLoading = domainOptions === null;
-  const domainNames = (domainOptions ?? []).map((d) => d.name);
-  const subDomainNamesFor = (domains: string[]): string[] => {
-    if (!domainOptions) return [];
-    if (domains.length === 0) {
-      return Array.from(new Set(domainOptions.flatMap((d) => d.subDomains)));
+  // Self-heal: a Need should never actually rest at the bare "draft"
+  // default post-creation — that only happens if something created it
+  // without going through the normal automatic-classification entry point
+  // (e.g. a Need imported via file upload before NeedsImportService started
+  // triggering it too). Rather than leaving it stuck forever with nothing
+  // running, kick off classification the first time anyone views it here,
+  // same as a fresh manually-created Need gets automatically.
+  useEffect(() => {
+    if (need.status !== "draft") return;
+    if (draftKickedOffRef.current === need.id) return;
+    draftKickedOffRef.current = need.id;
+    aiDecisionsService.classify(need.id).catch(() => undefined);
+  }, [need.id, need.status]);
+
+  // Poll while classification is in flight (or about to be, for a "draft"
+  // Need the effect above just kicked off) — no push mechanism exists, so
+  // this is the only way the page learns it finished without a reload.
+  useEffect(() => {
+    if (isAwaitingRevision) return;
+    if (need.status !== "pending_ai_classification" && need.status !== "draft") return;
+    const interval = setInterval(() => {
+      needsService
+        .getById(need.id)
+        .then((updated) => onNeedUpdated?.(updated))
+        .catch(() => undefined);
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [need.id, need.status]);
+
+  useEffect(() => {
+    const wasInProgress =
+      previousStatusRef.current === "pending_ai_classification" ||
+      previousStatusRef.current === "draft";
+    if (wasInProgress && need.status === "ai_classified") {
+      setJustCompleted(true);
+      const timer = setTimeout(() => setJustCompleted(false), 4000);
+      return () => clearTimeout(timer);
     }
-    const set = new Set<string>();
-    for (const domain of domains) {
-      const match = domainOptions.find((d) => d.name === domain);
-      for (const sub of match?.subDomains ?? []) set.add(sub);
-    }
-    return Array.from(set);
-  };
+    previousStatusRef.current = need.status;
+  }, [need.status]);
 
-  if (!canRun) return null;
+  const workingDomain = pendingOverride?.domain ?? need.aiSuggestedDomain ?? null;
+  const workingSubDomain =
+    pendingOverride?.subDomain ?? need.aiSuggestedSubDomain ?? null;
+  const subDomainOptionsFor = (domain: string | null): string[] =>
+    domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
 
-  // evidence_submitted or further (ai_classified/human_reviewed) means
-  // evidence has been through the explicit Submit step at least once.
-  const isEligible =
-    hasNeed && studyStatus !== "draft" && studyStatus !== "need_captured";
-
-  const runClassify = async () => {
+  async function retry() {
     setError(null);
-    setIsRunning(true);
+    setRetrying(true);
     try {
-      const result = await aiDecisionsService.classify(studyId);
-      setLatest(result);
+      await aiDecisionsService.classify(need.id);
+      const updated = await needsService.getById(need.id);
+      onNeedUpdated?.(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("classifyError"));
     } finally {
-      setIsRunning(false);
+      setRetrying(false);
     }
-  };
+  }
 
-  const startOverride = () => {
-    if (!latest) return;
-    // Only pre-fill with values that actually exist in the live methodology
-    // list — Gemini's raw suggestion is free-form text and, despite the
-    // prompt instructing it to pick an exact name, isn't guaranteed to match
-    // verbatim. Pre-filling an unmatched value would silently exclude it
-    // from the dropdown (already "selected") with no way to tell why —
-    // exactly the confusion this is meant to avoid. If it doesn't match,
-    // the reviewer picks from the dropdown instead; the raw suggestion is
-    // still shown for reference below.
-    const suggestedDomains = (latest.suggestion.domains ?? []).filter((d) =>
-      domainNames.includes(d),
-    );
-    const eligibleSubDomains = subDomainNamesFor(suggestedDomains);
-    const suggestedSubDomains = (latest.suggestion.subDomains ?? []).filter((sd) =>
-      eligibleSubDomains.includes(sd),
-    );
-    setOverrideDomains(suggestedDomains);
-    setOverrideSubDomains(suggestedSubDomains);
+  function startOverride() {
+    setOverrideDomain(need.aiSuggestedDomain ?? null);
+    setOverrideSubDomain(need.aiSuggestedSubDomain ?? null);
     setOverrideReason("");
     setOverriding(true);
-  };
+  }
 
-  const submitReview = async (decision: "approved" | "modified") => {
-    if (!latest) return;
+  async function previewOverride() {
+    if (!overrideDomain || !overrideSubDomain || !overrideReason.trim()) return;
+    setOverridePreviewLoading(true);
     setError(null);
-    setIsReviewing(true);
     try {
-      const updated = await aiDecisionsService.review(latest.id, {
-        decision,
-        ...(decision === "modified"
-          ? {
-              notes: overrideReason,
-              overrideValue: { domains: overrideDomains, subDomains: overrideSubDomains },
-            }
-          : {}),
+      // Refreshes the suggested questions on the Survey Builder page for the
+      // candidate domain — nothing is written to the Need until Approve.
+      await aiReviewService.overrideDomainPreview(
+        need.id,
+        overrideDomain,
+        overrideSubDomain,
+      );
+      setPendingOverride({
+        domain: overrideDomain,
+        subDomain: overrideSubDomain,
+        reason: overrideReason.trim(),
       });
-      setLatest(updated);
       setOverriding(false);
-      if (decision === "approved" || decision === "modified") onReviewed?.();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("overrideError"));
+    } finally {
+      setOverridePreviewLoading(false);
+    }
+  }
+
+  async function approve() {
+    setApproving(true);
+    setError(null);
+    try {
+      // Approve only decides the classification here — curating questions,
+      // picking a Methodology Version, and Submit for Approval / Approve &
+      // Publish all happen separately on the Survey Builder page (see the
+      // "View Suggested Questions" button below), once this Need reaches
+      // reviewer_approved.
+      await aiReviewService.approve(need.id, {
+        domainOverride: pendingOverride ?? undefined,
+      });
+      const updated = await needsService.getById(need.id);
+      onNeedUpdated?.(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("reviewError"));
     } finally {
-      setIsReviewing(false);
+      setApproving(false);
     }
-  };
+  }
 
-  const overrideValue = latest?.humanDecision?.overrideValue as
-    { domains?: string[]; subDomains?: string[] } | undefined;
-  const isModified = latest?.humanDecision?.decision === "modified";
+  function openRejectDialog() {
+    setComments("");
+    setCommentsError(null);
+    setRejectOpen(true);
+  }
+
+  async function confirmReject() {
+    const trimmed = comments.trim();
+    if (!trimmed) {
+      setCommentsError(t("commentsRequired"));
+      return;
+    }
+    setRejecting(true);
+    setError(null);
+    try {
+      await aiReviewService.reject(need.id, trimmed);
+      setRejectOpen(false);
+      const updated = await needsService.getById(need.id);
+      onNeedUpdated?.(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("reviewError"));
+    } finally {
+      setRejecting(false);
+    }
+  }
+
+  const showPostApprovalSummary =
+    need.status === "reviewer_approved" ||
+    need.status === "survey_created" ||
+    need.status === "survey_published" ||
+    (need.status === "ai_classified" && Boolean(latest?.humanDecision));
 
   return (
     <div className="border-border overflow-hidden rounded-xl border">
-      {/* A section, not a boxed-in card — a tinted header strip like the
-       * other workflow steps, running the full width of the page. */}
       <div className="bg-primary/5 border-border flex items-center justify-between border-b px-5 py-3.5">
         <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
           <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
@@ -316,281 +341,432 @@ export function AiClassificationSection({
         <Badge
           className={cn(
             "border-transparent",
-            latest?.humanDecision
-              ? "bg-badge-success text-badge-success-foreground"
-              : latest
-                ? "bg-badge-primary text-badge-primary-foreground"
-                : "bg-muted text-muted-foreground",
+            isAwaitingRevision
+              ? "bg-destructive/10 text-destructive"
+              : STATUS_BADGE_CLASS[need.status],
           )}
         >
-          {latest?.humanDecision
-            ? t("statusReviewed")
-            : latest
-              ? t("statusClassified")
-              : t("statusPending")}
+          {isAwaitingRevision ? t("rejectedStatus") : t(`needStatus.${need.status}`)}
         </Badge>
       </div>
 
-      <div className="space-y-5 p-5">
-        {!isEligible ? (
-          <p className="text-muted-foreground text-sm">
-            {!hasNeed
-              ? t("waitingForNeed")
-              : evidenceCount === 0
-                ? t("waitingForEvidence")
-                : t("waitingForSubmit")}
-          </p>
+      <div className="space-y-4 p-5">
+        {justCompleted ? (
+          <div
+            role="status"
+            className="bg-badge-success/10 text-badge-success-foreground border-badge-success/30 flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm"
+          >
+            <CheckCircle2 className="size-4 shrink-0" />
+            {t("justCompleted")}
+          </div>
         ) : null}
 
-        {isEligible && !latest ? (
-          <div className="flex flex-col items-start gap-3">
-            <div>
-              <p className="text-foreground text-sm font-medium">
-                {t("readyToClassify")}
+        {isAwaitingRevision ? (
+          <div className="border-destructive/40 bg-destructive/5 flex items-start gap-2.5 rounded-md border p-3.5">
+            <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-destructive text-sm font-medium">
+                {t("reviewerCommentsLabel")}
               </p>
-              <p className="text-muted-foreground text-sm">{t("readyToClassifyHint")}</p>
+              {latest?.humanDecision?.notes ? (
+                <p className="text-foreground text-sm whitespace-pre-wrap">
+                  {latest.humanDecision.notes}
+                </p>
+              ) : null}
+              <p className="text-muted-foreground text-xs">{t("awaitingRevisionHint")}</p>
             </div>
+          </div>
+        ) : need.status === "pending_ai_classification" || need.status === "draft" ? (
+          <div className="text-muted-foreground flex items-center gap-2 text-sm">
+            <Loader2 className="size-4 animate-spin" />
+            {t("pendingHint")}
+          </div>
+        ) : null}
+
+        {need.status === "ai_classification_failed" ? (
+          <div className="space-y-3">
+            <div className="border-destructive/40 bg-destructive/5 flex items-start gap-2.5 rounded-md border p-3.5">
+              <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-destructive text-sm font-medium">{t("failedTitle")}</p>
+                {need.classificationError ? (
+                  <p className="text-foreground text-sm">{need.classificationError}</p>
+                ) : null}
+              </div>
+            </div>
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
             <LoadingButton
               type="button"
-              onClick={runClassify}
-              isLoading={isRunning}
-              className="gap-2"
-              text={isRunning ? t("classifying") : t("runClassification")}
-              startIcon={<Sparkles className="size-4" />}
+              variant="outline"
+              onClick={retry}
+              isLoading={retrying}
+              className="gap-1.5"
+              startIcon={<RotateCw className="size-3.5" />}
+              text={retrying ? t("retrying") : t("retry")}
             />
           </div>
         ) : null}
 
-        {error ? <p className="text-destructive text-sm">{error}</p> : null}
-
-        {latest ? (
-          <div className="grid gap-5 lg:grid-cols-3">
-            {/* AI Suggestion — a solid brand-secondary tint (not a washed-out
-             * opacity blend, which reads as gray), clearly AI's voice.
-             * Spans two of the three columns so domains/rationale read
-             * horizontally next to confidence + review actions. */}
-            <div className="bg-badge-secondary space-y-4 rounded-lg p-4 lg:col-span-2">
-              <p className="text-badge-secondary-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
-                <Sparkles className="size-3.5" />
+        {showPostApprovalSummary ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="bg-badge-secondary/10 border-badge-secondary/30 space-y-2 rounded-lg border p-4">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {t("aiSuggestionHeading")}
               </p>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    {t("suggestedDomains")}
-                  </p>
-                  <DomainChips
-                    items={latest.suggestion.domains ?? []}
-                    variant="primary"
-                    border={true}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    {t("suggestedSubDomains")}
-                  </p>
-                  <DomainChips
-                    items={latest.suggestion.subDomains ?? []}
-                    variant="secondary"
-                    border={true}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t("aiSuggestedDomainLabel")}
+                </p>
+                <DomainChips
+                  items={need.aiSuggestedDomain ? [need.aiSuggestedDomain] : []}
+                  variant="secondary"
+                  border
+                />
               </div>
-
-              {latest.suggestion.rationale ? (
-                <div className="border-border/60 border-t pt-3">
-                  <p className="text-muted-foreground mb-1 text-xs font-medium">
-                    {t("rationaleHeading")}
+              {need.aiSuggestedSubDomain ? (
+                <div className="space-y-1.5">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("aiSuggestedSubDomainLabel")}
                   </p>
+                  <DomainChips
+                    items={[need.aiSuggestedSubDomain]}
+                    variant="secondary"
+                    border
+                  />
+                </div>
+              ) : null}
+              {latest?.suggestion.rationale ? (
+                <p className="text-foreground/80 text-xs leading-relaxed italic">
+                  {latest.suggestion.rationale}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-3">
+              {need.domain && need.subDomain ? (
+                <div className="bg-badge-success/10 border-badge-success/30 flex items-start gap-2 rounded-lg border p-4">
+                  <CheckCircle2 className="text-badge-success-foreground mt-0.5 size-4 shrink-0" />
+                  <div className="w-full space-y-2">
+                    <p className="text-badge-success-foreground text-xs font-semibold">
+                      {t("approvedStatusTitle")}
+                    </p>
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {t("approvedDomainLabel")}
+                      </p>
+                      <DomainChips items={[need.domain]} variant="primary" border />
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        {t("approvedSubDomainLabel")}
+                      </p>
+                      <DomainChips items={[need.subDomain]} variant="primary" border />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("approvedDomainLabel")}
+                  </p>
+                  <span className="text-muted-foreground text-sm">
+                    {t("awaitingReview")}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {isReadyForReview ? (
+          <>
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+
+            <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+              {/* AI Suggestion — tinted panel, domain/sub-domain chips + the
+                  rationale as an italicized explanation, matching the
+                  reference design. */}
+              <div className="bg-badge-secondary/10 border-badge-secondary/30 space-y-3 rounded-lg border p-4">
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  {t("aiSuggestionHeading")}
+                </p>
+                <div className="space-y-1.5">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("aiSuggestedDomainLabel")}
+                  </p>
+                  <DomainChips
+                    items={need.aiSuggestedDomain ? [need.aiSuggestedDomain] : []}
+                    variant="secondary"
+                    border
+                  />
+                </div>
+                {need.aiSuggestedSubDomain ? (
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {t("aiSuggestedSubDomainLabel")}
+                    </p>
+                    <DomainChips
+                      items={[need.aiSuggestedSubDomain]}
+                      variant="secondary"
+                      border
+                    />
+                  </div>
+                ) : null}
+                {latest?.suggestion.rationale ? (
                   <p className="text-foreground/80 text-xs leading-relaxed italic">
                     {latest.suggestion.rationale}
                   </p>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Confidence + review actions/final decision — the "metrics and
-             * comparison" column sitting next to the suggestion, not below it. */}
-            <div className="space-y-4">
-              <div className="border-border rounded-lg border p-4">
-                <ConfidenceMeter value={latest.confidence} />
+                ) : null}
               </div>
 
-              {/* Human Review — distinct from AI: a plain surface with a
-               * single accent border, not another solid color fill —
-               * the two colored panels (AI Suggestion, Final Decision)
-               * carry enough weight on their own. */}
-              {!latest.humanDecision && canReview ? (
-                <div className="border-border border-l-primary space-y-3 rounded-lg border border-l-4 p-4">
-                  <p className="text-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
-                    <UserCheck className="text-primary size-3.5" />
-                    {t("humanReviewHeading")}
-                  </p>
-
-                  <div className="flex justify-end gap-2">
-                    <LoadingButton
-                      type="button"
-                      size="lg"
-                      onClick={() => submitReview("approved")}
-                      isLoading={isReviewing}
-                      className="gap-1.5"
-                      text={isReviewing ? t("approving") : t("approve")}
-                      startIcon={<CheckCircle2 className="size-4" />}
-                    />
-                    <Button
-                      type="button"
-                      size="lg"
-                      variant="outline"
-                      onClick={startOverride}
-                      disabled={isReviewing}
-                    >
-                      {t("override")}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Final Decision — the confirmation state, once a reviewer has acted */}
-              {latest.humanDecision ? (
-                <div className="bg-badge-success space-y-3 rounded-lg p-4">
-                  <p className="text-badge-success-foreground flex items-center gap-1.5 text-sm font-semibold">
-                    <CheckCircle2 className="size-4" />
-                    {isModified ? t("humanOverrideSaved") : t("classificationApproved")}
-                  </p>
-                  {isModified && overrideValue ? (
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <p className="text-muted-foreground text-xs font-medium">
-                          {t("suggestedDomains")}
-                        </p>
-                        <DomainChips
-                          items={overrideValue.domains ?? []}
-                          variant="primary"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <p className="text-muted-foreground text-xs font-medium">
-                          {t("suggestedSubDomains")}
-                        </p>
-                        <DomainChips
-                          items={overrideValue.subDomains ?? []}
-                          variant="secondary"
-                        />
-                      </div>
-                      {latest.humanDecision.notes ? (
-                        <div className="border-border/60 border-t pt-2">
-                          <p className="text-muted-foreground text-xs font-medium">
-                            {t("overrideReasonLabel")}
-                          </p>
-                          <p className="text-foreground text-xs">
-                            {latest.humanDecision.notes}
-                          </p>
-                        </div>
-                      ) : null}
+              {/* Confidence as an actual progress bar (tiered green/amber/
+                  red), plus the Working Domain once an override is staged. */}
+              <div className="space-y-4">
+                {latest && latest.confidence > 0 ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                        {t("confidence")}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-sm font-bold tabular-nums",
+                          latest.confidence >= 0.7
+                            ? "text-success"
+                            : latest.confidence >= 0.4
+                              ? "text-warning"
+                              : "text-destructive",
+                        )}
+                      >
+                        {Math.round(latest.confidence * 100)}%
+                      </span>
                     </div>
-                  ) : null}
-                </div>
-              ) : null}
+                    <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          latest.confidence >= 0.7
+                            ? "bg-success"
+                            : latest.confidence >= 0.4
+                              ? "bg-warning"
+                              : "bg-destructive",
+                        )}
+                        style={{ width: `${Math.round(latest.confidence * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Working Domain only matters once an override is actually
+                    staged — otherwise it's identical to AI Suggested Domain
+                    above and just duplicates it. */}
+                {pendingOverride ? (
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {t("workingDomainLabel")}
+                    </p>
+                    <DomainChips
+                      items={workingDomain ? [workingDomain] : []}
+                      variant="primary"
+                      border
+                    />
+                    {workingSubDomain ? (
+                      <p className="text-muted-foreground text-xs">{workingSubDomain}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
+
+            {canReview ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" onClick={startOverride}>
+                  {t("override")}
+                </Button>
+                {pendingOverride ? (
+                  <p className="text-muted-foreground text-xs">
+                    {t("overridePendingNote")}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              // Researchers/other viewers can see the classification but the
+              // Approve/Override/Reject decision is entirely the Reviewer/
+              // Approver's job — this replaces those controls for them. A
+              // `div` (block-level, own line) with no border/pill styling —
+              // plain informational text, deliberately not shaped like the
+              // "View Suggested Questions" button below so the two aren't
+              // mistaken for a pair of equivalent actions.
+              <div
+                title={t("sentForApprovalTooltip")}
+                className="text-muted-foreground flex items-center gap-1.5 text-xs"
+              >
+                <Info className="size-3.5 shrink-0" />
+                {t("sentForApproval")}
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {hasSurvey ? (
+          <div className="pt-2">
+            <Button asChild size="sm" className="gap-2 font-medium">
+              <Link href={`/survey-builder/${need.id}`}>
+                <ClipboardList className="size-4" />
+                Open Survey Builder (Build & Publish)
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+
+        {isReadyForReview && canReview ? (
+          <div className="flex items-center justify-end gap-2.5 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="text-destructive hover:text-destructive gap-1.5"
+              onClick={openRejectDialog}
+              disabled={approving || rejecting}
+            >
+              <XCircle className="size-4" />
+              {t("reject")}
+            </Button>
+            <LoadingButton
+              type="button"
+              isLoading={approving}
+              onClick={approve}
+              disabled={rejecting}
+              className="gap-1.5"
+              startIcon={<CheckCircle2 className="size-4" />}
+              text={approving ? t("approving") : t("approve")}
+            />
           </div>
         ) : null}
       </div>
 
-      {/* Override — a centered modal, not a growing inline form, so the
-       * main workflow page stays uncluttered while reviewing. */}
+      {/* Override Domain */}
       <Dialog open={overriding} onOpenChange={setOverriding}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("overrideDialogTitle")}</DialogTitle>
             <DialogDescription>{t("overrideDialogDescription")}</DialogDescription>
           </DialogHeader>
-
-          <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-0.5">
-            {/* AI's raw suggestion, for reference while overriding — always
-             * shown as-is (even if it didn't exactly match the live
-             * methodology list below and so couldn't be pre-filled; see
-             * startOverride). Distinct from "Your domain(s)" below, which is
-             * what actually gets saved. */}
-            <div className="bg-secondary/10 grid grid-cols-2 gap-3 rounded-lg p-2.5">
-              <div className="space-y-1">
-                <p className="text-muted-foreground text-[11px] font-medium">
-                  {t("suggestedDomains")}
-                </p>
-                <DomainChips items={latest?.suggestion.domains ?? []} variant="primary" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground text-[11px] font-medium">
-                  {t("suggestedSubDomains")}
-                </p>
-                <DomainChips
-                  items={latest?.suggestion.subDomains ?? []}
-                  variant="secondary"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium">{t("editableLabel")}</p>
-                <ChipEditor
-                  values={overrideDomains}
-                  onChange={setOverrideDomains}
-                  options={domainNames}
-                  loading={domainOptionsLoading}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium">{t("editableSubLabel")}</p>
-                {overrideDomains.length === 0 ? (
-                  <p className="text-muted-foreground border-input rounded-md border border-dashed px-3 py-2 text-xs">
-                    {t("selectDomainFirst")}
-                  </p>
-                ) : (
-                  <ChipEditor
-                    values={overrideSubDomains}
-                    onChange={setOverrideSubDomains}
-                    options={subDomainNamesFor(overrideDomains)}
-                    loading={domainOptionsLoading}
-                  />
-                )}
-              </div>
-            </div>
-            <p className="text-muted-foreground text-xs">{t("overrideSelectionNote")}</p>
-
+          <div className="space-y-4">
             <div className="space-y-1.5">
-              <label htmlFor="overrideReason" className="text-xs font-medium">
-                {t("overrideReasonLabel")}
-              </label>
-              <textarea
-                id="overrideReason"
+              <Label>{t("domainLabel")}</Label>
+              <Select
+                value={overrideDomain ?? undefined}
+                onValueChange={(v) => {
+                  setOverrideDomain(v);
+                  setOverrideSubDomain(null);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("selectDomain")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {domainOptions.map((d) => (
+                    <SelectItem key={d.name} value={d.name}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("subDomainLabel")}</Label>
+              <Select
+                value={overrideSubDomain ?? undefined}
+                onValueChange={setOverrideSubDomain}
+                disabled={!overrideDomain}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("selectSubDomain")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {subDomainOptionsFor(overrideDomain).map((sd) => (
+                    <SelectItem key={sd} value={sd}>
+                      {sd}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="override-reason">{t("overrideReasonLabel")}</Label>
+              <Textarea
+                id="override-reason"
                 rows={3}
-                required
                 value={overrideReason}
                 onChange={(e) => setOverrideReason(e.target.value)}
                 placeholder={t("overrideReasonPlaceholder")}
-                className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
               />
             </div>
           </div>
-
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOverriding(false)}
-              disabled={isReviewing}
+              disabled={overridePreviewLoading}
             >
               {t("cancel")}
             </Button>
             <LoadingButton
               type="button"
-              onClick={() => submitReview("modified")}
-              disabled={overrideReason.trim().length === 0}
-              isLoading={isReviewing}
-              className="gap-1.5"
-              text={isReviewing ? t("savingOverride") : t("saveOverride")}
+              onClick={previewOverride}
+              disabled={!overrideDomain || !overrideSubDomain || !overrideReason.trim()}
+              isLoading={overridePreviewLoading}
+              text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
+            />
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject */}
+      <Dialog
+        open={rejectOpen}
+        onOpenChange={(open) => !rejecting && setRejectOpen(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("rejectDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("rejectDialogDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reject-comments">
+              {t("commentsLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="reject-comments"
+              rows={5}
+              value={comments}
+              onChange={(e) => {
+                setComments(e.target.value);
+                if (commentsError) setCommentsError(null);
+              }}
+              placeholder={t("commentsPlaceholder")}
+              aria-invalid={commentsError ? true : undefined}
+            />
+            {commentsError ? (
+              <p className="text-destructive text-sm">{commentsError}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectOpen(false)}
+              disabled={rejecting}
+            >
+              {t("cancel")}
+            </Button>
+            <LoadingButton
+              type="button"
+              variant="destructive"
+              isLoading={rejecting}
+              onClick={confirmReject}
+              text={rejecting ? t("rejecting") : t("confirmReject")}
             />
           </DialogFooter>
         </DialogContent>

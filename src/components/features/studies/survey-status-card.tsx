@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { usePermission } from "@/hooks/use-permission";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
+import type { NeedStatus } from "@/services/needs/needs.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
 
 type CreateMode = "ai" | "manual";
@@ -34,13 +34,19 @@ type CreateMode = "ai" | "manual";
  * question list here.
  */
 export function SurveyStatusCard({
-  studyId,
+  needId,
+  needStatus,
   domain,
   subDomain,
+  aiSuggestedDomain,
+  aiSuggestedSubDomain,
 }: {
-  studyId: string;
+  needId: string;
+  needStatus: NeedStatus;
   domain: string | null | undefined;
   subDomain: string | null | undefined;
+  aiSuggestedDomain?: string | null;
+  aiSuggestedSubDomain?: string | null;
 }) {
   const t = useTranslations("app.studies.survey");
   const canWrite = usePermission("surveyBuilder", "write");
@@ -51,125 +57,152 @@ export function SurveyStatusCard({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mode, setMode] = useState<CreateMode>("ai");
   const [creating, setCreating] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     surveysService
-      .getSurveyByStudyId(studyId)
+      .getSurveyByNeedId(needId)
       .then(setSurvey)
       .catch(() => undefined)
       .finally(() => setLoadingSurvey(false));
-  }, [studyId]);
+  }, [needId]);
 
-  const domainApproved = Boolean(domain && subDomain);
+  const hasDomain = Boolean(domain && subDomain);
+  // Domain Category is no longer set manually at Need creation — it stays
+  // null until a reviewer approves (or overrides) an AI Classification (see
+  // AiDecisionsService.review on the backend, which now writes it there).
+  // `classificationApproved` below is the separate, authoritative gate
+  // Survey creation actually enforces (SurveysService#assertClassificationApproved
+  // checks the same rule server-side) — `hasDomain` only controls whether
+  // this card's own "classified as" summary has anything to show yet.
+  const classificationApproved =
+    needStatus === "reviewer_approved" ||
+    needStatus === "survey_created" ||
+    needStatus === "survey_published";
 
   async function createSurvey() {
     setCreating(true);
     setError(null);
     try {
       if (mode === "ai") {
-        await surveysService.recommendQuestions(studyId);
+        await surveysService.recommendQuestions(needId);
       } else {
-        await surveysService.createEmptySurvey(studyId);
+        await surveysService.createEmptySurvey(needId);
       }
-      router.push(`/survey-builder/${studyId}`);
+      router.push(`/survey-builder/${needId}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
       setCreating(false);
     }
   }
 
-  async function publishNow() {
+  async function submitForApproval() {
     if (!survey) return;
-    setPublishing(true);
+    setSubmitting(true);
     setError(null);
     try {
-      await surveysService.saveDraft(survey.id, "PUBLISHED");
-      setSurvey({ ...survey, status: "PUBLISHED" });
+      const updated = await surveysService.submitForApproval(survey.id);
+      setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
-      setPublishing(false);
+      setSubmitting(false);
     }
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 p-6">
+    <div className="border-border overflow-hidden rounded-xl border">
+      {/* Same tinted header-strip chrome as the other workflow sections
+       * (Need, Evidence, AI Classification) on this page. */}
+      <div className="bg-primary/5 border-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
         <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
           <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
             <ClipboardList className="size-3.5" />
           </span>
           {t("heading")}
         </h2>
+        {survey ? (
+          <Badge className="border-transparent" variant="secondary">
+            {t(`status.${survey.status}`)}
+          </Badge>
+        ) : null}
+      </div>
 
-        {domainApproved ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-muted-foreground text-xs">{t("approvedDomainLabel")}</p>
-              <Badge variant="secondary">{domain}</Badge>
+      <div className="space-y-4 p-5">
+        {hasDomain ? (
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground text-xs font-medium">
+              {t("classifiedAsLabel")}
+            </p>
+            <div className="border-border bg-muted/40 rounded-md border px-3.5 py-2.5">
+              <p className="text-foreground text-sm font-medium">{domain}</p>
+              <p className="text-muted-foreground text-sm">{subDomain}</p>
             </div>
-            <div>
+            {aiSuggestedDomain && aiSuggestedSubDomain ? (
               <p className="text-muted-foreground text-xs">
-                {t("approvedSubDomainLabel")}
+                {t("aiSuggestedNote", {
+                  domain: aiSuggestedDomain,
+                  subDomain: aiSuggestedSubDomain,
+                })}
               </p>
-              <Badge variant="secondary">{subDomain}</Badge>
-            </div>
+            ) : null}
           </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">{t("domainNotApprovedNote")}</p>
-        )}
+        ) : null}
+
+        {/* Survey creation still needs a *reviewed and approved* AI
+         * Classification, separately from the Domain Category above — see
+         * classificationApproved's own comment for why these are now two
+         * different conditions. */}
+        {!classificationApproved ? (
+          needStatus === "ai_classified" ? (
+            <p className="text-muted-foreground text-sm">{t("awaitingReviewNote")}</p>
+          ) : (
+            <p className="text-muted-foreground text-sm">{t("notEligibleNote")}</p>
+          )
+        ) : null}
 
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
         {loadingSurvey ? (
           <div className="bg-muted h-9 w-40 animate-pulse rounded" />
         ) : survey ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge
-              className="border-transparent"
-              variant={survey.status === "PUBLISHED" ? "default" : "secondary"}
-            >
-              {survey.status === "PUBLISHED" ? t("statusPublished") : t("statusCreated")}
-            </Badge>
+          <div className="flex flex-wrap items-center gap-2.5">
             <Button asChild size="sm" variant="outline" className="gap-1.5">
-              <Link href={`/survey-builder/${studyId}`}>
+              <Link href={`/survey-builder/${needId}`}>
                 <ClipboardList className="size-3.5" />
                 {t("editSurvey")}
               </Link>
             </Button>
-            {canWrite && survey.status !== "PUBLISHED" ? (
+            {canWrite && (survey.status === "DRAFT" || survey.status === "REJECTED") ? (
               <LoadingButton
                 size="sm"
-                isLoading={publishing}
-                onClick={publishNow}
+                isLoading={submitting}
+                onClick={submitForApproval}
                 className="gap-1.5"
-                text={publishing ? t("publishing") : t("publishSurvey")}
+                text={submitting ? t("submitting") : t("submitForApproval")}
               />
             ) : null}
           </div>
         ) : canWrite ? (
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               size="sm"
-              disabled={!domainApproved}
+              disabled={!classificationApproved}
               onClick={() => setDialogOpen(true)}
               className="gap-1.5"
             >
               <ClipboardList className="size-3.5" />
               {t("createSurvey")}
             </Button>
-            {!domainApproved ? (
-              <p className="text-muted-foreground mt-1.5 text-xs">
-                {t("domainRequiredNote")}
-              </p>
+            {!classificationApproved ? (
+              <p className="text-muted-foreground text-xs">{t("domainRequiredNote")}</p>
             ) : null}
           </div>
         ) : (
           <p className="text-muted-foreground text-sm">{t("noSurveyYet")}</p>
         )}
-      </CardContent>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !creating && setDialogOpen(open)}>
         <DialogContent>
@@ -225,6 +258,6 @@ export function SurveyStatusCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

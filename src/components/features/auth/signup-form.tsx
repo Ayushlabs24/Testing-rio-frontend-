@@ -1,16 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Copy, ImageUp, MailCheck } from "lucide-react";
+import { ArrowRight, Check, Copy, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -18,31 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SECTORS } from "@/config/sectors";
+import { useSectorOptions } from "@/hooks/use-sector-options";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
-import { organizationsService } from "@/services/organizations/organizations.service";
+import { geographyService } from "@/services/geography/geography.service";
+import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 
 interface PendingConfirmation {
   temporaryPasswordEmailed: boolean;
   temporaryPassword?: string;
-}
-
-// Client-side allowlist for the organization logo — mirrors the backend's
-// evidence-upload allowlist pattern (extension check before anything is
-// sent), just for images instead of documents.
-const ALLOWED_LOGO_EXTENSIONS = [".png", ".jpg", ".jpeg", ".svg"];
-
-// The logo is stored as a base64 data URI (no object storage yet — see
-// organizations.contract.ts on the backend), so this cap isn't arbitrary:
-// 2MB raw expands to ~2.7M base64 chars, just under the backend's 2.8M-char
-// limit on `logoUrl`. Raising this requires raising that backend limit too.
-const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
-
-function hasAllowedExtension(fileName: string, allowed: string[]): boolean {
-  const lower = fileName.toLowerCase();
-  return allowed.some((ext) => lower.endsWith(ext));
 }
 
 /**
@@ -129,18 +115,21 @@ function SignupConfirmation({
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
-  // Reuses the same sector labels as Settings > Organization — one source
-  // of truth for what a sector is called, not a duplicated copy here.
+  // "Other" is the one fixed label left — every other option is a live
+  // Methodology Configuration domain name, displayed as-is (see
+  // useSectorOptions).
   const tSectors = useTranslations("app.settings.organization.sectors");
+  // Reused rather than duplicated — Settings > Organization already has the
+  // exact Region/Governorate/Center picker copy this form needs.
+  const tGeo = useTranslations("app.settings.organization");
+  const sectorOptions = useSectorOptions(false);
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] =
     useState<PendingConfirmation | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoFileName, setLogoFileName] = useState<string | null>(null);
-  const [logoError, setLogoError] = useState<string | null>(null);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [governorates, setGovernorates] = useState<Governorate[]>([]);
+  const [centers, setCenters] = useState<Center[]>([]);
 
   const signupSchema = z.object({
     organizationName: z
@@ -152,6 +141,11 @@ export function SignupForm() {
       .string()
       .min(1, { message: tValidation("registrationNumberRequired") }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
+    regionId: z.string().min(1, { message: tValidation("regionRequired") }),
+    governorateIds: z
+      .array(z.string())
+      .min(1, { message: tValidation("governorateIdsRequired") }),
+    centerIds: z.array(z.string()).min(1, { message: tValidation("centerIdsRequired") }),
   });
 
   type SignupValues = z.infer<typeof signupSchema>;
@@ -164,30 +158,78 @@ export function SignupForm() {
     formState: { errors, isSubmitting },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { sector: "", otherSector: "" },
+    defaultValues: {
+      sector: "",
+      otherSector: "",
+      regionId: "",
+      governorateIds: [],
+      centerIds: [],
+    },
   });
 
   const selectedSector = useWatch({ control, name: "sector" });
+  const regionId = useWatch({ control, name: "regionId" });
+  const governorateIds = useWatch({ control, name: "governorateIds" });
+  const centerIds = useWatch({ control, name: "centerIds" });
 
-  const onLogoSelected = (file: File) => {
-    setLogoError(null);
-    if (!hasAllowedExtension(file.name, ALLOWED_LOGO_EXTENSIONS)) {
-      setLogoError(t("logoInvalidType"));
-      setLogoPreview(null);
-      setLogoFileName(null);
-      return;
-    }
-    if (file.size > MAX_LOGO_SIZE_BYTES) {
-      setLogoError(t("logoTooLarge"));
-      setLogoPreview(null);
-      setLogoFileName(null);
-      return;
-    }
-    setLogoFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => setLogoPreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  useEffect(() => {
+    geographyService
+      .listRegions()
+      .then(setRegions)
+      .catch(() => setRegions([]));
+  }, []);
+
+  // Governorate options are scoped to the single selected Region — there's
+  // no org yet to further scope against (this creates the org), unlike
+  // Settings > Organization's own cascade. A previously-selected Governorate
+  // no longer applies once the Region changes, so it's pruned once the new
+  // option list lands.
+  useEffect(() => {
+    const load = regionId
+      ? geographyService.listGovernorates(regionId)
+      : Promise.resolve([]);
+    load
+      .then((options) => {
+        setGovernorates(options);
+        const validIds = new Set(options.map((g) => g.id));
+        setValue(
+          "governorateIds",
+          governorateIds.filter((id) => validIds.has(id)),
+          { shouldValidate: false },
+        );
+      })
+      .catch(() => setGovernorates([]));
+    // governorateIds is read fresh via closure, not tracked as a dependency —
+    // this effect should only re-run when the Region selection itself
+    // changes, not on every Governorate toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regionId]);
+
+  // Center options are scoped to the union of all selected Governorates —
+  // same prune-stale-selection pattern as above.
+  useEffect(() => {
+    const load =
+      governorateIds.length === 0
+        ? Promise.resolve([])
+        : Promise.all(governorateIds.map((id) => geographyService.listCenters(id))).then(
+            (lists) => lists.flat(),
+          );
+    load
+      .then((options) => {
+        setCenters(options);
+        const validIds = new Set(options.map((c) => c.id));
+        setValue(
+          "centerIds",
+          centerIds.filter((id) => validIds.has(id)),
+          { shouldValidate: false },
+        );
+      })
+      .catch(() => setCenters([]));
+    // centerIds is read fresh via closure, not tracked as a dependency —
+    // this effect should only re-run when the Governorate selection itself
+    // changes, not on every Center toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [governorateIds]);
 
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
@@ -198,20 +240,10 @@ export function SignupForm() {
         purpose: values.sector === "other" ? values.otherSector : undefined,
         registrationNumber: values.registrationNumber,
         email: values.email,
+        regionId: values.regionId,
+        governorateIds: values.governorateIds,
+        centerIds: values.centerIds,
       });
-      // The signup response already carries a live session (the backend
-      // sets the session cookie on signup) — used only to attach the logo,
-      // right here, before the admin has actually "signed in" from the
-      // app's point of view. A failed logo upload doesn't fail the whole
-      // signup: the organization/account already exist at this point.
-      if (logoPreview) {
-        try {
-          await organizationsService.update({ logoUrl: logoPreview });
-        } catch {
-          // Non-fatal — the admin can still upload a logo later from
-          // Settings > Organization.
-        }
-      }
       // Signup doesn't sign the admin in automatically — they confirm
       // either how they got their password (emailed) or the password
       // itself (fallback), then sign in explicitly with it, same as any
@@ -269,7 +301,7 @@ export function SignupForm() {
           <div className="space-y-2">
             <Label htmlFor="sector">{t("sectorLabel")}</Label>
             <Select
-              value={selectedSector || undefined}
+              value={selectedSector}
               onValueChange={(value) =>
                 setValue("sector", value, { shouldValidate: true })
               }
@@ -278,11 +310,12 @@ export function SignupForm() {
                 <SelectValue placeholder={t("sectorPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {SECTORS.map((sector) => (
+                {sectorOptions.map((sector) => (
                   <SelectItem key={sector} value={sector}>
-                    {tSectors(sector)}
+                    {sector}
                   </SelectItem>
                 ))}
+                <SelectItem value="other">{tSectors("other")}</SelectItem>
               </SelectContent>
             </Select>
             {errors.sector ? (
@@ -302,6 +335,68 @@ export function SignupForm() {
           </div>
         ) : null}
 
+        {/* Stacked full-width, not a side-by-side grid — Governorate/Center
+            chip lists can wrap to several rows once many are selected. */}
+        <div className="space-y-2">
+          <Label htmlFor="region">{tGeo("administrativeRegionLabel")}</Label>
+          <Combobox
+            aria-label={tGeo("administrativeRegionLabel")}
+            items={regions.map((r) => ({ value: r.id, label: r.name }))}
+            value={regionId || null}
+            onSelect={(value) => setValue("regionId", value, { shouldValidate: true })}
+            placeholder={tGeo("administrativeRegionPlaceholder")}
+            searchPlaceholder={tGeo("administrativeRegionSearchPlaceholder")}
+            emptyText={tGeo("administrativeRegionEmpty")}
+          />
+          {errors.regionId ? (
+            <p className="text-destructive text-sm">{errors.regionId.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>{tGeo("governorateLabel")}</Label>
+          <MultiSelect
+            options={governorates.map((g) => ({ value: g.id, label: g.name }))}
+            values={governorateIds}
+            onChange={(next) =>
+              setValue("governorateIds", next, { shouldValidate: true })
+            }
+            placeholder={
+              regionId ? tGeo("governoratePlaceholder") : tGeo("selectRegionFirst")
+            }
+            searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+            emptyText={tGeo("governorateEmpty")}
+            removeAriaLabel={(governorate) =>
+              tGeo("removeGovernorateSelection", { governorate })
+            }
+            disabled={!regionId}
+          />
+          {errors.governorateIds ? (
+            <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>{tGeo("centerLabel")}</Label>
+          <MultiSelect
+            options={centers.map((c) => ({ value: c.id, label: c.name }))}
+            values={centerIds}
+            onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
+            placeholder={
+              governorateIds.length > 0
+                ? tGeo("centerPlaceholder")
+                : tGeo("selectGovernorateFirst")
+            }
+            searchPlaceholder={tGeo("centerSearchPlaceholder")}
+            emptyText={tGeo("centerEmpty")}
+            removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
+            disabled={governorateIds.length === 0}
+          />
+          {errors.centerIds ? (
+            <p className="text-destructive text-sm">{errors.centerIds.message}</p>
+          ) : null}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="email">{t("emailLabel")}</Label>
           <Input
@@ -313,38 +408,6 @@ export function SignupForm() {
           {errors.email ? (
             <p className="text-destructive text-sm">{errors.email.message}</p>
           ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="logoUpload">{t("logoLabel")}</Label>
-          <button
-            id="logoUpload"
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="border-input hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg border bg-transparent px-2.5 text-sm transition-colors outline-none focus-visible:ring-3"
-          >
-            <ImageUp className="text-muted-foreground size-4 shrink-0" />
-            {logoPreview ? (
-              <Avatar size="sm" className="shrink-0">
-                <AvatarImage src={logoPreview} alt="" />
-              </Avatar>
-            ) : null}
-            <span className="text-muted-foreground min-w-0 flex-1 truncate text-left">
-              {logoFileName ?? t("logoPlaceholder")}
-            </span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onLogoSelected(file);
-              event.target.value = "";
-            }}
-          />
-          {logoError ? <p className="text-destructive text-sm">{logoError}</p> : null}
         </div>
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}

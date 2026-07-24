@@ -1,5 +1,6 @@
 export interface ResponseQualityResult {
   id: string;
+  needId: string;
   studyId: string;
   /** Null = Consolidated (every Survey Link); set = scoped to just that one link. */
   surveyLinkId: string | null;
@@ -14,6 +15,7 @@ export interface ResponseQualityResult {
 
 export interface AiSummary {
   id: string;
+  needId: string;
   studyId: string;
   surveyLinkId: string | null;
   summaryText: string;

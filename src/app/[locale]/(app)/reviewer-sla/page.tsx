@@ -23,6 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/components/providers/auth-provider";
+import { markReviewerSlaAlertsSeen } from "@/hooks/use-reviewer-sla-badge";
 import { Link } from "@/i18n/navigation";
 import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
 import type {
@@ -37,6 +39,17 @@ const STATUS_VARIANT: Record<SlaAlertStatus, "default" | "secondary" | "destruct
   breached: "destructive",
 };
 
+// AI Classification review happens on the Need workspace page; Survey
+// Approval review happens on the dedicated Review page (see
+// SurveysService's state machine / the Survey Builder Review page) — never
+// the same link, since these are two different queues on two different
+// screens.
+function alertHref(alert: SlaAlert): string {
+  return alert.type === "survey_approval"
+    ? `/survey-builder/${alert.needId}/review`
+    : `/studies/${alert.studyId}/needs/${alert.needId}`;
+}
+
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
@@ -46,6 +59,7 @@ function formatDate(iso: string): string {
 
 export default function ReviewerSlaPage() {
   const t = useTranslations("app.reviewerSla");
+  const { session } = useAuth();
   // No concept of assignment: every user with the Reviewer/Approver role
   // sees the same org-wide pending queue (see ReviewerSlaService.listAlerts)
   // — once anyone reviews an item, it disappears for everyone.
@@ -60,6 +74,10 @@ export default function ReviewerSlaPage() {
       .then((rows) => {
         setAlerts(rows);
         setLoadFailed(false);
+        // Mark every currently-loaded alert as seen — the topbar/sidebar
+        // unread badge (useReviewerSlaBadge) clears for these once the user
+        // has actually viewed this page while they were present.
+        if (session?.user.id) markReviewerSlaAlertsSeen(session.user.id, rows);
       })
       .catch(() => {
         setAlerts([]);
@@ -73,6 +91,10 @@ export default function ReviewerSlaPage() {
       .then(setConfig)
       .catch(() => undefined);
     loadAlerts();
+    // loadAlerts is redefined every render (it closes over `session`, which
+    // only ever grows more defined post-login, never meaningfully changes
+    // mid-session) — intentionally run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Poll interval is server-configurable (RIO-NFR-014) — the frontend never
@@ -83,6 +105,7 @@ export default function ReviewerSlaPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config]);
 
   const summary = useMemo(() => {
@@ -136,19 +159,20 @@ export default function ReviewerSlaPage() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-28">{t("typeColumn")}</TableHead>
                     <TableHead className="w-[26%]">{t("studyColumn")}</TableHead>
                     <TableHead className="w-[26%]">{t("needColumn")}</TableHead>
-                    <TableHead className="w-36">{t("createdColumn")}</TableHead>
-                    <TableHead className="w-36">{t("dueColumn")}</TableHead>
-                    <TableHead className="w-32">{t("statusColumn")}</TableHead>
-                    <TableHead className="w-28">{t("actionColumn")}</TableHead>
+                    <TableHead className="w-40">{t("createdColumn")}</TableHead>
+                    <TableHead className="w-40">{t("dueColumn")}</TableHead>
+                    <TableHead className="w-28">{t("statusColumn")}</TableHead>
+                    <TableHead className="w-32">{t("actionColumn")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {alerts === null ? (
                     Array.from({ length: 3 }).map((_, index) => (
                       <TableRow key={index}>
-                        {Array.from({ length: 6 }).map((__, cell) => (
+                        {Array.from({ length: 7 }).map((__, cell) => (
                           <TableCell key={cell} className="py-4">
                             <div className="bg-muted h-4 w-24 rounded" />
                           </TableCell>
@@ -158,7 +182,7 @@ export default function ReviewerSlaPage() {
                   ) : alerts.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="text-muted-foreground h-32 text-center"
                       >
                         <div className="flex flex-col items-center gap-2.5">
@@ -171,20 +195,22 @@ export default function ReviewerSlaPage() {
                     </TableRow>
                   ) : (
                     alerts.map((alert) => (
-                      <TableRow key={alert.aiDecisionId}>
+                      <TableRow key={alert.id}>
+                        <TableCell className="py-4 align-top whitespace-nowrap">
+                          <Badge variant="outline" className="font-normal">
+                            {t(`type.${alert.type}`)}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
-                          <Link
-                            href={`/studies/${alert.studyId}`}
-                            className="hover:underline"
-                          >
+                          <Link href={alertHref(alert)} className="hover:underline">
                             {alert.studyTitle}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                        <TableCell className="text-muted-foreground max-w-0 py-4 align-top text-sm">
                           {alert.needStatement ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <p className="line-clamp-3 cursor-default break-words">
+                                <p className="cursor-default truncate">
                                   {alert.needStatement}
                                 </p>
                               </TooltipTrigger>
@@ -196,22 +222,20 @@ export default function ReviewerSlaPage() {
                             t("noNeedStatement")
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
                           {formatDate(alert.createdAt)}
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm">
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
                           {formatDate(alert.dueAt)}
                         </TableCell>
-                        <TableCell className="py-4 align-top">
+                        <TableCell className="py-4 align-top whitespace-nowrap">
                           <Badge variant={STATUS_VARIANT[alert.status]}>
                             {t(`status.${alert.status}`)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-4 align-top">
+                        <TableCell className="py-4 align-top whitespace-nowrap">
                           <Button asChild size="sm" variant="outline">
-                            <Link href={`/studies/${alert.studyId}`}>
-                              {t("reviewNow")}
-                            </Link>
+                            <Link href={alertHref(alert)}>{t("reviewNow")}</Link>
                           </Button>
                         </TableCell>
                       </TableRow>

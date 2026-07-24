@@ -6,7 +6,13 @@ import { apiClient } from "@/services/api/client";
 import { apiConfig } from "@/services/api/config";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
-import type { AuditEvent, RecordAuditEventInput } from "@/services/audit/audit.types";
+import type {
+  AuditEvent,
+  AuditExportFilters,
+  AuditListParams,
+  AuditListResult,
+  RecordAuditEventInput,
+} from "@/services/audit/audit.types";
 
 function requireCurrentUser() {
   const session = mockSession.read();
@@ -62,9 +68,21 @@ export const auditService = {
     return event;
   },
 
-  /** Read-only history for the current user's organisation, newest first. */
-  async list(): Promise<AuditEvent[]> {
-    return apiClient.get<AuditEvent[]>(endpoints.audit.list);
+  /**
+   * Read-only history for the current user's organisation, newest first.
+   * Filtering and pagination are the server's job — the log is unbounded and
+   * the endpoint caps a single page at 200 rows, so filtering a client-side
+   * array would only ever search the most recent page.
+   */
+  async list(params: AuditListParams = {}): Promise<AuditListResult> {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") search.set(key, String(value));
+    }
+    const qs = search.toString();
+    return apiClient.get<AuditListResult>(
+      qs ? `${endpoints.audit.list}?${qs}` : endpoints.audit.list,
+    );
   },
 
   /**
@@ -73,11 +91,17 @@ export const auditService = {
    * (JSON-only) the same way reportsService.download() does, and triggers
    * a real browser download from the response.
    */
-  async downloadCsv(): Promise<void> {
+  async downloadCsv(filters: AuditExportFilters = {}): Promise<void> {
     const url = new URL(
       endpoints.audit.export.replace(/^\//, ""),
       `${apiConfig.baseUrl}/`,
     );
+    // Mirrors the Audit Log page's own filters so the CSV contains exactly
+    // the rows the user is looking at — an export that quietly ignored the
+    // active filters would be worse than no export at all.
+    for (const [key, value] of Object.entries(filters)) {
+      if (value) url.searchParams.set(key, value);
+    }
     const response = await fetch(url, { credentials: "include" });
     if (!response.ok) {
       const payload = await response.json().catch(() => undefined);

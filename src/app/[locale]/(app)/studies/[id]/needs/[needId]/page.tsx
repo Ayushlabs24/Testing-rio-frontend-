@@ -1,0 +1,604 @@
+"use client";
+
+import { Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { use, useEffect, useState, type ReactNode } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
+import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
+import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
+import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
+import { BackButton } from "@/components/common/back-button";
+import { GovernoratePicker } from "@/components/common/governorate-picker";
+import { LoadingButton } from "@/components/common/loading-button";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { PageContainer } from "@/components/common/page-container";
+import { PageHeader } from "@/components/common/page-header";
+import { PermissionGuard } from "@/components/layout/permission-guard";
+import { AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { usePermission } from "@/hooks/use-permission";
+import { useStudyGovernorates, useStudyCenters } from "@/hooks/use-study-geography";
+import { cn } from "@/lib/utils";
+import { useRouter } from "@/i18n/navigation";
+import { ApiError } from "@/services/api/types";
+import { evidenceService } from "@/services/evidence/evidence.service";
+import { needsService } from "@/services/needs/needs.service";
+import { NEED_EDITABLE_STATUSES, type Need } from "@/services/needs/needs.types";
+import type { Governorate, Center } from "@/services/geography/geography.types";
+import { studiesService } from "@/services/studies/studies.service";
+import type { Study } from "@/services/studies/studies.types";
+
+interface NeedFormValues {
+  title: string;
+  statement: string;
+  village: string[];
+  governorateIds: string[];
+  centerIds: string[];
+}
+
+function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
+
+function VillageChips({ villages }: { villages: string[] }) {
+  const t = useTranslations("app.studies.detail");
+  if (villages.length === 0) {
+    return <span className="text-muted-foreground text-sm">{t("noVillage")}</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {villages.map((village) => (
+        <Badge key={village} variant="secondary" className="gap-1">
+          <MapPin className="size-3" />
+          {village}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function FilledTextBlock({ children }: { children: ReactNode }) {
+  return (
+    <div className="border-border bg-muted/40 min-h-24 rounded-md border px-3.5 py-3 text-sm whitespace-pre-wrap">
+      {children}
+    </div>
+  );
+}
+
+function FilledField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-muted-foreground text-xs font-medium">{label}</p>
+      <div className="border-border bg-muted/40 rounded-md border px-3.5 py-2 text-sm">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type StepState = "not_started" | "in_progress" | "completed";
+
+const STEP_BADGE_CLASS: Record<StepState, string> = {
+  not_started: "bg-muted text-muted-foreground",
+  in_progress: "bg-badge-warning text-badge-warning-foreground",
+  completed: "bg-badge-success text-badge-success-foreground",
+};
+
+function WorkflowStep({
+  icon,
+  title,
+  state,
+  stateLabel,
+  action,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  state: StepState;
+  stateLabel: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border-border overflow-hidden rounded-xl border">
+      <div className="bg-primary/5 border-border flex items-center justify-between gap-3 border-b px-5 py-3.5">
+        <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+          <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+            {icon}
+          </span>
+          {title}
+        </h2>
+        <div className="flex items-center gap-2">
+          <Badge className={cn("border-transparent", STEP_BADGE_CLASS[state])}>
+            {stateLabel}
+          </Badge>
+          {action}
+        </div>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+/** Need statement/village/source — editable inline while still `draft`;
+ * every later stage has downstream artifacts an edit would invalidate, so
+ * it becomes a read-only summary instead. */
+function NeedDetailsCard({
+  need,
+  canEdit,
+  studyGovernorates,
+  studyCenters,
+  onSaved,
+  onDeleted,
+}: {
+  need: Need;
+  canEdit: boolean;
+  studyGovernorates: Governorate[];
+  studyCenters: Center[];
+  onSaved: (need: Need) => void;
+  onDeleted: () => void;
+}) {
+  const t = useTranslations("app.studies.need");
+  const tGeo = useTranslations("app.geography");
+  const tSource = useTranslations("app.studies.source");
+  const tDelete = useTranslations("app.studies.need.delete");
+  const tValidation = useTranslations("app.studies.validation");
+  const [editing, setEditing] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const schema = z.object({
+    title: z
+      .string()
+      .trim()
+      .min(1, tValidation("titleRequired"))
+      .max(300, tValidation("titleTooLong")),
+    statement: z.string().trim().min(1, tValidation("needStatementRequired")),
+    village: z.array(z.string()),
+    governorateIds: z.array(z.string()),
+    centerIds: z.array(z.string()),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<NeedFormValues>({
+    resolver: zodResolver(schema),
+    values: {
+      title: need.title,
+      statement: need.statement,
+      village: need.village,
+      governorateIds: need.governorateIds,
+      centerIds: need.centerIds,
+    },
+  });
+
+  const village = useWatch({ control, name: "village" });
+  const governorateIds = useWatch({ control, name: "governorateIds" });
+  const centerIds = useWatch({ control, name: "centerIds" });
+  const centerOptions = studyCenters.filter((c) =>
+    governorateIds.includes(c.governorateId),
+  );
+
+  const submit = handleSubmit(async (values) => {
+    setSubmitError(null);
+    try {
+      const updated = await needsService.update(need.id, {
+        title: values.title,
+        statement: values.statement,
+        village: values.village,
+        governorateIds: values.governorateIds,
+        centerIds: values.centerIds,
+      });
+      onSaved(updated);
+      setEditing(false);
+    } catch (error) {
+      setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+    }
+  });
+
+  const locked = !NEED_EDITABLE_STATUSES.includes(need.status);
+
+  return (
+    <Card className="shadow-md">
+      <CardContent className="space-y-4 p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+            {need.title}
+          </h2>
+          <div className="flex items-center gap-2">
+            <NeedStatusBadge status={need.status} />
+            {canEdit && !locked && !editing ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil className="size-3.5" />
+                {t("editNeed")}
+              </Button>
+            ) : null}
+            {canEdit && !locked ? (
+              <DeleteNeedDialog
+                needId={need.id}
+                onDeleted={onDeleted}
+                trigger={
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive gap-1.5"
+                    >
+                      <Trash2 className="size-3.5" />
+                      {tDelete("action")}
+                    </Button>
+                  </AlertDialogTrigger>
+                }
+              />
+            ) : null}
+          </div>
+        </div>
+
+        {locked ? (
+          <div
+            role="status"
+            className="bg-muted text-muted-foreground flex items-start gap-2 rounded-md border p-3 text-sm"
+          >
+            <Lock className="mt-0.5 size-4 shrink-0" />
+            {/* One message per actual status — "reviewed" is only true once
+             * a reviewer has actually approved (reviewer_approved or later);
+             * evidence_submitted/ai_classified are locked too but for a
+             * different, still-in-progress reason, so they need their own
+             * wording rather than a blanket "reviewed" claim. */}
+            <span>{t(`lockedNotice.${need.status}`)}</span>
+          </div>
+        ) : null}
+
+        {editing ? (
+          <form onSubmit={submit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="title">{t("titleLabel")}</Label>
+              <Input id="title" {...register("title")} />
+              {errors.title ? (
+                <p className="text-destructive text-sm">{errors.title.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="statement">{t("statementLabel")}</Label>
+              <textarea
+                id="statement"
+                rows={5}
+                className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                {...register("statement")}
+              />
+              {errors.statement ? (
+                <p className="text-destructive text-sm">{errors.statement.message}</p>
+              ) : null}
+            </div>
+
+            {/* Governorates/Centers scoped to the Study's own selection,
+                side by side; Village (free text) comes after Center. */}
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{tGeo("governorateLabel")}</Label>
+                <MultiSelect
+                  options={studyGovernorates.map((g) => ({ value: g.id, label: g.name }))}
+                  values={governorateIds}
+                  onChange={(next) =>
+                    setValue("governorateIds", next, { shouldValidate: true })
+                  }
+                  placeholder={tGeo("governoratePlaceholder")}
+                  searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+                  emptyText={tGeo("governorateEmpty")}
+                  removeAriaLabel={(governorate) =>
+                    tGeo("removeGovernorateSelection", { governorate })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{tGeo("centerLabel")}</Label>
+                <MultiSelect
+                  options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
+                  values={centerIds}
+                  onChange={(next) =>
+                    setValue("centerIds", next, { shouldValidate: true })
+                  }
+                  placeholder={
+                    governorateIds.length > 0
+                      ? tGeo("centerPlaceholder")
+                      : tGeo("selectGovernorateFirst")
+                  }
+                  searchPlaceholder={tGeo("centerSearchPlaceholder")}
+                  emptyText={tGeo("centerEmpty")}
+                  removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
+                  disabled={governorateIds.length === 0}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="village">{t("villageLabel")}</Label>
+              <GovernoratePicker
+                values={village ?? []}
+                options={[]}
+                onChange={(next) => setValue("village", next, { shouldValidate: true })}
+              />
+              {errors.village ? (
+                <p className="text-destructive text-sm">{errors.village.message}</p>
+              ) : null}
+            </div>
+
+            {submitError ? (
+              <p className="text-destructive text-sm">{submitError}</p>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <LoadingButton
+                type="submit"
+                isLoading={isSubmitting}
+                text={isSubmitting ? t("saving") : t("save")}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditing(false)}
+                disabled={isSubmitting}
+              >
+                {t("cancel")}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("statementLabel")}
+              </p>
+              <FilledTextBlock>{need.statement}</FilledTextBlock>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FilledField label={tGeo("governorateLabel")}>
+                {need.governorateIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {need.governorateIds.map((id) => (
+                      <Badge key={id} variant="secondary">
+                        {studyGovernorates.find((g) => g.id === id)?.name ?? id}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </FilledField>
+              <FilledField label={tGeo("centerLabel")}>
+                {need.centerIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {need.centerIds.map((id) => (
+                      <Badge key={id} variant="secondary">
+                        {studyCenters.find((c) => c.id === id)?.name ?? id}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </FilledField>
+              <FilledField label={t("villageLabel")}>
+                <VillageChips villages={need.village} />
+              </FilledField>
+              <FilledField label={t("sourceLabel")}>{tSource(need.source)}</FilledField>
+              <FilledField label={t("enteredByLabel")}>
+                {need.createdByName ?? t("enteredByUnknown")}
+              </FilledField>
+              <FilledField label={t("captureDateLabel")}>
+                {formatDateTime(need.createdAt)}
+              </FilledField>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function NeedWorkspacePage({
+  params,
+}: {
+  params: Promise<{ id: string; needId: string }>;
+}) {
+  const { id: studyId, needId } = use(params);
+  const t = useTranslations("app.studies.detail");
+  const router = useRouter();
+  const canEdit = usePermission("dataCollection", "write");
+  const canViewEvidence = usePermission("dataCollection", "read");
+
+  const [need, setNeed] = useState<Need | null>(null);
+  const [study, setStudy] = useState<Study | null>(null);
+  // Distinct from `study` itself — a failed fetch must still let the page
+  // render (with governorates/centers falling back to empty) instead of
+  // leaving the skeleton up forever waiting for a `study` that never arrives.
+  const [studyLoadFailed, setStudyLoadFailed] = useState(false);
+  const studyGovernorates = useStudyGovernorates(study);
+  const studyCenters = useStudyCenters(study);
+  const [evidenceCount, setEvidenceCount] = useState(0);
+  const [notFound, setNotFound] = useState(false);
+  // One-time notice for the Create Need form's best-effort evidence upload
+  // (see studies/[id]/needs/new/page.tsx) — a failed upload there never
+  // blocks navigating here, so it's surfaced here instead of being lost.
+  // Read via a lazy initializer (not an effect) since this only needs to
+  // happen once, synchronously, at mount — needId is already known by then.
+  const [failedEvidenceNames] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    const key = `need-evidence-upload-failed:${needId}`;
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return [];
+    sessionStorage.removeItem(key);
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  });
+
+  const refreshNeed = () => {
+    needsService
+      .getById(needId)
+      .then(setNeed)
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 404) setNotFound(true);
+      });
+  };
+
+  useEffect(() => {
+    refreshNeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needId]);
+
+  useEffect(() => {
+    studiesService
+      .getById(studyId)
+      .then(setStudy)
+      .catch(() => setStudyLoadFailed(true));
+  }, [studyId]);
+
+  useEffect(() => {
+    evidenceService
+      .listByNeed(needId)
+      .then((list) => setEvidenceCount(list.length))
+      .catch(() => undefined);
+  }, [needId]);
+
+  if (notFound) {
+    return (
+      <PermissionGuard module="dataCollection" action="read">
+        <PageContainer>
+          <div className="mb-6 flex justify-start">
+            <BackButton href={`/studies/${studyId}`} label={t("backToList")} />
+          </div>
+          <PageHeader title={t("needNotFound")} />
+        </PageContainer>
+      </PermissionGuard>
+    );
+  }
+
+  if (need === null || (study === null && !studyLoadFailed)) {
+    // Wait for both before rendering real content — Need and Study/
+    // Governorates/Centers load independently, and rendering as soon as
+    // just `need` arrived would flash the Governorate/Center chips empty
+    // (still resolving from `study`) before they populate a beat later.
+    return (
+      <PermissionGuard module="dataCollection" action="read">
+        <PageContainer>
+          <div className="space-y-4">
+            <div className="bg-muted h-8 w-64 rounded" />
+            <div className="bg-muted h-40 w-full rounded" />
+          </div>
+        </PageContainer>
+      </PermissionGuard>
+    );
+  }
+
+  const evidenceState: StepState =
+    evidenceCount === 0
+      ? "not_started"
+      : NEED_EDITABLE_STATUSES.includes(need.status)
+        ? "in_progress"
+        : "completed";
+
+  return (
+    <PermissionGuard module="dataCollection" action="read">
+      <PageContainer>
+        <div className="mb-6 flex justify-start">
+          <BackButton href={`/studies/${studyId}`} label={t("backToStudy")} />
+        </div>
+        <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
+          {t("needEyebrow")}
+        </p>
+        <PageHeader title={need.title} />
+
+        {failedEvidenceNames.length > 0 ? (
+          <div
+            role="alert"
+            className="border-destructive/40 bg-destructive/5 mt-4 flex items-start gap-2.5 rounded-md border p-3.5"
+          >
+            <div className="space-y-1">
+              <p className="text-destructive text-sm font-medium">
+                {t("evidenceUploadFailedTitle")}
+              </p>
+              <p className="text-foreground text-sm">
+                {t("evidenceUploadFailedNames", {
+                  names: failedEvidenceNames.join(", "),
+                })}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-6 space-y-6">
+          <NeedDetailsCard
+            need={need}
+            canEdit={canEdit}
+            studyGovernorates={studyGovernorates}
+            studyCenters={studyCenters}
+            onSaved={setNeed}
+            onDeleted={() => router.push(`/studies/${studyId}`)}
+          />
+
+          {canViewEvidence ? (
+            <WorkflowStep
+              icon={<UploadCloud className="size-3.5" />}
+              title={t("evidenceHeading")}
+              state={evidenceState}
+              stateLabel={t(`stepState.${evidenceState}`)}
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() =>
+                    router.push(`/studies/${studyId}/needs/${needId}/evidence`)
+                  }
+                >
+                  <UploadCloud className="size-3.5" />
+                  {t("manageEvidence")}
+                </Button>
+              }
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-full text-sm font-semibold",
+                    evidenceCount > 0
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {evidenceCount}
+                </span>
+                <p className="text-foreground text-sm font-medium">
+                  {t("evidenceCount", { count: evidenceCount })}
+                </p>
+              </div>
+            </WorkflowStep>
+          ) : null}
+
+          <AiClassificationSection need={need} onNeedUpdated={setNeed} />
+        </div>
+      </PageContainer>
+    </PermissionGuard>
+  );
+}

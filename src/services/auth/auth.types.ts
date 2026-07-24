@@ -1,4 +1,3 @@
-import type { Sector } from "@/config/sectors";
 import type { ModulePermission } from "@/types/permissions";
 
 export interface AuthUser {
@@ -23,8 +22,13 @@ export interface AuthOrganization {
   logoUrl: string | null;
   region: string[];
   email: string;
-  sector: Sector | null;
+  /** A live Methodology Configuration domain name (e.g. "Health"), or
+   * "other" (paired with `purpose` for free text) — never a fixed enum. */
+  sector: string | null;
   villages: string[];
+  regionId: string | null;
+  governorateIds: string[];
+  centerIds: string[];
   isActive: boolean;
   createdAt: string;
 }
@@ -88,6 +92,12 @@ export interface SignupPayload {
   purpose?: string;
   registrationNumber: string;
   email: string;
+  /** KSA Geographic Reference hierarchy — mandatory at signup so the org's
+   * scope is configured from the start (still editable later via
+   * Settings > Organization). */
+  regionId: string;
+  governorateIds: string[];
+  centerIds: string[];
 }
 
 /**

@@ -21,7 +21,9 @@ import type { PermissionModule } from "@/types/permissions";
  * `approvals` table, share ↔ the `sharing_requests` flow); `delete` is
  * included so destructive removals are never silently lost. `login`/
  * `logout` are recorded server-side on every authentication event (see
- * the backend's AuthService.login()/logout()).
+ * the backend's AuthService.login()/logout()). `consent` is RIO-FR-Add-02's
+ * data-sharing consent acceptance — its own event, not folded into `edit`,
+ * so it's independently auditable/reportable.
  */
 export const AUDIT_ACTIONS = [
   "create",
@@ -31,6 +33,7 @@ export const AUDIT_ACTIONS = [
   "delete",
   "login",
   "logout",
+  "consent",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -49,6 +52,7 @@ export const AUDIT_ENTITY_TYPES = [
   "need",
   "ai_decision",
   "survey",
+  "survey_response",
   "evidence",
   "report",
   "sharing_request",
@@ -68,6 +72,7 @@ export const AUDIT_ENTITY_MODULE: Record<AuditEntityType, PermissionModule> = {
   need: "dataCollection",
   ai_decision: "aiReview",
   survey: "studySurvey",
+  survey_response: "studySurvey",
   evidence: "dataCollection",
   report: "reportsDashboards",
   sharing_request: "archiveSharingAudit",

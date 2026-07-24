@@ -211,7 +211,9 @@ export const roles: Role[] = [
       // once a study's classification/review work is done.
       perm("reportsDashboards", READ_ONLY),
       perm("archiveSharingAudit", READ_ONLY),
-      perm("surveyBuilder"),
+      // Survey Approval workflow: reviews and decides (approve/reject/
+      // publish), never a co-author — no write/create on survey content.
+      perm("surveyBuilder", { read: true, approve: true }),
     ],
   },
   {

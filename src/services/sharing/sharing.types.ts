@@ -14,11 +14,17 @@ export interface SharingRequest {
   decidedBy: string | null;
   decidedAt: string | null;
   note: string | null;
+  decisionNote: string | null;
 }
 
 export interface CreateSharingRequestPayload {
   ownerOrgId: string;
   studyId: string;
+  /** "Purpose" in the UI — required. */
+  note: string;
+}
+
+export interface DecideSharingRequestPayload {
   note?: string;
 }
 

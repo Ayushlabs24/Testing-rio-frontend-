@@ -5,6 +5,7 @@ import type {
   CreateSubDomainPayload,
   Domain,
   DomainWithSubDomains,
+  PublicDomainOption,
   SubDomain,
   UpdateDomainPayload,
   UpdateSubDomainPayload,
@@ -16,6 +17,12 @@ import type {
  * restricted server-side to ngo_admin (methodologyQuestionBank write).
  */
 export const domainsService = {
+  /** Active domain names only — reachable pre-login, backs the sector
+   * dropdown on the public signup form. Use `list()` instead once signed in. */
+  async listPublic(): Promise<PublicDomainOption[]> {
+    return apiClient.get<PublicDomainOption[]>(endpoints.domains.public);
+  },
+
   async list(): Promise<Domain[]> {
     return apiClient.get<Domain[]>(endpoints.domains.list);
   },

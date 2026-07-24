@@ -1,18 +1,8 @@
-/** Mirrors the backend's `StudyStatus` enum exactly (see the backend's studies.types.ts). */
-export const STUDY_STATUSES = [
-  "draft",
-  "need_captured",
-  "evidence_submitted",
-  "ai_classified",
-  "human_reviewed",
-] as const;
-export type StudyStatus = (typeof STUDY_STATUSES)[number];
-
 /**
- * Status is workflow-driven (capturing a Need, uploading Evidence, running
- * AI Classification, human review all advance it server-side) — a user can
- * only ever rename the title directly; everything else about the lifecycle
- * moves forward through those other screens, never a free-form edit.
+ * A Study is a pure container — no status/domain/subDomain of its own. Each
+ * Need under it runs its own independent lifecycle (see needs.types.ts's
+ * NeedStatus) — a Study stays open for new Needs regardless of how far
+ * along its existing ones are.
  *
  * `villages` is the set the study concerns, chosen at create. A Need carries
  * its own `village` list (see `needs.types.ts`) which starts from the Study's
@@ -22,11 +12,18 @@ export type StudyStatus = (typeof STUDY_STATUSES)[number];
 export interface Study {
   id: string;
   title: string;
-  /** Set only once a human approves an AI Classification decision on this Study's Need. */
-  domain?: string | null;
-  subDomain?: string | null;
   villages: string[];
-  status: StudyStatus;
+  // Mandatory multi-select subsets of the owning Organization's own
+  // selected Governorates/Centers. No Region field here — it's derived live
+  // from the owning Organization's own single region.
+  governorateIds: string[];
+  centerIds: string[];
+  // Optional link to the real, status-gated MethodologyVersion master data
+  // — must be PUBLISHED when set, settable at creation or later.
+  methodologyVersionId: string | null;
+  // Sequential per-org counter (1, 2, 3... across every Study the org has
+  // ever created) — server-assigned at creation, never client-writable.
+  cycleNumber: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +32,7 @@ export interface Study {
 /** `GET /studies/{id}` only — the list endpoint doesn't compute this per row. */
 export interface StudyDetail extends Study {
   evidenceCount: number;
+  needCount: number;
 }
 
 /**
@@ -48,37 +46,24 @@ export type StudySummary = Study;
 export interface CreateStudyPayload {
   title: string;
   villages?: string[];
+  governorateIds: string[];
+  centerIds: string[];
+  methodologyVersionId?: string | null;
 }
 
-/**
- * `domain`/`subDomain` are never client-writable — they're set only once a
- * human approves an AI Classification decision (see
- * AiDecisionsService.review on the backend).
- */
 export interface UpdateStudyPayload {
   title?: string;
   villages?: string[];
+  governorateIds?: string[];
+  centerIds?: string[];
+  methodologyVersionId?: string | null;
 }
 
 export interface ListStudiesParams {
   limit?: number;
   offset?: number;
-  status?: StudyStatus;
   search?: string;
 }
-
-/**
- * Business rule: a study can be deleted up through
- * evidence_submitted — once AI Classification or Human Review has acted on
- * it, other people rely on it and it can no longer be deleted (the backend
- * enforces this with a 409 STUDY_NOT_DELETABLE; this list is only used to
- * decide whether to show the delete action at all).
- */
-export const DELETABLE_STUDY_STATUSES: readonly StudyStatus[] = [
-  "draft",
-  "need_captured",
-  "evidence_submitted",
-];
 
 /** Dashboard counters. Still mock-backed — no stats endpoint exists yet. */
 export interface PlatformStudyStats {

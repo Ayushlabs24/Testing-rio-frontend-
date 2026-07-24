@@ -50,6 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession: setSessionState,
       logout: async () => {
         await authService.logout();
+        // The backend clears rio_session/rio_csrf itself (see
+        // AuthController#logout), but per-user client-side caches (reviewer
+        // SLA / sharing "seen alert" ids — see use-reviewer-sla-badge.ts,
+        // use-sharing-notifications.ts) live in localStorage and are never
+        // otherwise cleared, so they'd persist into a next session in the
+        // same browser (e.g. a different account signing in right after).
+        if (typeof window !== "undefined") {
+          window.localStorage.clear();
+          window.sessionStorage.clear();
+        }
         setSessionState(null);
       },
     }),

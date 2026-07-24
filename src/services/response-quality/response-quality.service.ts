@@ -6,35 +6,35 @@ import type {
 } from "@/services/response-quality/response-quality.types";
 
 export const responseQualityService = {
-  async assess(studyId: string, surveyLinkId?: string): Promise<ResponseQualityResult[]> {
+  async assess(needId: string, surveyLinkId?: string): Promise<ResponseQualityResult[]> {
     return apiClient.post<ResponseQualityResult[]>(
-      endpoints.responseQuality.assess(studyId),
+      endpoints.responseQuality.assess(needId),
       undefined,
       {
         params: { surveyLinkId },
       },
     );
   },
-  async list(studyId: string, surveyLinkId?: string): Promise<ResponseQualityResult[]> {
+  async list(needId: string, surveyLinkId?: string): Promise<ResponseQualityResult[]> {
     return apiClient.get<ResponseQualityResult[]>(
-      endpoints.responseQuality.list(studyId),
+      endpoints.responseQuality.list(needId),
       {
         params: { surveyLinkId },
       },
     );
   },
-  async generateSummary(studyId: string, surveyLinkId?: string): Promise<AiSummary> {
+  async generateSummary(needId: string, surveyLinkId?: string): Promise<AiSummary> {
     return apiClient.post<AiSummary>(
-      endpoints.responseQuality.generateSummary(studyId),
+      endpoints.responseQuality.generateSummary(needId),
       undefined,
       {
         params: { surveyLinkId },
       },
     );
   },
-  async getSummary(studyId: string, surveyLinkId?: string): Promise<AiSummary | null> {
+  async getSummary(needId: string, surveyLinkId?: string): Promise<AiSummary | null> {
     return apiClient.get<AiSummary | null>(
-      endpoints.responseQuality.getSummary(studyId),
+      endpoints.responseQuality.getSummary(needId),
       {
         params: { surveyLinkId },
       },

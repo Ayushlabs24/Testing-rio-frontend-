@@ -43,6 +43,7 @@ export function Combobox({
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const listRef = React.useRef<HTMLDivElement>(null);
 
   const selected = items.find((item) => item.value === value);
   const filtered = onQueryChange
@@ -92,7 +93,20 @@ export function Combobox({
             className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
           />
         </div>
-        <div className="max-h-64 overflow-y-auto p-1">
+        <div
+          ref={listRef}
+          className="max-h-64 overflow-y-auto p-1"
+          // Radix's Dialog scroll-lock (react-remove-scroll) can swallow
+          // wheel events over this list when the Combobox is opened from
+          // inside a Dialog, since the popover's content is portaled
+          // outside the Dialog's own scroll-allowed region — the list looks
+          // scrollable but the mouse wheel does nothing. Scrolling it
+          // directly here works regardless of what's intercepting the
+          // native wheel-to-scroll behavior.
+          onWheel={(event) => {
+            if (listRef.current) listRef.current.scrollTop += event.deltaY;
+          }}
+        >
           {loading ? (
             <p className="text-muted-foreground px-2.5 py-4 text-center text-sm">
               {searchPlaceholder}

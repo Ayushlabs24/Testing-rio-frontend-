@@ -3,8 +3,8 @@ import { endpoints } from "@/services/api/endpoints";
 import type { Evidence } from "@/services/evidence/evidence.types";
 
 export const evidenceService = {
-  async listByStudy(studyId: string): Promise<Evidence[]> {
-    return apiClient.get<Evidence[]>(endpoints.evidence.forStudy(studyId));
+  async listByNeed(needId: string): Promise<Evidence[]> {
+    return apiClient.get<Evidence[]>(endpoints.evidence.forNeed(needId));
   },
 
   /**
@@ -13,14 +13,14 @@ export const evidenceService = {
    * progress/retry lifecycle in the UI instead of an all-or-nothing batch.
    */
   async upload(
-    studyId: string,
+    needId: string,
     file: File,
     options?: { onProgress?: (percent: number) => void; signal?: AbortSignal },
   ): Promise<Evidence> {
     const formData = new FormData();
     formData.append("files", file);
     const created = await apiClient.uploadForm<Evidence[]>(
-      endpoints.evidence.forStudy(studyId),
+      endpoints.evidence.forNeed(needId),
       formData,
       options,
     );
@@ -33,7 +33,7 @@ export const evidenceService = {
 
   // A distinct step from uploading — AI Classification only
   // becomes eligible once evidence has been explicitly submitted.
-  async submit(studyId: string): Promise<void> {
-    await apiClient.post(endpoints.evidence.submit(studyId));
+  async submit(needId: string): Promise<void> {
+    await apiClient.post(endpoints.evidence.submit(needId));
   },
 };

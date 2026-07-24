@@ -1,4 +1,3 @@
-import { toSector } from "@/config/sectors";
 import { roles } from "@/mocks/data/roles";
 import { findUserByEmail, resolveContext, type AuthedContext } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
@@ -42,6 +41,9 @@ interface ApiSessionView {
     email: string | null;
     sector: string | null;
     villages: string[];
+    regionId: string | null;
+    governorateIds: string[];
+    centerIds: string[];
     isActive: boolean;
     createdAt: string;
   };
@@ -85,6 +87,10 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
       email: context.organization.email,
       sector: context.organization.sector,
       villages: context.organization.villages,
+      // Mock accounts don't model the KSA geography link.
+      regionId: null,
+      governorateIds: [],
+      centerIds: [],
       isActive: context.organization.isActive,
       createdAt: context.organization.createdAt,
     },
@@ -139,8 +145,11 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
       logoUrl: view.organization.logoUrl,
       region: view.organization.region,
       email: view.organization.email ?? "",
-      sector: toSector(view.organization.sector),
+      sector: view.organization.sector,
       villages: view.organization.villages,
+      regionId: view.organization.regionId,
+      governorateIds: view.organization.governorateIds,
+      centerIds: view.organization.centerIds,
       isActive: view.organization.isActive,
       createdAt: view.organization.createdAt,
     },

@@ -1,12 +1,13 @@
 "use client";
 
-import { BarChart3, Download, Plus } from "lucide-react";
+import { BarChart3, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { ReportActions } from "@/components/features/reports/report-actions";
+import { ReportStatusBadge } from "@/components/features/reports/report-status-badge";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
@@ -18,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -36,10 +38,11 @@ import {
 import { Link } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
+import { needsService } from "@/services/needs/needs.service";
 import { reportsService } from "@/services/reports/reports.service";
 import {
+  GENERATABLE_REPORT_TYPES,
   REPORT_TYPE_META,
-  REPORT_TYPES,
   type Report,
   type ReportStatus,
   type ReportTypeCode,
@@ -49,15 +52,6 @@ import type { StudySummary } from "@/services/studies/studies.types";
 
 const ALL = "all";
 
-const STATUS_VARIANT: Record<
-  ReportStatus,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  draft: "outline",
-  approved: "default",
-  rejected: "destructive",
-};
-
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
@@ -65,12 +59,12 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-const REPORT_TYPE_ITEMS = REPORT_TYPES.map((code) => ({
+const REPORT_TYPE_ITEMS = GENERATABLE_REPORT_TYPES.map((code) => ({
   value: code,
   label: `${code} — ${REPORT_TYPE_META[code].name}`,
 }));
 
-/** Report type (searchable — 13 types) + (if needed) study, in a modal. */
+/** Report type (searchable) + study + (for RPT14) village, in a modal. */
 function GenerateReportDialog({
   open,
   onOpenChange,
@@ -83,18 +77,23 @@ function GenerateReportDialog({
   const t = useTranslations("app.reports.create");
   const [reportType, setReportType] = useState<ReportTypeCode | null>(null);
   const [studyId, setStudyId] = useState<string>("");
+  const [villageId, setVillageId] = useState<string>("");
+  const [villages, setVillages] = useState<string[]>([]);
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const requiresStudy =
     reportType !== null && REPORT_TYPE_META[reportType].requiresStudyId;
+  const requiresVillage = reportType === "RPT14";
 
   function handleOpenChange(next: boolean) {
     onOpenChange(next);
     if (!next) {
       setReportType(null);
       setStudyId("");
+      setVillageId("");
+      setVillages([]);
       setError(null);
     }
   }
@@ -107,14 +106,43 @@ function GenerateReportDialog({
         .catch(() => setStudies([]));
   }, [requiresStudy]);
 
+  // Village dropdown is populated from the selected study's needs (each Need
+  // carries its own village list), falling back to the study's own village set.
+  // (The list is cleared on dialog close and when the study changes, so no
+  // synchronous reset is needed here — that would trigger cascading renders.)
+  useEffect(() => {
+    if (!requiresVillage || !studyId) return;
+    let cancelled = false;
+    const fallback = () => studies.find((s) => s.id === studyId)?.villages ?? [];
+    needsService
+      .listByStudy(studyId)
+      .then((needs) => {
+        if (cancelled) return;
+        const fromNeeds = Array.from(
+          new Set(needs.flatMap((n) => n.village ?? [])),
+        ).sort();
+        setVillages(fromNeeds.length ? fromNeeds : fallback());
+      })
+      .catch(() => {
+        if (!cancelled) setVillages(fallback());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requiresVillage, studyId, studies]);
+
+  const incomplete =
+    !reportType || (requiresStudy && !studyId) || (requiresVillage && !villageId.trim());
+
   async function submit() {
-    if (!reportType || (requiresStudy && !studyId)) return;
+    if (incomplete) return;
     setGenerating(true);
     setError(null);
     try {
       await reportsService.create({
-        reportType,
+        reportType: reportType!,
         studyId: requiresStudy ? studyId : undefined,
+        filters: requiresVillage ? { villageId: villageId.trim() } : undefined,
       });
       handleOpenChange(false);
       onGenerated();
@@ -147,7 +175,14 @@ function GenerateReportDialog({
           {requiresStudy ? (
             <div className="space-y-2">
               <Label>{t("studyLabel")}</Label>
-              <Select value={studyId} onValueChange={setStudyId}>
+              <Select
+                value={studyId}
+                onValueChange={(v) => {
+                  setStudyId(v);
+                  setVillageId("");
+                  setVillages([]);
+                }}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={t("studyPlaceholder")} />
                 </SelectTrigger>
@@ -161,16 +196,37 @@ function GenerateReportDialog({
               </Select>
             </div>
           ) : null}
+          {requiresVillage ? (
+            <div className="space-y-2">
+              <Label>{t("villageLabel")}</Label>
+              <Select
+                value={villageId}
+                onValueChange={setVillageId}
+                disabled={!studyId || villages.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("villagePlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {villages.map((village) => (
+                    <SelectItem key={village} value={village}>
+                      {village}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {studyId && villages.length === 0 ? (
+                <p className="text-muted-foreground text-xs">{t("villageEmpty")}</p>
+              ) : null}
+            </div>
+          ) : null}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t("cancel")}
           </Button>
-          <Button
-            onClick={submit}
-            disabled={generating || !reportType || (requiresStudy && !studyId)}
-          >
+          <Button onClick={submit} disabled={generating || incomplete}>
             {generating ? t("generating") : t("generate")}
           </Button>
         </DialogFooter>
@@ -182,8 +238,6 @@ function GenerateReportDialog({
 export default function ReportsPage() {
   const t = useTranslations("app.reports");
   const canCreate = usePermission("reportsDashboards", "create");
-  const canApprove = usePermission("reportsDashboards", "approve");
-  const canExport = usePermission("reportsDashboards", "export");
 
   const [generateOpen, setGenerateOpen] = useState(false);
   const [reports, setReports] = useState<Report[] | null>(null);
@@ -220,35 +274,6 @@ export default function ReportsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studyFilter, statusFilter]);
-
-  async function handleApprove(id: string) {
-    setActionError(null);
-    try {
-      await reportsService.approve(id);
-      load();
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : t("detail.reviewError"));
-    }
-  }
-
-  async function handleReject(id: string) {
-    setActionError(null);
-    try {
-      await reportsService.reject(id);
-      load();
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : t("detail.reviewError"));
-    }
-  }
-
-  async function handleExport(id: string, format: "pdf" | "excel") {
-    setActionError(null);
-    try {
-      await reportsService.download(id, format);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : t("detail.exportError"));
-    }
-  }
 
   return (
     <PermissionGuard module="reportsDashboards" action="read">
@@ -305,7 +330,8 @@ export default function ReportsPage() {
                 <SelectContent>
                   <SelectItem value={ALL}>{t("filterStatusAll")}</SelectItem>
                   <SelectItem value="draft">{t("status.draft")}</SelectItem>
-                  <SelectItem value="approved">{t("status.approved")}</SelectItem>
+                  <SelectItem value="released">{t("status.released")}</SelectItem>
+                  <SelectItem value="archived">{t("status.archived")}</SelectItem>
                   <SelectItem value="rejected">{t("status.rejected")}</SelectItem>
                 </SelectContent>
               </Select>
@@ -318,7 +344,7 @@ export default function ReportsPage() {
                   <TableHead className="w-24">{t("typeColumn")}</TableHead>
                   <TableHead className="w-28">{t("statusColumn")}</TableHead>
                   <TableHead className="w-44">{t("generatedColumn")}</TableHead>
-                  <TableHead className="w-72" />
+                  <TableHead className="w-80" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -327,7 +353,7 @@ export default function ReportsPage() {
                     <TableRow key={index}>
                       {Array.from({ length: 5 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
-                          <div className="bg-muted h-4 w-20 rounded" />
+                          <Skeleton className="h-4 w-20" />
                         </TableCell>
                       ))}
                     </TableRow>
@@ -354,9 +380,7 @@ export default function ReportsPage() {
                       </TableCell>
                       <TableCell className="text-sm">{report.reportType}</TableCell>
                       <TableCell>
-                        <Badge variant={STATUS_VARIANT[report.status]}>
-                          {t(`status.${report.status}`)}
-                        </Badge>
+                        <ReportStatusBadge status={report.status} />
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {formatDate(report.generatedAt)}
@@ -366,51 +390,11 @@ export default function ReportsPage() {
                           <Button asChild size="sm" variant="outline">
                             <Link href={`/reports/${report.id}`}>{t("view")}</Link>
                           </Button>
-                          {canApprove && report.status === "draft" ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleApprove(report.id)}
-                              >
-                                {t("approve")}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive"
-                                onClick={() => handleReject(report.id)}
-                              >
-                                {t("reject")}
-                              </Button>
-                            </>
-                          ) : null}
-                          {canExport &&
-                          report.status === "approved" &&
-                          report.exportFormats.includes("pdf") ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5"
-                              onClick={() => handleExport(report.id, "pdf")}
-                            >
-                              <Download className="size-3.5" />
-                              {t("exportPdf")}
-                            </Button>
-                          ) : null}
-                          {canExport &&
-                          report.status === "approved" &&
-                          report.exportFormats.includes("excel") ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5"
-                              onClick={() => handleExport(report.id, "excel")}
-                            >
-                              <Download className="size-3.5" />
-                              {t("exportExcel")}
-                            </Button>
-                          ) : null}
+                          <ReportActions
+                            report={report}
+                            onChanged={load}
+                            onError={(m) => setActionError(m || null)}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>

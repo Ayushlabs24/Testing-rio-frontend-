@@ -37,3 +37,11 @@ export interface UpdateMethodologyConfigPayload {
   priorityFactorWeights?: Array<{ key: string; weight: number }>;
   confidenceFlagSettings?: Partial<ConfidenceFlagSettings>;
 }
+
+/** TEMPORARY — see the MethodologyVersionOption model comment on the
+ * backend. Backs the Survey workflow's Methodology Version selector until
+ * the real source of versions is clarified. */
+export interface MethodologyVersionOption {
+  id: string;
+  version: string;
+}
