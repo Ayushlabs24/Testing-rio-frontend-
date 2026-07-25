@@ -1,9 +1,11 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
+  CreateOrganizationPayload,
   Organization,
   OrganizationSummary,
   UpdateOrganizationPayload,
+  UpdateOrganizationStatusPayload,
 } from "@/services/organizations/organizations.types";
 
 /** Shape returned by the real backend's /organizations* endpoints (see organizations.types.ts on the backend). */
@@ -26,6 +28,12 @@ interface ApiOrganization {
 
 interface ApiOrganizationSummary extends ApiOrganization {
   memberCount: number;
+  studyCount?: number;
+  surveyCount?: number;
+  reportCount?: number;
+  ngoAdminName?: string | null;
+  ngoAdminEmail?: string | null;
+  deactivationReason?: string | null;
 }
 
 /** The backend models email as nullable; the frontend treats "not set" as "". */
@@ -37,13 +45,18 @@ function toOrganization(api: ApiOrganization): Organization {
 }
 
 function toOrganizationSummary(api: ApiOrganizationSummary): OrganizationSummary {
-  return { ...toOrganization(api), memberCount: api.memberCount };
+  return {
+    ...toOrganization(api),
+    memberCount: api.memberCount,
+    studyCount: api.studyCount ?? 0,
+    surveyCount: api.surveyCount ?? 0,
+    reportCount: api.reportCount ?? 0,
+    ngoAdminName: api.ngoAdminName ?? null,
+    ngoAdminEmail: api.ngoAdminEmail ?? null,
+    deactivationReason: api.deactivationReason ?? null,
+  };
 }
 
-// listAll/getById are cross-entity, read-only (Center Supervisor viewing
-// organizations other than its own). No cross-org write path exists:
-// System Admin (the only role that ever had one) is disabled, and the
-// backend only exposes PATCH /organizations/current (the caller's own org).
 export const organizationsService = {
   async getCurrent(): Promise<Organization> {
     const api = await apiClient.get<ApiOrganization>(endpoints.organizations.current);
@@ -56,6 +69,25 @@ export const organizationsService = {
       payload,
     );
     return toOrganization(api);
+  },
+
+  async create(payload: CreateOrganizationPayload): Promise<Organization> {
+    const api = await apiClient.post<ApiOrganization>(
+      endpoints.organizations.create,
+      payload,
+    );
+    return toOrganization(api);
+  },
+
+  async updateStatus(
+    id: string,
+    payload: UpdateOrganizationStatusPayload,
+  ): Promise<OrganizationSummary> {
+    const api = await apiClient.patch<ApiOrganizationSummary>(
+      endpoints.organizations.status(id),
+      payload,
+    );
+    return toOrganizationSummary(api);
   },
 
   /** Cross-entity, read-only — every org, regardless of the caller's own. */

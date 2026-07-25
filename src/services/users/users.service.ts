@@ -2,23 +2,15 @@ import { organizationsService } from "@/services/organizations/organizations.ser
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
+  AssignNgoAdminPayload,
   CreateUserPayload,
   CreateUserResponse,
   OrgUser,
   PlatformUser,
   UpdateUserPayload,
+  UserStatus,
 } from "@/services/users/users.types";
 
-/**
- * All methods here call the real backend (see users.controller.ts).
- * `listAll` has no single "every user across every org" backend endpoint,
- * so it's built by combining the real `organizationsService.listAll()`
- * with a real per-org `listByOrganizationId()` call for each — the
- * platform-wide view Center Supervisor (the one remaining cross-entity,
- * read-only role) needs. There is no cross-org write path anymore: System
- * Admin (the only role that ever had one) is disabled, so create/edit/
- * delete always go through the entity-scoped methods below.
- */
 export const usersService = {
   async listByOrganization(): Promise<OrgUser[]> {
     return apiClient.get<OrgUser[]>(endpoints.users.list);
@@ -29,6 +21,74 @@ export const usersService = {
     return apiClient.get<OrgUser[]>(endpoints.users.list, {
       params: { organizationId },
     });
+  },
+
+  /** System Admin: list users for a specific organization via /organizations/:id/users */
+  async listForOrg(organizationId: string): Promise<OrgUser[]> {
+    return apiClient.get<OrgUser[]>(endpoints.organizations.usersForOrg(organizationId));
+  },
+
+  /** System Admin: fetch NGO Admins for a specific organization. */
+  async getNgoAdminsForOrg(organizationId: string): Promise<OrgUser[]> {
+    return apiClient.get<OrgUser[]>(
+      endpoints.organizations.ngoAdminsForOrg(organizationId),
+    );
+  },
+
+  /** System Admin: assign or change NGO Admin for an organization. */
+  async assignNgoAdmin(
+    organizationId: string,
+    payload: AssignNgoAdminPayload,
+  ): Promise<CreateUserResponse> {
+    return apiClient.post<CreateUserResponse>(
+      endpoints.organizations.assignNgoAdmin(organizationId),
+      payload,
+    );
+  },
+
+  /** System Admin: update a user's role in a specific organization. */
+  async updateRoleForOrg(
+    organizationId: string,
+    userId: string,
+    payload: { roleId: string; reason?: string },
+  ): Promise<OrgUser> {
+    return apiClient.patch<OrgUser>(
+      endpoints.organizations.updateUserRoleForOrg(organizationId, userId),
+      payload,
+    );
+  },
+
+  /** System Admin: update a user's status (active | disabled) in a specific organization. */
+  async updateStatusForOrg(
+    organizationId: string,
+    userId: string,
+    payload: { status: UserStatus; reason?: string },
+  ): Promise<OrgUser> {
+    return apiClient.patch<OrgUser>(
+      endpoints.organizations.updateUserStatusForOrg(organizationId, userId),
+      payload,
+    );
+  },
+
+  /** System Admin: resend invitation for a user in a specific organization. */
+  async resendInviteForOrg(
+    organizationId: string,
+    userId: string,
+  ): Promise<CreateUserResponse> {
+    return apiClient.post<CreateUserResponse>(
+      endpoints.organizations.resendInviteForOrg(organizationId, userId),
+    );
+  },
+
+  /** System Admin: create/invite user in a specific organization. */
+  async createForOrg(
+    organizationId: string,
+    payload: CreateUserPayload,
+  ): Promise<CreateUserResponse> {
+    return apiClient.post<CreateUserResponse>(
+      endpoints.organizations.usersForOrg(organizationId),
+      payload,
+    );
   },
 
   async create(payload: CreateUserPayload): Promise<CreateUserResponse> {

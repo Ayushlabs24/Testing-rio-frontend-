@@ -23,7 +23,18 @@ export const endpoints = {
   organizations: {
     current: "/organizations/current",
     list: "/organizations",
+    create: "/organizations",
     byId: (id: string) => `/organizations/${id}`,
+    status: (id: string) => `/organizations/${id}/status`,
+    usersForOrg: (id: string) => `/organizations/${id}/users`,
+    ngoAdminsForOrg: (id: string) => `/organizations/${id}/ngoadmins`,
+    assignNgoAdmin: (id: string) => `/organizations/${id}/ngoadmins/assign`,
+    updateUserRoleForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/role`,
+    updateUserStatusForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/status`,
+    resendInviteForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/resend-invite`,
   },
   geography: {
     regions: "/regions",

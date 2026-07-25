@@ -1,0 +1,757 @@
+"use client";
+
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  FileText,
+  Users2,
+  XCircle,
+  ClipboardCheck,
+  BarChart3,
+  ShieldCheck,
+  Clock,
+  UserCheck,
+  UserPlus,
+  Search,
+  Filter,
+  RefreshCw,
+  UserX,
+  Shield,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { use, useEffect, useState, useMemo, useCallback } from "react";
+import { PageContainer } from "@/components/common/page-container";
+import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
+import { Link } from "@/i18n/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { organizationsService } from "@/services/organizations/organizations.service";
+import type { OrganizationSummary } from "@/services/organizations/organizations.types";
+import { usersService } from "@/services/users/users.service";
+import type { OrgUser } from "@/services/users/users.types";
+import { DeactivateOrganizationDialog } from "../_components/deactivate-organization-dialog";
+import { ReactivateOrganizationDialog } from "../_components/reactivate-organization-dialog";
+import { AssignNgoAdminDialog } from "../_components/assign-ngo-admin-dialog";
+import { InviteUserDialog } from "../_components/invite-user-dialog";
+import { ChangeRoleDialog } from "../_components/change-role-dialog";
+import { ToggleUserStatusDialog } from "../_components/toggle-user-status-dialog";
+import { OrgStudiesTab } from "../_components/org-studies-tab";
+import { OrgSurveysTab } from "../_components/org-surveys-tab";
+import { OrgReportsTab } from "../_components/org-reports-tab";
+
+export default function SystemAdminOrganizationDetailPage({
+  params,
+}: {
+  params: Promise<{ organizationId: string }>;
+}) {
+  const { organizationId } = use(params);
+  const t = useTranslations("systemAdmin.detail");
+  const tOrgs = useTranslations("systemAdmin.organizations");
+  const tNgo = useTranslations("systemAdmin.ngoAdmin");
+  const tUsers = useTranslations("systemAdmin.users");
+
+  const [organization, setOrganization] = useState<OrganizationSummary | null>(null);
+  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Filters for Users Tab
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Dialog states
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
+  const [assignAdminDialogOpen, setAssignAdminDialogOpen] = useState(false);
+  const [inviteUserDialogOpen, setInviteUserDialogOpen] = useState(false);
+
+  const [changeRoleUser, setChangeRoleUser] = useState<OrgUser | null>(null);
+  const [toggleStatusUser, setToggleStatusUser] = useState<OrgUser | null>(null);
+  const [targetStatus, setTargetStatus] = useState<"active" | "disabled">("disabled");
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
+
+  const loadOrganizationData = useCallback(() => {
+    Promise.all([
+      organizationsService.getById(organizationId),
+      usersService.listForOrg(organizationId).catch(() => []),
+    ])
+      .then(([orgData, usersData]) => {
+        setOrganization(orgData);
+        setOrgUsers(usersData);
+        setLoading(false);
+      })
+      .catch(() => {
+        setOrganization(null);
+        setOrgUsers([]);
+        setLoading(false);
+      });
+  }, [organizationId]);
+
+  useEffect(() => {
+    loadOrganizationData();
+  }, [loadOrganizationData]);
+
+  // Unique roles for filter dropdown
+  const availableRoles = useMemo(() => {
+    const map = new Map<string, string>();
+    orgUsers.forEach((u) => map.set(u.role.key, u.role.name));
+    return Array.from(map.entries()).map(([key, name]) => ({ key, name }));
+  }, [orgUsers]);
+
+  // Filtered users list
+  const filteredUsers = useMemo(() => {
+    return orgUsers.filter((user) => {
+      const matchesSearch =
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesRole = roleFilter === "all" || user.role.key === roleFilter;
+      const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [orgUsers, searchQuery, roleFilter, statusFilter]);
+
+  const handleResendInvite = async (userId: string) => {
+    setResendingInviteId(userId);
+    try {
+      await usersService.resendInviteForOrg(organizationId, userId);
+      loadOrganizationData();
+    } catch {
+      // Handled cleanly
+    } finally {
+      setResendingInviteId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <CrossEntityGuard>
+        <PageContainer>
+          <div className="bg-muted h-32 w-full animate-pulse rounded-lg" />
+        </PageContainer>
+      </CrossEntityGuard>
+    );
+  }
+
+  if (!organization) {
+    return (
+      <CrossEntityGuard>
+        <PageContainer>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Building2 className="text-muted-foreground/40 size-12" />
+            <h2 className="mt-4 text-lg font-semibold">{tOrgs("noResults")}</h2>
+            <Button variant="outline" className="mt-4 gap-2" asChild>
+              <Link href="/system-admin/organizations">
+                <ArrowLeft className="size-4" />
+                {t("backToOrganizations")}
+              </Link>
+            </Button>
+          </div>
+        </PageContainer>
+      </CrossEntityGuard>
+    );
+  }
+
+  const currentNgoAdmin = orgUsers.find((u) => u.role.key === "ngo_admin") ?? null;
+  const ngoAdminName = currentNgoAdmin?.name ?? organization.ngoAdminName;
+  const ngoAdminEmail = currentNgoAdmin?.email ?? organization.ngoAdminEmail;
+  const hasNgoAdmin = !!(ngoAdminName || currentNgoAdmin);
+
+  return (
+    <CrossEntityGuard>
+      <PageContainer>
+        {/* Back Link */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground gap-1.5"
+            asChild
+          >
+            <Link href="/system-admin/organizations">
+              <ArrowLeft className="size-4" />
+              {t("backToOrganizations")}
+            </Link>
+          </Button>
+        </div>
+
+        {/* Organization Header */}
+        <div className="border-border bg-card mb-6 flex flex-col gap-4 rounded-lg border p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-foreground text-2xl font-bold">{organization.name}</h1>
+              <Badge
+                variant={organization.isActive ? "default" : "outline"}
+                className={
+                  organization.isActive
+                    ? "bg-badge-success text-badge-success-foreground border-transparent"
+                    : undefined
+                }
+              >
+                {tOrgs(organization.isActive ? "active" : "inactive")}
+              </Badge>
+            </div>
+            <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-xs">
+              <span>
+                {tOrgs("table.code")}:{" "}
+                <span className="font-mono font-medium">
+                  {organization.registrationNumber ?? "—"}
+                </span>
+              </span>
+              <span>•</span>
+              <span>
+                {tOrgs("table.region")}:{" "}
+                {organization.region.length > 0 ? organization.region.join(", ") : "—"}
+              </span>
+              <span>•</span>
+              <span>
+                {tOrgs("table.createdDate")}:{" "}
+                {new Date(organization.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            {organization.isActive ? (
+              <Button
+                variant="outline"
+                onClick={() => setDeactivateDialogOpen(true)}
+                className="gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+              >
+                <XCircle className="size-4" />
+                {t("overview.deactivateButton")}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => setReactivateDialogOpen(true)}
+                className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+              >
+                <CheckCircle2 className="size-4" />
+                {t("overview.reactivateButton")}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-muted/60 mb-6 flex h-auto flex-wrap gap-1 p-1">
+            <TabsTrigger value="overview">{t("tabs.overview")}</TabsTrigger>
+            <TabsTrigger value="users">{t("tabs.users")}</TabsTrigger>
+            <TabsTrigger value="studies">{t("tabs.studies")}</TabsTrigger>
+            <TabsTrigger value="surveys">{t("tabs.surveys")}</TabsTrigger>
+            <TabsTrigger value="reports">{t("tabs.reports")}</TabsTrigger>
+            <TabsTrigger value="archive">{t("tabs.archive")}</TabsTrigger>
+            <TabsTrigger value="auditHistory">{t("tabs.auditHistory")}</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {/* Information Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold">
+                    {t("overview.infoCardTitle")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div className="border-border/50 border-b pb-3">
+                    <p className="text-muted-foreground text-xs">
+                      {t("overview.contactEmail")}
+                    </p>
+                    <p className="text-foreground font-medium">
+                      {organization.email || "—"}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-1">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-md">
+                        <Users2 className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          {t("overview.userCount")}
+                        </p>
+                        <p className="text-foreground text-lg font-semibold">
+                          {organization.memberCount}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-md">
+                        <ClipboardCheck className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          {t("overview.studyCount")}
+                        </p>
+                        <p className="text-foreground text-lg font-semibold">
+                          {organization.studyCount ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-md">
+                        <BarChart3 className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          {t("overview.surveyCount")}
+                        </p>
+                        <p className="text-foreground text-lg font-semibold">
+                          {organization.surveyCount ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-md">
+                        <FileText className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          {t("overview.reportCount")}
+                        </p>
+                        <p className="text-foreground text-lg font-semibold">
+                          {organization.reportCount ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* NGO Administration Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-base font-semibold">
+                    {tNgo("cardTitle")}
+                  </CardTitle>
+                  <ShieldCheck className="text-primary size-4" />
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">
+                      {tNgo("currentAdmin")}
+                    </p>
+                    {hasNgoAdmin ? (
+                      <div className="mt-1">
+                        <p className="text-foreground font-semibold">{ngoAdminName}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {ngoAdminEmail ?? "—"}
+                        </p>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground mt-1">
+                        {tNgo("notAssigned")}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {currentNgoAdmin ? (
+                    <div className="border-border/50 grid grid-cols-2 gap-2 border-t pt-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">{tNgo("status")}:</span>
+                        <Badge variant="outline" className="ml-1.5 capitalize">
+                          {currentNgoAdmin.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {tNgo("assignedDate")}:
+                        </span>
+                        <span className="ml-1 font-mono">
+                          {new Date(currentNgoAdmin.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="border-border/50 border-t pt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setAssignAdminDialogOpen(true)}
+                      disabled={!organization.isActive}
+                      className="w-full gap-2"
+                    >
+                      <UserCheck className="size-4" />
+                      {hasNgoAdmin ? tNgo("changeButton") : tNgo("assignButton")}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Status Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold">
+                    {t("overview.statusCardTitle")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">
+                      {t("overview.currentStatus")}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge
+                        variant={organization.isActive ? "default" : "outline"}
+                        className={
+                          organization.isActive
+                            ? "bg-badge-success text-badge-success-foreground border-transparent"
+                            : undefined
+                        }
+                      >
+                        {tOrgs(organization.isActive ? "active" : "inactive")}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {!organization.isActive && organization.deactivationReason ? (
+                    <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-3 text-xs">
+                      <p className="font-semibold text-amber-900 dark:text-amber-200">
+                        {t("overview.deactivationReasonLabel")}
+                      </p>
+                      <p className="mt-1 text-amber-800 dark:text-amber-300">
+                        {organization.deactivationReason}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="border-border/50 border-t pt-4">
+                    {organization.isActive ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeactivateDialogOpen(true)}
+                        className="gap-2"
+                      >
+                        <XCircle className="size-4" />
+                        {t("overview.deactivateButton")}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setReactivateDialogOpen(true)}
+                        className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                      >
+                        <CheckCircle2 className="size-4" />
+                        {t("overview.reactivateButton")}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-base font-semibold">
+                    {tUsers("title")} ({orgUsers.length})
+                  </CardTitle>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setInviteUserDialogOpen(true)}
+                  disabled={!organization.isActive}
+                  className="gap-2"
+                >
+                  <UserPlus className="size-4" />
+                  {tUsers("inviteButton")}
+                </Button>
+              </CardHeader>
+
+              {/* Filters Bar */}
+              <div className="flex flex-col gap-3 px-6 pb-4 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
+                  <Input
+                    placeholder={tUsers("searchPlaceholder")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 text-xs"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-[160px] text-xs">
+                      <Filter className="text-muted-foreground mr-1.5 size-3.5" />
+                      <SelectValue placeholder={tUsers("filterRole")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{tUsers("allRoles")}</SelectItem>
+                      {availableRoles.map((r) => (
+                        <SelectItem key={r.key} value={r.key}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[150px] text-xs">
+                      <SelectValue placeholder={tUsers("filterStatus")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{tUsers("allStatuses")}</SelectItem>
+                      <SelectItem value="active">
+                        {tUsers("statusBadges.active")}
+                      </SelectItem>
+                      <SelectItem value="invited">
+                        {tUsers("statusBadges.invited")}
+                      </SelectItem>
+                      <SelectItem value="disabled">
+                        {tUsers("statusBadges.disabled")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* User Table */}
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{tUsers("columns.name")}</TableHead>
+                      <TableHead>{tUsers("columns.email")}</TableHead>
+                      <TableHead>{tUsers("columns.role")}</TableHead>
+                      <TableHead>{tUsers("columns.accountStatus")}</TableHead>
+                      <TableHead>{tUsers("columns.createdDate")}</TableHead>
+                      <TableHead className="text-right">
+                        {tUsers("columns.actions")}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="text-muted-foreground h-24 text-center"
+                        >
+                          No users matching filter criteria.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((user) => {
+                        const isNgoAdmin = user.role.key === "ngo_admin";
+                        const isDisabled = user.status === "disabled";
+
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className="text-foreground font-medium">
+                              <div className="flex items-center gap-2">
+                                <span>{user.name}</span>
+                                {isNgoAdmin ? (
+                                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                                    NGO Admin
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {user.email}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{user.role.name}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  isDisabled
+                                    ? "destructive"
+                                    : user.status === "active"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="capitalize"
+                              >
+                                {tUsers(`statusBadges.${user.status}` as never)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground font-mono text-xs">
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Change Role */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setChangeRoleUser(user)}
+                                  disabled={!organization.isActive}
+                                  className="size-8 p-0"
+                                  title={tUsers("actions.changeRole")}
+                                >
+                                  <Shield className="text-muted-foreground size-3.5" />
+                                </Button>
+
+                                {/* Resend Invite (if status === 'invited') */}
+                                {user.status === "invited" ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleResendInvite(user.id)}
+                                    disabled={
+                                      resendingInviteId === user.id ||
+                                      !organization.isActive
+                                    }
+                                    className="size-8 p-0"
+                                    title={tUsers("actions.resendInvite")}
+                                  >
+                                    <RefreshCw
+                                      className={`text-muted-foreground size-3.5 ${resendingInviteId === user.id ? "animate-spin" : ""}`}
+                                    />
+                                  </Button>
+                                ) : null}
+
+                                {/* Enable / Disable User */}
+                                {isDisabled ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setToggleStatusUser(user);
+                                      setTargetStatus("active");
+                                    }}
+                                    disabled={!organization.isActive}
+                                    className="size-8 p-0 text-emerald-600 hover:text-emerald-700"
+                                    title={tUsers("actions.enableUser")}
+                                  >
+                                    <UserCheck className="size-3.5" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setToggleStatusUser(user);
+                                      setTargetStatus("disabled");
+                                    }}
+                                    className="text-destructive hover:text-destructive size-8 p-0"
+                                    title={tUsers("actions.disableUser")}
+                                  >
+                                    <UserX className="size-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Real Read-Only Tabs */}
+          <TabsContent value="studies">
+            <OrgStudiesTab organizationId={organization.id} />
+          </TabsContent>
+
+          <TabsContent value="surveys">
+            <OrgSurveysTab organizationId={organization.id} />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <OrgReportsTab organizationId={organization.id} />
+          </TabsContent>
+
+          {/* Placeholder for remaining tabs */}
+          {["archive", "auditHistory"].map((tabKey) => (
+            <TabsContent key={tabKey} value={tabKey}>
+              <Card>
+                <CardContent className="text-muted-foreground flex flex-col items-center justify-center py-16 text-center">
+                  <Clock className="text-muted-foreground/40 size-10" />
+                  <h3 className="text-foreground mt-3 text-base font-semibold">
+                    {t("unavailableTabTitle")}
+                  </h3>
+                  <p className="mt-1 max-w-sm text-sm">
+                    {t("unavailableTabDescription")}
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        {/* Dialogs */}
+        <AssignNgoAdminDialog
+          organizationId={organization.id}
+          organizationName={organization.name}
+          hasCurrentAdmin={hasNgoAdmin}
+          open={assignAdminDialogOpen}
+          onOpenChange={setAssignAdminDialogOpen}
+          onAssigned={loadOrganizationData}
+        />
+        <InviteUserDialog
+          organizationId={organization.id}
+          organizationName={organization.name}
+          open={inviteUserDialogOpen}
+          onOpenChange={setInviteUserDialogOpen}
+          onInvited={loadOrganizationData}
+        />
+        <ChangeRoleDialog
+          organizationId={organization.id}
+          user={changeRoleUser}
+          open={!!changeRoleUser}
+          onOpenChange={(open) => !open && setChangeRoleUser(null)}
+          onUpdated={loadOrganizationData}
+        />
+        <ToggleUserStatusDialog
+          organizationId={organization.id}
+          isOrgActive={organization.isActive}
+          user={toggleStatusUser}
+          targetStatus={targetStatus}
+          open={!!toggleStatusUser}
+          onOpenChange={(open) => !open && setToggleStatusUser(null)}
+          onUpdated={loadOrganizationData}
+        />
+        <DeactivateOrganizationDialog
+          organization={organization}
+          open={deactivateDialogOpen}
+          onOpenChange={setDeactivateDialogOpen}
+          onUpdated={loadOrganizationData}
+        />
+        <ReactivateOrganizationDialog
+          organization={organization}
+          open={reactivateDialogOpen}
+          onOpenChange={setReactivateDialogOpen}
+          onUpdated={loadOrganizationData}
+        />
+      </PageContainer>
+    </CrossEntityGuard>
+  );
+}

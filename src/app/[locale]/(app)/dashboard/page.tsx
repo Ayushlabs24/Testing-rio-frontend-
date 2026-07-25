@@ -19,6 +19,7 @@ import { CollectiveDashboard } from "@/components/features/dashboard/collective-
 import { ResearchOfficerDashboard } from "@/components/features/dashboard/research-officer-dashboard";
 import { ReviewerDashboard } from "@/components/features/dashboard/reviewer-dashboard";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import SystemAdminDashboardPage from "../system-admin/dashboard/page";
 import { SupervisorDashboard } from "@/components/features/dashboard/supervisor-dashboard";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import { rolesService } from "@/services/roles/roles.service";
@@ -78,6 +79,10 @@ export default function DashboardPage() {
       }
     }
   }, [isCrossEntity, canReadUsers, canReadRoles]);
+
+  if (session?.role.key === "system_admin") {
+    return <SystemAdminDashboardPage />;
+  }
 
   // Program Supervisor gets its own read-only, cross-organization dashboard
   // (real Sharing/Reports/Studies data via /supervisor-overview) rather than

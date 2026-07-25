@@ -252,7 +252,7 @@ export const roles: Role[] = [
     description:
       "Manages accounts, roles, permissions, audit log, and configuration settings.",
     crossEntity: true,
-    enabled: false,
+    enabled: true,
     permissions: [
       // Write is deliberately narrow — confirmed directly by the team lead:
       // System Admin can create a user and create a new organization, full

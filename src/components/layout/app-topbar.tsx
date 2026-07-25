@@ -313,6 +313,7 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   const { session } = useAuth();
   const t = useTranslations("app.topbar");
   const tSidebar = useTranslations("app.sidebar");
+  const tSysAdmin = useTranslations("systemAdmin");
   const pathname = usePathname();
 
   if (!session) return null;
@@ -320,6 +321,9 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   const currentNavItem = appNav.find((item) =>
     item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href),
   );
+
+  const isSystemAdmin =
+    session.role.key === "system_admin" || pathname.startsWith("/system-admin");
 
   // Same permission gate as the Reviewer SLA nav item itself (see
   // config/navigation.ts's `module: "aiReview"` entry, and MobileNav's
@@ -376,10 +380,22 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
           <h1 className="text-foreground truncate text-base font-semibold">
             {tSidebar(currentNavItem.labelKey)}
           </h1>
+        ) : isSystemAdmin ? (
+          <h1 className="text-foreground truncate text-base font-semibold">
+            {tSysAdmin("platformContext")}
+          </h1>
         ) : null}
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {isSystemAdmin ? (
+          <Badge
+            variant="outline"
+            className="border-primary/20 text-primary bg-primary/10 font-medium"
+          >
+            {tSysAdmin("platformContext")}
+          </Badge>
+        ) : null}
         {canSeeReviewerSla || canSeeSharing ? (
           <NotificationsBell
             canSeeReviewerSla={canSeeReviewerSla}
