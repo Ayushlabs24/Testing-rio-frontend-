@@ -37,6 +37,7 @@ export const endpoints = {
   },
   questionBank: {
     domainOptions: "/question-bank/domain-options",
+    kpiOptions: "/question-bank/kpi-options",
     questions: "/question-bank/questions",
   },
   surveys: {
@@ -103,6 +104,7 @@ export const endpoints = {
     reject: (needId: string) => `/needs/${needId}/ai-review/reject`,
     overrideDomain: (needId: string) => `/needs/${needId}/ai-review/override-domain`,
     retry: (needId: string) => `/needs/${needId}/ai-review/retry-classification`,
+    manualClassify: (needId: string) => `/needs/${needId}/ai-review/manual-classify`,
   },
   domains: {
     public: "/domains/public",

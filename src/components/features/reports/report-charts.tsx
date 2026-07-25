@@ -112,7 +112,7 @@ export function Gauge({
           textAnchor="middle"
           className="fill-foreground text-2xl font-bold"
         >
-          {value}
+          {Math.round(value)}
         </text>
         {sub ? (
           <text

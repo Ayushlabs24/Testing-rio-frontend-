@@ -30,10 +30,31 @@ function label(key: string): string {
     .replace(/[_.]/g, " ")
     .replace(/^./, (c) => c.toUpperCase());
 }
-function scalar(v: unknown): string {
+function scalar(v: unknown, key?: string): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "Yes" : "No";
   if (typeof v === "object") return JSON.stringify(v);
+  // Performance Score in the Severity Analysis table is a computed ratio
+  // (e.g. 76.28999999999999) — 2 decimal places, same spirit as the whole-
+  // number rounding already applied to severity/priority scores elsewhere.
+  if (key === "performanceScore" && typeof v === "number") {
+    return (Math.round(v * 100) / 100).toFixed(2);
+  }
+  // Fold ISO datetimes to a compact, readable stamp — the Approval Trail
+  // section (officerConfirmedAt/reviewedAt) was showing raw
+  // "2026-07-22T10:30:00.000Z" instead of an actual date/time.
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) {
+    const d = new Date(v);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleString(undefined, {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+  }
   return String(v);
 }
 function num(v: unknown): number | null {
@@ -95,7 +116,7 @@ function DataTable({ rows }: { rows: Dict[] }) {
             <TableRow key={i}>
               {columns.map((c) => (
                 <TableCell key={c} className="text-sm whitespace-nowrap">
-                  {scalar(r[c])}
+                  {scalar(r[c], c)}
                 </TableCell>
               ))}
             </TableRow>
@@ -222,7 +243,9 @@ export function ReportContentView({ report }: { report: Report }) {
               <div className="space-y-1">
                 <p className="text-muted-foreground text-xs">{t("priorityScore")}</p>
                 <p className="text-foreground text-3xl font-bold tabular-nums">
-                  {scalar(priority.villagePriorityScore)}
+                  {num(priority.villagePriorityScore) !== null
+                    ? Math.round(num(priority.villagePriorityScore)!)
+                    : scalar(priority.villagePriorityScore)}
                 </p>
                 <span
                   className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
@@ -457,9 +480,16 @@ export function ReportContentView({ report }: { report: Report }) {
     node: (
       <KeyValues
         obj={{
-          officerConfirmedBy: approval?.officerConfirmedBy ?? report.officerConfirmedBy,
+          // Prefer the resolved display name (report.*Name, from the API —
+          // see toReport/namesFor on the backend) over a raw user id; `approval`
+          // (from report content, when present) doesn't carry names at all.
+          officerConfirmedBy:
+            report.officerConfirmedByName ??
+            approval?.officerConfirmedBy ??
+            report.officerConfirmedBy,
           officerConfirmedAt: approval?.officerConfirmedAt ?? report.officerConfirmedAt,
-          reviewerApprovedBy: approval?.reviewerApprovedBy ?? report.reviewedBy,
+          reviewerApprovedBy:
+            report.reviewedByName ?? approval?.reviewerApprovedBy ?? report.reviewedBy,
           reviewerApprovedAt: approval?.reviewerApprovedAt ?? report.reviewedAt,
         }}
       />
@@ -483,7 +513,7 @@ export function ReportContentView({ report }: { report: Report }) {
   meta.push({ k: t("reportId"), v: report.id.slice(0, 8).toUpperCase() });
 
   return (
-    <div className="mx-auto ">
+    <div className="mx-auto">
       <div className="bg-card border-border overflow-hidden rounded-xl border shadow-sm">
         {/* Cover / masthead */}
         <div className="border-t-4 border-t-[var(--primary)] p-5 sm:p-6">

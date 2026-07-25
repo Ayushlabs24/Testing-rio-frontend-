@@ -443,7 +443,7 @@ export function CollectiveDashboard() {
                         <TableCell className="font-medium">{p.label}</TableCell>
                         <TableCell>{p.domain}</TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {p.severityScore}
+                          {Math.round(p.severityScore)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {p.entity ?? "—"}

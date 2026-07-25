@@ -39,6 +39,11 @@ export interface ReviewerSlaBadgeState {
    * notifications dropdown call markReviewerSlaAlertsSeen directly on
    * "mark all as read" without a second fetch. */
   alerts: SlaAlert[];
+  /** Recomputes unread state from localStorage immediately — call this right
+   * after markReviewerSlaAlertsSeen, otherwise the badge only clears on the
+   * next poll tick (which can be minutes away), making "mark all as read"
+   * look like it did nothing. */
+  refresh: () => void;
 }
 
 /** Unread Reviewer SLA alert count (+ severity) for the topbar/sidebar
@@ -55,12 +60,18 @@ export function useReviewerSlaBadge(): ReviewerSlaBadgeState {
     count: 0,
     severity: null,
     alerts: [],
+    refresh: () => undefined,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // load() needs to be callable on-demand (see refresh) as well as on its own
+  // poll interval, so the effect stashes it here instead of only closing over it.
+  const loadRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     if (!userId) {
-      Promise.resolve().then(() => setState({ count: 0, severity: null, alerts: [] }));
+      Promise.resolve().then(() =>
+        setState({ count: 0, severity: null, alerts: [], refresh: () => undefined }),
+      );
       return;
     }
     const uid = userId;
@@ -80,11 +91,17 @@ export function useReviewerSlaBadge(): ReviewerSlaBadgeState {
               : unread.length > 0
                 ? "pending"
                 : null;
-          setState({ count: unread.length, severity, alerts });
+          setState({
+            count: unread.length,
+            severity,
+            alerts,
+            refresh: () => loadRef.current(),
+          });
         })
         .catch(() => undefined);
     }
 
+    loadRef.current = load;
     load();
     reviewerSlaService
       .getConfig()

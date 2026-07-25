@@ -434,7 +434,7 @@ export function AiPrioritySummaryPanel({
                         <span>{kf.title}</span>
                         {kf.severityScore !== null && (
                           <Badge variant="destructive" className="text-[10px]">
-                            {t("severityLabel")}: {kf.severityScore}
+                            {t("severityLabel")}: {Math.round(kf.severityScore)}
                           </Badge>
                         )}
                       </div>

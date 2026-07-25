@@ -121,6 +121,20 @@ export function StudyForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgCenters, orgCentersLoaded]);
 
+  // Default to the (most recently) published Methodology Version instead of
+  // leaving this at "None" — `methodologyVersions` arrives asynchronously
+  // (the caller renders this form before its own fetch resolves), so this
+  // can't just be part of `defaultValues` above. Only fires while nothing's
+  // selected yet, so it never overrides a Study that already has its own
+  // explicit choice (including an existing Study deliberately linked to
+  // none). Already ordered most-recent-first by the backend.
+  useEffect(() => {
+    if (methodologyVersionId) return;
+    const mostRecentlyPublished = methodologyVersions[0];
+    if (!mostRecentlyPublished) return;
+    setValue("methodologyVersionId", mostRecentlyPublished.id);
+  }, [methodologyVersions, methodologyVersionId, setValue]);
+
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {

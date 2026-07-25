@@ -1,7 +1,7 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { OrgBrandMark } from "@/components/common/org-brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { appNav, NAV_ORDER_BY_ROLE, type NavItem } from "@/config/navigation";
 import { siteConfig } from "@/config/site";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
@@ -40,7 +40,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
   const t = useTranslations("app.sidebar");
   const tTopbar = useTranslations("app.topbar");
   const pathname = usePathname();
-  const router = useRouter();
+  const locale = useLocale();
 
   if (!session) return null;
 
@@ -48,7 +48,11 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/");
+    // A soft client-side router.push left stale client state (e.g. cached
+    // route data from protected pages) rendering behind the sign-in page in
+    // some cases — a full navigation guarantees a clean, fully signed-out
+    // page load, same as visiting the URL directly.
+    window.location.assign(`/${locale}`);
   };
 
   function isPermitted(item: NavItem): boolean {

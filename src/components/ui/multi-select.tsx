@@ -5,11 +5,17 @@ import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 export interface MultiSelectOption {
   value: string;
   label: string;
+  /** Optional group heading (e.g. a parent Domain for a Sub-domain option)
+   * — options sharing a `group` are clustered together under one label,
+   * with a separator between groups. Ungrouped options (no `group` on any
+   * option) render as a single flat list, unchanged from before. */
+  group?: string;
 }
 
 interface MultiSelectProps {
@@ -72,6 +78,39 @@ export function MultiSelect({
     } else {
       onChange([...values, value]);
     }
+  }
+
+  // Cluster options by `group`, preserving first-appearance order — options
+  // with no `group` at all (the common case) fall through to a flat list,
+  // unchanged from before this was added.
+  const groupOrder: string[] = [];
+  const groupedOptions = new Map<string, MultiSelectOption[]>();
+  const ungroupedOptions: MultiSelectOption[] = [];
+  for (const option of filtered) {
+    if (option.group === undefined) {
+      ungroupedOptions.push(option);
+      continue;
+    }
+    if (!groupedOptions.has(option.group)) {
+      groupedOptions.set(option.group, []);
+      groupOrder.push(option.group);
+    }
+    groupedOptions.get(option.group)!.push(option);
+  }
+
+  function renderOption(option: MultiSelectOption) {
+    return (
+      <label
+        key={option.value}
+        className="hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden rounded-md px-2.5 py-1.5 text-left text-sm"
+      >
+        <Checkbox
+          checked={values.includes(option.value)}
+          onCheckedChange={() => toggle(option.value)}
+        />
+        <span className="min-w-0 flex-1 truncate">{option.label}</span>
+      </label>
+    );
   }
 
   // Past a handful of selections, showing every chip clutters the field —
@@ -186,24 +225,39 @@ export function MultiSelect({
             className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
           />
         </div>
-        <div id={listboxId} role="listbox" className="max-h-64 overflow-y-auto p-1">
+        <div
+          id={listboxId}
+          role="listbox"
+          className="max-h-64 overflow-y-auto p-1"
+          // Dialog's scroll lock treats this body-portaled Popover as outside
+          // the modal and cancels wheel events when they reach `document`.
+          // Keep the wheel event inside the actual scroll container so its
+          // native overflow scrolling is allowed to run.
+          onWheel={(event) => event.stopPropagation()}
+        >
           {filtered.length === 0 ? (
             <p className="text-muted-foreground px-2.5 py-4 text-center text-sm">
               {emptyText}
             </p>
+          ) : groupOrder.length === 0 ? (
+            filtered.map((option) => renderOption(option))
           ) : (
-            filtered.map((option) => (
-              <label
-                key={option.value}
-                className="hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-pointer items-center gap-2 overflow-hidden rounded-md px-2.5 py-1.5 text-left text-sm"
-              >
-                <Checkbox
-                  checked={values.includes(option.value)}
-                  onCheckedChange={() => toggle(option.value)}
-                />
-                <span className="min-w-0 flex-1 truncate">{option.label}</span>
-              </label>
-            ))
+            <>
+              {ungroupedOptions.map((option) => renderOption(option))}
+              {groupOrder.map((group, index) => (
+                <div key={group}>
+                  {index > 0 || ungroupedOptions.length > 0 ? (
+                    <Separator className="my-1" />
+                  ) : null}
+                  <p className="text-muted-foreground px-2.5 pt-1.5 pb-1 text-xs font-medium">
+                    {group}
+                  </p>
+                  {(groupedOptions.get(group) ?? []).map((option) =>
+                    renderOption(option),
+                  )}
+                </div>
+              ))}
+            </>
           )}
         </div>
         {/* Staying open after each pick is deliberate (so several options

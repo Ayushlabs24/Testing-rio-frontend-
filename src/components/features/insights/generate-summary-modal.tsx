@@ -137,7 +137,7 @@ export function GenerateSummaryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="w-[90%] min-w-2xl sm:w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <Sparkles className="text-primary size-5" />
@@ -413,7 +413,10 @@ export function GenerateSummaryModal({
                   </div>
                   <div>
                     {t("overallIndex")}:{" "}
-                    {previewData.severity?.overallVillageNeedsIndex ?? t("na")}
+                    {previewData.severity?.overallVillageNeedsIndex !== undefined &&
+                    previewData.severity?.overallVillageNeedsIndex !== null
+                      ? Math.round(previewData.severity.overallVillageNeedsIndex)
+                      : t("na")}
                   </div>
                 </div>
               )}
@@ -438,7 +441,7 @@ export function GenerateSummaryModal({
             {t("previewButton")}
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               type="button"
               variant="ghost"
