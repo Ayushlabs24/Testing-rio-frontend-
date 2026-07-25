@@ -142,6 +142,11 @@ export function ReportActions({
           icon={FileText}
           label={t("tooltip.exportPdf")}
           iconSize={iconSize}
+          // Red = PDF, green = Excel (see the Excel export below) — same
+          // shorthand every file picker/OS uses, so the two export actions
+          // read as distinct at a glance instead of two near-identical
+          // gray document glyphs.
+          className="text-destructive hover:text-destructive"
           onClick={() =>
             run(() => reportsService.download(report.id, "pdf"), "detail.exportError")
           }
@@ -153,6 +158,7 @@ export function ReportActions({
           icon={FileSpreadsheet}
           label={t("tooltip.exportExcel")}
           iconSize={iconSize}
+          className="text-success hover:text-success"
           onClick={() =>
             run(() => reportsService.download(report.id, "excel"), "detail.exportError")
           }

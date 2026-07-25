@@ -47,6 +47,24 @@ export interface SurveyQuestionItem {
   isRequired: boolean;
 }
 
+/** A custom (open-ended) question a Research Officer previously typed in
+ * from scratch on some OTHER survey targeting the same Domain/Sub-domain —
+ * shown in the Survey Builder's "Custom Questions" tab so it can be reused
+ * instead of retyped. `id` is the originating SurveyQuestion's own id, only
+ * useful as a stable list key here — adding one to the current survey
+ * copies its text/type/options into a brand-new SurveyQuestion row, it's
+ * never linked by reference the way a Question Bank item is. */
+export interface ReusableCustomQuestion {
+  id: string;
+  questionText: string;
+  answerType: string;
+  answerOptions: string[] | null;
+  domain: string | null;
+  subDomain: string | null;
+  kpi: string | null;
+  sourceSurveyTitle: string;
+}
+
 /** DRAFT -> SUBMITTED -> PUBLISHED, or SUBMITTED -> REJECTED -> (edit) ->
  * SUBMITTED again. See the backend SurveysService for the full state
  * machine and who's allowed to make each transition. */
@@ -175,6 +193,18 @@ export const surveysService = {
     return apiClient.get<Question[]>(endpoints.questionBank.questions, {
       params: pairs.length > 0 ? { pairs: JSON.stringify(pairs) } : {},
     });
+  },
+
+  /** Custom questions previously added to some other survey for this exact
+   * Domain/Sub-domain — see ReusableCustomQuestion's own doc comment. */
+  async getReusableCustomQuestions(
+    domain: string,
+    subDomain: string,
+  ): Promise<ReusableCustomQuestion[]> {
+    return apiClient.get<ReusableCustomQuestion[]>(
+      endpoints.surveys.reusableCustomQuestions,
+      { params: { domain, subDomain } },
+    );
   },
 
   async getSurveyByNeedId(needId: string): Promise<Survey | null> {

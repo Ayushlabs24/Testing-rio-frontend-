@@ -53,6 +53,7 @@ import type { Need } from "@/services/needs/needs.types";
 import {
   surveysService,
   type Question,
+  type ReusableCustomQuestion,
   type SaveSurveyQuestionInput,
   type Survey,
   type SurveyQuestionItem,
@@ -90,6 +91,9 @@ export default function SurveyBuilderDetailPage({
   const [need, setNeed] = useState<Need | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [eligibleQuestions, setEligibleQuestions] = useState<Question[]>([]);
+  const [reusableQuestions, setReusableQuestions] = useState<ReusableCustomQuestion[]>(
+    [],
+  );
   const [loaded, setLoaded] = useState(false);
 
   // Both the Recommended and Question Bank lists can run into the hundreds
@@ -270,6 +274,25 @@ export default function SurveyBuilderDetailPage({
             })
             .catch(() => setEligibleQuestions([]));
         }
+        if (pairs && pairs.length > 0) {
+          Promise.all(
+            pairs.map((p) =>
+              surveysService
+                .getReusableCustomQuestions(p.domain, p.subDomain)
+                .catch(() => []),
+            ),
+          ).then((lists) => {
+            const seen = new Set<string>();
+            const merged = lists.flat().filter((q) => {
+              if (seen.has(q.id)) return false;
+              seen.add(q.id);
+              return true;
+            });
+            setReusableQuestions(merged);
+          });
+        } else {
+          setReusableQuestions([]);
+        }
       })
       .catch(() => undefined)
       .finally(() => setLoaded(true));
@@ -399,6 +422,32 @@ export default function SurveyBuilderDetailPage({
         isCustom: false,
         order: prev.length + 1,
         isRequired: question.requiredOptional === "required",
+      },
+    ]);
+    setDirty(true);
+  }
+
+  // Copies a reusable custom question's text/type/options into a brand-new
+  // SurveyQuestion on THIS survey — not linked by reference the way a
+  // Question Bank item is (there's no shared row to link to), so editing it
+  // afterward here never affects the original it was copied from.
+  function addFromReusable(item: ReusableCustomQuestion) {
+    setAdditional((prev) => [
+      ...prev,
+      {
+        id: nextTempId("reused"),
+        bankQuestionId: null,
+        questionCode: null,
+        questionText: item.questionText,
+        answerType: item.answerType,
+        answerOptions: item.answerOptions,
+        domain: item.domain,
+        subDomain: item.subDomain,
+        indicator: null,
+        kpi: item.kpi,
+        isCustom: true,
+        order: recommended.length + prev.length + 1,
+        isRequired: true,
       },
     ]);
     setDirty(true);
@@ -565,7 +614,7 @@ export default function SurveyBuilderDetailPage({
         // consumes them (see AiDecisionsService.review).
         const domainOverride =
           need.proposedDomains && need.proposedDomains.length > 0
-            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? "" }
+            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? undefined }
             : undefined;
         await aiReviewService.approve(needId, { domainOverride });
       }
@@ -606,16 +655,30 @@ export default function SurveyBuilderDetailPage({
   }
 
   // Saves whatever the Approver curated (add/remove/reorder/custom — see
-  // canEditQuestions above) then publishes. Distinct from saveAndPublish,
-  // which additionally decides the classification and calls
-  // submitForApproval — neither applies here since the Survey is already
+  // canEditQuestions above) then publishes. Distinct from saveAndPublish
+  // only in that it skips submitForApproval — the Survey is already
   // SUBMITTED (submitForApproval requires DRAFT/REJECTED and would 409).
+  // Still has to commit the classification decision itself first, exactly
+  // like saveAndPublish does: a Survey can reach SUBMITTED while its Need
+  // is still ai_classified (submitForApproval never required the Need to
+  // be reviewer_approved first — see SurveysService), so without this the
+  // Survey publishes fine but the Need's domain/subDomain/needDomains are
+  // never actually written, leaving "Awaiting Approver review" showing
+  // forever even after the Survey is done.
   async function approveSubmittedSurvey() {
-    if (!survey) return;
+    if (!survey || !need) return;
     setApprovingSubmitted(true);
     setError(null);
     setMessage(null);
     try {
+      if (need.status === "ai_classified") {
+        const domainOverride =
+          need.proposedDomains && need.proposedDomains.length > 0
+            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? undefined }
+            : undefined;
+        await aiReviewService.approve(needId, { domainOverride });
+      }
+
       const payload: SaveSurveyQuestionInput[] = [
         ...recommended.map((q, index) => ({
           questionId: q.bankQuestionId as string,
@@ -635,9 +698,13 @@ export default function SurveyBuilderDetailPage({
       ];
       await surveysService.updateQuestions(survey.id, payload);
       await surveysService.approveAndPublish(survey.id);
-      const published = await surveysService.getSurveyByNeedId(needId);
+      const [published, updatedNeed] = await Promise.all([
+        surveysService.getSurveyByNeedId(needId),
+        needsService.getById(needId),
+      ]);
       setSurvey(published);
       loadDraftFromSurvey(published);
+      setNeed(updatedNeed);
       setMessage(t("publishedMessage"));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -966,8 +1033,117 @@ export default function SurveyBuilderDetailPage({
                           <TabsTrigger value="questionBank" size="lg">
                             {t("questionBankTab")}
                           </TabsTrigger>
+                          <TabsTrigger value="customQuestions" size="lg">
+                            {t("customQuestionsTab")}
+                          </TabsTrigger>
                         </TabsList>
                       </div>
+
+                      <TabsContent value="customQuestions" className="mt-6 space-y-4">
+                        {/* Custom questions previously typed in from scratch
+                            on some OTHER survey, for this exact Domain/
+                            Sub-domain — reuse instead of retype. Deliberately
+                            NOT every custom question ever created (see
+                            SurveysService.listReusableCustomQuestions). */}
+                        <p className="text-muted-foreground text-xs">
+                          {t("customQuestionsDescription")}
+                        </p>
+                        {reusableQuestions.length === 0 ? (
+                          <p className="text-muted-foreground text-sm">
+                            {t("customQuestionsEmpty")}
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {reusableQuestions.map((q) => {
+                              const added = additional.some(
+                                (item) =>
+                                  item.questionText.trim().toLowerCase() ===
+                                  q.questionText.trim().toLowerCase(),
+                              );
+                              return (
+                                <div
+                                  key={q.id}
+                                  className={cn(
+                                    "space-y-2.5 rounded-lg border p-4",
+                                    added
+                                      ? "border-badge-success/40 bg-badge-success/5"
+                                      : "border-border",
+                                  )}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <p className="text-foreground text-sm">
+                                      {q.questionText}
+                                    </p>
+                                    {canEditQuestions ? (
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant={added ? "secondary" : "outline"}
+                                        className={cn(
+                                          "size-8 shrink-0",
+                                          added &&
+                                            "bg-badge-success text-badge-success-foreground hover:bg-badge-success",
+                                        )}
+                                        disabled={added}
+                                        onClick={() => addFromReusable(q)}
+                                        aria-label={
+                                          added ? t("alreadyAdded") : t("addToSurvey")
+                                        }
+                                        title={
+                                          added ? t("alreadyAdded") : t("addToSurvey")
+                                        }
+                                      >
+                                        <Check className="size-4" />
+                                      </Button>
+                                    ) : null}
+                                  </div>
+
+                                  <p className="text-muted-foreground text-xs">
+                                    {t("customQuestionsSourceLabel", {
+                                      survey: q.sourceSurveyTitle,
+                                    })}
+                                  </p>
+
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("answerTypeLabel")}
+                                    </p>
+                                    <Badge variant="outline" className="mt-0.5">
+                                      {titleCase(q.answerType)}
+                                    </Badge>
+                                  </div>
+
+                                  {q.answerOptions && q.answerOptions.length > 0 ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("optionsLabel")}
+                                      </p>
+                                      <div className="mt-1 flex flex-wrap gap-1.5">
+                                        {q.answerOptions.map((option) => (
+                                          <Badge
+                                            key={option}
+                                            variant="secondary"
+                                            className="font-normal"
+                                          >
+                                            {option}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : null}
+
+                                  {added ? (
+                                    <Badge className="bg-badge-success text-badge-success-foreground gap-1 border-transparent font-normal">
+                                      <Check className="size-3" />
+                                      {t("alreadyAdded")}
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </TabsContent>
 
                       <TabsContent value="questionBank" className="mt-6 space-y-4">
                         {/* Every Question Bank row matching this Need's
