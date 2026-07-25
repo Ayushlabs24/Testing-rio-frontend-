@@ -273,7 +273,9 @@ export function SignupForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="organizationName">{t("organizationNameLabel")}</Label>
+          <Label htmlFor="organizationName">
+            {t("organizationNameLabel")} <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="organizationName"
             placeholder={t("organizationNamePlaceholder")}
@@ -286,7 +288,9 @@ export function SignupForm() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="registrationNumber">{t("registrationNumberLabel")}</Label>
+            <Label htmlFor="registrationNumber">
+              {t("registrationNumberLabel")} <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="registrationNumber"
               placeholder={t("registrationNumberPlaceholder")}
@@ -299,7 +303,9 @@ export function SignupForm() {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sector">{t("sectorLabel")}</Label>
+            <Label htmlFor="sector">
+              {t("sectorLabel")} <span className="text-destructive">*</span>
+            </Label>
             <Select
               value={selectedSector}
               onValueChange={(value) =>
@@ -338,7 +344,10 @@ export function SignupForm() {
         {/* Stacked full-width, not a side-by-side grid — Governorate/Center
             chip lists can wrap to several rows once many are selected. */}
         <div className="space-y-2">
-          <Label htmlFor="region">{tGeo("administrativeRegionLabel")}</Label>
+          <Label htmlFor="region">
+            {tGeo("administrativeRegionLabel")}{" "}
+            <span className="text-destructive">*</span>
+          </Label>
           <Combobox
             aria-label={tGeo("administrativeRegionLabel")}
             items={regions.map((r) => ({ value: r.id, label: r.name }))}
@@ -354,7 +363,9 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <Label>{tGeo("governorateLabel")}</Label>
+          <Label>
+            {tGeo("governorateLabel")} <span className="text-destructive">*</span>
+          </Label>
           <MultiSelect
             options={governorates.map((g) => ({ value: g.id, label: g.name }))}
             values={governorateIds}
@@ -377,7 +388,9 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <Label>{tGeo("centerLabel")}</Label>
+          <Label>
+            {tGeo("centerLabel")} <span className="text-destructive">*</span>
+          </Label>
           <MultiSelect
             options={centers.map((c) => ({ value: c.id, label: c.name }))}
             values={centerIds}
@@ -398,7 +411,9 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">{t("emailLabel")}</Label>
+          <Label htmlFor="email">
+            {t("emailLabel")} <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="email"
             type="email"

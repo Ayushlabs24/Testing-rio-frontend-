@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -25,6 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
+import { cn } from "@/lib/utils";
 import { markReviewerSlaAlertsSeen } from "@/hooks/use-reviewer-sla-badge";
 import { Link } from "@/i18n/navigation";
 import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
@@ -34,10 +34,14 @@ import type {
   SlaConfig,
 } from "@/services/reviewer-sla/reviewer-sla.types";
 
-const STATUS_VARIANT: Record<SlaAlertStatus, "default" | "secondary" | "destructive"> = {
-  pending: "secondary",
-  at_risk: "default",
-  breached: "destructive",
+// A colored dot + plain text, not another pill — a filled Badge here read as
+// a second button sitting right next to the real one (Action), same shape
+// and weight, hard to tell apart at a glance. This keeps Status legible as
+// information, not another thing that looks clickable.
+const STATUS_DOT_CLASS: Record<SlaAlertStatus, string> = {
+  pending: "bg-muted-foreground",
+  at_risk: "bg-primary",
+  breached: "bg-destructive",
 };
 
 // Links straight to the Need detail page rather than the separate Survey
@@ -168,18 +172,22 @@ export default function ReviewerSlaPage() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-28">{t("typeColumn")}</TableHead>
-                    <TableHead className="w-[26%]">{t("studyColumn")}</TableHead>
-                    <TableHead className="w-[26%]">{t("needColumn")}</TableHead>
-                    <TableHead className="w-40">{t("createdColumn")}</TableHead>
+                    {/* Type column hidden for now — t("typeColumn")/t(`type.${alert.type}`) still exist, just not rendered. */}
+                    <TableHead className="w-[22%]">{t("studyColumn")}</TableHead>
+                    <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
+                    <TableHead className="w-36">{t("createdColumn")}</TableHead>
                     {/* Due/breach only applies to the still-open Approver
                         queue — a Research Officer's alerts are already
                         resolved, there's nothing left to be "at risk" of. */}
                     {canApprove ? (
-                      <TableHead className="w-40">{t("dueColumn")}</TableHead>
+                      <TableHead className="w-36">{t("dueColumn")}</TableHead>
                     ) : null}
                     {canApprove ? (
-                      <TableHead className="w-28">{t("statusColumn")}</TableHead>
+                      // Wide enough for the longest label ("Pending Review")
+                      // plus its dot without wrapping or spilling into
+                      // Action next to it — table-fixed enforces this width
+                      // literally, it won't shrink to fit content on its own.
+                      <TableHead className="w-40">{t("statusColumn")}</TableHead>
                     ) : null}
                     <TableHead className="w-32">{t("actionColumn")}</TableHead>
                   </TableRow>
@@ -188,7 +196,7 @@ export default function ReviewerSlaPage() {
                   {alerts === null ? (
                     Array.from({ length: 3 }).map((_, index) => (
                       <TableRow key={index}>
-                        {Array.from({ length: canApprove ? 7 : 5 }).map((__, cell) => (
+                        {Array.from({ length: canApprove ? 6 : 4 }).map((__, cell) => (
                           <TableCell key={cell} className="py-4">
                             <div className="bg-muted h-4 w-24 rounded" />
                           </TableCell>
@@ -198,7 +206,7 @@ export default function ReviewerSlaPage() {
                   ) : alerts.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={canApprove ? 7 : 5}
+                        colSpan={canApprove ? 6 : 4}
                         className="text-muted-foreground h-32 text-center"
                       >
                         <div className="flex flex-col items-center gap-2.5">
@@ -218,11 +226,7 @@ export default function ReviewerSlaPage() {
                   ) : (
                     alerts.map((alert) => (
                       <TableRow key={alert.id}>
-                        <TableCell className="py-4 align-top whitespace-nowrap">
-                          <Badge variant="outline" className="font-normal">
-                            {t(`type.${alert.type}`)}
-                          </Badge>
-                        </TableCell>
+                        {/* Type cell hidden for now — see the matching header comment above. */}
                         <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
                           <Link href={alertHref(alert)} className="hover:underline">
                             {alert.studyTitle}
@@ -263,13 +267,19 @@ export default function ReviewerSlaPage() {
                         ) : null}
                         {canApprove ? (
                           <TableCell className="py-4 align-top whitespace-nowrap">
-                            <Badge variant={STATUS_VARIANT[alert.status]}>
+                            <span className="inline-flex items-center gap-1.5 text-sm">
+                              <span
+                                className={cn(
+                                  "size-2 shrink-0 rounded-full",
+                                  STATUS_DOT_CLASS[alert.status],
+                                )}
+                              />
                               {t(`status.${alert.status}`)}
-                            </Badge>
+                            </span>
                           </TableCell>
                         ) : null}
                         <TableCell className="py-4 align-top whitespace-nowrap">
-                          <Button asChild size="sm" variant="outline">
+                          <Button asChild size="sm">
                             <Link href={alertHref(alert)}>
                               {canApprove ? t("reviewNow") : t("viewNow")}
                             </Link>

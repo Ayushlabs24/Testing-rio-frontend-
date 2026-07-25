@@ -55,6 +55,9 @@ export const endpoints = {
     public: (id: string) => `/surveys/public/${id}`,
     submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
     responses: (id: string) => `/surveys/${id}/responses`,
+    // Org-wide, not needId-scoped — a reusable custom question can have
+    // come from any survey (see SurveysController.listReusableCustomQuestions).
+    reusableCustomQuestions: "/custom-questions",
   },
   roles: {
     list: "/roles",
@@ -128,6 +131,8 @@ export const endpoints = {
     links: (needId: string) => `/needs/${needId}/survey-links`,
     deactivateLink: (needId: string, linkId: string) =>
       `/needs/${needId}/survey-links/${linkId}/deactivate`,
+    shareLinkByEmail: (needId: string, linkId: string) =>
+      `/needs/${needId}/survey-links/${linkId}/share-email`,
     responses: (needId: string) => `/needs/${needId}/survey-responses`,
     // Same rows as `responses`, with each one's answers already joined in.
     responsesWithAnswers: (needId: string) => `/needs/${needId}/survey-responses-full`,

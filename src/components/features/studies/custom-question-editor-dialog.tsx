@@ -173,7 +173,7 @@ export function CustomQuestionEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
             {initialValue ? t("editOpenEndedQuestion") : t("addOpenEndedQuestion")}

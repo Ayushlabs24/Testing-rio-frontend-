@@ -329,12 +329,21 @@ export function AiClassificationSection({
 
   // Dropping a Domain from the multi-select drops its staged Sub-domains
   // too — otherwise they'd linger invisibly and still count toward the
-  // final pairs list.
+  // final pairs list. A newly-added Domain starts with every one of its
+  // active Sub-domains pre-selected (same default allDomainsSelected
+  // already gets elsewhere in this dialog) rather than none — leaving it
+  // empty meant a Domain added here contributed zero pairs to
+  // pairsFromSelections() until a Sub-domain was separately picked for it,
+  // and nothing blocked Preview Override from silently succeeding without
+  // it (the button only checks the *total* pairs list is non-empty), so it
+  // looked like the override "did nothing" for that Domain.
   function handleOverrideDomainsChange(next: string[]) {
     setOverrideDomains(next);
     setOverrideSubDomainsByDomain((prev) => {
       const nextMap: Record<string, string[]> = {};
-      for (const domain of next) nextMap[domain] = prev[domain] ?? [];
+      for (const domain of next) {
+        nextMap[domain] = prev[domain] ?? subDomainOptionsFor(domain);
+      }
       return nextMap;
     });
   }
@@ -358,11 +367,18 @@ export function AiClassificationSection({
     // (pendingOverride, from Need.proposedDomains) takes priority over
     // everything else, so re-opening Override shows what was already staged
     // instead of reverting to the AI's original suggestion (which is what
-    // happened before this read from the Need directly). Falls back to: the
-    // real, multi-valued NeedDomain pairs if any exist; else, when AI
-    // couldn't classify at all (allDomainsSelected), every active
-    // Domain/Sub-domain (matching what "All Domains" actually means); else
-    // the AI's own single suggested pair.
+    // happened before this read from the Need directly). Falls back to the
+    // real, multi-valued NeedDomain pairs if any exist; else the AI's own
+    // single suggested pair.
+    //
+    // Deliberately does NOT pre-select anything when AI couldn't classify
+    // at all (allDomainsSelected) — every Domain/Sub-domain pre-checked
+    // read as the system having already decided, when nothing had actually
+    // been chosen (feedback from product review). This is a genuine first
+    // classification, not an override of an AI decision — the dialog stays
+    // empty and the person has to actually pick something (see the
+    // AI-couldn't-classify notice rendered above the trigger button, and
+    // its own button label below).
     const initial: Record<string, string[]> = {};
     if (pendingOverride) {
       for (const pair of pendingOverride.pairs) {
@@ -372,11 +388,11 @@ export function AiClassificationSection({
       for (const pair of need.needDomains) {
         initial[pair.domain] = [...(initial[pair.domain] ?? []), pair.subDomain];
       }
-    } else if (need.allDomainsSelected) {
-      for (const d of domainOptions) {
-        initial[d.name] = [...d.subDomains];
-      }
-    } else if (need.aiSuggestedDomain && need.aiSuggestedSubDomain) {
+    } else if (
+      !need.allDomainsSelected &&
+      need.aiSuggestedDomain &&
+      need.aiSuggestedSubDomain
+    ) {
       initial[need.aiSuggestedDomain] = [need.aiSuggestedSubDomain];
     }
     setOverrideDomains(Object.keys(initial));
@@ -388,7 +404,7 @@ export function AiClassificationSection({
   async function previewOverride() {
     const pairs = pairsFromSelections();
     const reason = overrideReason.trim();
-    if (pairs.length === 0 || !reason) return;
+    if (pairs.length === 0) return;
     setOverridePreviewLoading(true);
     setError(null);
     try {
@@ -767,6 +783,20 @@ export function AiClassificationSection({
 
             {canReview ? (
               <div className="space-y-3 border-t pt-4">
+                {/* AI declined to guess at all (allDomainsSelected) — this
+                    is a first classification, not a change to an existing
+                    AI decision, so it gets its own notice + button wording
+                    rather than looking like every Domain/Sub-domain was
+                    already (confusingly) pre-selected for review. */}
+                {need.allDomainsSelected ? (
+                  <div className="border-badge-warning/40 bg-badge-warning/10 flex items-start gap-2.5 rounded-md border p-3.5">
+                    <AlertTriangle className="text-badge-warning-foreground mt-0.5 size-4 shrink-0" />
+                    <p className="text-badge-warning-foreground text-sm">
+                      {t("allDomainsNotice")}
+                    </p>
+                  </div>
+                ) : null}
+
                 {/* Match the review hierarchy from the reference: the broad
                     Override action leads the row, while Suggested Questions
                     stays beside it as the narrower navigation action. */}
@@ -783,7 +813,7 @@ export function AiClassificationSection({
                         : undefined
                     }
                   >
-                    {t("override")}
+                    {need.allDomainsSelected ? t("chooseClassification") : t("override")}
                   </Button>
                   {hasSurvey ? (
                     <Button
@@ -841,7 +871,7 @@ export function AiClassificationSection({
 
       {/* Override Domain */}
       <Dialog open={overriding} onOpenChange={setOverriding}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{t("overrideDialogTitle")}</DialogTitle>
             <DialogDescription>{t("overrideDialogDescription")}</DialogDescription>
@@ -901,7 +931,7 @@ export function AiClassificationSection({
             <LoadingButton
               type="button"
               onClick={previewOverride}
-              disabled={pairsFromSelections().length === 0 || !overrideReason.trim()}
+              disabled={pairsFromSelections().length === 0}
               isLoading={overridePreviewLoading}
               text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
             />
