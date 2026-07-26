@@ -97,16 +97,22 @@ function KeyValues({ obj, exclude = [] }: { obj: Dict; exclude?: string[] }) {
   );
 }
 
-function DataTable({ rows }: { rows: Dict[] }) {
-  const columns = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
+// Explicit column spec — lets a caller fix the column order, relabel, and
+// combine fields (e.g. Confidence = band + %). Omitted → auto-derive every key.
+type ColSpec = { key: string; label?: string; format?: (r: Dict) => string };
+
+function DataTable({ rows, columns }: { rows: Dict[]; columns?: ColSpec[] }) {
+  const cols: ColSpec[] =
+    columns ??
+    Array.from(new Set(rows.flatMap((r) => Object.keys(r)))).map((key) => ({ key }));
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            {columns.map((c) => (
-              <TableHead key={c} className="whitespace-nowrap">
-                {label(c)}
+            {cols.map((c) => (
+              <TableHead key={c.key} className="whitespace-nowrap">
+                {c.label ?? label(c.key)}
               </TableHead>
             ))}
           </TableRow>
@@ -114,9 +120,9 @@ function DataTable({ rows }: { rows: Dict[] }) {
         <TableBody>
           {rows.map((r, i) => (
             <TableRow key={i}>
-              {columns.map((c) => (
-                <TableCell key={c} className="text-sm whitespace-nowrap">
-                  {scalar(r[c], c)}
+              {cols.map((c) => (
+                <TableCell key={c.key} className="text-sm whitespace-nowrap">
+                  {c.format ? c.format(r) : scalar(r[c.key], c.key)}
                 </TableCell>
               ))}
             </TableRow>
@@ -126,6 +132,26 @@ function DataTable({ rows }: { rows: Dict[] }) {
     </div>
   );
 }
+
+// Explicit column set for the domain table — includes the methodology code and
+// KPI count, and folds the quantitative % into the Confidence column.
+const DOMAIN_COLUMNS: ColSpec[] = [
+  { key: "name", label: "Domain" },
+  { key: "domainCode", label: "Code" },
+  { key: "severityScore", label: "Severity" },
+  { key: "performanceScore", label: "Performance" },
+  { key: "weight", label: "Weight" },
+  { key: "kpiCount", label: "KPIs" },
+  {
+    key: "confidence",
+    label: "Confidence",
+    format: (r) =>
+      typeof r.confidencePct === "number"
+        ? `${scalar(r.confidence)} (${r.confidencePct}%)`
+        : scalar(r.confidence),
+  },
+  { key: "isCriticalDomain", label: "Critical" },
+];
 
 /** Card-wrapped section — used only for the generic (placeholder) fallback. */
 function Section({
@@ -213,7 +239,14 @@ export function ReportContentView({ report }: { report: Report }) {
   const approval = isObj(c.approval) ? c.approval : null;
   const demo = isObj(c.demographics) ? c.demographics : null;
   const isNeedsReport =
-    !!severity || !!domains || isObjArray(c.regions) || isObjArray(c.topPriorities);
+    !!severity ||
+    !!domains ||
+    isObjArray(c.regions) ||
+    isObjArray(c.topPriorities) ||
+    // Executive report may have an empty topPriorities list — treat a report
+    // carrying Response Quality as a needs report so the demographics
+    // placeholder still renders, consistent with the other reports.
+    isObj(c.responseQuality);
   const needsIndex = severity ? num(severity.overallVillageNeedsIndex) : null;
   const priorityStatus = priority ? scalar(priority.priorityStatus) : "";
 
@@ -261,6 +294,17 @@ export function ReportContentView({ report }: { report: Report }) {
     });
   }
 
+  // Structured scope — Region / Governorate (Executive report), shown up front.
+  if (isObj(c.scope)) {
+    const scope = c.scope as Dict;
+    sections.push({
+      title: t("regionGovernorate"),
+      node: (
+        <KeyValues obj={{ coverage: scope.villages, governorate: scope.governorate }} />
+      ),
+    });
+  }
+
   // 2 — Response Quality (stat tiles)
   if (isObj(c.responseQuality)) {
     sections.push({
@@ -268,11 +312,18 @@ export function ReportContentView({ report }: { report: Report }) {
       node: (
         <StatTiles
           items={Object.entries(c.responseQuality)
-            .filter(([, v]) => !isObj(v) && !Array.isArray(v))
-            .map(([k, v]) => ({
-              label: label(k),
-              value: k.toLowerCase().includes("rate") ? `${scalar(v)}%` : scalar(v),
-            }))}
+            // confidencePct is folded into the Overall Confidence tile below.
+            .filter(([k, v]) => k !== "confidencePct" && !isObj(v) && !Array.isArray(v))
+            .map(([k, v]) => {
+              const pct = (c.responseQuality as Dict).confidencePct;
+              if (k === "overallConfidence" && typeof pct === "number") {
+                return { label: label(k), value: `${scalar(v)} (${pct}%)` };
+              }
+              return {
+                label: label(k),
+                value: k.toLowerCase().includes("rate") ? `${scalar(v)}%` : scalar(v),
+              };
+            })}
         />
       ),
     });
@@ -315,7 +366,29 @@ export function ReportContentView({ report }: { report: Report }) {
               <BarChart bars={severBars} max={100} />
             </div>
           </div>
-          <DataTable rows={domains} />
+          <DataTable rows={domains} columns={DOMAIN_COLUMNS} />
+          {domains.some((d) => typeof d.trendNote === "string" && d.trendNote) ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("trendNotes")}
+              </p>
+              <div className="divide-border divide-y">
+                {domains
+                  .filter((d) => typeof d.trendNote === "string" && d.trendNote)
+                  .map((d, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start justify-between gap-4 py-2 text-sm"
+                    >
+                      <span className="text-muted-foreground">{scalar(d.name)}</span>
+                      <span className="text-foreground text-right">
+                        {scalar(d.trendNote)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       ),
     });
@@ -454,6 +527,27 @@ export function ReportContentView({ report }: { report: Report }) {
     });
   }
 
+  // First-class Data Quality and Trend notes (promoted out of the AI Summary —
+  // currently the region report) rendered as their own distinct sections.
+  if (typeof c.dataQualityNote === "string" && c.dataQualityNote) {
+    sections.push({
+      title: t("dataQualityNote"),
+      node: (
+        <p className="text-foreground text-sm leading-relaxed">
+          {scalar(c.dataQualityNote)}
+        </p>
+      ),
+    });
+  }
+  if (typeof c.trendNote === "string" && c.trendNote) {
+    sections.push({
+      title: t("trendNote"),
+      node: (
+        <p className="text-foreground text-sm leading-relaxed">{scalar(c.trendNote)}</p>
+      ),
+    });
+  }
+
   // Anomalies + reviewer notes
   if (Array.isArray(c.anomalies) && c.anomalies.length > 0) {
     sections.push({
@@ -490,6 +584,8 @@ export function ReportContentView({ report }: { report: Report }) {
           officerConfirmedAt: approval?.officerConfirmedAt ?? report.officerConfirmedAt,
           reviewerApprovedBy:
             report.reviewedByName ?? approval?.reviewerApprovedBy ?? report.reviewedBy,
+          // Reviewer's role (Approver vs Supervisor) — only when known.
+          ...(report.reviewedByRole ? { reviewerRole: report.reviewedByRole } : {}),
           reviewerApprovedAt: approval?.reviewerApprovedAt ?? report.reviewedAt,
         }}
       />

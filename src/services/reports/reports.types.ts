@@ -120,6 +120,7 @@ export interface Report {
   officerConfirmedAt: string | null;
   reviewedBy: string | null;
   reviewedByName: string | null;
+  reviewedByRole: string | null;
   reviewedAt: string | null;
   archivedAt: string | null;
   exportFormats: ExportFormat[];
