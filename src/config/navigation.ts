@@ -96,7 +96,15 @@ export const appNav: NavItem[] = [
     labelKey: "reviewerSla",
     href: "/reviewer-sla",
     icon: AlarmClock,
-    module: "aiReview",
+    // Was "aiReview" — a permission several roles hold for unrelated
+    // reasons (classification-decision read access), which leaked this
+    // nav item to roles that can't act on anything it shows (data_analyst,
+    // read_only_viewer, center_supervisor, system_admin all hold
+    // aiReview:read). surveyBuilder:read is what the two roles that
+    // actually belong here (Research Officer, Reviewer/Approver) hold —
+    // see ReviewerSlaService.listAlerts, which branches on which one you
+    // are to decide what you actually see.
+    module: "surveyBuilder",
   },
   {
     labelKey: "organization",

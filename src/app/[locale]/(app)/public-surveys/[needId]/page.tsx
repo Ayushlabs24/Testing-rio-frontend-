@@ -5,9 +5,9 @@ import {
   Check,
   Copy,
   FileWarning,
+  Mail,
   Plus,
   QrCode as QrCodeIcon,
-  Share2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
@@ -104,10 +104,12 @@ function formatDate(iso: string): string {
 }
 
 function LinkRow({
+  needId,
   link,
   canWrite,
   onDeactivated,
 }: {
+  needId: string;
   link: PublicSurveyLink;
   canWrite: boolean;
   onDeactivated: () => void;
@@ -115,27 +117,42 @@ function LinkRow({
   const t = useTranslations("app.publicSurveys.detail");
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailValue, setEmailValue] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  function handleEmailOpenChange(next: boolean) {
+    setEmailOpen(next);
+    if (!next) {
+      setEmailValue("");
+      setEmailError(null);
+      setEmailSent(false);
+    }
+  }
+
+  async function sendEmail() {
+    if (!emailValue.trim()) {
+      setEmailError(t("emailRequired"));
+      return;
+    }
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      await publicSurveysService.shareLinkByEmail(needId, link.id, emailValue.trim());
+      setEmailSent(true);
+    } catch (error) {
+      setEmailError(error instanceof ApiError ? error.message : t("genericError"));
+    } finally {
+      setEmailSending(false);
+    }
+  }
 
   async function copyUrl() {
     await navigator.clipboard.writeText(link.publicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }
-
-  // Reuses the existing publicUrl as-is — never generates a new URL or QR.
-  // Falls back to the same copy-link behavior (and its "Copied" feedback)
-  // when the Web Share API isn't available, or when the user's platform
-  // share sheet fails for a reason other than them just cancelling it.
-  async function shareUrl() {
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title: link.label, url: link.publicUrl });
-        return;
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-      }
-    }
-    await copyUrl();
   }
 
   return (
@@ -195,13 +212,13 @@ function LinkRow({
                   size="icon"
                   variant="outline"
                   className="size-8"
-                  onClick={shareUrl}
-                  aria-label={t("share")}
+                  onClick={() => setQrOpen(true)}
+                  aria-label={t("viewQrCode")}
                 >
-                  <Share2 className="size-3.5" />
+                  <QrCodeIcon className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t("share")}</TooltipContent>
+              <TooltipContent>{t("viewQrCode")}</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -210,13 +227,13 @@ function LinkRow({
                   size="icon"
                   variant="outline"
                   className="size-8"
-                  onClick={() => setQrOpen(true)}
-                  aria-label={t("viewQrCode")}
+                  onClick={() => setEmailOpen(true)}
+                  aria-label={t("emailLink")}
                 >
-                  <QrCodeIcon className="size-3.5" />
+                  <Mail className="size-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{t("viewQrCode")}</TooltipContent>
+              <TooltipContent>{t("emailLink")}</TooltipContent>
             </Tooltip>
 
             {canWrite && link.isActive ? (
@@ -259,6 +276,62 @@ function LinkRow({
                 <QRCodeSVG value={link.publicUrl} size={192} />
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={emailOpen} onOpenChange={handleEmailOpenChange}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("emailLinkDialogTitle")}</DialogTitle>
+            </DialogHeader>
+            {emailSent ? (
+              <p className="text-foreground text-sm">
+                {t("emailSentMessage", { email: emailValue.trim() })}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-muted-foreground text-sm">
+                  {t("emailLinkDialogDescription")}
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor={`survey-link-email-${link.id}`}>
+                    {t("emailAddressLabel")}
+                  </Label>
+                  <Input
+                    id={`survey-link-email-${link.id}`}
+                    type="email"
+                    placeholder={t("emailAddressPlaceholder")}
+                    value={emailValue}
+                    onChange={(e) => {
+                      setEmailValue(e.target.value);
+                      if (emailError) setEmailError(null);
+                    }}
+                    aria-invalid={emailError ? true : undefined}
+                  />
+                  {emailError ? (
+                    <p className="text-destructive text-sm">{emailError}</p>
+                  ) : null}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              {emailSent ? (
+                <Button onClick={() => handleEmailOpenChange(false)}>{t("close")}</Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleEmailOpenChange(false)}
+                    disabled={emailSending}
+                  >
+                    {t("cancel")}
+                  </Button>
+                  <Button onClick={sendEmail} disabled={emailSending}>
+                    {emailSending ? t("sending") : t("send")}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </TableCell>
@@ -473,6 +546,7 @@ export default function PublicSurveyDetailPage({
                     {links.map((link) => (
                       <LinkRow
                         key={link.id}
+                        needId={needId}
                         link={link}
                         canWrite={canWrite}
                         onDeactivated={() => deactivate(link.id)}

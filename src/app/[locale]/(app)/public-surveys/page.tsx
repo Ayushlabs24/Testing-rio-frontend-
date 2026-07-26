@@ -86,10 +86,10 @@ export default function PublicSurveysPage() {
 
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="py-3">{t("studyColumn")}</TableHead>
+                  <TableHead className="w-[45%] py-3">{t("studyColumn")}</TableHead>
                   <TableHead className="w-40 py-3">{t("statusColumn")}</TableHead>
                   <TableHead className="w-40 py-3" />
                 </TableRow>

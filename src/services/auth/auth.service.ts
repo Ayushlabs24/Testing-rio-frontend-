@@ -166,13 +166,14 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
 }
 
 /**
- * `login`/`signup`/`me`/`logout`/`changePassword`/`giveConsent` call the
- * real backend — the session lives in an httpOnly cookie the server
- * sets/reads (see Project-RIO-Backend's auth.controller.ts), not in
- * `mockSession`. `forgotPassword`/`requestOtp`/`verifyOtp` have no backend
- * counterpart yet and stay on the mock layer until one exists — each gets
- * swapped independently as its own endpoint lands, per the project's
- * incremental-swap convention.
+ * `login`/`signup`/`me`/`logout`/`changePassword`/`giveConsent`/
+ * `forgotPassword`/`resetPassword` call the real backend — the session
+ * lives in an httpOnly cookie the server sets/reads (see
+ * Project-RIO-Backend's auth.controller.ts), not in `mockSession`.
+ * `requestOtp`/`verifyOtp` (staff sign-in OTP, distinct from citizen survey
+ * OTP) have no backend counterpart yet and stay on the mock layer until one
+ * exists — each gets swapped independently as its own endpoint lands, per
+ * the project's incremental-swap convention.
  */
 export const authService = {
   async login(payload: LoginPayload): Promise<SessionContext> {
@@ -223,16 +224,12 @@ export const authService = {
     await apiClient.post(endpoints.auth.logout);
   },
 
-  async forgotPassword(_payload: ForgotPasswordPayload): Promise<{ message: string }> {
-    await mockDelay();
-    // Always report success, regardless of whether the email exists — avoids
-    // leaking which emails are registered, and mirrors real-world behavior.
-    return { message: "If that email exists, a reset link has been sent." };
+  async forgotPassword(payload: ForgotPasswordPayload): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>(endpoints.auth.forgotPassword, payload);
   },
 
-  async resetPassword(_payload: ResetPasswordPayload): Promise<{ message: string }> {
-    await mockDelay();
-    return { message: "Password reset." };
+  async resetPassword(payload: ResetPasswordPayload): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>(endpoints.auth.resetPassword, payload);
   },
 
   async requestOtp({ email }: RequestOtpPayload): Promise<{ message: string }> {

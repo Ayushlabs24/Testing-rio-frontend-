@@ -48,6 +48,7 @@ export const endpoints = {
   },
   questionBank: {
     domainOptions: "/question-bank/domain-options",
+    kpiOptions: "/question-bank/kpi-options",
     questions: "/question-bank/questions",
   },
   surveys: {
@@ -65,6 +66,9 @@ export const endpoints = {
     public: (id: string) => `/surveys/public/${id}`,
     submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
     responses: (id: string) => `/surveys/${id}/responses`,
+    // Org-wide, not needId-scoped — a reusable custom question can have
+    // come from any survey (see SurveysController.listReusableCustomQuestions).
+    reusableCustomQuestions: "/custom-questions",
   },
   roles: {
     list: "/roles",
@@ -114,6 +118,7 @@ export const endpoints = {
     reject: (needId: string) => `/needs/${needId}/ai-review/reject`,
     overrideDomain: (needId: string) => `/needs/${needId}/ai-review/override-domain`,
     retry: (needId: string) => `/needs/${needId}/ai-review/retry-classification`,
+    manualClassify: (needId: string) => `/needs/${needId}/ai-review/manual-classify`,
   },
   domains: {
     public: "/domains/public",
@@ -137,6 +142,8 @@ export const endpoints = {
     links: (needId: string) => `/needs/${needId}/survey-links`,
     deactivateLink: (needId: string, linkId: string) =>
       `/needs/${needId}/survey-links/${linkId}/deactivate`,
+    shareLinkByEmail: (needId: string, linkId: string) =>
+      `/needs/${needId}/survey-links/${linkId}/share-email`,
     responses: (needId: string) => `/needs/${needId}/survey-responses`,
     // Same rows as `responses`, with each one's answers already joined in.
     responsesWithAnswers: (needId: string) => `/needs/${needId}/survey-responses-full`,

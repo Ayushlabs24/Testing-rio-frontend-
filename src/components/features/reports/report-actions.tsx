@@ -1,16 +1,70 @@
 "use client";
 
-import { Archive, CheckCircle2, Download, ShieldCheck, XCircle } from "lucide-react";
+import {
+  Archive,
+  CheckCircle2,
+  FileSpreadsheet,
+  FileText,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { reportsService } from "@/services/reports/reports.service";
 import { EXPORTABLE_STATUSES, type Report } from "@/services/reports/reports.types";
 
+type ButtonVariant = "outline" | "ghost";
+
+// A single icon-only action with a descriptive tooltip. The tooltip carries the
+// label (previously the button text) so the row stays compact but every symbol
+// is still self-explanatory and accessible (aria-label mirrors it).
+function IconAction({
+  icon: Icon,
+  label,
+  onClick,
+  variant = "outline",
+  className,
+  iconSize,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  variant?: ButtonVariant;
+  className?: string;
+  iconSize: "icon" | "icon-sm";
+}): ReactNode {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          size={iconSize}
+          variant={variant}
+          className={className}
+          aria-label={label}
+          onClick={onClick}
+        >
+          <Icon />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 // Lifecycle + export actions for a single report, shared by the list rows and
 // the detail header so the two-step approval flow (Officer confirm → Reviewer
-// approve/release → Archive) stays identical everywhere.
+// approve/release → Archive) stays identical everywhere. Rendered as icon
+// buttons with tooltips to keep the actions column compact.
 export function ReportActions({
   report,
   onChanged,
@@ -31,6 +85,7 @@ export function ReportActions({
   const isReleased = report.status === "released";
   const isConfirmed = report.officerConfirmedAt !== null;
   const exportable = EXPORTABLE_STATUSES.includes(report.status);
+  const iconSize = size === "default" ? "icon" : "icon-sm";
 
   async function run(action: () => Promise<unknown>, fallback: string) {
     onError("");
@@ -43,82 +98,72 @@ export function ReportActions({
   }
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       {canWrite && isDraft && !isConfirmed ? (
-        <Button
-          size={size}
-          variant="outline"
-          className="gap-1.5"
+        <IconAction
+          icon={CheckCircle2}
+          label={t("tooltip.confirm")}
+          iconSize={iconSize}
           onClick={() => run(() => reportsService.confirm(report.id), "actionError")}
-        >
-          <CheckCircle2 className="size-3.5" />
-          {t("confirm")}
-        </Button>
+        />
       ) : null}
 
       {canApprove && isDraft && isConfirmed ? (
-        <Button
-          size={size}
-          variant="outline"
-          className="gap-1.5"
+        <IconAction
+          icon={ShieldCheck}
+          label={t("tooltip.approve")}
+          iconSize={iconSize}
           onClick={() => run(() => reportsService.approve(report.id), "actionError")}
-        >
-          <ShieldCheck className="size-3.5" />
-          {t("approve")}
-        </Button>
+        />
       ) : null}
 
       {canApprove && isDraft ? (
-        <Button
-          size={size}
+        <IconAction
+          icon={XCircle}
+          label={t("tooltip.reject")}
           variant="ghost"
-          className="text-destructive gap-1.5"
+          className="text-destructive hover:text-destructive"
+          iconSize={iconSize}
           onClick={() => run(() => reportsService.reject(report.id), "actionError")}
-        >
-          <XCircle className="size-3.5" />
-          {t("reject")}
-        </Button>
+        />
       ) : null}
 
       {canApprove && isReleased ? (
-        <Button
-          size={size}
-          variant="outline"
-          className="gap-1.5"
+        <IconAction
+          icon={Archive}
+          label={t("tooltip.archive")}
+          iconSize={iconSize}
           onClick={() => run(() => reportsService.archive(report.id), "actionError")}
-        >
-          <Archive className="size-3.5" />
-          {t("archive")}
-        </Button>
+        />
       ) : null}
 
       {canExport && exportable && report.exportFormats.includes("pdf") ? (
-        <Button
-          size={size}
-          variant="outline"
-          className="gap-1.5"
+        <IconAction
+          icon={FileText}
+          label={t("tooltip.exportPdf")}
+          iconSize={iconSize}
+          // Red = PDF, green = Excel (see the Excel export below) — same
+          // shorthand every file picker/OS uses, so the two export actions
+          // read as distinct at a glance instead of two near-identical
+          // gray document glyphs.
+          className="text-destructive hover:text-destructive"
           onClick={() =>
             run(() => reportsService.download(report.id, "pdf"), "detail.exportError")
           }
-        >
-          <Download className="size-3.5" />
-          {t("exportPdf")}
-        </Button>
+        />
       ) : null}
 
       {canExport && exportable && report.exportFormats.includes("excel") ? (
-        <Button
-          size={size}
-          variant="outline"
-          className="gap-1.5"
+        <IconAction
+          icon={FileSpreadsheet}
+          label={t("tooltip.exportExcel")}
+          iconSize={iconSize}
+          className="text-success hover:text-success"
           onClick={() =>
             run(() => reportsService.download(report.id, "excel"), "detail.exportError")
           }
-        >
-          <Download className="size-3.5" />
-          {t("exportExcel")}
-        </Button>
+        />
       ) : null}
-    </>
+    </TooltipProvider>
   );
 }

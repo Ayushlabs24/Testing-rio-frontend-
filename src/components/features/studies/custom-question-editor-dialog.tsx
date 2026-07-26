@@ -2,7 +2,8 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -22,8 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { domainsService } from "@/services/domains/domains.service";
 import {
   ADDITIONAL_QUESTION_ANSWER_TYPES,
+  surveysService,
   type AdditionalQuestionAnswerType,
 } from "@/services/surveys/surveys.service";
 
@@ -39,6 +42,9 @@ export interface CustomQuestionValue {
   questionText: string;
   answerType: AdditionalQuestionAnswerType;
   answerOptions: string[] | null;
+  domain: string | null;
+  subDomain: string | null;
+  kpi: string | null;
   isRequired: boolean;
 }
 
@@ -77,9 +83,52 @@ export function CustomQuestionEditorDialog({
       ? initialValue.answerOptions
       : ["", ""],
   );
+  // Domain/Sub-domain/KPI — required going forward for every custom
+  // question saved through this dialog (new or edited), so the Question
+  // Bank and reports stay consistent regardless of how a question was
+  // added. A question saved before this field existed just opens with
+  // these blank; it keeps working unedited (see SurveysService#
+  // updateQuestions on the backend) — only actually editing it here, via
+  // this dialog's own Save, requires filling them in.
+  const [domain, setDomain] = useState<string | null>(initialValue?.domain ?? null);
+  const [subDomain, setSubDomain] = useState<string | null>(
+    initialValue?.subDomain ?? null,
+  );
+  const [kpi, setKpi] = useState(initialValue?.kpi ?? "");
+  const [domainOptions, setDomainOptions] = useState<
+    Array<{ name: string; subDomains: string[] }>
+  >([]);
+  const [kpiOptions, setKpiOptions] = useState<string[]>([]);
   const [required, setRequired] = useState(initialValue?.isRequired ?? true);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    domainsService
+      .listWithSubDomains()
+      .then((domains) =>
+        setDomainOptions(
+          domains
+            .filter((d) => d.isActive)
+            .map((d) => ({
+              name: d.name,
+              subDomains: d.subDomains.filter((sd) => sd.isActive).map((sd) => sd.name),
+            })),
+        ),
+      )
+      .catch(() => setDomainOptions([]));
+  }, []);
+
+  // Suggestions only — KPI has no fixed vocabulary the way Domain/Sub-domain
+  // do (see surveysService.getKpiOptions), so this never blocks typing a
+  // brand-new one.
+  useEffect(() => {
+    surveysService
+      .getKpiOptions()
+      .then(setKpiOptions)
+      .catch(() => setKpiOptions([]));
+  }, []);
+
+  const subDomainOptions = domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
   const needsOptions = OPTIONS_ANSWER_TYPES.has(answerType);
 
   function updateOption(index: number, value: string) {
@@ -105,10 +154,18 @@ export function CustomQuestionEditorDialog({
       setError(t("openEndedOptionsRequired"));
       return;
     }
+    const trimmedKpi = kpi.trim();
+    if (!domain || !subDomain || !trimmedKpi) {
+      setError(t("domainSubDomainKpiRequired"));
+      return;
+    }
     onSave({
       questionText: trimmed,
       answerType,
       answerOptions: needsOptions ? cleanedOptions : null,
+      domain,
+      subDomain,
+      kpi: trimmedKpi,
       isRequired: required,
     });
     onOpenChange(false);
@@ -116,7 +173,7 @@ export function CustomQuestionEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
             {initialValue ? t("editOpenEndedQuestion") : t("addOpenEndedQuestion")}
@@ -156,6 +213,65 @@ export function CustomQuestionEditorDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="custom-question-domain">
+              {t("domainLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={domain ?? undefined}
+              onValueChange={(v) => {
+                setDomain(v);
+                setSubDomain(null);
+              }}
+            >
+              <SelectTrigger id="custom-question-domain" className="w-full">
+                <SelectValue placeholder={t("selectDomain")} />
+              </SelectTrigger>
+              <SelectContent>
+                {domainOptions.map((d) => (
+                  <SelectItem key={d.name} value={d.name}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="custom-question-sub-domain">
+              {t("subDomainLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={subDomain ?? undefined}
+              onValueChange={setSubDomain}
+              disabled={!domain}
+            >
+              <SelectTrigger id="custom-question-sub-domain" className="w-full">
+                <SelectValue placeholder={t("selectSubDomain")} />
+              </SelectTrigger>
+              <SelectContent>
+                {subDomainOptions.map((sd) => (
+                  <SelectItem key={sd} value={sd}>
+                    {sd}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="custom-question-kpi">
+              {t("kpiLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <AutocompleteInput
+              id="custom-question-kpi"
+              value={kpi}
+              onChange={setKpi}
+              options={kpiOptions}
+              placeholder={t("kpiPlaceholder")}
+            />
           </div>
 
           {needsOptions ? (

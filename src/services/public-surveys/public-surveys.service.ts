@@ -32,6 +32,17 @@ export const publicSurveysService = {
     );
   },
 
+  /** Sends the link plus its QR code (embedded, not just the raw URL) as a
+   * real formatted email — a mailto: link has no way to attach an image, so
+   * this goes through the backend's mailer instead (see
+   * PublicSurveysService.shareLinkByEmail). The QR is generated fresh
+   * server-side from the link's own token, not sent from here. */
+  async shareLinkByEmail(needId: string, linkId: string, email: string): Promise<void> {
+    await apiClient.post(endpoints.publicSurveys.shareLinkByEmail(needId, linkId), {
+      email,
+    });
+  },
+
   async listResponses(
     needId: string,
     params: {

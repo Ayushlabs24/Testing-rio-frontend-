@@ -28,6 +28,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Curated, not exhaustive — Gulf/neighboring countries first (this app is
+// KSA-focused, so Saudi Arabia is the default), plus a handful of other
+// common codes. A respondent whose country isn't listed can still pick the
+// closest match; the actual OTP delivery only cares that the combined
+// number is a valid phone shape.
+const COUNTRY_DIAL_CODES = [
+  { code: "SA", dialCode: "+966", label: "Saudi Arabia (+966)" },
+  { code: "AE", dialCode: "+971", label: "UAE (+971)" },
+  { code: "BH", dialCode: "+973", label: "Bahrain (+973)" },
+  { code: "KW", dialCode: "+965", label: "Kuwait (+965)" },
+  { code: "OM", dialCode: "+968", label: "Oman (+968)" },
+  { code: "QA", dialCode: "+974", label: "Qatar (+974)" },
+  { code: "EG", dialCode: "+20", label: "Egypt (+20)" },
+  { code: "JO", dialCode: "+962", label: "Jordan (+962)" },
+  { code: "IN", dialCode: "+91", label: "India (+91)" },
+  { code: "PK", dialCode: "+92", label: "Pakistan (+92)" },
+  { code: "US", dialCode: "+1", label: "United States (+1)" },
+  { code: "GB", dialCode: "+44", label: "United Kingdom (+44)" },
+] as const;
+
 type LoadState = "loading" | "notFound" | "ready";
 // "welcome" carries the study/organisation context that used to live on its
 // own post-OTP screen — showing it up front (before asking for any personal
@@ -111,13 +131,21 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   const [questionIndex, setQuestionIndex] = useState(0);
 
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  // Both channels are mandatory — a single OTP code is sent to both (see
+  // CitizenService.requestOtp on the backend), and the respondent can
+  // verify with the code from whichever one they actually checked.
+  const [dialCode, setDialCode] = useState<string>(COUNTRY_DIAL_CODES[0].dialCode);
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const contact = email.trim();
+  const mobile = `${dialCode}${mobileNumber.replace(/\D/g, "")}`;
   const [gender, setGender] = useState<Gender | "">("");
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCode] = useState("");
-  // Set only when the backend couldn't email the code (no mailer configured
-  // — dev/test) and returned it directly instead, per RequestOtpResult's
-  // `code` field — the only way to proceed without a real inbox.
+  // Set only when NEITHER channel could be delivered (no mailer/SMS
+  // configured — dev/test) and the backend returned the code directly
+  // instead, per RequestOtpResult's `code` field — the only way to proceed
+  // without a real inbox/phone.
   const [devCode, setDevCode] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   // Participant consent, collected on the details step before any personal
@@ -160,14 +188,17 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      const { isDuplicate } = await citizenService.checkDuplicate(token, { contact });
+      const { isDuplicate } = await citizenService.checkDuplicate(token, {
+        contact,
+        mobile,
+      });
       if (isDuplicate) {
         setError(t("details.duplicateError"));
         return;
       }
-      const result = await citizenService.requestOtp(token, { contact });
+      const result = await citizenService.requestOtp(token, { contact, mobile });
       setChallengeId(result.challengeId);
-      setDevCode(result.codeEmailed ? null : (result.code ?? null));
+      setDevCode(result.codeTexted ? null : (result.code ?? null));
       setPhase("otp");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -404,13 +435,39 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="citizen-contact">{t("details.emailLabel")}</Label>
+            <Label htmlFor="citizen-mobile">{t("details.mobileLabel")}</Label>
+            <div className="flex gap-2">
+              <Select value={dialCode} onValueChange={setDialCode}>
+                <SelectTrigger className="w-32 shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_DIAL_CODES.map((c) => (
+                    <SelectItem key={c.code} value={c.dialCode}>
+                      {c.dialCode}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id="citizen-mobile"
+                type="tel"
+                inputMode="tel"
+                className="flex-1"
+                value={mobileNumber}
+                placeholder={t("details.mobilePlaceholder")}
+                onChange={(e) => setMobileNumber(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="citizen-email">{t("details.emailLabel")}</Label>
             <Input
-              id="citizen-contact"
+              id="citizen-email"
               type="email"
-              value={contact}
+              value={email}
               placeholder={t("details.emailPlaceholder")}
-              onChange={(e) => setContact(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -475,7 +532,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         <Button
           className="mt-6 w-full"
           size="lg"
-          disabled={submitting || !contact || !name}
+          disabled={submitting || !name || !mobileNumber.trim() || !email.trim()}
           onClick={submitDetails}
         >
           {submitting ? t("details.submitting") : t("details.submit")}
@@ -497,7 +554,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
           <div className="space-y-1.5">
             <h1 className="text-foreground text-lg font-semibold">{t("otp.title")}</h1>
             <p className="text-muted-foreground text-sm">
-              {t("otp.description", { contact })}
+              {t("otp.description", { mobile })}
             </p>
           </div>
           {devCode ? (

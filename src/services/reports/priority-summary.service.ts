@@ -1,5 +1,14 @@
 import { apiClient } from "@/services/api/client";
 
+// A real Gemini call for a Region/Executive-scope summary routinely takes
+// longer than the app-wide default request timeout (see apiConfig.timeoutMs)
+// — this only overrides it for the one call that actually needs it. Kept a
+// bit above the backend's own AiService.generateJson timeout (60s) so that
+// one wins the race and this request gets the backend's clean, specific
+// "AI service took too long" error instead of the generic frontend
+// "Request timed out" from aborting first.
+const GENERATE_SUMMARY_TIMEOUT_MS = 75_000;
+
 export type SummaryScopeType = "VILLAGE" | "SECTOR" | "REGION" | "EXECUTIVE";
 
 export interface ScopeFilters {
@@ -93,6 +102,7 @@ export const prioritySummaryService = {
     return apiClient.post<PrioritySummaryResponse>(
       `/studies/${studyId}/surveys/${surveyId}/priority-summary/generate`,
       { scope, scopeFilters },
+      { timeoutMs: GENERATE_SUMMARY_TIMEOUT_MS },
     );
   },
 
