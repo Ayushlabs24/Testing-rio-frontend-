@@ -315,22 +315,22 @@ export function ReportSharingPanel({
     return (
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>{t("reportColumn")}</TableHead>
-                <TableHead>{t("orgColumn")}</TableHead>
+                <TableHead className="w-64">{t("reportColumn")}</TableHead>
+                <TableHead className="w-40">{t("orgColumn")}</TableHead>
                 {options.showRole ? (
                   <TableHead className="w-28">{t("roleColumn")}</TableHead>
                 ) : null}
                 {options.showPurpose ? (
-                  <TableHead className="w-64">{t("purposeColumn")}</TableHead>
+                  <TableHead className="w-56">{t("purposeColumn")}</TableHead>
                 ) : null}
                 {options.showRejectReason ? (
-                  <TableHead className="w-64">{t("rejectReasonColumn")}</TableHead>
+                  <TableHead className="w-56">{t("rejectReasonColumn")}</TableHead>
                 ) : null}
                 <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                <TableHead className="w-44">{t("requestedColumn")}</TableHead>
+                <TableHead className="w-40">{t("requestedColumn")}</TableHead>
                 <TableHead className="w-56" />
               </TableRow>
             </TableHeader>
@@ -364,10 +364,10 @@ export function ReportSharingPanel({
                   const isOwnerView = request.ownerOrgId === myOrgId;
                   return (
                     <TableRow key={request.id}>
-                      <TableCell className="py-4 text-sm font-medium">
+                      <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
                         {request.reportTitle}
                       </TableCell>
-                      <TableCell className="py-4 text-sm">
+                      <TableCell className="py-4 text-sm break-words whitespace-normal">
                         {isOwnerView ? request.requestingOrgName : request.ownerOrgName}
                       </TableCell>
                       {options.showRole ? (

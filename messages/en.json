@@ -58,11 +58,9 @@
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",
       "temporaryPasswordTitle": "Your account is ready",
-      "temporaryPasswordDescription": "Save this temporary password — you'll need it to sign in. This is shown only once.",
       "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
       "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
-      "temporaryPasswordLabel": "Temporary password",
-      "copyButton": "Copy",
+      "temporaryPasswordNotEmailedNotice": "Use the temporary password provided to you to sign in. You'll be asked to set your own password the first time you sign in.",
       "goToSignInButton": "Go to sign in"
     },
     "forgotPassword": {
@@ -2070,6 +2068,7 @@
       "domainContributionsTitle": "Domain Priority Contributions",
       "kpiRankingsTitle": "KPI Severity Rankings",
       "kpiRankingsDesc": "All KPIs sorted from highest severity to lowest.",
+      "viewKpiDetail": "View question detail",
       "tableHeaders": {
         "domain": "Domain",
         "severity": "Severity",

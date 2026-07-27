@@ -1,0 +1,13 @@
+# Normalize line endings to LF for every text file, regardless of the
+# checkout platform — avoids CRLF/LF churn showing up as noise in diffs on
+# Windows checkouts. Binary assets are left untouched.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

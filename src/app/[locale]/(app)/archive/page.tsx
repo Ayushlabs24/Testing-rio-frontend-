@@ -124,6 +124,7 @@ export default function ArchivePage() {
                   <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     placeholder={t("searchPlaceholder")}
+                    aria-label={t("searchPlaceholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="h-8 pl-9"

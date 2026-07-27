@@ -250,26 +250,10 @@ export default function SurveyBuilderDetailPage({
         setSurvey(surveyResult);
         loadDraftFromSurvey(surveyResult);
         const pairs = questionBankPairsFor(needResult);
-        // TEMP diagnostic logging (RIO-debug: research-officer override ->
-        // Question Bank tab not showing new sub-domain's questions) — remove
-        // once root cause is confirmed.
-        console.debug("[QB-DEBUG] survey-builder load()", {
-          needId,
-          needStatus: needResult.status,
-          needDomains: needResult.needDomains,
-          surveyQuestionsBankPairs: (surveyResult?.questions ?? [])
-            .filter((q) => !q.isCustom)
-            .map((q) => ({ domain: q.domain, subDomain: q.subDomain })),
-          questionBankPairsForResult: pairs,
-        });
         if (pairs !== null) {
           surveysService
             .getQuestions(pairs)
             .then((questions) => {
-              console.debug("[QB-DEBUG] survey-builder getQuestions() returned", {
-                pairs,
-                count: questions.length,
-              });
               setEligibleQuestions(questions);
             })
             .catch(() => setEligibleQuestions([]));

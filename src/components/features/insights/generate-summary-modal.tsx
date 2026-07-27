@@ -39,6 +39,10 @@ import {
   ScopeFilters,
   PrioritySummaryResponse,
 } from "@/services/reports/priority-summary.service";
+import {
+  parsePrioritySummarySnapshot,
+  type PrioritySummarySnapshot,
+} from "@/services/reports/priority-summary.schemas";
 
 export function GenerateSummaryModal({
   open,
@@ -80,8 +84,7 @@ export function GenerateSummaryModal({
 
   const [generating, setGenerating] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [previewData, setPreviewData] = useState<any | null>(null);
+  const [previewData, setPreviewData] = useState<PrioritySummarySnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const getFilters = (): ScopeFilters => {
@@ -108,7 +111,7 @@ export function GenerateSummaryModal({
         scope,
         getFilters(),
       );
-      setPreviewData(res.snapshot);
+      setPreviewData(parsePrioritySummarySnapshot(res.snapshot));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("errors.previewFailed"));
     } finally {
@@ -454,10 +457,11 @@ export function GenerateSummaryModal({
               type="button"
               size="sm"
               onClick={handleGenerate}
-              disabled={
+              disabled={Boolean(
                 generating ||
-                (previewData && previewData.responseQuality?.submittedResponseCount === 0)
-              }
+                (previewData &&
+                  previewData.responseQuality?.submittedResponseCount === 0),
+              )}
               className="gap-1.5 text-xs"
             >
               {generating ? (

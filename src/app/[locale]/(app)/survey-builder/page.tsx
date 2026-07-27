@@ -159,9 +159,19 @@ export default function SurveyBuilderPage() {
                       <TableCell className="align-middle">
                         <Badge
                           variant="outline"
-                          className={STATUS_BADGE_CLASS[survey.status]}
+                          className={
+                            STATUS_BADGE_CLASS[
+                              survey.status.toUpperCase() as Survey["status"]
+                            ]
+                          }
                         >
-                          {t(`status.${survey.status}`)}
+                          {t.has(`status.${survey.status.toUpperCase()}`)
+                            ? t(
+                                `status.${survey.status.toUpperCase()}` as Parameters<
+                                  typeof t
+                                >[0],
+                              )
+                            : survey.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right align-middle">
