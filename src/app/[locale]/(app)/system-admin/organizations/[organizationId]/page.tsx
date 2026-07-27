@@ -498,6 +498,7 @@ export default function SystemAdminOrganizationDetailPage({
                   <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
                   <Input
                     placeholder={tUsers("searchPlaceholder")}
+                    aria-label={tUsers("searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9 text-xs"

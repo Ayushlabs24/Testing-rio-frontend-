@@ -98,7 +98,12 @@ export function ArchiveDetailDrawer({
                 {t("readOnlyBanner")}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label={t("drawer.close")}
+            >
               <X className="size-5" />
             </Button>
           </div>
