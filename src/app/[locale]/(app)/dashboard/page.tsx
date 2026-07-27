@@ -2,7 +2,6 @@
 
 import {
   Building2,
-  CheckCircle2,
   ClipboardCheck,
   FileText,
   LayoutGrid,
@@ -14,11 +13,12 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { PageContainer } from "@/components/common/page-container";
-import { PageHeader } from "@/components/common/page-header";
 import { CollectiveDashboard } from "@/components/features/dashboard/collective-dashboard";
 import { ResearchOfficerDashboard } from "@/components/features/dashboard/research-officer-dashboard";
 import { ReviewerDashboard } from "@/components/features/dashboard/reviewer-dashboard";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
+import SystemAdminDashboardPage from "../system-admin/dashboard/page";
 import { SupervisorDashboard } from "@/components/features/dashboard/supervisor-dashboard";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import { rolesService } from "@/services/roles/roles.service";
@@ -26,17 +26,11 @@ import { studiesService } from "@/services/studies/studies.service";
 import { usersService } from "@/services/users/users.service";
 import type { PlatformStudyStats } from "@/services/studies/studies.types";
 import { PERMISSION_MODULES } from "@/types/permissions";
-import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
   const t = useTranslations("app.dashboard");
   const { session } = useAuth();
   const isCrossEntity = session?.role.crossEntity ?? false;
-  // These tiles fetch org team + role data. Only the roles that can read those
-  // modules (e.g. NGO Admin) are permitted the underlying endpoints — a
-  // Research Officer holds neither, so firing the calls unconditionally would
-  // 403. Gate the fetch (and the tile) on the same permission the backend
-  // enforces, so no role is shown a card it cannot populate.
   const canReadUsers = usePermission("entityTeam", "read");
   const canReadRoles = usePermission("rolesPermissions", "read");
   const canReadReports = usePermission("reportsDashboards", "read");
@@ -47,11 +41,7 @@ export default function DashboardPage() {
   const [studyStats, setStudyStats] = useState<PlatformStudyStats | null>(null);
 
   useEffect(() => {
-    // Every fetch is caught: a denied or failed tile falls back to its `?? 0`
-    // placeholder rather than surfacing as an unhandled promise rejection.
     if (isCrossEntity) {
-      // System Admin / Center Supervisor: a platform-wide view — every
-      // org's data, not just their own.
       organizationsService
         .listAll()
         .then((organizations) => {
@@ -79,93 +69,98 @@ export default function DashboardPage() {
     }
   }, [isCrossEntity, canReadUsers, canReadRoles]);
 
-  // Program Supervisor gets its own read-only, cross-organization dashboard
-  // (real Sharing/Reports/Studies data via /supervisor-overview) rather than
-  // reusing System Admin's platform-stats view below — the two crossEntity
-  // roles have different jobs, so "isCrossEntity" alone isn't the right
-  // branch for this one.
+  /* ── Role-specific dashboard overrides ─────────────────────────────── */
+  if (session?.role.key === "system_admin") {
+    return <SystemAdminDashboardPage />;
+  }
   if (session?.role.key === "center_supervisor") {
     return <SupervisorDashboard userName={session.user.name} />;
   }
-
-  // Human Reviewer gets its own dashboard — the pending AI-review queue,
-  // studies awaiting review, recently reviewed studies, and SLA status —
-  // rather than the org-stats tiles below, which this role has no
-  // read access to populate anyway (no entityTeam/rolesPermissions).
   if (session?.role.key === "human_reviewer") {
     return <ReviewerDashboard userName={session.user.name} />;
   }
-
-  // Research Officer's work is the Study -> Need -> Evidence -> AI
-  // Classification pipeline, so its dashboard reflects that directly
-  // instead of the generic org-stats tiles below (Users/Roles/Modules
-  // count), which this role can't populate anyway.
   if (session?.role.key === "ngo_research_officer") {
     return <ResearchOfficerDashboard userName={session.user.name} />;
   }
 
+  /* ── NGO Admin Dashboard ────────────────────────────────────────────── */
   return (
     <PageContainer>
-      <PageHeader
-        title={t("title", { name: session?.user.name ?? "" })}
-        description={t(isCrossEntity ? "descriptionGlobal" : "description")}
-      />
-      <div
-        className={cn(
-          "grid grid-cols-1 gap-4 sm:grid-cols-2",
-          isCrossEntity ? "lg:grid-cols-5" : "lg:grid-cols-3",
-        )}
-      >
-        {isCrossEntity ? (
-          <>
-            <StatCard
-              label={t("stats.organizations")}
-              value={organizationCount ?? 0}
-              icon={Building2}
-            />
-            <StatCard label={t("stats.users")} value={userCount ?? 0} icon={Users2} />
-            <StatCard
-              label={t("stats.activeStudies")}
-              value={studyStats?.activeStudies ?? 0}
-              icon={ClipboardCheck}
-            />
-            <StatCard
-              label={t("stats.pendingReviews")}
-              value={studyStats?.pendingReviews ?? 0}
-              icon={CheckCircle2}
-            />
-            <StatCard
-              label={t("stats.reportsGenerated")}
-              value={studyStats?.reportsGenerated ?? 0}
-              icon={FileText}
-            />
-          </>
-        ) : (
-          <>
-            {canReadUsers ? (
-              <StatCard label={t("stats.users")} value={userCount ?? 0} icon={Users2} />
-            ) : null}
-            {canReadRoles ? (
-              <StatCard
-                label={t("stats.roles")}
-                value={roleCount ?? 0}
-                icon={ShieldCheck}
-              />
-            ) : null}
-            <StatCard
-              label={t("stats.modules")}
-              value={PERMISSION_MODULES.length}
-              icon={LayoutGrid}
-            />
-          </>
-        )}
-      </div>
-
-      {canReadReports ? (
-        <div className="mt-8">
-          <CollectiveDashboard />
+      <div className="flex flex-col gap-8">
+        {/* ── Page Header ───────────────────────────────────────────────── */}
+        <div>
+          <h1 className="text-foreground text-2xl font-bold tracking-tight">
+            {t("title", { name: session?.user.name ?? "" })}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t(isCrossEntity ? "descriptionGlobal" : "description")}
+          </p>
         </div>
-      ) : null}
+
+        {/* ── KPI Stat Cards ────────────────────────────────────────────── */}
+        <div
+          className={
+            isCrossEntity
+              ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5"
+              : "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          }
+        >
+          {isCrossEntity ? (
+            <>
+              <StatCard
+                label={t("stats.organizations")}
+                value={organizationCount ?? 0}
+                icon={Building2}
+              />
+              <StatCard label={t("stats.users")} value={userCount ?? 0} icon={Users2} />
+              <StatCard
+                label={t("stats.activeStudies")}
+                value={studyStats?.activeStudies ?? 0}
+                icon={ClipboardCheck}
+              />
+              <StatCard
+                label={t("stats.pendingReviews")}
+                value={studyStats?.pendingReviews ?? 0}
+                icon={ClipboardCheck}
+                badge={
+                  (studyStats?.pendingReviews ?? 0) > 0
+                    ? { text: t("stats.pendingBadge"), variant: "attention" }
+                    : undefined
+                }
+              />
+              <StatCard
+                label={t("stats.reportsGenerated")}
+                value={studyStats?.reportsGenerated ?? 0}
+                icon={FileText}
+              />
+            </>
+          ) : (
+            <>
+              {canReadUsers ? (
+                <StatCard label={t("stats.users")} value={userCount ?? 0} icon={Users2} />
+              ) : null}
+              {canReadRoles ? (
+                <StatCard
+                  label={t("stats.roles")}
+                  value={roleCount ?? 0}
+                  icon={ShieldCheck}
+                />
+              ) : null}
+              <StatCard
+                label={t("stats.modules")}
+                value={PERMISSION_MODULES.length}
+                icon={LayoutGrid}
+              />
+            </>
+          )}
+        </div>
+
+        {/* ── Geographic Distribution Section ───────────────────────────── */}
+        <GeographicDistribution variant="ngo" />
+
+        {/* ── Collective Dashboard (NGO Analytics) ─────────────────────── */}
+        {canReadReports ? <CollectiveDashboard /> : null}
+      </div>
     </PageContainer>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { ClipboardList, Sparkles, UploadCloud, CheckCircle2 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ClipboardList, Sparkles, UploadCloud, CheckCircle2 } from "lucide-react";
 import { PageContainer } from "@/components/common/page-container";
-import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
@@ -19,21 +19,9 @@ function formatDate(iso: string): string {
   );
 }
 
-/**
- * Research Officer's own dashboard — their work is Study → Need → Evidence
- * → Submit → AI Classification, so the dashboard reflects that pipeline
- * directly instead of the generic org-stats tiles (Users/Roles/Modules
- * count), which this role has no read access to populate anyway (no
- * entityTeam/rolesPermissions) and aren't meaningful to this job either way.
- * A Study has no status of its own now — every stat here is per-Need.
- */
 export function ResearchOfficerDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.researchOfficer");
   const [needs, setNeeds] = useState<Need[] | null>(null);
-  // "Recent" is Study-level, one row per Study — a Study can hold several
-  // Needs, and the old version of this listed one row per Need, so the same
-  // Study title could repeat up to N times. Clicking through to a specific
-  // Need belongs on the Study detail page's own Need list, not here.
   const [recentStudies, setRecentStudies] = useState<StudySummary[] | null>(null);
 
   useEffect(() => {
@@ -42,7 +30,9 @@ export function ResearchOfficerDashboard({ userName }: { userName: string }) {
       .then(async (studies) => {
         setRecentStudies(
           [...studies]
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+            .sort(
+              (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+            )
             .slice(0, 5),
         );
         const needsByStudy = await Promise.all(
@@ -64,58 +54,80 @@ export function ResearchOfficerDashboard({ userName }: { userName: string }) {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title", { name: userName })} description={t("description")} />
+      <div className="flex flex-col gap-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-foreground text-2xl font-bold tracking-tight">
+            {t("title", { name: userName })}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
+            {t("description")}
+          </p>
+        </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label={t("stats.awaitingEvidence")}
-          value={awaitingEvidence}
-          icon={UploadCloud}
-        />
-        <StatCard
-          label={t("stats.readyToClassify")}
-          value={readyToClassify}
-          icon={Sparkles}
-        />
-        <StatCard
-          label={t("stats.awaitingReview")}
-          value={awaitingReview}
-          icon={ClipboardList}
-        />
-        <StatCard label={t("stats.completed")} value={completed} icon={CheckCircle2} />
+        {/* Top Stat Cards Grid */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label={t("stats.awaitingEvidence")}
+            value={awaitingEvidence}
+            icon={UploadCloud}
+          />
+          <StatCard
+            label={t("stats.readyToClassify")}
+            value={readyToClassify}
+            icon={Sparkles}
+          />
+          <StatCard
+            label={t("stats.awaitingReview")}
+            value={awaitingReview}
+            icon={ClipboardList}
+          />
+          <StatCard label={t("stats.completed")} value={completed} icon={CheckCircle2} />
+        </div>
+
+        {/* Geographic Distribution Section */}
+        <GeographicDistribution variant="ngo" />
+
+        {/* Recent Studies Card */}
+        <Card className="border-border/60 rounded-2xl shadow-sm">
+          <CardContent className="p-6">
+            <h2 className="text-foreground mb-4 text-lg font-bold">
+              {t("recentStudiesHeading")}
+            </h2>
+            {recentStudies === null ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-muted h-10 w-full animate-pulse rounded-xl"
+                  />
+                ))}
+              </div>
+            ) : recentStudies.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-sm font-medium">
+                {t("noStudies")}
+              </p>
+            ) : (
+              <div className="divide-border/60 border-border/60 divide-y overflow-hidden rounded-xl border">
+                {recentStudies.map((study) => (
+                  <Link
+                    key={study.id}
+                    href={`/studies/${study.id}`}
+                    className="hover:bg-muted/40 flex items-center justify-between gap-4 px-4 py-3.5 text-sm transition-colors"
+                  >
+                    <span className="text-foreground truncate font-semibold">
+                      {study.title}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs font-medium">
+                      {formatDate(study.updatedAt)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      <Card>
-        <CardContent className="space-y-3 p-6">
-          <h2 className="text-foreground text-sm font-semibold">
-            {t("recentStudiesHeading")}
-          </h2>
-          {recentStudies === null ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-muted h-9 w-full animate-pulse rounded" />
-              ))}
-            </div>
-          ) : recentStudies.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t("noStudies")}</p>
-          ) : (
-            <div className="divide-border divide-y rounded-md border">
-              {recentStudies.map((study) => (
-                <Link
-                  key={study.id}
-                  href={`/studies/${study.id}`}
-                  className="hover:bg-muted/50 flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
-                >
-                  <span className="truncate font-medium">{study.title}</span>
-                  <span className="text-muted-foreground shrink-0 text-xs">
-                    {formatDate(study.updatedAt)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </PageContainer>
   );
 }

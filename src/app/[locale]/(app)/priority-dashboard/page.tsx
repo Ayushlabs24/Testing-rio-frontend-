@@ -144,7 +144,7 @@ export default function PriorityDashboardPage() {
                   <TableHead className="w-28">{t("scoreColumn")}</TableHead>
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
                   <TableHead className="w-40">{t("scoredColumn")}</TableHead>
-                  <TableHead className="w-44 text-right">Actions</TableHead>
+                  <TableHead className="w-44 text-right">{t("actionsColumn")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
