@@ -10,7 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,59 @@ interface AuditSummaryResponse {
     reportActions: number;
     archiveActions: number;
   };
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function formatAuditActionLabel(
+  action: string,
+  tActions?: (key: string) => string,
+): string {
+  if (tActions) {
+    try {
+      const translated = tActions(action);
+      if (
+        translated &&
+        !translated.startsWith("app.settings.audit.actions.") &&
+        !translated.startsWith("systemAdmin.auditLog.")
+      ) {
+        return translated;
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  return action
+    .replace(/^SYSTEM_ADMIN_/, "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function resolveAuditItemLabel(
+  item: AuditItem,
+  orgMap: Map<string, Organization>,
+): string {
+  const isUuid = !!item.entityLabel && UUID_REGEX.test(item.entityLabel);
+  if (!isUuid && item.entityLabel) {
+    return item.entityLabel;
+  }
+
+  const targetOrgId =
+    item.entityType === "organization"
+      ? item.entityId || item.organizationId
+      : item.organizationId;
+
+  if (targetOrgId && orgMap.has(targetOrgId)) {
+    return orgMap.get(targetOrgId)!.name;
+  }
+
+  if (isUuid && item.entityLabel) {
+    return `${item.entityType.charAt(0).toUpperCase() + item.entityType.slice(1)} (${item.entityLabel.slice(0, 8)})`;
+  }
+
+  return item.entityLabel || item.entityType;
 }
 
 export default function SystemAdminAuditLogPage() {
@@ -127,6 +180,10 @@ export default function SystemAdminAuditLogPage() {
   useEffect(() => {
     loadLogs();
   }, [loadLogs]);
+
+  const orgMap = useMemo(() => {
+    return new Map(organizations.map((org) => [org.id, org]));
+  }, [organizations]);
 
   const totalPages = Math.ceil(total / limit) || 1;
   const currentPage = Math.floor(offset / limit) + 1;
@@ -333,22 +390,20 @@ export default function SystemAdminAuditLogPage() {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-xs">
+                        <TableCell className="text-muted-foreground text-xs font-medium">
                           {item.organizationId
-                            ? item.organizationId.slice(0, 8) + "..."
+                            ? (orgMap.get(item.organizationId)?.name ??
+                              item.organizationId.slice(0, 8) + "...")
                             : t("globalScope")}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="font-mono text-[10px] uppercase"
-                          >
-                            {item.action}
+                          <Badge variant="secondary" className="text-[11px] font-medium">
+                            {formatAuditActionLabel(item.action)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">
-                          <span className="text-foreground font-semibold">
-                            {item.entityLabel}
+                          <span className="text-foreground block font-semibold break-words">
+                            {resolveAuditItemLabel(item, orgMap)}
                           </span>
                           <span className="text-muted-foreground block font-mono text-[10px] capitalize">
                             {item.entityType}
