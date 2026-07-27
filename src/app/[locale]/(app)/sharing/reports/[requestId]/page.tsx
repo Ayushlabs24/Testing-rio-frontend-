@@ -46,6 +46,7 @@ function toReport(snapshot: SharedReportSnapshot): Report {
     officerConfirmedAt: snapshot.officerConfirmedAt,
     reviewedBy: snapshot.reviewedBy,
     reviewedByName: null,
+    reviewedByRole: null,
     reviewedAt: snapshot.reviewedAt,
     archivedAt: null,
     exportFormats: [],
