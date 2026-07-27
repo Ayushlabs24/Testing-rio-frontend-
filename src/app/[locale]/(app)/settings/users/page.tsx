@@ -133,7 +133,7 @@ function UserDialog({
     name: z.string().min(1, { message: tValidation("nameRequired") }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
     roleId: z.string().min(1, { message: tValidation("roleRequired") }),
-    status: z.enum(["active", "invited"]),
+    status: z.enum(["active", "invited", "disabled"]),
   });
   type Values = z.infer<typeof schema>;
 

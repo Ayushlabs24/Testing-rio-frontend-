@@ -1,11 +1,11 @@
 "use client";
 
-import { AlarmClock, CheckCircle2, Clock3, ShieldAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { AlarmClock, CheckCircle2, Clock3, ShieldAlert } from "lucide-react";
 import { PageContainer } from "@/components/common/page-container";
-import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -31,9 +31,6 @@ function formatDate(iso: string): string {
   );
 }
 
-// Worst-case wins when several of a Study's Needs are each awaiting review —
-// a single Study row showing "breached" if even one of its items has, rather
-// than whichever alert happened to sort last.
 const STATUS_RANK: Record<SlaAlertStatus, number> = {
   breached: 2,
   at_risk: 1,
@@ -48,12 +45,6 @@ interface StudyAwaitingReview {
   worstStatus: SlaAlertStatus;
 }
 
-// A Study can hold several Needs, each with its own pending alert — grouping
-// by Study here (unlike the full Reviewer Alerts page, which legitimately
-// lists one row per Need alongside its own Need statement/type/dates) avoids
-// the same Study title appearing several times over with nothing to tell
-// the rows apart, which read as a rendering bug rather than "3 separate
-// Needs in this one Study need review."
 function groupAlertsByStudy(alerts: SlaAlert[]): StudyAwaitingReview[] {
   const byStudy = new Map<string, SlaAlert[]>();
   for (const alert of alerts) {
@@ -84,24 +75,12 @@ function groupAlertsByStudy(alerts: SlaAlert[]): StudyAwaitingReview[] {
     );
 }
 
-/**
- * Human Reviewer's own dashboard — their work starts at the pending review
- * queue, not executive/org stats (they don't hold entityTeam/rolesPermissions
- * read access anyway — see role-matrix.ts's human_reviewer entry). Reuses
- * the same data the Reviewer Alerts page and Studies list already show, just
- * surfaced as an at-a-glance summary instead of requiring a page visit.
- */
 export function ReviewerDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.reviewer");
   const [alerts, setAlerts] = useState<SlaAlert[] | null>(null);
   const [recentlyReviewed, setRecentlyReviewed] = useState<StudySummary[] | null>(null);
 
   useEffect(() => {
-    // "Recently Reviewed" must never show a Study that still has something
-    // pending — the alerts list is the one source of truth for "not yet
-    // acted on," so it's fetched first and used to filter the Studies list
-    // below, rather than treating "recently touched" (updatedAt) as if it
-    // meant "recently reviewed."
     reviewerSlaService
       .listAlerts()
       .then((list) => {
@@ -136,107 +115,144 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title", { name: userName })} description={t("description")} />
+      <div className="flex flex-col gap-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-foreground text-2xl font-bold tracking-tight">
+            {t("title", { name: userName })}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
+            {t("description")}
+          </p>
+        </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          label={t("stats.pendingAiReviews")}
-          value={pendingCount}
-          icon={AlarmClock}
-        />
-        <StatCard label={t("stats.atRisk")} value={atRiskCount} icon={Clock3} />
-        <StatCard label={t("stats.breached")} value={breachedCount} icon={ShieldAlert} />
-      </div>
+        {/* Top KPI Cards */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            label={t("stats.pendingAiReviews")}
+            value={pendingCount}
+            icon={AlarmClock}
+          />
+          <StatCard label={t("stats.atRisk")} value={atRiskCount} icon={Clock3} />
+          <StatCard
+            label={t("stats.breached")}
+            value={breachedCount}
+            icon={ShieldAlert}
+          />
+        </div>
 
-      {/* One table, not a duplicate card + table showing the same alerts —
-       * this is the detailed view (Study, Due date, Status all at once). */}
-      <Card>
-        <CardContent className="space-y-3 p-6 pb-0">
-          <h2 className="text-foreground text-sm font-semibold">
-            {t("awaitingReviewHeading")}
-          </h2>
-        </CardContent>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("studyColumn")}</TableHead>
-                <TableHead className="w-36">{t("dueColumn")}</TableHead>
-                <TableHead className="w-28">{t("statusColumn")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {studyRows === null ? (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <TableRow key={index}>
-                    {Array.from({ length: 3 }).map((__, cell) => (
-                      <TableCell key={cell} className="py-4">
-                        <div className="bg-muted h-4 w-24 rounded" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : studyRows.length === 0 ? (
+        {/* Studies Awaiting Review Table Card */}
+        <Card className="border-border/60 overflow-hidden rounded-2xl shadow-sm">
+          <CardContent className="p-6 pb-4">
+            <h2 className="text-foreground text-lg font-bold">
+              {t("awaitingReviewHeading")}
+            </h2>
+          </CardContent>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableCell
-                    colSpan={3}
-                    className="text-muted-foreground h-24 text-center"
-                  >
-                    {t("noAlerts")}
-                  </TableCell>
+                  <TableHead className="text-sm font-bold">{t("studyColumn")}</TableHead>
+                  <TableHead className="w-40 text-sm font-bold">
+                    {t("dueColumn")}
+                  </TableHead>
+                  <TableHead className="w-32 text-sm font-bold">
+                    {t("statusColumn")}
+                  </TableHead>
                 </TableRow>
-              ) : (
-                studyRows.slice(0, 5).map((row) => (
-                  <TableRow key={row.studyId}>
-                    <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                      <Link href={`/studies/${row.studyId}`} className="hover:underline">
-                        {row.studyTitle}
-                      </Link>
-                      {row.pendingCount > 1 ? (
-                        <Badge variant="secondary" className="ml-2 font-normal">
-                          {t("pendingCount", { count: row.pendingCount })}
-                        </Badge>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(row.earliestDueAt)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {t(`status.${row.worstStatus}`)}
+              </TableHeader>
+              <TableBody>
+                {studyRows === null ? (
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <TableRow key={index}>
+                      {Array.from({ length: 3 }).map((__, cell) => (
+                        <TableCell key={cell} className="py-4">
+                          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : studyRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={3}
+                      className="text-muted-foreground py-8 text-center text-sm font-medium"
+                    >
+                      {t("noAlerts")}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  studyRows.slice(0, 5).map((row) => (
+                    <TableRow key={row.studyId} className="hover:bg-muted/30">
+                      <TableCell className="py-4 text-sm font-semibold break-words whitespace-normal">
+                        <Link
+                          href={`/studies/${row.studyId}`}
+                          className="text-foreground hover:text-primary hover:underline"
+                        >
+                          {row.studyTitle}
+                        </Link>
+                        {row.pendingCount > 1 ? (
+                          <Badge variant="secondary" className="ml-2.5 font-medium">
+                            {t("pendingCount", { count: row.pendingCount })}
+                          </Badge>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-medium">
+                        {formatDate(row.earliestDueAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-semibold">
+                        <Badge
+                          variant={
+                            row.worstStatus === "breached" ? "destructive" : "outline"
+                          }
+                          className="font-semibold"
+                        >
+                          {t(`status.${row.worstStatus}`)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-      <div className="mt-6">
-        <Card>
-          <CardContent className="space-y-3 p-6">
-            <h2 className="text-foreground flex items-center gap-1.5 text-sm font-semibold">
-              <CheckCircle2 className="text-badge-success-foreground size-4" />
+        {/* Geographic Distribution Section */}
+        <GeographicDistribution variant="ngo" />
+
+        {/* Recently Reviewed Card */}
+        <Card className="border-border/60 rounded-2xl shadow-sm">
+          <CardContent className="p-6">
+            <h2 className="text-foreground mb-4 flex items-center gap-2 text-lg font-bold">
+              <CheckCircle2 className="size-5 text-emerald-500" />
               {t("recentlyReviewedHeading")}
             </h2>
             {recentlyReviewed === null ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-muted h-9 w-full rounded" />
+                  <div
+                    key={i}
+                    className="bg-muted h-10 w-full animate-pulse rounded-xl"
+                  />
                 ))}
               </div>
             ) : recentlyReviewed.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{t("noRecentlyReviewed")}</p>
+              <p className="text-muted-foreground py-4 text-sm font-medium">
+                {t("noRecentlyReviewed")}
+              </p>
             ) : (
-              <div className="divide-border divide-y rounded-md border">
+              <div className="divide-border/60 border-border/60 divide-y overflow-hidden rounded-xl border">
                 {recentlyReviewed.map((study) => (
                   <Link
                     key={study.id}
                     href={`/studies/${study.id}`}
-                    className="hover:bg-muted/50 flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
+                    className="hover:bg-muted/40 flex items-center justify-between gap-4 px-4 py-3 text-sm transition-colors"
                   >
-                    <span className="truncate font-medium">{study.title}</span>
-                    <span className="text-muted-foreground shrink-0 text-xs">
+                    <span className="text-foreground truncate font-semibold">
+                      {study.title}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs font-medium">
                       {formatDate(study.updatedAt)}
                     </span>
                   </Link>

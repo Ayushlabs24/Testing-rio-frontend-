@@ -27,10 +27,21 @@
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "sharp",
+      "unrs-resolver",
+      "esbuild"
+    ]
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@types/leaflet": "^1.9.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "next-intl": "^4.13.1",
@@ -40,6 +51,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.81.0",
+    "react-leaflet": "^5.0.0",
     "tailwind-merge": "^3.6.0",
     "tw-animate-css": "^1.4.0",
     "zod": "^4.4.3"

@@ -45,6 +45,28 @@ export interface UpdateOrganizationPayload {
   isActive?: boolean;
 }
 
+export interface UpdateOrganizationStatusPayload {
+  isActive: boolean;
+  reason?: string;
+}
+
+export interface CreateOrganizationPayload {
+  name: string;
+  registrationNumber: string;
+  region?: string[];
+  email?: string;
+  sector?: string | null;
+  purpose?: string | null;
+  adminName?: string;
+  adminEmail?: string;
+}
+
 export interface OrganizationSummary extends Organization {
   memberCount: number;
+  studyCount?: number;
+  surveyCount?: number;
+  reportCount?: number;
+  ngoAdminName?: string | null;
+  ngoAdminEmail?: string | null;
+  deactivationReason?: string | null;
 }

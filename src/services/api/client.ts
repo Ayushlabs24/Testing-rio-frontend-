@@ -282,6 +282,51 @@ function uploadForm<TResponse>(
   });
 }
 
+async function downloadBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? apiConfig.timeoutMs,
+  );
+
+  try {
+    const csrfToken = readCsrfCookie();
+    const response = await fetch(buildUrl(path, options.params), {
+      method: "GET",
+      headers: {
+        ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
+        ...options.headers,
+      },
+      signal: options.signal ?? controller.signal,
+      cache: options.cache,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const payload = isJson ? await response.json() : undefined;
+      throw new ApiError({
+        message: payload?.error?.message ?? payload?.message ?? response.statusText,
+        status: response.status,
+        details: payload?.error?.details ?? payload,
+      });
+    }
+
+    return await response.blob();
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError({ message: "Request timed out", status: 408 });
+    }
+    throw new ApiError({
+      message: error instanceof Error ? error.message : "Network error",
+      status: 0,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * The only object in the app allowed to call `fetch`. Every service method
  * must go through this client so request handling (base URL, timeouts,
@@ -298,6 +343,7 @@ export const apiClient = {
     request<TResponse>("PATCH", path, body, options),
   delete: <TResponse>(path: string, options?: RequestOptions) =>
     request<TResponse>("DELETE", path, undefined, options),
+  downloadBlob,
   uploadForm,
   download,
 };
