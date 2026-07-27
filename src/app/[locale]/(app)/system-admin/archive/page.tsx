@@ -2,7 +2,7 @@
 
 import { Archive, Search, Eye, Building2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -60,8 +60,10 @@ export default function SystemAdminArchivePage() {
     title: string;
   } | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const archiveRequestRef = useRef(0);
 
   const loadArchive = useCallback(() => {
+    const requestId = ++archiveRequestRef.current;
     const params: Record<string, string> = {};
     if (selectedOrgId !== "all") {
       params.organizationId = selectedOrgId;
@@ -69,10 +71,12 @@ export default function SystemAdminArchivePage() {
     apiClient
       .get<ArchiveEntry[]>(endpoints.archive.list, { params })
       .then((res) => {
+        if (requestId !== archiveRequestRef.current) return;
         setEntries(res ?? []);
         setLoading(false);
       })
       .catch(() => {
+        if (requestId !== archiveRequestRef.current) return;
         setEntries([]);
         setLoading(false);
       });

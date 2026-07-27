@@ -19,7 +19,6 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { appNav } from "@/config/navigation";
-import { siteConfig } from "@/config/site";
 import {
   markReviewerSlaAlertsSeen,
   useReviewerSlaBadge,
@@ -380,14 +379,16 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">{t("menu")}</SheetTitle>
-            <div className="border-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4 text-sm font-semibold">
+            <div className="border-border flex h-16 min-w-0 items-center border-b px-4 text-sm font-semibold">
               <OrgBrandMark
                 logoUrl={session.organization.logoUrl}
                 crossEntity={session.role.crossEntity}
               />
-              <span className="min-w-0 flex-1 break-words">
-                {session.role.crossEntity ? siteConfig.name : session.organization.name}
-              </span>
+              {session.role.crossEntity ? null : (
+                <span className="ml-2.5 min-w-0 flex-1 break-words">
+                  {session.organization.name}
+                </span>
+              )}
             </div>
             <MobileNav />
           </SheetContent>

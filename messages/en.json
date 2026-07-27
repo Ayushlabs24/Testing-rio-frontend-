@@ -729,7 +729,22 @@
           "delete": "Deleted",
           "login": "Signed in",
           "logout": "Signed out",
-          "consent": "Accepted consent"
+          "consent": "Accepted consent",
+          "SYSTEM_ADMIN_VIEWED_ORGANIZATION_USERS": "Viewed Organization Users",
+          "SYSTEM_ADMIN_VIEWED_ORGANIZATION": "Viewed Organization",
+          "SYSTEM_ADMIN_VIEWED_AUDIT_LOGS": "Viewed Audit Logs",
+          "SYSTEM_ADMIN_ASSIGNED_NGO_ADMIN": "Assigned NGO Admin",
+          "SYSTEM_ADMIN_UPDATED_USER_ROLE": "Updated User Role",
+          "SYSTEM_ADMIN_UPDATED_USER_STATUS": "Updated User Status",
+          "SYSTEM_ADMIN_VIEWED_REPORTS": "Viewed Reports",
+          "SYSTEM_ADMIN_VIEWED_ARCHIVE": "Viewed Archive",
+          "SYSTEM_ADMIN_ARCHIVED_STUDY": "Archived Study",
+          "SYSTEM_ADMIN_RESTORED_STUDY": "Restored Study",
+          "SYSTEM_ADMIN_CREATED_ORGANIZATION": "Created Organization",
+          "SYSTEM_ADMIN_DEACTIVATED_ORGANIZATION": "Deactivated Organization",
+          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "Reactivated Organization",
+          "ORGANIZATION_DEACTIVATED": "Organization Deactivated",
+          "ORGANIZATION_REACTIVATED": "Organization Reactivated"
         },
         "entities": {
           "organization": "Organisation",

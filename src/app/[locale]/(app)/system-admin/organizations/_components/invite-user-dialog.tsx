@@ -24,11 +24,14 @@ import {
 import { usersService } from "@/services/users/users.service";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { getAssignableOrganizationRoles } from "./role-options";
 
 interface RoleOption {
   id: string;
   key: string;
   name: string;
+  enabled: boolean;
+  crossEntity: boolean;
 }
 
 interface InviteUserDialogProps {
@@ -61,7 +64,7 @@ export function InviteUserDialog({
         .get<RoleOption[]>(endpoints.roles.list)
         .then((allRoles) => {
           // Filter out System Admin role for organization user management
-          const filtered = allRoles.filter((r) => r.key !== "system_admin");
+          const filtered = getAssignableOrganizationRoles(allRoles);
           setRoles(filtered);
           if (filtered.length > 0) {
             setRoleId(filtered[0].id);

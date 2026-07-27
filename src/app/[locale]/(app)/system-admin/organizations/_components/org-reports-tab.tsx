@@ -70,9 +70,14 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
     );
   }, [reports, searchQuery]);
 
-  const handleDownload = (id: string, format: "pdf" | "excel") => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}${endpoints.reports.export(id, format)}`;
-    window.open(url, "_blank");
+  const handleDownload = async (id: string, format: "pdf" | "excel") => {
+    const blob = await apiClient.downloadBlob(endpoints.reports.export(id, format));
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `report-${id}.${format === "excel" ? "xlsx" : "pdf"}`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

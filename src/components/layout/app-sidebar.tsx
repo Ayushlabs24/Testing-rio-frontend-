@@ -18,7 +18,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { appNav, NAV_ORDER_BY_ROLE, type NavItem } from "@/config/navigation";
-import { siteConfig } from "@/config/site";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -123,15 +122,15 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
         )}
       >
         {!collapsed ? (
-          <div className="border-sidebar-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4">
-            <OrgBrandMark logoUrl={organization.logoUrl} crossEntity={role.crossEntity} />
-            {role.crossEntity ? (
-              <span className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold">
-                {siteConfig.name}
-              </span>
-            ) : (
+          <div className="border-sidebar-border flex h-16 min-w-0 items-center border-b px-4">
+            <OrgBrandMark
+              logoUrl={organization.logoUrl}
+              crossEntity={role.crossEntity}
+              collapsed={collapsed}
+            />
+            {role.crossEntity ? null : (
               <span
-                className="text-sidebar-foreground min-w-0 flex-1 text-sm font-semibold break-words"
+                className="text-sidebar-foreground ml-2.5 min-w-0 flex-1 text-sm font-semibold break-words"
                 title={organization.name}
               >
                 {organization.name}
