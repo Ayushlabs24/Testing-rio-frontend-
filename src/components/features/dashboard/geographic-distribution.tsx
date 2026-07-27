@@ -15,6 +15,7 @@ import type { Governorate, Region } from "@/services/geography/geography.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import type { MapRegionMarker } from "./leaflet-map";
+import { getVerifiedNeedStatusCounts, NO_RECORDED_RESPONSES } from "./dashboard-metrics";
 
 // Dynamically import LeafletMapContainer with SSR disabled (Leaflet needs `window`)
 const LeafletMapContainer = dynamic(
@@ -173,7 +174,7 @@ export function GeographicDistribution({
           domainCounts[n.domain] = (domainCounts[n.domain] || 0) + 1;
         }
       });
-      let leadingDomain = "Water & Sanitation";
+      let leadingDomain = "-";
       let maxCount = 0;
       Object.entries(domainCounts).forEach(([dom, cnt]) => {
         if (cnt > maxCount) {
@@ -189,7 +190,7 @@ export function GeographicDistribution({
           if (!v) return;
           const curr = villageMap.get(v) || { studyIds: new Set(), responses: 0 };
           curr.studyIds.add(n.studyId);
-          curr.responses += 45;
+          curr.responses = NO_RECORDED_RESPONSES;
           villageMap.set(v, curr);
         });
       });
@@ -202,32 +203,12 @@ export function GeographicDistribution({
         }),
       );
 
-      // Orgs breakdown for NCNP
-      const orgStudyCounts: Record<string, number> = {};
-      regionStudies.forEach(() => {
-        const org = organizations.find((o) => o.studyCount && o.studyCount > 0);
-        const oName = org?.name ?? "NGO Partner";
-        orgStudyCounts[oName] = (orgStudyCounts[oName] || 0) + 1;
-      });
+      const workingOrgsList: OrgWorkSummary[] = regionOrgs.map((org) => ({
+        name: org.name,
+        studyCount: org.studyCount ?? 0,
+      }));
 
-      const workingOrgsList: OrgWorkSummary[] =
-        regionOrgs.length > 0
-          ? regionOrgs.map((o) => ({
-              name: o.name,
-              studyCount:
-                regionStudies.length > 0
-                  ? Math.ceil(regionStudies.length / regionOrgs.length)
-                  : 0,
-            }))
-          : Object.entries(orgStudyCounts).map(([name, count]) => ({
-              name,
-              studyCount: count,
-            }));
-
-      const publishedCount = regionNeeds.filter(
-        (n) => n.status === "survey_published",
-      ).length;
-      const draftCount = regionNeeds.length - publishedCount;
+      const { publishedCount, draftCount } = getVerifiedNeedStatusCounts(regionNeeds);
 
       return {
         regionId: region.id,
@@ -237,9 +218,9 @@ export function GeographicDistribution({
         lng: coords.lng,
         studyCount: regionStudies.length,
         orgCount: regionOrgs.length,
-        responseCount: regionStudies.length * 105 + regionNeeds.length * 15,
-        publishedCount: publishedCount || Math.ceil(regionStudies.length * 0.75),
-        draftCount: draftCount || Math.floor(regionStudies.length * 0.25),
+        responseCount: NO_RECORDED_RESPONSES,
+        publishedCount,
+        draftCount,
         leadingDomain,
         workingOrgs: workingOrgsList,
         villages: villagesList,

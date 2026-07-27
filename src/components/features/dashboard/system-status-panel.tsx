@@ -13,9 +13,9 @@ interface SystemStatusPanelProps {
 }
 
 export function SystemStatusPanel({
-  aiServiceOnline = true,
-  reviewSlaHours = { surveys: 72, reports: 120, sharing: 48 },
-  consentVersion = "v2.1",
+  aiServiceOnline,
+  reviewSlaHours,
+  consentVersion,
   className,
 }: SystemStatusPanelProps) {
   const t = useTranslations("systemAdmin.dashboard");
@@ -26,9 +26,17 @@ export function SystemStatusPanel({
       icon: Bot,
       iconColor: "text-purple-500",
       title: t("aiService"),
-      statusText: aiServiceOnline ? t("aiServiceOnline") : t("aiServiceOffline"),
+      statusText:
+        aiServiceOnline === undefined
+          ? t("statusUnavailable", { defaultValue: "Unavailable" })
+          : aiServiceOnline
+            ? t("aiServiceOnline")
+            : t("aiServiceOffline"),
       statusVariant: aiServiceOnline ? "ok" : "attention",
-      detail: t("aiServiceDetail"),
+      detail:
+        aiServiceOnline === undefined
+          ? t("statusNotConfigured", { defaultValue: "Not configured" })
+          : t("aiServiceDetail"),
       href: "/settings/methodology",
       manageLabel: t("manage"),
     },
@@ -37,13 +45,17 @@ export function SystemStatusPanel({
       icon: Clock,
       iconColor: "text-amber-500",
       title: t("reviewSla"),
-      statusText: t("reviewSlaStatus"),
-      statusVariant: "ok",
-      detail: t("reviewSlaDetail", {
-        surveys: reviewSlaHours.surveys,
-        reports: reviewSlaHours.reports,
-        sharing: reviewSlaHours.sharing,
-      }),
+      statusText: reviewSlaHours
+        ? t("reviewSlaStatus")
+        : t("statusUnavailable", { defaultValue: "Unavailable" }),
+      statusVariant: reviewSlaHours ? "ok" : "attention",
+      detail: reviewSlaHours
+        ? t("reviewSlaDetail", {
+            surveys: reviewSlaHours.surveys,
+            reports: reviewSlaHours.reports,
+            sharing: reviewSlaHours.sharing,
+          })
+        : t("statusNotConfigured", { defaultValue: "Not configured" }),
       href: "/settings/methodology",
       manageLabel: t("manage"),
     },
@@ -52,9 +64,12 @@ export function SystemStatusPanel({
       icon: FileText,
       iconColor: "text-emerald-500",
       title: t("consentInstruments"),
-      statusText: consentVersion,
-      statusVariant: "ok",
-      detail: t("consentDetail"),
+      statusText:
+        consentVersion ?? t("statusUnavailable", { defaultValue: "Unavailable" }),
+      statusVariant: consentVersion ? "ok" : "attention",
+      detail: consentVersion
+        ? t("consentDetail")
+        : t("statusNotConfigured", { defaultValue: "Not configured" }),
       href: "/settings/organization",
       manageLabel: t("manage"),
     },
