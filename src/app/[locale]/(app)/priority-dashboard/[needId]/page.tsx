@@ -198,9 +198,9 @@ export default function PriorityDetailInsightsPage({
         {/* Tab 1: Severity Score | Tab 2: Priority Score | Tab 3: AI Summary */}
         <Tabs defaultValue="severity" className="mt-6">
           <TabsList variant="line" className="mb-6">
-            <TabsTrigger value="severity">1. Severity Score</TabsTrigger>
-            <TabsTrigger value="priority">2. Priority Score</TabsTrigger>
-            <TabsTrigger value="summary">3. AI Summary</TabsTrigger>
+            <TabsTrigger value="severity">{t("tab1")}</TabsTrigger>
+            <TabsTrigger value="priority">{t("tab2")}</TabsTrigger>
+            <TabsTrigger value="summary">{t("tab3")}</TabsTrigger>
           </TabsList>
 
           {/* TAB 1: Severity Score (Severity Dashboard + Response Quality) */}
@@ -220,11 +220,10 @@ export default function PriorityDetailInsightsPage({
                       <div>
                         <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
                           <ListChecks className="text-primary size-4" />
-                          Response Quality Results
+                          {t("responseQualityTitle")}
                         </h2>
                         <p className="text-muted-foreground mt-0.5 text-xs">
-                          Completeness check, confidence level flags, and duplicate
-                          detection for submitted survey responses.
+                          {t("responseQualityDesc")}
                         </p>
                       </div>
                       {canWrite ? (
@@ -234,7 +233,7 @@ export default function PriorityDetailInsightsPage({
                           onClick={handleAssess}
                           disabled={assessing}
                         >
-                          {assessing ? "Assessing..." : "Run Quality Assessment"}
+                          {assessing ? t("assessing") : t("runQualityAssessment")}
                         </Button>
                       ) : null}
                     </div>
@@ -243,10 +242,10 @@ export default function PriorityDetailInsightsPage({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Response ID</TableHead>
-                            <TableHead>Completeness Score</TableHead>
-                            <TableHead>Confidence Flag</TableHead>
-                            <TableHead>Duplicate Status</TableHead>
+                            <TableHead>{t("colResponseId")}</TableHead>
+                            <TableHead>{t("colCompletenessScore")}</TableHead>
+                            <TableHead>{t("colConfidenceFlag")}</TableHead>
+                            <TableHead>{t("colDuplicateStatus")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -270,7 +269,9 @@ export default function PriorityDetailInsightsPage({
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-muted-foreground text-xs">
-                                {r.isDuplicate ? "Duplicate Response" : "Unique Response"}
+                                {r.isDuplicate
+                                  ? t("duplicateResponse")
+                                  : t("uniqueResponse")}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -333,7 +334,7 @@ export default function PriorityDetailInsightsPage({
                         }
                         className="px-3 py-1 text-sm font-bold tracking-wide uppercase"
                       >
-                        {priorityV2.priorityStatus} PRIORITY
+                        {priorityV2.priorityStatus} {t("prioritySuffix")}
                       </Badge>
                     </div>
 
@@ -456,9 +457,7 @@ export default function PriorityDetailInsightsPage({
                 hasPriorityScoring={Boolean(priorityV2)}
               />
             ) : (
-              <p className="text-muted-foreground text-sm">
-                No survey associated with this need.
-              </p>
+              <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>
             )}
           </TabsContent>
         </Tabs>
