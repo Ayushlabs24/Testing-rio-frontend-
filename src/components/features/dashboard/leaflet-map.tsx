@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { createMarkerIconElement } from "./leaflet-map.utils";
 
 export interface MapRegionMarker {
   regionId: string;
@@ -209,43 +210,12 @@ export function LeafletMapContainer({
       const size = 26 + Math.round((m.studyCount / (maxStudies || 1)) * 14);
       const half = Math.round(size / 2);
 
-      // HTML custom div icon matching screenshot
-      const iconHtml = `
-        <div class="relative flex flex-col items-center justify-center cursor-pointer select-none group">
-          <!-- Multi-line label above/below -->
-          <div className="text-center font-sans leading-tight mb-1 pointer-events-none">
-            ${m.centerName ? `<div style="font-size: 9px; color: #6b7280; font-weight: 500;">${m.centerName}</div>` : ""}
-            <div style="font-size: 11px; font-weight: ${isSelected ? "700" : "600"}; color: #111827; white-space: nowrap;">
-              ${m.name}
-            </div>
-          </div>
-
-          <!-- Circle with number -->
-          <div 
-            style="
-              width: ${size}px; 
-              height: ${size}px; 
-              border-radius: 9999px; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              font-weight: 700; 
-              font-size: 13px;
-              transition: all 0.2s ease;
-              ${
-                isSelected
-                  ? "background-color: #000000; color: #ffffff; border: 2px solid #ffffff; box-shadow: 0 0 0 3px #000000;"
-                  : "background-color: #ffffff; color: #111827; border: 2px solid #111827; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-              }
-            "
-          >
-            ${m.studyCount}
-          </div>
-        </div>
-      `;
+      const iconElement = createMarkerIconElement(m, isSelected, size, () =>
+        onSelectRegion(m.regionId),
+      );
 
       const customIcon = L.divIcon({
-        html: iconHtml,
+        html: iconElement,
         className: "custom-map-marker",
         iconSize: [120, size + 36],
         iconAnchor: [60, half + 18],

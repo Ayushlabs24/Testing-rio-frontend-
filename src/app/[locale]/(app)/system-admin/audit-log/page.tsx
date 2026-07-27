@@ -10,7 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -84,8 +84,10 @@ export default function SystemAdminAuditLogPage() {
     null,
   );
   const [inspectEventId, setInspectEventId] = useState<string | null>(null);
+  const auditRequestRef = useRef(0);
 
   const loadLogs = useCallback(() => {
+    const requestId = ++auditRequestRef.current;
     const params: Record<string, string | number> = {
       limit,
       offset,
@@ -97,11 +99,13 @@ export default function SystemAdminAuditLogPage() {
     apiClient
       .get<AuditListResponse>("/audit", { params })
       .then((res) => {
+        if (requestId !== auditRequestRef.current) return;
         setItems(res?.items ?? []);
         setTotal(res?.total ?? 0);
         setLoading(false);
       })
       .catch(() => {
+        if (requestId !== auditRequestRef.current) return;
         setItems([]);
         setTotal(0);
         setLoading(false);
