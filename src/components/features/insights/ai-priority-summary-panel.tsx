@@ -577,8 +577,7 @@ export function AiPrioritySummaryPanel({
             </Table>
           ) : (
             <div className="text-muted-foreground p-8 text-center text-xs">
-              No saved AI summaries available for this organization yet. Click{" "}
-              <strong>Save</strong> in the section above to archive a summary.
+              {t("noSavedSummaries")}
             </div>
           )}
         </CardContent>
@@ -590,22 +589,25 @@ export function AiPrioritySummaryPanel({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-semibold">
               <Sparkles className="text-primary size-5" />
-              Saved Summary Details — {viewSummary?.summaryScope} Scope
+              {t("savedDetailsTitle", { scope: viewSummary?.summaryScope ?? "" })}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Saved on{" "}
-              {viewSummary
-                ? new Date(
-                    viewSummary.updatedAt || viewSummary.createdAt,
-                  ).toLocaleString()
-                : ""}
+              {t("savedOnDate", {
+                date: viewSummary
+                  ? new Date(
+                      viewSummary.updatedAt || viewSummary.createdAt,
+                    ).toLocaleString()
+                  : "",
+              })}
             </DialogDescription>
           </DialogHeader>
 
           {viewSummary ? (
             <div className="max-h-[65vh] space-y-4 overflow-y-auto pt-2 text-xs">
               <div className="bg-muted/30 space-y-1 rounded-md p-3">
-                <span className="text-foreground font-semibold">Executive Summary:</span>
+                <span className="text-foreground font-semibold">
+                  {t("executiveSummaryLabel")}
+                </span>
                 <p className="text-muted-foreground whitespace-pre-line">
                   {
                     (viewSummary.officerEditedOutputJson || viewSummary.aiOutputJson)

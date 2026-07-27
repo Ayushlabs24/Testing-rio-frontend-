@@ -1,4 +1,4 @@
-export type UserStatus = "active" | "invited";
+export type UserStatus = "active" | "invited" | "disabled";
 
 export interface UserRoleSummary {
   id: string;
@@ -39,4 +39,16 @@ export interface UpdateUserPayload {
   name?: string;
   roleId?: string;
   status?: UserStatus;
+}
+
+export interface UpdateUserStatusPayload {
+  status: UserStatus;
+  reason?: string;
+}
+
+export interface AssignNgoAdminPayload {
+  userId?: string;
+  name?: string;
+  email?: string;
+  reason?: string;
 }

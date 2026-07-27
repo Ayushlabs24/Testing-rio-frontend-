@@ -23,7 +23,18 @@ export const endpoints = {
   organizations: {
     current: "/organizations/current",
     list: "/organizations",
+    create: "/organizations",
     byId: (id: string) => `/organizations/${id}`,
+    status: (id: string) => `/organizations/${id}/status`,
+    usersForOrg: (id: string) => `/organizations/${id}/users`,
+    ngoAdminsForOrg: (id: string) => `/organizations/${id}/ngoadmins`,
+    assignNgoAdmin: (id: string) => `/organizations/${id}/ngoadmins/assign`,
+    updateUserRoleForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/role`,
+    updateUserStatusForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/status`,
+    resendInviteForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/resend-invite`,
   },
   geography: {
     regions: "/regions",
@@ -176,6 +187,7 @@ export const endpoints = {
   },
   archive: {
     list: "/archive",
+    byId: (id: string) => `/archive/${id}`,
   },
   sharing: {
     list: "/sharing-requests",
@@ -212,8 +224,6 @@ export const endpoints = {
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",
-    // TEMPORARY — see the MethodologyVersionOption model comment on the
-    // backend. Backs the Survey workflow's Methodology Version selector.
     versions: "/methodology-config/versions",
   },
 } as const;
