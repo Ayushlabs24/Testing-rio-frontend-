@@ -26,15 +26,6 @@
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "@swc/core",
-      "sharp",
-      "unrs-resolver",
-      "esbuild"
-    ]
-  },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@types/leaflet": "^1.9.21",
@@ -80,5 +71,6 @@
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.10"
-  }
+  },
+  "packageManager": "npm@10.8.2"
 }

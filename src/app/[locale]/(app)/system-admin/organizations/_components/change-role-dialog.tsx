@@ -25,11 +25,14 @@ import { usersService } from "@/services/users/users.service";
 import type { OrgUser } from "@/services/users/users.types";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { getAssignableOrganizationRoles } from "./role-options";
 
 interface RoleOption {
   id: string;
   key: string;
   name: string;
+  enabled: boolean;
+  crossEntity: boolean;
 }
 
 interface ChangeRoleDialogProps {
@@ -65,7 +68,7 @@ export function ChangeRoleDialog({
             setSelectedRoleId(user.role.id);
             setReason("");
             setErrorMsg("");
-            setRoles(allRoles.filter((r) => r.key !== "system_admin"));
+            setRoles(getAssignableOrganizationRoles(allRoles));
           }
         })
         .catch(() => {
