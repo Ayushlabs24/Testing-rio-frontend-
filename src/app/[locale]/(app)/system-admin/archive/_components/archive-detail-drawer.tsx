@@ -3,6 +3,8 @@
 import { X, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
+import { apiClient } from "@/services/api/client";
+import { endpoints } from "@/services/api/endpoints";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,13 +62,8 @@ export function ArchiveDetailDrawer({
     let isMounted = true;
     if (!studyId || !open) return;
 
-    fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/archive/${studyId}`,
-      {
-        headers: { "Content-Type": "application/json" },
-      },
-    )
-      .then((res) => res.json())
+    apiClient
+      .get<ArchiveDetailData>(endpoints.archive.byId(studyId))
       .then((res) => {
         if (isMounted) {
           setData(res);

@@ -65,8 +65,15 @@ export function ToggleUserStatusDialog({
       setReason("");
       onOpenChange(false);
       onUpdated();
-    } catch {
-      setErrorMsg(isDisabling ? tDisable("errorToast") : tEnable("errorToast"));
+    } catch (err: unknown) {
+      const fallback = isDisabling ? tDisable("errorToast") : tEnable("errorToast");
+      const errorObj = err as {
+        response?: { data?: { error?: { message?: string } } };
+        message?: string;
+      };
+      const msg =
+        errorObj?.response?.data?.error?.message || errorObj?.message || fallback;
+      setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
     }

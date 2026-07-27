@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
 import { ArchiveDetailDrawer } from "./_components/archive-detail-drawer";
 import { ArchiveStudyDialog } from "./_components/archive-study-dialog";
@@ -66,7 +67,7 @@ export default function SystemAdminArchivePage() {
       params.organizationId = selectedOrgId;
     }
     apiClient
-      .get<ArchiveEntry[]>("/archive", { params })
+      .get<ArchiveEntry[]>(endpoints.archive.list, { params })
       .then((res) => {
         setEntries(res ?? []);
         setLoading(false);
@@ -78,9 +79,9 @@ export default function SystemAdminArchivePage() {
   }, [selectedOrgId]);
 
   useEffect(() => {
-    apiClient
-      .get<{ items: Organization[] }>(endpoints.organizations.list)
-      .then((res) => setOrganizations(res.items ?? []))
+    organizationsService
+      .listAll()
+      .then((orgs) => setOrganizations(orgs as unknown as Organization[]))
       .catch(() => setOrganizations([]));
   }, []);
 

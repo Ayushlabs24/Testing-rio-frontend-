@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
 
 interface ReportItem {
@@ -47,9 +48,9 @@ export default function SystemAdminReportsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient
-      .get<{ items: Organization[] }>(endpoints.organizations.list)
-      .then((res) => setOrganizations(res.items ?? []))
+    organizationsService
+      .listAll()
+      .then((orgs) => setOrganizations(orgs as unknown as Organization[]))
       .catch(() => setOrganizations([]));
   }, []);
 
@@ -85,9 +86,18 @@ export default function SystemAdminReportsPage() {
     );
   }, [reports, searchQuery]);
 
-  const handleDownload = (id: string, format: "pdf" | "excel") => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}${endpoints.reports.export(id, format)}`;
-    window.open(url, "_blank");
+  const handleDownload = async (id: string, format: "pdf" | "excel") => {
+    try {
+      const blob = await apiClient.downloadBlob(endpoints.reports.export(id, format));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${id}.${format === "excel" ? "xlsx" : "pdf"}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export download failed:", err);
+    }
   };
 
   return (

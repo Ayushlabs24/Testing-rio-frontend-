@@ -33,7 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiClient } from "@/services/api/client";
-import { endpoints } from "@/services/api/endpoints";
+import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
 import { AuditDetailDrawer } from "./_components/audit-detail-drawer";
 
@@ -109,9 +109,9 @@ export default function SystemAdminAuditLogPage() {
   }, [limit, offset, selectedOrgId, selectedEntityType, searchQuery]);
 
   useEffect(() => {
-    apiClient
-      .get<{ items: Organization[] }>(endpoints.organizations.list)
-      .then((res) => setOrganizations(res.items ?? []))
+    organizationsService
+      .listAll()
+      .then((orgs) => setOrganizations(orgs as unknown as Organization[]))
       .catch(() => setOrganizations([]));
 
     apiClient
@@ -127,9 +127,18 @@ export default function SystemAdminAuditLogPage() {
   const totalPages = Math.ceil(total / limit) || 1;
   const currentPage = Math.floor(offset / limit) + 1;
 
-  const handleExportCsv = () => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/audit/export`;
-    window.open(url, "_blank");
+  const handleExportCsv = async () => {
+    try {
+      const blob = await apiClient.downloadBlob("/audit/export");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export download failed:", err);
+    }
   };
 
   return (

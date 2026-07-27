@@ -125,7 +125,10 @@ export default function SystemAdminOrganizationDetailPage({
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesRole = roleFilter === "all" || user.role.key === roleFilter;
+      const matchesRole =
+        roleFilter === "all" ||
+        user.role.key === roleFilter ||
+        user.role.id === roleFilter;
       const matchesStatus = statusFilter === "all" || user.status === statusFilter;
 
       return matchesSearch && matchesRole && matchesStatus;

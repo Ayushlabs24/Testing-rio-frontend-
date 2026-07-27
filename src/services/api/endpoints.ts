@@ -187,6 +187,7 @@ export const endpoints = {
   },
   archive: {
     list: "/archive",
+    byId: (id: string) => `/archive/${id}`,
   },
   sharing: {
     list: "/sharing-requests",
@@ -223,8 +224,6 @@ export const endpoints = {
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",
-    // TEMPORARY — see the MethodologyVersionOption model comment on the
-    // backend. Backs the Survey workflow's Methodology Version selector.
     versions: "/methodology-config/versions",
   },
 } as const;

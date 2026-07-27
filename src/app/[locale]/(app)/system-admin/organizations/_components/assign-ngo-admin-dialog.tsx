@@ -98,8 +98,14 @@ export function AssignNgoAdminDialog({
       resetForm();
       onOpenChange(false);
       onAssigned();
-    } catch {
-      setErrorMsg(t("errorToast"));
+    } catch (err: unknown) {
+      const errorObj = err as {
+        response?: { data?: { error?: { message?: string } } };
+        message?: string;
+      };
+      const msg =
+        errorObj?.response?.data?.error?.message || errorObj?.message || t("errorToast");
+      setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
     }
