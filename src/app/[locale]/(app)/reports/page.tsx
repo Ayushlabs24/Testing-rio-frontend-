@@ -55,6 +55,7 @@ import {
 } from "@/services/reports/reports.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
+import { surveysService, type SurveyListItem } from "@/services/surveys/surveys.service";
 
 const ALL = "all";
 
@@ -83,6 +84,8 @@ function GenerateReportDialog({
   const t = useTranslations("app.reports.create");
   const [reportType, setReportType] = useState<ReportTypeCode | null>(null);
   const [studyId, setStudyId] = useState<string>("");
+  const [surveyId, setSurveyId] = useState<string>("");
+  const [surveys, setSurveys] = useState<SurveyListItem[] | null>(null);
   const [villageId, setVillageId] = useState<string>("");
   const [villages, setVillages] = useState<string[]>([]);
   const [studies, setStudies] = useState<StudySummary[]>([]);
@@ -91,6 +94,8 @@ function GenerateReportDialog({
 
   const requiresStudy =
     reportType !== null && REPORT_TYPE_META[reportType].requiresStudyId;
+  const requiresSurvey =
+    reportType !== null && REPORT_TYPE_META[reportType].requiresSurveyId;
   const requiresVillage = reportType === "RPT14";
 
   function handleOpenChange(next: boolean) {
@@ -98,6 +103,8 @@ function GenerateReportDialog({
     if (!next) {
       setReportType(null);
       setStudyId("");
+      setSurveyId("");
+      setSurveys(null);
       setVillageId("");
       setVillages([]);
       setError(null);
@@ -111,6 +118,29 @@ function GenerateReportDialog({
         .then(setStudies)
         .catch(() => setStudies([]));
   }, [requiresStudy]);
+
+  // Survey list for the survey-scoped types. Filtered to surveys that actually
+  // have responses — generating from an unscored survey fails server-side with
+  // STUDY_NOT_SCORED, so offering those would only produce a dead end.
+  useEffect(() => {
+    if (!requiresSurvey || !studyId) return;
+    let cancelled = false;
+    // No synchronous reset here — the list is already cleared on dialog close
+    // and in the study <Select>'s own onValueChange, and doing it in the effect
+    // body triggers cascading renders (same reasoning as the village effect).
+    surveysService
+      .listByStudy(studyId)
+      .then((rows) => {
+        if (cancelled) return;
+        setSurveys(rows.filter((s) => s.responseCount > 0));
+      })
+      .catch(() => {
+        if (!cancelled) setSurveys([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requiresSurvey, studyId]);
 
   // Village dropdown is populated from the selected study's needs (each Need
   // carries its own village list), falling back to the study's own village set.
@@ -138,7 +168,10 @@ function GenerateReportDialog({
   }, [requiresVillage, studyId, studies]);
 
   const incomplete =
-    !reportType || (requiresStudy && !studyId) || (requiresVillage && !villageId.trim());
+    !reportType ||
+    (requiresStudy && !studyId) ||
+    (requiresSurvey && !surveyId) ||
+    (requiresVillage && !villageId.trim());
 
   async function submit() {
     if (incomplete) return;
@@ -148,6 +181,7 @@ function GenerateReportDialog({
       await reportsService.create({
         reportType: reportType!,
         studyId: requiresStudy ? studyId : undefined,
+        surveyId: requiresSurvey ? surveyId : undefined,
         filters: requiresVillage ? { villageId: villageId.trim() } : undefined,
       });
       handleOpenChange(false);
@@ -185,6 +219,8 @@ function GenerateReportDialog({
                 value={studyId}
                 onValueChange={(v) => {
                   setStudyId(v);
+                  setSurveyId("");
+                  setSurveys(null);
                   setVillageId("");
                   setVillages([]);
                 }}
@@ -200,6 +236,30 @@ function GenerateReportDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          ) : null}
+          {requiresSurvey ? (
+            <div className="space-y-2">
+              <Label>{t("surveyLabel")}</Label>
+              <Select
+                value={surveyId}
+                onValueChange={setSurveyId}
+                disabled={!studyId || !surveys || surveys.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("surveyPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(surveys ?? []).map((survey) => (
+                    <SelectItem key={survey.id} value={survey.id}>
+                      {survey.title} — {survey.responseCount} {t("surveyResponsesSuffix")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {studyId && surveys?.length === 0 ? (
+                <p className="text-muted-foreground text-xs">{t("surveyEmpty")}</p>
+              ) : null}
             </div>
           ) : null}
           {requiresVillage ? (
@@ -383,6 +443,15 @@ export default function ReportsPage() {
                     <TableRow key={report.id}>
                       <TableCell className="py-4 text-sm font-medium">
                         {report.title}
+                        {/* Survey-scoped types (RPT01/RPT15) only. Shown as a
+                            sub-line rather than a sixth column so two reports
+                            from sibling surveys are still tellable apart
+                            without widening an already-full table. */}
+                        {report.surveyTitle ? (
+                          <span className="text-muted-foreground block text-xs font-normal">
+                            {t("surveyColumn")}: {report.surveyTitle}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-sm">{report.reportType}</TableCell>
                       <TableCell>
