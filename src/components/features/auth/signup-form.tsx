@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Check, Copy, MailCheck } from "lucide-react";
+import { ArrowRight, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -28,35 +28,25 @@ import type { Center, Governorate, Region } from "@/services/geography/geography
 
 interface PendingConfirmation {
   temporaryPasswordEmailed: boolean;
-  temporaryPassword?: string;
 }
 
 /**
- * Shown once, right after a successful signup. Two variants: if the
- * backend's mailer is configured, it already emailed the temporary
- * password — this just confirms that. Otherwise (mailer not configured,
- * or the send failed — dev/test only, see the backend's
- * `AuthService.signup()`) the password is revealed here instead, since
- * the admin needs it to log in and there's nowhere else to get it.
+ * Shown once, right after a successful signup. Deliberately never renders
+ * the temporary password itself — only whether it was emailed. See the
+ * backend's `AuthService.signup()` for why: while the email provider's
+ * trial-plan restriction is in place, every signup's temporary password is
+ * a fixed, known value rather than a per-account secret, so displaying it
+ * on screen would be both pointless and a bad habit to leave in place once
+ * that restriction is lifted and passwords go back to being random again.
  */
 function SignupConfirmation({
   temporaryPasswordEmailed,
-  temporaryPassword,
   onGoToSignIn,
 }: {
   temporaryPasswordEmailed: boolean;
-  temporaryPassword?: string;
   onGoToSignIn: () => void;
 }) {
   const t = useTranslations("auth.signup");
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    if (!temporaryPassword) return;
-    await navigator.clipboard.writeText(temporaryPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <div className="w-full max-w-lg">
@@ -65,40 +55,18 @@ function SignupConfirmation({
           {t("temporaryPasswordTitle")}
         </h1>
         <p className="text-muted-foreground text-sm">
-          {temporaryPasswordEmailed
-            ? t("temporaryPasswordEmailedDescription")
-            : t("temporaryPasswordDescription")}
+          {t("temporaryPasswordEmailedDescription")}
         </p>
       </div>
 
-      {temporaryPasswordEmailed ? (
-        <div className="border-border bg-muted/30 flex items-center gap-3 rounded-lg border p-4">
-          <MailCheck className="text-muted-foreground size-5 shrink-0" />
-          <p className="text-foreground text-sm">{t("temporaryPasswordEmailedNotice")}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <Label htmlFor="temporaryPassword">{t("temporaryPasswordLabel")}</Label>
-          <div className="flex gap-2">
-            <Input
-              id="temporaryPassword"
-              readOnly
-              value={temporaryPassword}
-              className="font-mono"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              aria-label={t("copyButton")}
-              onClick={handleCopy}
-            >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            </Button>
-          </div>
-        </div>
-      )}
+      <div className="border-border bg-muted/30 flex items-center gap-3 rounded-lg border p-4">
+        <MailCheck className="text-muted-foreground size-5 shrink-0" />
+        <p className="text-foreground text-sm">
+          {temporaryPasswordEmailed
+            ? t("temporaryPasswordEmailedNotice")
+            : t("temporaryPasswordNotEmailedNotice")}
+        </p>
+      </div>
 
       <Button
         type="button"
@@ -234,7 +202,7 @@ export function SignupForm() {
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
     try {
-      const { temporaryPasswordEmailed, temporaryPassword } = await authService.signup({
+      const { temporaryPasswordEmailed } = await authService.signup({
         organizationName: values.organizationName,
         sector: values.sector,
         purpose: values.sector === "other" ? values.otherSector : undefined,
@@ -244,11 +212,12 @@ export function SignupForm() {
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
       });
-      // Signup doesn't sign the admin in automatically — they confirm
-      // either how they got their password (emailed) or the password
-      // itself (fallback), then sign in explicitly with it, same as any
-      // returning user would.
-      setPendingConfirmation({ temporaryPasswordEmailed, temporaryPassword });
+      // Signup doesn't sign the admin in automatically — they confirm how
+      // they got their password (emailed, or the not-emailed fallback
+      // notice — never the password value itself, see
+      // SignupConfirmation's own comment), then sign in explicitly with
+      // it, same as any returning user would.
+      setPendingConfirmation({ temporaryPasswordEmailed });
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : t("genericError"));
     }
@@ -258,7 +227,6 @@ export function SignupForm() {
     return (
       <SignupConfirmation
         temporaryPasswordEmailed={pendingConfirmation.temporaryPasswordEmailed}
-        temporaryPassword={pendingConfirmation.temporaryPassword}
         onGoToSignIn={() => router.push("/")}
       />
     );

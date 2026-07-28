@@ -57,6 +57,11 @@ export function InviteUserDialog({
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [credentials, setCredentials] = useState<{
+    email: string;
+    temporaryPasswordEmailed: boolean;
+    temporaryPassword?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -80,6 +85,11 @@ export function InviteUserDialog({
     setErrorMsg("");
   };
 
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setCredentials(null);
+    onOpenChange(next);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -88,15 +98,21 @@ export function InviteUserDialog({
 
     setIsSubmitting(true);
     try {
-      await usersService.createForOrg(organizationId, {
+      const created = await usersService.createForOrg(organizationId, {
         name: name.trim(),
         email: email.trim(),
         roleId,
       });
 
       resetForm();
-      onOpenChange(false);
       onInvited();
+      // Don't close yet — the temporary password (or emailed confirmation)
+      // needs to be shown to the admin first; see the `credentials` state.
+      setCredentials({
+        email: created.email,
+        temporaryPasswordEmailed: created.temporaryPasswordEmailed,
+        temporaryPassword: created.temporaryPassword,
+      });
     } catch {
       setErrorMsg(t("errorToast"));
     } finally {
@@ -104,8 +120,47 @@ export function InviteUserDialog({
     }
   };
 
+  if (credentials) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("title")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-foreground text-sm">
+              {t("userCreatedSuccess", { email: credentials.email })}
+            </p>
+            {credentials.temporaryPasswordEmailed ? (
+              <p className="border-badge-success bg-badge-success/40 text-badge-success-foreground rounded-md border p-3 text-sm">
+                {t("temporaryPasswordEmailed")}
+              </p>
+            ) : (
+              <div className="border-warning/40 bg-warning/10 space-y-2 rounded-md border p-3">
+                <p className="text-foreground text-sm">
+                  {t("temporaryPasswordNotEmailed")}
+                </p>
+                <p className="border-border bg-background rounded-md border px-3 py-2 font-mono text-sm">
+                  {credentials.temporaryPassword}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {t("temporaryPasswordHint")}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={() => handleOpenChange(false)}>
+              {t("done")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -182,7 +237,7 @@ export function InviteUserDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
               {t("cancel")}

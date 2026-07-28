@@ -148,6 +148,7 @@ export default function SystemAdminArchivePage() {
                 <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
                 <Input
                   placeholder={t("searchPlaceholder")}
+                  aria-label={t("searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 text-xs"

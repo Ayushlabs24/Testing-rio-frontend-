@@ -49,8 +49,11 @@ const STATUS_DOT_CLASS: Record<SlaAlertStatus, string> = {
 // domain, curate questions, and Approve & Publish, instead of two different
 // screens. Same destination works for a Research Officer's own resolved
 // alerts (survey_approved/survey_rejected) — the Need workspace page shows
-// the Survey's current state either way.
+// the Survey's current state either way. Report alerts have no Need/Study
+// concept to link through (a Report can be org-wide) — those go straight
+// to the Report detail page instead.
 function alertHref(alert: SlaAlert): string {
+  if (alert.type.startsWith("report_")) return `/reports/${alert.reportId}`;
   return `/studies/${alert.studyId}/needs/${alert.needId}`;
 }
 
@@ -64,14 +67,16 @@ function formatDate(iso: string): string {
 export default function ReviewerSlaPage() {
   const t = useTranslations("app.reviewerSla");
   const { session } = useAuth();
-  // Which of the two queues ReviewerSlaService.listAlerts returns depends
+  // Which set of queues ReviewerSlaService.listAlerts returns depends
   // entirely on this — a Reviewer/Approver gets the org-wide "awaiting your
-  // decision" queue (no concept of assignment: once anyone reviews an item,
-  // it disappears for everyone); anyone else with access here (a Research
-  // Officer) gets their OWN submitted surveys' resolved status instead —
-  // already-decided, so the SLA due/breach concept below doesn't apply to
-  // their rows at all.
-  const canApprove = usePermission("surveyBuilder", "approve");
+  // decision" queues (surveys AND reports; no concept of assignment: once
+  // anyone reviews an item, it disappears for everyone); anyone else with
+  // access here (a Research Officer) gets their OWN submitted surveys' and
+  // generated reports' resolved status instead — already-decided, so the
+  // SLA due/breach concept below doesn't apply to their rows at all.
+  const canApproveSurveys = usePermission("surveyBuilder", "approve");
+  const canApproveReports = usePermission("reportsDashboards", "approve");
+  const canApprove = canApproveSurveys || canApproveReports;
   const [config, setConfig] = useState<SlaConfig | null>(null);
   const [alerts, setAlerts] = useState<SlaAlert[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -253,6 +258,12 @@ export default function ReviewerSlaPage() {
                                 ) : null}
                               </TooltipContent>
                             </Tooltip>
+                          ) : alert.type.startsWith("report_") ? (
+                            // Reports have no "need statement" concept at
+                            // all (unlike survey rows, where this genuinely
+                            // means "recorded" vs. "missing") — an em dash
+                            // reads as "not applicable," not "data missing."
+                            t("noContext")
                           ) : (
                             t("noNeedStatement")
                           )}

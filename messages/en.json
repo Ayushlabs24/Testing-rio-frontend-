@@ -58,11 +58,9 @@
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",
       "temporaryPasswordTitle": "Your account is ready",
-      "temporaryPasswordDescription": "Save this temporary password — you'll need it to sign in. This is shown only once.",
       "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
       "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
-      "temporaryPasswordLabel": "Temporary password",
-      "copyButton": "Copy",
+      "temporaryPasswordNotEmailedNotice": "Use the temporary password provided to you to sign in. You'll be asked to set your own password the first time you sign in.",
       "goToSignInButton": "Go to sign in"
     },
     "forgotPassword": {
@@ -235,7 +233,7 @@
       "notifications": "Notifications",
       "reviewerSlaAlerts": "Reviewer SLA alerts",
       "reviewerSlaPendingCount": "{count} review item(s) awaiting action",
-      "surveyStatusUpdateCount": "{count} survey status update(s)",
+      "surveyStatusUpdateCount": "{count} status update(s)",
       "sharingAlerts": "Sharing notifications",
       "sharingSectionTitle": "Sharing requests",
       "sharingAlertsEmpty": "No sharing notifications",
@@ -1122,6 +1120,7 @@
       },
       "needColumn": "Need",
       "noNeedStatement": "No need statement recorded",
+      "noContext": "—",
       "commentsLabel": "Reviewer comments",
       "actionColumn": "Action",
       "reviewNow": "Review now",
@@ -1133,11 +1132,14 @@
         "ai_classification": "AI Classification",
         "survey_approval": "Survey Approval",
         "survey_approved": "Approved & Published",
-        "survey_rejected": "Changes Requested"
+        "survey_rejected": "Changes Requested",
+        "report_approval": "Report Approval",
+        "report_released": "Released",
+        "report_rejected": "Rejected"
       },
-      "titleOwn": "My Survey Status",
-      "descriptionOwn": "Surveys you've submitted, and whether they were approved or sent back for changes.",
-      "noAlertsOwn": "No survey status updates yet.",
+      "titleOwn": "My Submissions",
+      "descriptionOwn": "Surveys and reports you've submitted, and whether they were approved or sent back for changes.",
+      "noAlertsOwn": "No status updates yet.",
       "viewNow": "View"
     },
     "publicSurveys": {
@@ -2107,6 +2109,7 @@
       "domainContributionsTitle": "Domain Priority Contributions",
       "kpiRankingsTitle": "KPI Severity Rankings",
       "kpiRankingsDesc": "All KPIs sorted from highest severity to lowest.",
+      "viewKpiDetail": "View question detail",
       "tableHeaders": {
         "domain": "Domain",
         "severity": "Severity",
@@ -2428,7 +2431,12 @@
         "submitting": "Sending...",
         "cancel": "Cancel",
         "successToast": "User invited successfully",
-        "errorToast": "Failed to invite user"
+        "errorToast": "Failed to invite user",
+        "userCreatedSuccess": "Account created for {email}.",
+        "temporaryPasswordEmailed": "A temporary password has been emailed to them. They'll be asked to set their own password the first time they sign in.",
+        "temporaryPasswordNotEmailed": "Email delivery isn't configured yet, so here's their temporary password — share it with them securely:",
+        "temporaryPasswordHint": "They'll be asked to set their own password the first time they sign in.",
+        "done": "Done"
       },
       "changeRoleDialog": {
         "title": "Change User Role",

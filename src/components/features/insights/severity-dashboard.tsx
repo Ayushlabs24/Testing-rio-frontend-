@@ -734,6 +734,7 @@ export function SeverityDashboard({
                                 size="icon"
                                 variant="ghost"
                                 className="hover:bg-muted size-7"
+                                aria-label={t("viewKpiDetail")}
                                 onClick={() => {
                                   // Use the kpi field as entity name; open by fetching all questions
                                   // The ranking item.kpi is the entityId stored in ScoreRollup,

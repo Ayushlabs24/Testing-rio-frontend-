@@ -133,6 +133,7 @@ export default function SystemAdminOrganizationsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("searchPlaceholder")}
+                aria-label={t("searchPlaceholder")}
                 className="pl-9"
               />
             </div>

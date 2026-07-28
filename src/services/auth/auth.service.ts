@@ -1,11 +1,13 @@
 import { roles } from "@/mocks/data/roles";
-import { findUserByEmail, resolveContext, type AuthedContext } from "@/mocks/db";
-import { mockSession } from "@/mocks/session";
-import { generateMockToken, mockDelay } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
-import type { ModulePermission } from "@/types/permissions";
+import {
+  apiSessionViewSchema,
+  apiSignupViewSchema,
+  type ApiSessionView,
+  type ApiSignupView,
+} from "@/services/auth/auth.schemas";
 import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
@@ -18,94 +20,36 @@ import type {
   VerifyOtpPayload,
 } from "@/services/auth/auth.types";
 
-/** The mock OTP is always this value — logged to the console for demo convenience. */
-const MOCK_OTP_CODE = "123456";
-
-/** Shape returned by the real backend's /auth/login, /auth/me, /auth/change-password. */
-interface ApiSessionView {
-  token: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    consentedAt: string | null;
-    consentedPolicyVersion: string | null;
-  };
-  organization: {
-    id: string;
-    name: string;
-    purpose: string;
-    registrationNumber: string;
-    logoUrl: string | null;
-    region: string[];
-    email: string | null;
-    sector: string | null;
-    villages: string[];
-    regionId: string | null;
-    governorateIds: string[];
-    centerIds: string[];
-    isActive: boolean;
-    createdAt: string;
-  };
-  // The backend's actual authorization data — crossEntity and permissions
-  // are both real, enforced-server-side fields, not display copy. `name`
-  // is deliberately NOT read from here (see toSessionContextFromApi): the
-  // frontend's local roles.ts carries this session's product-copy renames
-  // the backend doesn't track, same as rolesService.list()'s "display source
-  // only" split. `enabled` doesn't exist server-side at all — it's a
-  // UI-only "is this role live for the current demo phase" gate.
-  role: { key: string; crossEntity: boolean; permissions: ModulePermission[] };
-  mustChangePassword: boolean;
+/**
+ * Validates an untrusted session/signup response at runtime before any of
+ * it is used — `permissions`/`crossEntity` in particular drive every
+ * `usePermission` check and `PermissionGuard` in the app, so a malformed or
+ * unexpectedly-shaped response here needs to fail loudly (a typed
+ * `ApiError`, same shape every other transport failure surfaces as) rather
+ * than silently propagate `undefined`s into the permission system.
+ */
+function parseSessionView(raw: unknown): ApiSessionView {
+  const result = apiSessionViewSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ApiError({
+      message: "The server returned an unexpected session response shape.",
+      status: 502,
+      details: result.error.issues,
+    });
+  }
+  return result.data;
 }
 
-/** /auth/signup's response — the same session shape plus how the temporary password was delivered. */
-interface ApiSignupView extends ApiSessionView {
-  temporaryPasswordEmailed: boolean;
-  temporaryPassword?: string;
-}
-
-/** Used by the still-mock methods (verifyOtp, giveConsent) — resolves a mock user's full context. */
-function toSessionContext(context: AuthedContext, token: string): SessionContext {
-  return {
-    token,
-    user: {
-      id: context.user.id,
-      name: context.user.name,
-      email: context.user.email,
-      consentedAt: context.user.consentedAt,
-      // Mock accounts don't model policy versioning — null is equivalent to
-      // "not yet consented under a version", same as a fresh real signup.
-      consentedPolicyVersion: null,
-    },
-    organization: {
-      id: context.organization.id,
-      name: context.organization.name,
-      purpose: context.organization.purpose,
-      registrationNumber: context.organization.registrationNumber,
-      logoUrl: context.organization.logoUrl,
-      region: context.organization.region,
-      email: context.organization.email,
-      sector: context.organization.sector,
-      villages: context.organization.villages,
-      // Mock accounts don't model the KSA geography link.
-      regionId: null,
-      governorateIds: [],
-      centerIds: [],
-      isActive: context.organization.isActive,
-      createdAt: context.organization.createdAt,
-    },
-    role: {
-      id: context.role.id,
-      key: context.role.key,
-      name: context.role.name,
-      crossEntity: context.role.crossEntity,
-      enabled: context.role.enabled,
-      permissions: context.role.permissions,
-    },
-    // Mock accounts (verifyOtp, giveConsent) already "know" their password —
-    // there's no signup-issued temp password in this path to force a change on.
-    mustChangePassword: false,
-  };
+function parseSignupView(raw: unknown): ApiSignupView {
+  const result = apiSignupViewSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ApiError({
+      message: "The server returned an unexpected signup response shape.",
+      status: 502,
+      details: result.error.issues,
+    });
+  }
+  return result.data;
 }
 
 /**
@@ -140,8 +84,8 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
     organization: {
       id: view.organization.id,
       name: view.organization.name,
-      purpose: view.organization.purpose,
-      registrationNumber: view.organization.registrationNumber,
+      purpose: view.organization.purpose ?? "",
+      registrationNumber: view.organization.registrationNumber ?? "",
       logoUrl: view.organization.logoUrl,
       region: view.organization.region,
       email: view.organization.email ?? "",
@@ -170,15 +114,23 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
  * `forgotPassword`/`resetPassword` call the real backend — the session
  * lives in an httpOnly cookie the server sets/reads (see
  * Project-RIO-Backend's auth.controller.ts), not in `mockSession`.
+ *
  * `requestOtp`/`verifyOtp` (staff sign-in OTP, distinct from citizen survey
- * OTP) have no backend counterpart yet and stay on the mock layer until one
- * exists — each gets swapped independently as its own endpoint lands, per
- * the project's incremental-swap convention.
+ * OTP) have no backend counterpart yet. They call the real backend endpoint
+ * by default — which will simply fail until that endpoint exists, rather
+ * than silently succeeding against a fixed code — and only fall back to the
+ * isolated mock in `./otp.mock` when `NEXT_PUBLIC_ENABLE_MOCK_AUTH=true` is
+ * explicitly set (never the default, never set in a real deployment). See
+ * env.ts and otp.mock.ts for why this is a raw `process.env` read rather
+ * than going through the parsed `env` object: Next.js statically replaces
+ * `process.env.NEXT_PUBLIC_*` at build time, which lets the bundler
+ * eliminate the entire dynamically-imported mock module (fixed code
+ * included) from a build where the flag is unset.
  */
 export const authService = {
   async login(payload: LoginPayload): Promise<SessionContext> {
-    const view = await apiClient.post<ApiSessionView>(endpoints.auth.login, payload);
-    return toSessionContextFromApi(view);
+    const raw = await apiClient.post<unknown>(endpoints.auth.login, payload);
+    return toSessionContextFromApi(parseSessionView(raw));
   },
 
   /**
@@ -193,7 +145,8 @@ export const authService = {
    * a name but never a registration number.
    */
   async signup(payload: SignupPayload): Promise<SignupResult> {
-    const view = await apiClient.post<ApiSignupView>(endpoints.auth.signup, payload);
+    const raw = await apiClient.post<unknown>(endpoints.auth.signup, payload);
+    const view = parseSignupView(raw);
     return {
       session: toSessionContextFromApi(view),
       temporaryPasswordEmailed: view.temporaryPasswordEmailed,
@@ -202,8 +155,8 @@ export const authService = {
   },
 
   async me(): Promise<SessionContext> {
-    const view = await apiClient.get<ApiSessionView>(endpoints.auth.me);
-    return toSessionContextFromApi(view);
+    const raw = await apiClient.get<unknown>(endpoints.auth.me);
+    return toSessionContextFromApi(parseSessionView(raw));
   },
 
   /**
@@ -213,11 +166,8 @@ export const authService = {
    * hash before accepting `newPassword`, same as any password change.
    */
   async changePassword(payload: ChangePasswordPayload): Promise<SessionContext> {
-    const view = await apiClient.post<ApiSessionView>(
-      endpoints.auth.changePassword,
-      payload,
-    );
-    return toSessionContextFromApi(view);
+    const raw = await apiClient.post<unknown>(endpoints.auth.changePassword, payload);
+    return toSessionContextFromApi(parseSessionView(raw));
   },
 
   async logout(): Promise<void> {
@@ -232,27 +182,21 @@ export const authService = {
     return apiClient.post<{ message: string }>(endpoints.auth.resetPassword, payload);
   },
 
-  async requestOtp({ email }: RequestOtpPayload): Promise<{ message: string }> {
-    await mockDelay();
-    if (!findUserByEmail(email)) {
-      throw new ApiError({ message: "No account found for this email.", status: 404 });
+  async requestOtp(payload: RequestOtpPayload): Promise<{ message: string }> {
+    if (process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH === "true") {
+      const { mockRequestOtp } = await import("@/services/auth/otp.mock");
+      return mockRequestOtp(payload);
     }
-    console.info(`[mock] OTP for ${email}: ${MOCK_OTP_CODE}`);
-    return { message: "Code sent." };
+    return apiClient.post<{ message: string }>(endpoints.auth.requestOtp, payload);
   },
 
-  async verifyOtp({ email, code }: VerifyOtpPayload): Promise<SessionContext> {
-    await mockDelay();
-    const user = findUserByEmail(email);
-    if (!user || code !== MOCK_OTP_CODE) {
-      throw new ApiError({ message: "Invalid or expired code.", status: 401 });
+  async verifyOtp(payload: VerifyOtpPayload): Promise<SessionContext> {
+    if (process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH === "true") {
+      const { mockVerifyOtp } = await import("@/services/auth/otp.mock");
+      return mockVerifyOtp(payload);
     }
-    const context = resolveContext(user);
-    // A disabled role (see roles.ts) can still authenticate — `enabled`
-    // gates the UI, never the session itself. See usePermission/app-sidebar.
-    const token = generateMockToken();
-    mockSession.save({ token, userId: user.id });
-    return toSessionContext(context, token);
+    const raw = await apiClient.post<unknown>(endpoints.auth.verifyOtp, payload);
+    return toSessionContextFromApi(parseSessionView(raw));
   },
 
   /**
