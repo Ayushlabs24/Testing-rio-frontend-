@@ -202,7 +202,7 @@ export default function PriorityDashboardPage() {
                         <Button asChild size="sm" variant="outline" className="gap-1.5">
                           <Link href={`/priority-dashboard/${entry.needId}`}>
                             <Gauge className="text-primary size-3.5" />
-                            View Matrix
+                            {t("viewMatrix")}
                           </Link>
                         </Button>
                       </TableCell>

@@ -596,9 +596,13 @@ export default function SurveyBuilderDetailPage({
         // the Researcher who submitted it — regardless of whose session
         // this is. The backend clears both fields once this Approve call
         // consumes them (see AiDecisionsService.review).
+        // reason is required going forward (see overrideDomainPreview), so
+        // proposedReason is only ever missing here for a staged override
+        // that predates that requirement — treat it the same as "no staged
+        // override" rather than sending a reason-less override.
         const domainOverride =
-          need.proposedDomains && need.proposedDomains.length > 0
-            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? undefined }
+          need.proposedDomains && need.proposedDomains.length > 0 && need.proposedReason
+            ? { pairs: need.proposedDomains, reason: need.proposedReason }
             : undefined;
         await aiReviewService.approve(needId, { domainOverride });
       }
@@ -656,9 +660,13 @@ export default function SurveyBuilderDetailPage({
     setMessage(null);
     try {
       if (need.status === "ai_classified") {
+        // reason is required going forward (see overrideDomainPreview), so
+        // proposedReason is only ever missing here for a staged override
+        // that predates that requirement — treat it the same as "no staged
+        // override" rather than sending a reason-less override.
         const domainOverride =
-          need.proposedDomains && need.proposedDomains.length > 0
-            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? undefined }
+          need.proposedDomains && need.proposedDomains.length > 0 && need.proposedReason
+            ? { pairs: need.proposedDomains, reason: need.proposedReason }
             : undefined;
         await aiReviewService.approve(needId, { domainOverride });
       }

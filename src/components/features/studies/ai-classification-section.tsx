@@ -404,7 +404,7 @@ export function AiClassificationSection({
   async function previewOverride() {
     const pairs = pairsFromSelections();
     const reason = overrideReason.trim();
-    if (pairs.length === 0) return;
+    if (pairs.length === 0 || reason.length === 0) return;
     setOverridePreviewLoading(true);
     setError(null);
     try {
@@ -909,13 +909,17 @@ export function AiClassificationSection({
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label htmlFor="override-reason">{t("overrideReasonLabel")}</Label>
+              <Label htmlFor="override-reason">
+                {t("overrideReasonLabel")} <span className="text-destructive">*</span>
+              </Label>
               <Textarea
                 id="override-reason"
                 rows={3}
                 value={overrideReason}
                 onChange={(e) => setOverrideReason(e.target.value)}
                 placeholder={t("overrideReasonPlaceholder")}
+                required
+                aria-invalid={overrideReason.trim().length === 0 ? true : undefined}
               />
             </div>
           </div>
@@ -931,7 +935,9 @@ export function AiClassificationSection({
             <LoadingButton
               type="button"
               onClick={previewOverride}
-              disabled={pairsFromSelections().length === 0}
+              disabled={
+                pairsFromSelections().length === 0 || overrideReason.trim().length === 0
+              }
               isLoading={overridePreviewLoading}
               text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
             />

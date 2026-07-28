@@ -29,7 +29,7 @@ export const aiDecisionsService = {
 };
 
 export interface AiReviewApprovePayload {
-  domainOverride?: { pairs: DomainSubDomainPair[]; reason?: string };
+  domainOverride?: { pairs: DomainSubDomainPair[]; reason: string };
 }
 
 /** The Approver's classification actions — Approve/Reject/Override/Retry,
@@ -56,14 +56,11 @@ export const aiReviewService = {
   async overrideDomainPreview(
     needId: string,
     pairs: DomainSubDomainPair[],
-    reason?: string,
+    reason: string,
   ): Promise<Survey> {
     return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), {
       pairs,
-      // Omitted (not sent as "") when blank — the backend's `reason` field
-      // is minLength:1 when present, so an empty string would fail
-      // validation instead of just being treated as "no reason given".
-      reason: reason || undefined,
+      reason,
     });
   },
 

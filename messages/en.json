@@ -785,7 +785,9 @@
       "summaryMedium": "Medium",
       "summaryLow": "Low",
       "notScoredBadge": "Not scored yet",
-      "statusColumn": "Study status"
+      "statusColumn": "Study status",
+      "actionsColumn": "Actions",
+      "viewMatrix": "View Matrix"
     },
     "reports": {
       "title": "Reports",
@@ -1510,7 +1512,7 @@
         "searchSubDomain": "Search sub-domains",
         "noSubDomainsFound": "No sub-domains found",
         "removeSubDomainAria": "Remove {subDomain}",
-        "overrideReasonLabel": "Reason for override (optional)",
+        "overrideReasonLabel": "Reason for override",
         "overrideReasonPlaceholder": "Explain why the AI's suggestion is being changed...",
         "previewOverride": "Override",
         "previewing": "Loading...",
