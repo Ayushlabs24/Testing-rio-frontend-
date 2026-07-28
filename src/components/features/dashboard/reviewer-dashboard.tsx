@@ -45,9 +45,19 @@ interface StudyAwaitingReview {
   worstStatus: SlaAlertStatus;
 }
 
+// This table is specifically "Studies awaiting review" — links straight to
+// `/studies/{studyId}`, so it only makes sense for Study-scoped alerts
+// (survey_approval). Report alerts (report_approval) have no Study to link
+// through in the org-wide case, and even when a Report is Study-scoped,
+// mixing "a report needs approval" into a per-Study Survey-review table
+// would be a different kind of item than this table is built to show —
+// filtered out here rather than force-fit in. The KPI cards above this
+// table intentionally do still count every pending alert type, including
+// reports — this filtering is specific to this one table.
 function groupAlertsByStudy(alerts: SlaAlert[]): StudyAwaitingReview[] {
   const byStudy = new Map<string, SlaAlert[]>();
   for (const alert of alerts) {
+    if (alert.studyId === null) continue;
     const existing = byStudy.get(alert.studyId);
     if (existing) existing.push(alert);
     else byStudy.set(alert.studyId, [alert]);
@@ -63,7 +73,9 @@ function groupAlertsByStudy(alerts: SlaAlert[]): StudyAwaitingReview[] {
         group[0]!.status,
       );
       return {
-        studyId: group[0]!.studyId,
+        // Guaranteed non-null — the loop above only ever pushes into
+        // `byStudy` for alerts whose studyId already passed the null check.
+        studyId: group[0]!.studyId!,
         studyTitle: group[0]!.studyTitle,
         pendingCount: group.length,
         earliestDueAt,
