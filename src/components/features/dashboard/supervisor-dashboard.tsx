@@ -1,11 +1,11 @@
 "use client";
 
-import { Building2, CheckCircle2, Clock3, FileText } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Building2, CheckCircle2, Clock3, FileText } from "lucide-react";
 import { PageContainer } from "@/components/common/page-container";
-import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/features/dashboard/stat-card";
+import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -25,11 +25,6 @@ function formatDate(iso: string): string {
   );
 }
 
-/**
- * Program Supervisor's own dashboard — read-only, cross-organization. No
- * edit/create/delete affordance anywhere on this page (nor does the backend
- * grant this role any — see role-matrix.ts's center_supervisor entry).
- */
 export function SupervisorDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.supervisor");
   const [overview, setOverview] = useState<SupervisorOverview | null>(null);
@@ -43,90 +38,115 @@ export function SupervisorDashboard({ userName }: { userName: string }) {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title", { name: userName })} description={t("description")} />
+      <div className="flex flex-col gap-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-foreground text-2xl font-bold tracking-tight">
+            {t("title", { name: userName })}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
+            {t("description")}
+          </p>
+        </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label={t("stats.totalOrganizations")}
-          value={overview?.totalOrganizations ?? 0}
-          icon={Building2}
-        />
-        <StatCard
-          label={t("stats.studiesInProgress")}
-          value={overview?.studiesInProgress ?? 0}
-          icon={Clock3}
-        />
-        <StatCard
-          label={t("stats.reportsShared")}
-          value={overview?.reportsShared ?? 0}
-          icon={FileText}
-        />
-        <StatCard
-          label={t("stats.pendingSharingRequests")}
-          value={overview?.pendingSharingRequests ?? 0}
-          icon={CheckCircle2}
-        />
-      </div>
+        {/* Top Stat Cards */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label={t("stats.totalOrganizations")}
+            value={overview?.totalOrganizations ?? 0}
+            icon={Building2}
+          />
+          <StatCard
+            label={t("stats.studiesInProgress")}
+            value={overview?.studiesInProgress ?? 0}
+            icon={Clock3}
+          />
+          <StatCard
+            label={t("stats.reportsShared")}
+            value={overview?.reportsShared ?? 0}
+            icon={FileText}
+          />
+          <StatCard
+            label={t("stats.pendingSharingRequests")}
+            value={overview?.pendingSharingRequests ?? 0}
+            icon={CheckCircle2}
+          />
+        </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("orgColumn")}</TableHead>
-                <TableHead>{t("activeStudyColumn")}</TableHead>
-                <TableHead>{t("latestReportColumn")}</TableHead>
-                <TableHead className="w-32">{t("sharingStatusColumn")}</TableHead>
-                <TableHead className="w-36">{t("lastActivityColumn")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {overview === null ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                  <TableRow key={index}>
-                    {Array.from({ length: 5 }).map((__, cell) => (
-                      <TableCell key={cell} className="py-4">
-                        <div className="bg-muted h-4 w-24 rounded" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : overview.rows.length === 0 ? (
+        {/* Geographic Distribution Section */}
+        <GeographicDistribution variant="ncnp" />
+
+        {/* Cross-Org Supervisor Overview Table */}
+        <Card className="border-border/60 overflow-hidden rounded-2xl shadow-sm">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-muted-foreground h-24 text-center"
-                  >
-                    {t("noResults")}
-                  </TableCell>
+                  <TableHead className="text-sm font-bold">{t("orgColumn")}</TableHead>
+                  <TableHead className="text-sm font-bold">
+                    {t("activeStudyColumn")}
+                  </TableHead>
+                  <TableHead className="text-sm font-bold">
+                    {t("latestReportColumn")}
+                  </TableHead>
+                  <TableHead className="w-36 text-sm font-bold">
+                    {t("sharingStatusColumn")}
+                  </TableHead>
+                  <TableHead className="w-40 text-sm font-bold">
+                    {t("lastActivityColumn")}
+                  </TableHead>
                 </TableRow>
-              ) : (
-                overview.rows.map((row) => (
-                  <TableRow key={row.organizationId}>
-                    <TableCell className="py-4 text-sm font-medium">
-                      {row.organizationName}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {row.activeStudyTitle ?? t("none")}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {row.latestReportTitle ?? t("none")}
-                    </TableCell>
-                    <TableCell>
-                      {row.sharingStatus ? (
-                        <Badge variant="outline">{row.sharingStatus}</Badge>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDate(row.lastActivity)}
+              </TableHeader>
+              <TableBody>
+                {overview === null ? (
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <TableRow key={index}>
+                      {Array.from({ length: 5 }).map((__, cell) => (
+                        <TableCell key={cell} className="py-4">
+                          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : overview.rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-muted-foreground py-8 text-center text-sm font-medium"
+                    >
+                      {t("noResults")}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  overview.rows.map((row) => (
+                    <TableRow key={row.organizationId} className="hover:bg-muted/30">
+                      <TableCell className="py-4 text-sm font-semibold">
+                        {row.organizationName}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-medium">
+                        {row.activeStudyTitle ?? t("none")}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-medium">
+                        {row.latestReportTitle ?? t("none")}
+                      </TableCell>
+                      <TableCell>
+                        {row.sharingStatus ? (
+                          <Badge variant="outline" className="font-semibold">
+                            {row.sharingStatus}
+                          </Badge>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-medium">
+                        {formatDate(row.lastActivity)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </PageContainer>
   );
 }

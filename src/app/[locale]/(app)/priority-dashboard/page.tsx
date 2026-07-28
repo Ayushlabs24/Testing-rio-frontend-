@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -142,8 +143,8 @@ export default function PriorityDashboardPage() {
                   <TableHead>{t("studyColumn")}</TableHead>
                   <TableHead className="w-28">{t("scoreColumn")}</TableHead>
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
-                  <TableHead className="w-32">{t("gapTypeColumn")}</TableHead>
                   <TableHead className="w-40">{t("scoredColumn")}</TableHead>
+                  <TableHead className="w-44 text-right">{t("actionsColumn")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -176,14 +177,14 @@ export default function PriorityDashboardPage() {
                     <TableRow key={entry.needId}>
                       <TableCell className="py-4 text-sm font-medium">
                         <Link
-                          href={`/public-surveys/${entry.needId}/insights`}
-                          className="hover:underline"
+                          href={`/priority-dashboard/${entry.needId}`}
+                          className="text-primary hover:underline"
                         >
                           {entry.studyTitle}
                         </Link>
                       </TableCell>
                       <TableCell className="text-sm tabular-nums">
-                        {entry.score?.overallScore ?? "—"}
+                        {entry.score ? Math.round(entry.score.overallScore) : "—"}
                       </TableCell>
                       <TableCell>
                         {entry.score ? (
@@ -195,10 +196,15 @@ export default function PriorityDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {entry.score?.gapType ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
                         {entry.score ? formatDate(entry.score.scoredAt) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild size="sm" variant="outline" className="gap-1.5">
+                          <Link href={`/priority-dashboard/${entry.needId}`}>
+                            <Gauge className="text-primary size-3.5" />
+                            View Matrix
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

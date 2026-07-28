@@ -1,7 +1,8 @@
 "use client";
 
 import { Bell, LogOut, Menu, PanelLeft } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 import { OrgBrandMark } from "@/components/common/org-brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,13 +12,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { appNav } from "@/config/navigation";
-import { siteConfig } from "@/config/site";
-import { useReviewerSlaBadge } from "@/hooks/use-reviewer-sla-badge";
+import {
+  markReviewerSlaAlertsSeen,
+  useReviewerSlaBadge,
+} from "@/hooks/use-reviewer-sla-badge";
+import { useSharingNotifications } from "@/hooks/use-sharing-notifications";
+import type { SharingNotification } from "@/hooks/use-sharing-notifications";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -38,13 +45,17 @@ function MobileNav() {
   const t = useTranslations("app.sidebar");
   const tTopbar = useTranslations("app.topbar");
   const pathname = usePathname();
-  const router = useRouter();
+  const locale = useLocale();
 
   if (!session) return null;
 
   const handleLogout = async () => {
     await logout();
-    router.push("/");
+    // A soft client-side router.push left stale client state (e.g. cached
+    // route data from protected pages) rendering behind the sign-in page in
+    // some cases — a full navigation guarantees a clean, fully signed-out
+    // page load, same as visiting the URL directly.
+    window.location.assign(`/${locale}`);
   };
 
   const visibleNav = appNav.filter((item) => {
@@ -113,6 +124,201 @@ function MobileNav() {
   );
 }
 
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** Single combined bell for every in-app alert source — Reviewer SLA
+ * (useReviewerSlaBadge) and report/study sharing-request events
+ * (useSharingNotifications). Previously two separate bells; consolidated
+ * into one icon with one dropdown per feedback that a second bell wasn't
+ * worth the extra chrome. Reviewer SLA surfaces as a single summary row
+ * linking to its own dedicated page (visiting it already marks its alerts
+ * seen — see reviewer-sla/page.tsx); Sharing surfaces as the same
+ * itemized, click-to-navigate list as before. */
+function NotificationsBell({
+  canSeeReviewerSla,
+  canSeeSharing,
+}: {
+  canSeeReviewerSla: boolean;
+  canSeeSharing: boolean;
+}) {
+  const t = useTranslations("app.topbar");
+  const router = useRouter();
+  const { session } = useAuth();
+  const reviewerSla = useReviewerSlaBadge();
+  const {
+    notifications,
+    unreadCount: sharingUnreadCount,
+    markSeen,
+    markAllSeen,
+  } = useSharingNotifications();
+  const [open, setOpen] = useState(false);
+
+  const reviewerSlaCount = canSeeReviewerSla ? reviewerSla.count : 0;
+  const sharingCount = canSeeSharing ? sharingUnreadCount : 0;
+  // Decides the summary row's wording below — a Reviewer/Approver's count
+  // is surveys awaiting THEIR decision; anyone else seeing this bell (a
+  // Research Officer) is looking at their OWN submitted surveys' resolved
+  // status instead (see ReviewerSlaService.listAlerts).
+  const canApproveSurveys =
+    session?.role.permissions.find((p) => p.module === "surveyBuilder")?.approve ?? false;
+  const totalCount = reviewerSlaCount + sharingCount;
+
+  // Same color language as the Reviewer SLA Alerts page's own status
+  // badges (STATUS_VARIANT in reviewer-sla/page.tsx) — breached escalates
+  // to destructive, at_risk to the brand/default color; sharing activity
+  // alone (no reviewer alerts) stays a neutral secondary, since a new
+  // sharing request isn't an urgency/SLA signal.
+  const badgeVariant =
+    reviewerSlaCount > 0 && reviewerSla.severity === "breached"
+      ? "destructive"
+      : reviewerSlaCount > 0 && reviewerSla.severity === "at_risk"
+        ? "default"
+        : "secondary";
+
+  function labelFor(n: SharingNotification): string {
+    const key =
+      n.type === "request_created"
+        ? n.entity === "study"
+          ? "sharingAlertCreatedStudy"
+          : "sharingAlertCreatedReport"
+        : n.type === "request_approved"
+          ? n.entity === "study"
+            ? "sharingAlertApprovedStudy"
+            : "sharingAlertApprovedReport"
+          : n.entity === "study"
+            ? "sharingAlertRejectedStudy"
+            : "sharingAlertRejectedReport";
+    return t(key, { orgName: n.orgName, title: n.title });
+  }
+
+  function handleSharingClick(n: SharingNotification) {
+    markSeen(n.id);
+    setOpen(false);
+    const tab = n.type === "request_created" ? "incoming" : "outgoing";
+    router.push(
+      `/sharing?entity=${n.entity === "study" ? "studies" : "reports"}&tab=${tab}`,
+    );
+  }
+
+  function handleMarkAllSeen() {
+    if (canSeeSharing) markAllSeen();
+    if (canSeeReviewerSla && session?.user.id) {
+      markReviewerSlaAlertsSeen(session.user.id, reviewerSla.alerts);
+      // Without this, the badge only recomputes on the hook's own poll
+      // interval — clicking "mark all as read" would look like a no-op
+      // until that next tick fires.
+      reviewerSla.refresh();
+    }
+    setOpen(false);
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={t("notifications")}
+        >
+          <Bell className="size-4" />
+          {totalCount > 0 ? (
+            <Badge
+              variant={badgeVariant}
+              className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] tabular-nums"
+            >
+              {totalCount > 99 ? "99+" : totalCount}
+            </Badge>
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <DropdownMenuLabel className="p-0">{t("notifications")}</DropdownMenuLabel>
+          {totalCount > 0 ? (
+            <button
+              type="button"
+              onClick={handleMarkAllSeen}
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-xs"
+            >
+              {t("sharingAlertsMarkAllSeen")}
+            </button>
+          ) : null}
+        </div>
+        <DropdownMenuSeparator />
+
+        {canSeeReviewerSla && reviewerSlaCount > 0 ? (
+          <DropdownMenuItem asChild onClick={() => setOpen(false)}>
+            <Link href="/reviewer-sla" className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  reviewerSla.severity === "breached"
+                    ? "bg-destructive"
+                    : reviewerSla.severity === "at_risk"
+                      ? "bg-primary"
+                      : "bg-muted-foreground",
+                )}
+              />
+              <span className="text-sm">
+                {canApproveSurveys
+                  ? t("reviewerSlaPendingCount", { count: reviewerSlaCount })
+                  : t("surveyStatusUpdateCount", { count: reviewerSlaCount })}
+              </span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+
+        {canSeeReviewerSla && reviewerSlaCount > 0 && canSeeSharing ? (
+          <DropdownMenuSeparator />
+        ) : null}
+
+        {canSeeSharing ? (
+          notifications.length === 0 ? (
+            <p className="text-muted-foreground px-2 py-4 text-center text-sm">
+              {t("sharingAlertsEmpty")}
+            </p>
+          ) : (
+            notifications.slice(0, 20).map((n) => (
+              <DropdownMenuItem
+                key={n.id}
+                onClick={() => handleSharingClick(n)}
+                className="flex flex-col items-start gap-0.5 whitespace-normal"
+              >
+                <span className={cn("text-sm", !n.seen && "font-medium")}>
+                  {labelFor(n)}
+                </span>
+                {n.reason ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t("sharingAlertReasonPrefix", { reason: n.reason })}
+                  </span>
+                ) : null}
+                <span className="text-muted-foreground text-xs">
+                  {timeAgo(n.createdAt)}
+                </span>
+              </DropdownMenuItem>
+            ))
+          )
+        ) : null}
+
+        {!canSeeSharing && reviewerSlaCount === 0 ? (
+          <p className="text-muted-foreground px-2 py-4 text-center text-sm">
+            {t("sharingAlertsEmpty")}
+          </p>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 interface AppTopbarProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -122,8 +328,8 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   const { session } = useAuth();
   const t = useTranslations("app.topbar");
   const tSidebar = useTranslations("app.sidebar");
+  const tSysAdmin = useTranslations("systemAdmin");
   const pathname = usePathname();
-  const reviewerSlaUnread = useReviewerSlaBadge();
 
   if (!session) return null;
 
@@ -131,13 +337,21 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
     item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href),
   );
 
+  const isSystemAdmin =
+    session.role.key === "system_admin" || pathname.startsWith("/system-admin");
+
   // Same permission gate as the Reviewer SLA nav item itself (see
-  // config/navigation.ts's `module: "aiReview"` entry, and MobileNav's
+  // config/navigation.ts's `module: "surveyBuilder"` entry, and MobileNav's
   // identical `visibleNav` filter above) — the bell only ever shows for a
-  // role that can actually see that page.
+  // role that can actually see that page (Research Officer or
+  // Reviewer/Approver — see ReviewerSlaService.listAlerts).
   const canSeeReviewerSla =
     session.role.enabled &&
-    (session.role.permissions.find((p) => p.module === "aiReview")?.read ?? false);
+    (session.role.permissions.find((p) => p.module === "surveyBuilder")?.read ?? false);
+  const canSeeSharing =
+    session.role.enabled &&
+    (session.role.permissions.find((p) => p.module === "archiveSharingAudit")?.read ??
+      false);
 
   return (
     <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6 lg:px-8">
@@ -165,14 +379,16 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">{t("menu")}</SheetTitle>
-            <div className="border-border flex h-16 min-w-0 items-center gap-2.5 border-b px-4 text-sm font-semibold">
+            <div className="border-border flex h-16 min-w-0 items-center border-b px-4 text-sm font-semibold">
               <OrgBrandMark
                 logoUrl={session.organization.logoUrl}
                 crossEntity={session.role.crossEntity}
               />
-              <span className="min-w-0 flex-1 break-words">
-                {session.role.crossEntity ? siteConfig.name : session.organization.name}
-              </span>
+              {session.role.crossEntity ? null : (
+                <span className="ml-2.5 min-w-0 flex-1 break-words">
+                  {session.organization.name}
+                </span>
+              )}
             </div>
             <MobileNav />
           </SheetContent>
@@ -182,24 +398,27 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
           <h1 className="text-foreground truncate text-base font-semibold">
             {tSidebar(currentNavItem.labelKey)}
           </h1>
+        ) : isSystemAdmin ? (
+          <h1 className="text-foreground truncate text-base font-semibold">
+            {tSysAdmin("platformContext")}
+          </h1>
         ) : null}
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        {canSeeReviewerSla ? (
-          <Button variant="ghost" size="icon" className="relative" asChild>
-            <Link href="/reviewer-sla" aria-label={t("reviewerSlaAlerts")}>
-              <Bell className="size-4" />
-              {reviewerSlaUnread > 0 ? (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] tabular-nums"
-                >
-                  {reviewerSlaUnread > 99 ? "99+" : reviewerSlaUnread}
-                </Badge>
-              ) : null}
-            </Link>
-          </Button>
+        {isSystemAdmin ? (
+          <Badge
+            variant="outline"
+            className="border-primary/20 text-primary bg-primary/10 font-medium"
+          >
+            {tSysAdmin("platformContext")}
+          </Badge>
+        ) : null}
+        {canSeeReviewerSla || canSeeSharing ? (
+          <NotificationsBell
+            canSeeReviewerSla={canSeeReviewerSla}
+            canSeeSharing={canSeeSharing}
+          />
         ) : null}
         <ThemeToggle />
       </div>

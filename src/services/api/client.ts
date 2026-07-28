@@ -1,6 +1,21 @@
 import { apiConfig } from "@/services/api/config";
 import { ApiError, type QueryParams, type RequestOptions } from "@/services/api/types";
 
+const CSRF_COOKIE_NAME = "rio_csrf";
+const CSRF_HEADER_NAME = "x-csrf-token";
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+// Backend double-submit CSRF (see CsrfGuard): a mutating request while a
+// rio_session cookie is present must echo the readable rio_csrf cookie back
+// as this header, or it's rejected with CSRF_TOKEN_INVALID regardless of a
+// valid session. Only relevant browser-side — SSR/no-cookie contexts (and
+// GET/HEAD/OPTIONS, which the backend never checks) just send nothing.
+function readCsrfCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]!) : undefined;
+}
+
 function buildUrl(path: string, params?: QueryParams): string {
   const url = new URL(path.replace(/^\//, ""), `${apiConfig.baseUrl}/`);
 
@@ -28,10 +43,12 @@ async function request<TResponse>(
   );
 
   try {
+    const csrfToken = SAFE_METHODS.has(method) ? undefined : readCsrfCookie();
     const response = await fetch(buildUrl(path, options.params), {
       method,
       headers: {
         "Content-Type": "application/json",
+        ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
         ...options.headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -94,6 +111,8 @@ function uploadForm<TResponse>(
     xhr.open("POST", buildUrl(path));
     xhr.withCredentials = true;
     xhr.timeout = apiConfig.timeoutMs;
+    const csrfToken = readCsrfCookie();
+    if (csrfToken) xhr.setRequestHeader(CSRF_HEADER_NAME, csrfToken);
 
     if (options.signal) {
       if (options.signal.aborted) {
@@ -139,6 +158,51 @@ function uploadForm<TResponse>(
   });
 }
 
+async function downloadBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? apiConfig.timeoutMs,
+  );
+
+  try {
+    const csrfToken = readCsrfCookie();
+    const response = await fetch(buildUrl(path, options.params), {
+      method: "GET",
+      headers: {
+        ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
+        ...options.headers,
+      },
+      signal: options.signal ?? controller.signal,
+      cache: options.cache,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const payload = isJson ? await response.json() : undefined;
+      throw new ApiError({
+        message: payload?.error?.message ?? payload?.message ?? response.statusText,
+        status: response.status,
+        details: payload?.error?.details ?? payload,
+      });
+    }
+
+    return await response.blob();
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError({ message: "Request timed out", status: 408 });
+    }
+    throw new ApiError({
+      message: error instanceof Error ? error.message : "Network error",
+      status: 0,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * The only object in the app allowed to call `fetch`. Every service method
  * must go through this client so request handling (base URL, timeouts,
@@ -155,5 +219,6 @@ export const apiClient = {
     request<TResponse>("PATCH", path, body, options),
   delete: <TResponse>(path: string, options?: RequestOptions) =>
     request<TResponse>("DELETE", path, undefined, options),
+  downloadBlob,
   uploadForm,
 };

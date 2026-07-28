@@ -3,6 +3,7 @@
 import { FileQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { DomainChips } from "@/components/common/domain-chips";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -18,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
-import { usePermission } from "@/hooks/use-permission";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
@@ -41,8 +41,7 @@ const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
  * running its own independent survey. */
 export default function SurveyBuilderPage() {
   const t = useTranslations("app.surveyBuilder");
-  const canWrite = usePermission("surveyBuilder", "write");
-  const canApprove = usePermission("surveyBuilder", "approve");
+  const tClassification = useTranslations("app.studies.classification");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -137,7 +136,19 @@ export default function SurveyBuilderPage() {
                         {need.title}
                       </TableCell>
                       <TableCell className="align-middle text-sm whitespace-normal">
-                        {need.domain && need.subDomain ? (
+                        {need.allDomainsSelected ? (
+                          <DomainChips
+                            items={[tClassification("allDomainsChip")]}
+                            variant="secondary"
+                          />
+                        ) : need.needDomains.length > 0 ? (
+                          <DomainChips
+                            items={need.needDomains.map(
+                              (d) => `${d.domain} / ${d.subDomain}`,
+                            )}
+                            variant="secondary"
+                          />
+                        ) : need.domain && need.subDomain ? (
                           <span className="text-muted-foreground break-words">
                             {need.domain} / {need.subDomain}
                           </span>
@@ -154,17 +165,13 @@ export default function SurveyBuilderPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right align-middle">
-                        {canApprove && !canWrite && survey.status === "SUBMITTED" ? (
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/survey-builder/${need.id}/review`}>
-                              {t("review")}
-                            </Link>
-                          </Button>
-                        ) : (
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/survey-builder/${need.id}`}>{t("open")}</Link>
-                          </Button>
-                        )}
+                        {/* Approve/Reject for a SUBMITTED survey now live
+                            inline on the detail page itself (see
+                            survey-builder/[needId]/page.tsx) — no separate
+                            review route to special-case here anymore. */}
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/survey-builder/${need.id}`}>{t("open")}</Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

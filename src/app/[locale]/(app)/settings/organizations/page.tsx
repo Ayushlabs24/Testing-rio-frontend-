@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
-import { Link } from "@/i18n/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -170,13 +171,19 @@ function OrganizationDetailSheet({
 export default function OrganizationsSettingsPage() {
   const t = useTranslations("app.settings.organizations");
   const tSectors = useTranslations("app.settings.organization.sectors");
+  const { session } = useAuth();
+  const router = useRouter();
   const [organizations, setOrganizations] = useState<OrganizationSummary[] | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
-    organizationsService.listAll().then(setOrganizations);
-  }, []);
+    if (session?.role.key === "system_admin") {
+      router.replace("/system-admin/organizations");
+    } else {
+      organizationsService.listAll().then(setOrganizations);
+    }
+  }, [session, router]);
 
   const openDetail = (id: string) => {
     setDetailId(id);

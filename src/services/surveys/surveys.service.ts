@@ -38,11 +38,31 @@ export interface SurveyQuestionItem {
   questionText: string;
   answerType: string;
   answerOptions: string[] | null;
+  domain: string | null;
+  subDomain: string | null;
   indicator: string | null;
   kpi: string | null;
   isCustom: boolean;
   order: number;
   isRequired: boolean;
+}
+
+/** A custom (open-ended) question a Research Officer previously typed in
+ * from scratch on some OTHER survey targeting the same Domain/Sub-domain —
+ * shown in the Survey Builder's "Custom Questions" tab so it can be reused
+ * instead of retyped. `id` is the originating SurveyQuestion's own id, only
+ * useful as a stable list key here — adding one to the current survey
+ * copies its text/type/options into a brand-new SurveyQuestion row, it's
+ * never linked by reference the way a Question Bank item is. */
+export interface ReusableCustomQuestion {
+  id: string;
+  questionText: string;
+  answerType: string;
+  answerOptions: string[] | null;
+  domain: string | null;
+  subDomain: string | null;
+  kpi: string | null;
+  sourceSurveyTitle: string;
 }
 
 /** DRAFT -> SUBMITTED -> PUBLISHED, or SUBMITTED -> REJECTED -> (edit) ->
@@ -128,26 +148,25 @@ export type SaveSurveyQuestionInput =
       customText: string;
       customAnswerType?: string;
       customOptions?: string[];
+      domain?: string;
+      subDomain?: string;
+      kpi?: string;
       order: number;
       isRequired: boolean;
     };
 
 /** Answer types an Additional (open-ended) question can take — distinct
  * from Question Bank answer types, since these are Survey Builder's own
- * vocabulary for study-specific questions. `single_choice`/`number`/`date`
- * were added for the AI Review screen's Add Custom Question dialog (see
- * CustomQuestionEditorDialog) — an options editor is only shown for
- * `multiple_choice`/`single_choice`. */
+ * vocabulary for study-specific questions: Free Text, Single Select, Multi
+ * Select, True/False, Scale, Number. An options editor is only shown for
+ * `multiple_choice`/`checkbox` (see CustomQuestionEditorDialog). */
 export const ADDITIONAL_QUESTION_ANSWER_TYPES = [
   "long_text",
-  "short_text",
   "multiple_choice",
-  "single_choice",
   "checkbox",
   "yes_no",
   "rating",
   "number",
-  "date",
 ] as const;
 export type AdditionalQuestionAnswerType =
   (typeof ADDITIONAL_QUESTION_ANSWER_TYPES)[number];
@@ -157,10 +176,35 @@ export const surveysService = {
     return apiClient.get<QuestionOption[]>(endpoints.questionBank.domainOptions);
   },
 
-  async getQuestions(domain: string, subDomain: string): Promise<Question[]> {
+  /** Distinct KPI values already in use across the Question Bank — free-text
+   * suggestions for the Custom Question Editor's KPI field, not a fixed list
+   * (see QuestionsService.getKpiOptions on the backend). */
+  async getKpiOptions(): Promise<string[]> {
+    return apiClient.get<string[]>(endpoints.questionBank.kpiOptions);
+  },
+
+  /** Empty `pairs` means "every active Question Bank entry" — the
+   * allDomainsSelected case, where there's no specific Domain/Sub-domain to
+   * filter by. Non-empty `pairs` matches any of them (a single classified
+   * pair, or an already-approved multi-domain Need's several pairs). */
+  async getQuestions(
+    pairs: Array<{ domain: string; subDomain: string }>,
+  ): Promise<Question[]> {
     return apiClient.get<Question[]>(endpoints.questionBank.questions, {
-      params: { domain, subDomain },
+      params: pairs.length > 0 ? { pairs: JSON.stringify(pairs) } : {},
     });
+  },
+
+  /** Custom questions previously added to some other survey for this exact
+   * Domain/Sub-domain — see ReusableCustomQuestion's own doc comment. */
+  async getReusableCustomQuestions(
+    domain: string,
+    subDomain: string,
+  ): Promise<ReusableCustomQuestion[]> {
+    return apiClient.get<ReusableCustomQuestion[]>(
+      endpoints.surveys.reusableCustomQuestions,
+      { params: { domain, subDomain } },
+    );
   },
 
   async getSurveyByNeedId(needId: string): Promise<Survey | null> {

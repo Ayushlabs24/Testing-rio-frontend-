@@ -428,18 +428,46 @@ export default function AuditSettingsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="py-5">
-                        <Badge variant={ACTION_VARIANT[event.action]}>
-                          {tActions(event.action)}
+                        <Badge variant={ACTION_VARIANT[event.action] ?? "outline"}>
+                          {(() => {
+                            try {
+                              const translated = tActions(event.action);
+                              if (
+                                translated &&
+                                !translated.startsWith("app.settings.audit.actions.")
+                              ) {
+                                return translated;
+                              }
+                            } catch {
+                              // fallback
+                            }
+                            return event.action
+                              .replace(/^SYSTEM_ADMIN_/, "")
+                              .replace(/_/g, " ")
+                              .toLowerCase()
+                              .replace(/\b\w/g, (c) => c.toUpperCase());
+                          })()}
                         </Badge>
                       </TableCell>
                       <TableCell className="py-5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex flex-col space-y-0.5">
-                            <span className="text-foreground text-sm">
-                              {event.entityLabel}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 flex-col space-y-0.5">
+                            <span className="text-foreground text-sm break-words whitespace-normal">
+                              {event.entityLabel &&
+                              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                                event.entityLabel,
+                              )
+                                ? `${(event.entityType || "Record").charAt(0).toUpperCase() + (event.entityType || "Record").slice(1)} (${event.entityLabel.slice(0, 8)})`
+                                : event.entityLabel || event.entityType}
                             </span>
                             <span className="text-muted-foreground text-xs">
-                              {tEntities(event.entityType)}
+                              {(() => {
+                                try {
+                                  return tEntities(event.entityType);
+                                } catch {
+                                  return event.entityType;
+                                }
+                              })()}
                             </span>
                           </div>
                           {event.changes && event.changes.length > 0 ? (

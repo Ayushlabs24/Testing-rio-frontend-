@@ -333,7 +333,7 @@ export default function OrganizationSettingsPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="bg-primary text-primary-foreground ring-background absolute right-0 bottom-0 flex size-8 items-center justify-center rounded-full ring-2 transition-opacity hover:opacity-90"
+                      className="bg-primary text-primary-foreground ring-background absolute right-0 bottom-0 flex size-8 cursor-pointer items-center justify-center rounded-full ring-2 transition-opacity hover:opacity-90"
                       aria-label={t("uploadLogo")}
                     >
                       <Pencil className="size-3.5" />

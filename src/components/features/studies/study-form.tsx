@@ -121,6 +121,20 @@ export function StudyForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgCenters, orgCentersLoaded]);
 
+  // Default to the (most recently) published Methodology Version instead of
+  // leaving this at "None" — `methodologyVersions` arrives asynchronously
+  // (the caller renders this form before its own fetch resolves), so this
+  // can't just be part of `defaultValues` above. Only fires while nothing's
+  // selected yet, so it never overrides a Study that already has its own
+  // explicit choice (including an existing Study deliberately linked to
+  // none). Already ordered most-recent-first by the backend.
+  useEffect(() => {
+    if (methodologyVersionId) return;
+    const mostRecentlyPublished = methodologyVersions[0];
+    if (!mostRecentlyPublished) return;
+    setValue("methodologyVersionId", mostRecentlyPublished.id);
+  }, [methodologyVersions, methodologyVersionId, setValue]);
+
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
@@ -135,7 +149,9 @@ export function StudyForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="title">{t("titleLabel")}</Label>
+        <Label htmlFor="title">
+          {t("titleLabel")} <span className="text-destructive">*</span>
+        </Label>
         <Input id="title" placeholder={t("titlePlaceholder")} {...register("title")} />
         {errors.title ? (
           <p className="text-destructive text-sm">{errors.title.message}</p>
@@ -149,7 +165,9 @@ export function StudyForm({
       </div>
 
       <div className="space-y-2">
-        <Label>{t("governorateLabel")}</Label>
+        <Label>
+          {t("governorateLabel")} <span className="text-destructive">*</span>
+        </Label>
         <MultiSelect
           options={orgGovernorates.map((g) => ({ value: g.id, label: g.name }))}
           values={governorateIds}
@@ -167,7 +185,9 @@ export function StudyForm({
       </div>
 
       <div className="space-y-2">
-        <Label>{t("centerLabel")}</Label>
+        <Label>
+          {t("centerLabel")} <span className="text-destructive">*</span>
+        </Label>
         <MultiSelect
           options={orgCenters.map((c) => ({ value: c.id, label: c.name }))}
           values={centerIds}

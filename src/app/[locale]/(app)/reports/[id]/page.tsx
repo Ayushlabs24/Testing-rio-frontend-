@@ -1,37 +1,16 @@
 "use client";
 
-import { Download, FileText, Sparkles, Table2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { ReportActions } from "@/components/features/reports/report-actions";
+import { ReportContentView } from "@/components/features/reports/report-content-view";
+import { ReportStatusBadge } from "@/components/features/reports/report-status-badge";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { usePermission } from "@/hooks/use-permission";
-import { flattenReportContent } from "@/lib/report-content-flatten";
-import { ApiError } from "@/services/api/types";
 import { reportsService } from "@/services/reports/reports.service";
-import type { Report, ReportStatus } from "@/services/reports/reports.types";
-
-const STATUS_VARIANT: Record<
-  ReportStatus,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  draft: "outline",
-  approved: "default",
-  rejected: "destructive",
-};
+import type { Report } from "@/services/reports/reports.types";
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -46,10 +25,7 @@ export default function ReportPreviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const t = useTranslations("app.reports");
   const tp = useTranslations("app.reports.preview");
-  const canApprove = usePermission("reportsDashboards", "approve");
-  const canExport = usePermission("reportsDashboards", "export");
 
   const [report, setReport] = useState<Report | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -69,42 +45,6 @@ export default function ReportPreviewPage({
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  async function handleApprove() {
-    setActionError(null);
-    try {
-      await reportsService.approve(id);
-      load();
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : tp("reviewError"));
-    }
-  }
-
-  async function handleReject() {
-    setActionError(null);
-    try {
-      await reportsService.reject(id);
-      load();
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : tp("reviewError"));
-    }
-  }
-
-  async function handleExport(format: "pdf" | "excel") {
-    setActionError(null);
-    try {
-      await reportsService.download(id, format);
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : tp("exportError"));
-    }
-  }
-
-  const flattened = report ? flattenReportContent(report.content) : null;
-  const isEmpty =
-    flattened &&
-    !flattened.narrative &&
-    flattened.summaryRows.length === 0 &&
-    flattened.tables.length === 0;
 
   return (
     <PermissionGuard module="reportsDashboards" action="read">
@@ -131,50 +71,12 @@ export default function ReportPreviewPage({
               }
               actions={
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={STATUS_VARIANT[report.status]}>
-                    {t(`status.${report.status}`)}
-                  </Badge>
-                  {canApprove && report.status === "draft" ? (
-                    <>
-                      <Button size="sm" variant="outline" onClick={handleApprove}>
-                        {tp("approve")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={handleReject}
-                      >
-                        {tp("reject")}
-                      </Button>
-                    </>
-                  ) : null}
-                  {canExport &&
-                  report.status === "approved" &&
-                  report.exportFormats.includes("pdf") ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      onClick={() => handleExport("pdf")}
-                    >
-                      <Download className="size-3.5" />
-                      {tp("exportPdf")}
-                    </Button>
-                  ) : null}
-                  {canExport &&
-                  report.status === "approved" &&
-                  report.exportFormats.includes("excel") ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      onClick={() => handleExport("excel")}
-                    >
-                      <Download className="size-3.5" />
-                      {tp("exportExcel")}
-                    </Button>
-                  ) : null}
+                  <ReportStatusBadge status={report.status} />
+                  <ReportActions
+                    report={report}
+                    onChanged={load}
+                    onError={(m) => setActionError(m || null)}
+                  />
                 </div>
               }
             />
@@ -183,89 +85,7 @@ export default function ReportPreviewPage({
               <p className="text-destructive mb-4 text-sm">{actionError}</p>
             ) : null}
 
-            <div className="space-y-6">
-              {flattened?.narrative ? (
-                <Card>
-                  <CardContent className="space-y-3 p-6">
-                    <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                      <Sparkles className="size-4" />
-                      {tp("executiveSummaryHeading")}
-                    </h2>
-                    <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
-                      {flattened.narrative}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : null}
-
-              {flattened && flattened.summaryRows.length > 0 ? (
-                <Card>
-                  <CardContent className="space-y-3 p-6">
-                    <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                      <FileText className="size-4" />
-                      {tp("summaryHeading")}
-                    </h2>
-                    <div className="divide-border divide-y">
-                      {flattened.summaryRows.map((row) => (
-                        <div
-                          key={row.field}
-                          className="flex items-center justify-between gap-4 py-2 text-sm"
-                        >
-                          <span className="text-muted-foreground">{row.field}</span>
-                          <span className="text-foreground font-medium">{row.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : null}
-
-              {flattened?.tables.map((table) => {
-                const columns = Array.from(
-                  new Set(table.rows.flatMap((row) => Object.keys(row))),
-                );
-                return (
-                  <Card key={table.name}>
-                    <CardContent className="space-y-3 p-6">
-                      <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                        <Table2 className="size-4" />
-                        {table.name}
-                      </h2>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            {columns.map((col) => (
-                              <TableHead key={col}>{col}</TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {table.rows.map((row, index) => (
-                            <TableRow key={index}>
-                              {columns.map((col) => (
-                                <TableCell key={col} className="text-sm">
-                                  {row[col] === null || row[col] === undefined
-                                    ? "—"
-                                    : String(row[col])}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {isEmpty ? (
-                <Card>
-                  <CardContent className="text-muted-foreground p-6 text-center text-sm">
-                    {tp("noContent")}
-                  </CardContent>
-                </Card>
-              ) : null}
-            </div>
+            <ReportContentView report={report} />
           </>
         )}
       </PageContainer>

@@ -17,6 +17,10 @@ export interface AiDecision {
   createdAt: string;
 }
 
+/** A Need can span multiple Domain/Sub-domain pairs (see NeedDomain on the
+ * backend) — no limit on how many. */
+export type DomainSubDomainPair = { domain: string; subDomain: string };
+
 export interface ReviewDecisionPayload {
   decision: "approved" | "rejected" | "modified";
   notes?: string;

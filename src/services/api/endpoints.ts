@@ -23,7 +23,18 @@ export const endpoints = {
   organizations: {
     current: "/organizations/current",
     list: "/organizations",
+    create: "/organizations",
     byId: (id: string) => `/organizations/${id}`,
+    status: (id: string) => `/organizations/${id}/status`,
+    usersForOrg: (id: string) => `/organizations/${id}/users`,
+    ngoAdminsForOrg: (id: string) => `/organizations/${id}/ngoadmins`,
+    assignNgoAdmin: (id: string) => `/organizations/${id}/ngoadmins/assign`,
+    updateUserRoleForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/role`,
+    updateUserStatusForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/status`,
+    resendInviteForOrg: (id: string, userId: string) =>
+      `/organizations/${id}/users/${userId}/resend-invite`,
   },
   geography: {
     regions: "/regions",
@@ -37,6 +48,7 @@ export const endpoints = {
   },
   questionBank: {
     domainOptions: "/question-bank/domain-options",
+    kpiOptions: "/question-bank/kpi-options",
     questions: "/question-bank/questions",
   },
   surveys: {
@@ -54,6 +66,9 @@ export const endpoints = {
     public: (id: string) => `/surveys/public/${id}`,
     submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
     responses: (id: string) => `/surveys/${id}/responses`,
+    // Org-wide, not needId-scoped — a reusable custom question can have
+    // come from any survey (see SurveysController.listReusableCustomQuestions).
+    reusableCustomQuestions: "/custom-questions",
   },
   roles: {
     list: "/roles",
@@ -103,6 +118,7 @@ export const endpoints = {
     reject: (needId: string) => `/needs/${needId}/ai-review/reject`,
     overrideDomain: (needId: string) => `/needs/${needId}/ai-review/override-domain`,
     retry: (needId: string) => `/needs/${needId}/ai-review/retry-classification`,
+    manualClassify: (needId: string) => `/needs/${needId}/ai-review/manual-classify`,
   },
   domains: {
     public: "/domains/public",
@@ -126,6 +142,8 @@ export const endpoints = {
     links: (needId: string) => `/needs/${needId}/survey-links`,
     deactivateLink: (needId: string, linkId: string) =>
       `/needs/${needId}/survey-links/${linkId}/deactivate`,
+    shareLinkByEmail: (needId: string, linkId: string) =>
+      `/needs/${needId}/survey-links/${linkId}/share-email`,
     responses: (needId: string) => `/needs/${needId}/survey-responses`,
     // Same rows as `responses`, with each one's answers already joined in.
     responsesWithAnswers: (needId: string) => `/needs/${needId}/survey-responses-full`,
@@ -160,13 +178,16 @@ export const endpoints = {
     list: "/reports",
     create: "/reports",
     byId: (id: string) => `/reports/${id}`,
+    confirm: (id: string) => `/reports/${id}/confirm`,
     approve: (id: string) => `/reports/${id}/approve`,
     reject: (id: string) => `/reports/${id}/reject`,
+    archive: (id: string) => `/reports/${id}/archive`,
     export: (id: string, format: "pdf" | "excel") =>
       `/reports/${id}/export?format=${format}`,
   },
   archive: {
     list: "/archive",
+    byId: (id: string) => `/archive/${id}`,
   },
   sharing: {
     list: "/sharing-requests",
@@ -187,8 +208,6 @@ export const endpoints = {
     approve: (id: string) => `/report-sharing-requests/${id}/approve`,
     reject: (id: string) => `/report-sharing-requests/${id}/reject`,
     sharedReport: (id: string) => `/report-sharing-requests/${id}/shared-report`,
-    export: (id: string, format: string) =>
-      `/report-sharing-requests/${id}/export?format=${encodeURIComponent(format)}`,
     lookupOrganizations: (query: string) =>
       `/report-sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
     lookupReportsForOrg: (orgId: string) =>
@@ -198,11 +217,13 @@ export const endpoints = {
     config: "/reviewer-sla/config",
     alerts: "/reviewer-sla/alerts",
   },
+  sharingAlerts: {
+    list: "/sharing-alerts",
+  },
+  collectiveDashboard: "/collective-dashboard",
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",
-    // TEMPORARY — see the MethodologyVersionOption model comment on the
-    // backend. Backs the Survey workflow's Methodology Version selector.
     versions: "/methodology-config/versions",
   },
 } as const;

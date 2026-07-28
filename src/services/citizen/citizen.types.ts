@@ -17,6 +17,7 @@ export interface ResolvedSurvey {
 
 export interface CheckDuplicatePayload {
   contact: string;
+  mobile: string;
 }
 
 export interface CheckDuplicateResult {
@@ -25,13 +26,14 @@ export interface CheckDuplicateResult {
 
 export interface RequestOtpPayload {
   contact: string;
+  mobile: string;
 }
 
 export interface RequestOtpResult {
   challengeId: string;
   expiresAt: string;
-  codeEmailed: boolean;
-  /** Only present when `codeEmailed` is false and no mailer is configured
+  codeTexted: boolean;
+  /** Only present when `codeTexted` is false and SMS isn't configured
    * (dev/test) — the only way the respondent can get the code at all. */
   code?: string;
 }

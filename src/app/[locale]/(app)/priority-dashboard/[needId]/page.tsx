@@ -1,0 +1,467 @@
+"use client";
+
+import { Gauge, ListChecks, AlertTriangle } from "lucide-react";
+import { use, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { cn, formatDomainSummary } from "@/lib/utils";
+import { BackButton } from "@/components/common/back-button";
+import { PageContainer } from "@/components/common/page-container";
+import { PageHeader } from "@/components/common/page-header";
+import { PermissionGuard } from "@/components/layout/permission-guard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { usePermission } from "@/hooks/use-permission";
+import { ApiError } from "@/services/api/types";
+import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
+import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
+import { responseQualityService } from "@/services/response-quality/response-quality.service";
+import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
+import { needsService } from "@/services/needs/needs.service";
+import { surveysService } from "@/services/surveys/surveys.service";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SeverityDashboard } from "@/components/features/insights/severity-dashboard";
+import {
+  severityScoringService,
+  VillagePriorityResult,
+} from "@/services/priority/severity-scoring.service";
+import { AiPrioritySummaryPanel } from "@/components/features/insights/ai-priority-summary-panel";
+import { SupportingEvidencePanel } from "@/components/features/insights/supporting-evidence-panel";
+
+const CONSOLIDATED = "consolidated";
+
+export default function PriorityDetailInsightsPage({
+  params,
+}: {
+  params: Promise<{ needId: string }>;
+}) {
+  const { needId } = use(params);
+  const t = useTranslations("PriorityDashboard.detailPage");
+  const canWrite = usePermission("aiReview", "write");
+  const canScore = usePermission("priorityScoring", "create");
+
+  const [links, setLinks] = useState<PublicSurveyLink[]>([]);
+  const [scope, setScope] = useState<string>(CONSOLIDATED);
+  const surveyLinkId = scope === CONSOLIDATED ? undefined : scope;
+
+  const [qualityResults, setQualityResults] = useState<ResponseQualityResult[] | null>(
+    null,
+  );
+  const [priorityV2, setPriorityV2] = useState<VillagePriorityResult | null>(null);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const [need, setNeed] = useState<any | null>(null);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const [survey, setSurvey] = useState<any | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [assessing, setAssessing] = useState(false);
+  const [scoring, setScoring] = useState(false);
+  const [summaryKey, setSummaryKey] = useState(0);
+
+  useEffect(() => {
+    publicSurveysService
+      .listLinks(needId)
+      .then(setLinks)
+      .catch(() => setLinks([]));
+  }, [needId]);
+
+  function load() {
+    needsService
+      .getById(needId)
+      .then(setNeed)
+      .catch(() => undefined);
+    surveysService
+      .getSurveyByNeedId(needId)
+      .then((srv) => {
+        setSurvey(srv);
+        if (srv) {
+          severityScoringService
+            .getVillagePriority(srv.studyId, srv.id, null)
+            .then(setPriorityV2)
+            .catch(() => setPriorityV2(null));
+        }
+      })
+      .catch(() => undefined);
+    responseQualityService
+      .list(needId, surveyLinkId)
+      .then(setQualityResults)
+      .catch(() => setQualityResults([]));
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needId, surveyLinkId]);
+
+  async function handleAssess() {
+    setAssessing(true);
+    setError(null);
+    try {
+      const results = await responseQualityService.assess(needId, surveyLinkId);
+      setQualityResults(results);
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to assess response quality",
+      );
+    } finally {
+      setAssessing(false);
+    }
+  }
+
+  async function handleScore() {
+    if (!survey) return;
+    setScoring(true);
+    setError(null);
+    try {
+      await severityScoringService.recalculate(survey.studyId, survey.id);
+      const result = await severityScoringService.getVillagePriority(
+        survey.studyId,
+        survey.id,
+        null,
+      );
+      setPriorityV2(result);
+      setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Failed to recalculate priority score",
+      );
+    } finally {
+      setScoring(false);
+    }
+  }
+
+  const criticalOverrides = (priorityV2?.domainComponents || []).filter(
+    (d) => d.triggeredOverride || d.isCriticalDomain,
+  );
+
+  return (
+    <PermissionGuard module="priorityScoring" action="read">
+      <PageContainer>
+        <div className="mb-6 flex justify-start">
+          <BackButton href="/priority-dashboard" label="Back to Priority Dashboard" />
+        </div>
+
+        <PageHeader
+          title={
+            need?.title
+              ? `${need.title} — Insights & Scoring`
+              : "Priority & Severity Insights"
+          }
+          description={
+            need?.allDomainsSelected
+              ? "Domain: All Domains"
+              : need && need.needDomains.length > 0
+                ? `Domain: ${formatDomainSummary(need.needDomains.map((d: { domain: string }) => d.domain))}`
+                : need?.domain
+                  ? `Domain: ${need.domain}`
+                  : "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights."
+          }
+          actions={
+            <div className="space-y-1.5">
+              <span className="text-muted-foreground text-xs font-medium">
+                Scope Filter
+              </span>
+              <Select value={scope} onValueChange={setScope}>
+                <SelectTrigger className="w-full sm:w-64" aria-label="Scope Filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={CONSOLIDATED}>Consolidated (All Links)</SelectItem>
+                  {links.map((link) => (
+                    <SelectItem key={link.id} value={link.id}>
+                      {link.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          }
+        />
+
+        {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
+
+        {/* Tab 1: Severity Score | Tab 2: Priority Score | Tab 3: AI Summary */}
+        <Tabs defaultValue="severity" className="mt-6">
+          <TabsList variant="line" className="mb-6">
+            <TabsTrigger value="severity">{t("tab1")}</TabsTrigger>
+            <TabsTrigger value="priority">{t("tab2")}</TabsTrigger>
+            <TabsTrigger value="summary">{t("tab3")}</TabsTrigger>
+          </TabsList>
+
+          {/* TAB 1: Severity Score (Severity Dashboard + Response Quality) */}
+          <TabsContent value="severity" className="space-y-6">
+            {survey ? (
+              <>
+                <SeverityDashboard
+                  studyId={survey.studyId}
+                  surveyId={survey.id}
+                  villages={need?.village || []}
+                />
+
+                {/* Response Quality Assessment Results */}
+                <Card className="border-border shadow-sm">
+                  <CardContent className="space-y-4 p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                          <ListChecks className="text-primary size-4" />
+                          {t("responseQualityTitle")}
+                        </h2>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {t("responseQualityDesc")}
+                        </p>
+                      </div>
+                      {canWrite ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAssess}
+                          disabled={assessing}
+                        >
+                          {assessing ? t("assessing") : t("runQualityAssessment")}
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    {qualityResults && qualityResults.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("colResponseId")}</TableHead>
+                            <TableHead>{t("colCompletenessScore")}</TableHead>
+                            <TableHead>{t("colConfidenceFlag")}</TableHead>
+                            <TableHead>{t("colDuplicateStatus")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {qualityResults.map((r) => (
+                            <TableRow key={r.id}>
+                              <TableCell className="font-medium">
+                                {r.surveyResponseId}
+                              </TableCell>
+                              <TableCell>
+                                {(r.completenessScore * 100).toFixed(0)}%
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    r.confidenceFlag === "low"
+                                      ? "destructive"
+                                      : "secondary"
+                                  }
+                                >
+                                  {r.confidenceFlag.toUpperCase()}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">
+                                {r.isDuplicate
+                                  ? t("duplicateResponse")
+                                  : t("uniqueResponse")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">{t("noAssessment")}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-sm">{t("noPublishedSurvey")}</p>
+            )}
+          </TabsContent>
+
+          {/* TAB 2: Priority Score (Priority Score Matrix + Supporting Evidence) */}
+          <TabsContent value="priority" className="space-y-6">
+            <Card className="border-border bg-card/60 relative overflow-hidden backdrop-blur-md">
+              <div
+                className={cn(
+                  "absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r",
+                  priorityV2
+                    ? priorityV2.priorityStatus === "HIGH"
+                      ? "from-destructive to-destructive/80"
+                      : priorityV2.priorityStatus === "MEDIUM"
+                        ? "from-warning to-warning/80"
+                        : "from-success to-success/80"
+                    : "from-muted to-muted",
+                )}
+              />
+              <CardContent className="space-y-6 p-6 pt-8">
+                {/* Priority Score and Status Cards */}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                    <Gauge className="size-4" />
+                    {t("priorityMatrixTitle")}
+                  </h2>
+                  {canScore ? (
+                    <Button size="sm" onClick={handleScore} disabled={scoring}>
+                      {scoring ? t("recalculating") : t("recalculateButton")}
+                    </Button>
+                  ) : null}
+                </div>
+
+                {priorityV2 ? (
+                  <div className="space-y-6">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between border-b pb-4">
+                      <span className="text-muted-foreground text-sm font-semibold">
+                        {t("villagePriorityStatus")}
+                      </span>
+                      <Badge
+                        variant={
+                          priorityV2.priorityStatus === "HIGH"
+                            ? "destructive"
+                            : priorityV2.priorityStatus === "MEDIUM"
+                              ? "secondary"
+                              : "outline"
+                        }
+                        className="px-3 py-1 text-sm font-bold tracking-wide uppercase"
+                      >
+                        {priorityV2.priorityStatus} {t("prioritySuffix")}
+                      </Badge>
+                    </div>
+
+                    {/* Score Metrics Grid */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="bg-muted/40 rounded-lg p-4">
+                        <p className="text-muted-foreground text-xs font-semibold uppercase">
+                          {t("priorityScoreIndex")}
+                        </p>
+                        <p className="text-foreground mt-1 text-2xl font-bold">
+                          {Math.round(priorityV2.priorityScore)}
+                        </p>
+                      </div>
+                      <div className="bg-muted/40 rounded-lg p-4">
+                        <p className="text-muted-foreground text-xs font-semibold uppercase">
+                          {t("overrideStatus")}
+                        </p>
+                        <p className="text-foreground mt-1 text-2xl font-bold capitalize">
+                          {priorityV2.overrideApplied
+                            ? t("criticalOverride")
+                            : t("standardRollup")}
+                        </p>
+                      </div>
+                      <div className="bg-muted/40 rounded-lg p-4">
+                        <p className="text-muted-foreground text-xs font-semibold uppercase">
+                          {t("criticalOverrides")}
+                        </p>
+                        <p className="text-foreground mt-1 text-2xl font-bold">
+                          {criticalOverrides.length}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Critical Domain Override Alert */}
+                    {criticalOverrides.length > 0 && (
+                      <div className="border-destructive/40 bg-destructive/10 rounded-lg border p-4 text-xs">
+                        <div className="text-destructive flex items-center gap-2 font-semibold">
+                          <AlertTriangle className="size-4" />
+                          {t("criticalOverrideTriggered")}
+                        </div>
+                        <p className="text-foreground mt-1">
+                          {t("criticalOverrideNote")}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {criticalOverrides.map((override, i) => (
+                            <Badge key={i} variant="destructive">
+                              {override.domainNameSnapshot}:{" "}
+                              {override.domainSeverityScore}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Domain Score / Weight / Contribution Table */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold">
+                        {t("domainPerformanceBreakdown")}
+                      </h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("tableHeaders.domain")}</TableHead>
+                            <TableHead>{t("tableHeaders.severityScore")}</TableHead>
+                            <TableHead>{t("tableHeaders.performanceScore")}</TableHead>
+                            <TableHead>{t("tableHeaders.weight")}</TableHead>
+                            <TableHead>
+                              {t("tableHeaders.weightedContribution")}
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(priorityV2.domainComponents || []).map((domain) => (
+                            <TableRow key={domain.domainKey}>
+                              <TableCell className="font-medium">
+                                {domain.domainNameSnapshot}
+                              </TableCell>
+                              <TableCell>{domain.domainSeverityScore}</TableCell>
+                              <TableCell>{domain.domainPerformanceScore}</TableCell>
+                              <TableCell>
+                                {(domain.domainWeight * 100).toFixed(0)}%
+                              </TableCell>
+                              <TableCell className="font-bold">
+                                {domain.weightedContribution.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    {t("noPriorityCalculated")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Supporting Evidence Section */}
+            {survey ? (
+              <SupportingEvidencePanel
+                needId={needId}
+                _studyId={survey.studyId}
+                onEvidenceToggled={() => setSummaryKey((prev) => prev + 1)}
+              />
+            ) : null}
+          </TabsContent>
+
+          {/* TAB 3: AI Summary */}
+          <TabsContent value="summary">
+            {survey ? (
+              <AiPrioritySummaryPanel
+                key={summaryKey}
+                studyId={survey.studyId}
+                surveyId={survey.id}
+                villageId={need?.village?.[0] || ""}
+                villages={need?.village || []}
+                hasSeverityScoring={Boolean(priorityV2)}
+                hasPriorityScoring={Boolean(priorityV2)}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>
+            )}
+          </TabsContent>
+        </Tabs>
+      </PageContainer>
+    </PermissionGuard>
+  );
+}

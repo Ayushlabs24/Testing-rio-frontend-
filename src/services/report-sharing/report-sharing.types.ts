@@ -22,7 +22,8 @@ export interface ReportSharingRequest {
 export interface CreateReportSharingRequestPayload {
   ownerOrgId: string;
   reportId: string;
-  note?: string;
+  /** "Purpose" in the UI — required. */
+  note: string;
 }
 
 export interface DecideReportSharingRequestPayload {
@@ -35,6 +36,12 @@ export interface SharedReportSnapshot {
   reportType: string;
   content: Record<string, unknown>;
   generatedAt: string;
+  ownerOrgName: string;
+  generatedByName: string | null;
+  officerConfirmedBy: string | null;
+  officerConfirmedAt: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
 }
 
 export interface OrgLookupResult {

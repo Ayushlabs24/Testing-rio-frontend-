@@ -10,8 +10,22 @@ export interface FlattenedReportContent {
   tables: Array<{ name: string; rows: Array<Record<string, unknown>> }>;
 }
 
+function isArrayOfObjects(value: unknown): value is Array<Record<string, unknown>> {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    typeof value[0] === "object" &&
+    value[0] !== null
+  );
+}
+
+function isArrayOfScalars(value: unknown): value is Array<string | number | boolean> {
+  return Array.isArray(value) && value.length > 0 && !isArrayOfObjects(value);
+}
+
 function stringifyScalar(value: unknown): string {
   if (value === null || value === undefined) return "—";
+  if (isArrayOfScalars(value)) return value.join(", ");
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
@@ -29,19 +43,31 @@ export function flattenReportContent(
 
   for (const [key, value] of Object.entries(content)) {
     if (key === "narrative" || key === "filters" || key === "reportKind") continue;
-    if (
-      Array.isArray(value) &&
-      value.length > 0 &&
-      typeof value[0] === "object" &&
-      value[0] !== null
-    ) {
-      tables.push({ name: toLabel(key), rows: value as Array<Record<string, unknown>> });
+
+    if (isArrayOfObjects(value)) {
+      tables.push({ name: toLabel(key), rows: value });
       continue;
     }
+
     if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      // One level of object nesting is common (e.g. `severity: { label,
+      // domains: [...] }`) — an array-of-objects found here is promoted to
+      // its own table (same as a top-level one) instead of being flattened
+      // into an unreadable JSON string inside a summary row; an
+      // array-of-scalars (e.g. `aiSummary.recommendations`) becomes a
+      // joined string instead of raw JSON too. Deeper nesting than this
+      // still falls back to JSON.stringify (stringifyScalar) — rare enough
+      // across the 13 report types not to need its own case yet.
       for (const [nestedKey, nestedValue] of Object.entries(
         value as Record<string, unknown>,
       )) {
+        if (isArrayOfObjects(nestedValue)) {
+          tables.push({
+            name: `${toLabel(key)} — ${toLabel(nestedKey)}`,
+            rows: nestedValue,
+          });
+          continue;
+        }
         summaryRows.push({
           field: `${toLabel(key)} — ${toLabel(nestedKey)}`,
           value: stringifyScalar(nestedValue),
@@ -49,6 +75,7 @@ export function flattenReportContent(
       }
       continue;
     }
+
     summaryRows.push({ field: toLabel(key), value: stringifyScalar(value) });
   }
 

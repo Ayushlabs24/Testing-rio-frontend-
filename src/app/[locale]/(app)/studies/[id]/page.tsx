@@ -40,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Link } from "@/i18n/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -464,10 +465,12 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                                 {t(`aiStatus.${aiStatus}`)}
                               </Badge>
                             </TableCell>
-                            <TableCell>
-                              <Badge variant={SURVEY_STATUS_VARIANT[surveyStatus]}>
-                                {t(`surveyStatus.${surveyStatus}`)}
-                              </Badge>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Link href={`/survey-builder/${need.id}`}>
+                                <Badge variant={SURVEY_STATUS_VARIANT[surveyStatus]} className="hover:opacity-80 transition-opacity cursor-pointer">
+                                  {t(`surveyStatus.${surveyStatus}`)} ↗
+                                </Badge>
+                              </Link>
                             </TableCell>
                             {canDeleteNeed ? (
                               <TableCell onClick={(event) => event.stopPropagation()}>
