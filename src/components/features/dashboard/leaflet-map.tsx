@@ -20,6 +20,12 @@ interface LeafletMapProps {
   selectedRegionId: string | null;
   onSelectRegion: (regionId: string) => void;
   maxStudies: number;
+  /** [singular, plural] label for the count each marker's `studyCount`
+   * field actually represents — that field name is literal only for this
+   * component's original caller; other callers reuse the same marker
+   * engine for a different metric (e.g. organization counts) and label it
+   * accordingly via this prop. Defaults to "study"/"studies". */
+  unitLabel?: readonly [string, string];
 }
 
 export function LeafletMapContainer({
@@ -27,6 +33,7 @@ export function LeafletMapContainer({
   selectedRegionId,
   onSelectRegion,
   maxStudies,
+  unitLabel,
 }: LeafletMapProps) {
   const t = useTranslations("systemAdmin.dashboard");
   const mapRef = useRef<L.Map | null>(null);
@@ -210,8 +217,12 @@ export function LeafletMapContainer({
       const size = 26 + Math.round((m.studyCount / (maxStudies || 1)) * 14);
       const half = Math.round(size / 2);
 
-      const iconElement = createMarkerIconElement(m, isSelected, size, () =>
-        onSelectRegion(m.regionId),
+      const iconElement = createMarkerIconElement(
+        m,
+        isSelected,
+        size,
+        () => onSelectRegion(m.regionId),
+        unitLabel,
       );
 
       const customIcon = L.divIcon({
@@ -229,7 +240,7 @@ export function LeafletMapContainer({
 
       markersRef.current.set(m.regionId, leafletMarker);
     });
-  }, [markers, selectedRegionId, maxStudies, onSelectRegion]);
+  }, [markers, selectedRegionId, maxStudies, onSelectRegion, unitLabel]);
 
   return (
     <div className="border-border/40 relative size-full overflow-hidden rounded-xl border">

@@ -70,6 +70,23 @@ export interface ReusableCustomQuestion {
  * machine and who's allowed to make each transition. */
 export type SurveyStatus = "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED";
 
+/** Matches the Prisma RejectionReasonCode enum's identifiers exactly (see
+ * schema.prisma). REJ_99 is "Other" — the only code that also requires
+ * `approverComments` to be filled in; see the reject dialog's validation. */
+export type RejectionReasonCode =
+  "REJ_01" | "REJ_02" | "REJ_03" | "REJ_04" | "REJ_05" | "REJ_06" | "REJ_07" | "REJ_99";
+
+export const REJECTION_REASON_LABELS: Record<RejectionReasonCode, string> = {
+  REJ_01: "Incomplete survey design",
+  REJ_02: "Methodology non-compliance",
+  REJ_03: "Duplicate of an existing survey",
+  REJ_04: "Incorrect need or study linkage",
+  REJ_05: "Out-of-scope geography or target population",
+  REJ_06: "Data quality concerns",
+  REJ_07: "Missing required attachments or approvals",
+  REJ_99: "Other",
+};
+
 export interface Survey {
   id: string;
   needId: string;
@@ -81,11 +98,24 @@ export interface Survey {
    * live reference: a later Methodology/Question Bank change never
    * retroactively changes what an already-published Survey shows here. */
   methodologyVersion: string | null;
+  /** Survey Design step, completed before Submit for Approval — all four
+   * null together until the Researcher saves this step (or on a survey
+   * created before this feature existed). Shown read-only to the Approver
+   * during review for context on who's being surveyed and how. */
+  targetGroup: string | null;
+  expectedSampleSize: number | null;
+  selectionApproach: string | null;
+  geographicCoverage: string | null;
   submittedAt: string | null;
   /** The Approver's reason for the most recent rejection — only set while
    * `status === "REJECTED"`; cleared the next time the survey is
    * resubmitted, so it never lingers as stale feedback. */
   approverComments: string | null;
+  /** The Approver's structured rejection reason, alongside the free-text
+   * approverComments above — same lifecycle (only set while REJECTED,
+   * cleared on resubmit). Null for surveys rejected before this field
+   * existed. */
+  rejectionReasonCode: RejectionReasonCode | null;
   approvedAt: string | null;
   approvedBy: string | null;
   approvedByName: string | null;
@@ -240,6 +270,25 @@ export const surveysService = {
     });
   },
 
+  /** Researcher: the Sample Description step — one Save action for all four
+   * fields together, mandatory before submitForApproval. Same editable-only
+   * window as updateQuestions (DRAFT/REJECTED). Shown read-only to the
+   * Approver on the Survey object returned by every other endpoint here. */
+  async setSampleDescription(
+    surveyId: string,
+    input: {
+      targetGroup: string;
+      expectedSampleSize: number;
+      selectionApproach: string;
+      geographicCoverage: string;
+    },
+  ): Promise<Survey> {
+    return apiClient.patch<Survey>(
+      endpoints.surveys.setSampleDescription(surveyId),
+      input,
+    );
+  },
+
   /** Researcher: hands the current content to the Approver. Valid from
    * DRAFT (first submission) or REJECTED (resubmission). */
   async submitForApproval(surveyId: string): Promise<SurveyRecord> {
@@ -252,10 +301,18 @@ export const surveysService = {
     return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId));
   },
 
-  /** Approver-only. `comments` is required — explains what needs to change
-   * before the Researcher resubmits. */
-  async rejectSurvey(surveyId: string, comments: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), { comments });
+  /** Approver-only. `reasonCode` is always required; `comments` is required
+   * only when reasonCode is "REJ_99" (Other) — enforced both here (the
+   * reject dialog) and again on the backend. */
+  async rejectSurvey(
+    surveyId: string,
+    reasonCode: RejectionReasonCode,
+    comments?: string,
+  ): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), {
+      reasonCode,
+      comments,
+    });
   },
 
   async getPublicSurvey(id: string): Promise<Survey> {

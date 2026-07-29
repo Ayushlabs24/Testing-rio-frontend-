@@ -31,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -51,8 +52,10 @@ import type { MethodologyVersionOption } from "@/services/methodology-config/met
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import {
+  REJECTION_REASON_LABELS,
   surveysService,
   type Question,
+  type RejectionReasonCode,
   type ReusableCustomQuestion,
   type SaveSurveyQuestionInput,
   type Survey,
@@ -114,6 +117,15 @@ export default function SurveyBuilderDetailPage({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // A fixed-position toast, not an inline banner buried below the page
+  // header — Save Draft (and every other action that sets `message`) needs
+  // to be noticeable without scrolling, and auto-dismisses on its own.
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
   // Approve/Reject a survey the Researcher already explicitly submitted
   // (Survey.status === SUBMITTED) — a plain decision on exactly what was
   // submitted, no editing (the backend's assertEditable blocks
@@ -132,6 +144,10 @@ export default function SurveyBuilderDetailPage({
   const [rejecting, setRejecting] = useState(false);
   const [comments, setComments] = useState("");
   const [commentsError, setCommentsError] = useState<string | null>(null);
+  // Only meaningful for the surveysService.rejectSurvey branch (SUBMITTED) —
+  // the aiReviewService.reject branch has no reason-code concept of its own.
+  const [reasonCode, setReasonCode] = useState<RejectionReasonCode | "">("");
+  const [reasonCodeError, setReasonCodeError] = useState<string | null>(null);
 
   // TEMPORARY — see MethodologyVersionOption's doc comment. Mandatory
   // before Submit for Approval; the Researcher picks it here, the Approver
@@ -140,6 +156,21 @@ export default function SurveyBuilderDetailPage({
     MethodologyVersionOption[]
   >([]);
   const [savingMethodologyVersion, setSavingMethodologyVersion] = useState(false);
+
+  // Sample Description step — Target Group / Expected Sample Size /
+  // Selection Approach / Geographic Coverage, saved together as one Save
+  // action (see setSampleDescription). Local editable copies rather than
+  // binding straight to `survey` since these are free-text/number inputs,
+  // not a single-value Select like Methodology Version above — synced from
+  // `survey` whenever it (re)loads, see the effect below.
+  const [targetGroup, setTargetGroup] = useState("");
+  const [expectedSampleSize, setExpectedSampleSize] = useState("");
+  const [selectionApproach, setSelectionApproach] = useState("");
+  const [geographicCoverage, setGeographicCoverage] = useState("");
+  const [savingSampleDescription, setSavingSampleDescription] = useState(false);
+  const [sampleDescriptionError, setSampleDescriptionError] = useState<string | null>(
+    null,
+  );
 
   // The Researcher only edits/saves/submits from DRAFT or REJECTED — once
   // SUBMITTED, content is frozen for the Researcher; once PUBLISHED, it's
@@ -187,6 +218,11 @@ export default function SurveyBuilderDetailPage({
     setRecommended((s?.questions ?? []).filter((q) => !q.isCustom));
     setAdditional((s?.questions ?? []).filter((q) => q.isCustom));
     setDirty(false);
+    setTargetGroup(s?.targetGroup ?? "");
+    setExpectedSampleSize(s?.expectedSampleSize ? String(s.expectedSampleSize) : "");
+    setSelectionApproach(s?.selectionApproach ?? "");
+    setGeographicCoverage(s?.geographicCoverage ?? "");
+    setSampleDescriptionError(null);
   }
 
   // The Question Bank browse tab's source pairs — which field is
@@ -361,6 +397,41 @@ export default function SurveyBuilderDetailPage({
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setSavingMethodologyVersion(false);
+    }
+  }
+
+  async function saveSampleDescription() {
+    if (!survey) return;
+    const trimmedTargetGroup = targetGroup.trim();
+    const trimmedSelectionApproach = selectionApproach.trim();
+    const trimmedGeographicCoverage = geographicCoverage.trim();
+    const sampleSize = Number(expectedSampleSize);
+    if (
+      !trimmedTargetGroup ||
+      !trimmedSelectionApproach ||
+      !trimmedGeographicCoverage ||
+      !Number.isInteger(sampleSize) ||
+      sampleSize < 1
+    ) {
+      setSampleDescriptionError(t("sampleDescriptionValidationError"));
+      return;
+    }
+    setSavingSampleDescription(true);
+    setSampleDescriptionError(null);
+    setError(null);
+    try {
+      const updated = await surveysService.setSampleDescription(survey.id, {
+        targetGroup: trimmedTargetGroup,
+        expectedSampleSize: sampleSize,
+        selectionApproach: trimmedSelectionApproach,
+        geographicCoverage: trimmedGeographicCoverage,
+      });
+      setSurvey(updated);
+      setMessage(t("saved"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setSavingSampleDescription(false);
     }
   }
 
@@ -708,24 +779,41 @@ export default function SurveyBuilderDetailPage({
   function openRejectDialog() {
     setComments("");
     setCommentsError(null);
+    setReasonCode("");
+    setReasonCodeError(null);
     setRejectOpen(true);
   }
 
   async function confirmReject() {
     const trimmed = comments.trim();
-    if (!trimmed) {
+    const isSurveyReject = survey?.status === "SUBMITTED";
+
+    if (isSurveyReject && !reasonCode) {
+      setReasonCodeError(t("rejectReasonCodeRequired"));
+      return;
+    }
+    // Comments are always required for the AI-review-reject branch (no
+    // reason-code concept there); for the survey-reject branch, only when
+    // "Other" is selected — every other code is already self-explanatory.
+    const commentsRequired = !isSurveyReject || reasonCode === "REJ_99";
+    if (commentsRequired && !trimmed) {
       setCommentsError(t("rejectCommentsRequired"));
       return;
     }
+
     setRejecting(true);
     setError(null);
     try {
-      if (survey?.status === "SUBMITTED") {
+      if (isSurveyReject && survey) {
         // The Survey's content itself is what's being rejected here (it was
         // explicitly submitted) — sends it back to REJECTED so the
         // Researcher can edit and resubmit. The Need's own domain/subDomain
         // decision is untouched.
-        await surveysService.rejectSurvey(survey.id, trimmed);
+        await surveysService.rejectSurvey(
+          survey.id,
+          reasonCode as RejectionReasonCode,
+          trimmed || undefined,
+        );
       } else {
         // Rejecting the classification decision itself — the Need resets to
         // pending_ai_classification for a fresh reclassification. The
@@ -744,6 +832,14 @@ export default function SurveyBuilderDetailPage({
 
   return (
     <PermissionGuard module="surveyBuilder" action="read">
+      {message ? (
+        <div
+          role="status"
+          className="border-badge-success bg-badge-success text-badge-success-foreground fixed top-20 right-4 z-[9999] rounded-md border px-4 py-3 text-sm font-medium shadow-lg"
+        >
+          {message}
+        </div>
+      ) : null}
       <PageContainer>
         <div className="mb-6 flex justify-start">
           <BackButton href="/survey-builder" label={t("backToList")} />
@@ -819,7 +915,7 @@ export default function SurveyBuilderDetailPage({
                         {saving ? t("saving") : t("saveDraft")}
                       </Button>
                     ) : null}
-                    {isEditable && canApprove ? (
+                    {isEditable && canApprove && survey.status === "DRAFT" ? (
                       <>
                         <Button
                           size="sm"
@@ -835,7 +931,7 @@ export default function SurveyBuilderDetailPage({
                           {submitting ? t("publishing") : t("saveAndPublish")}
                         </Button>
                       </>
-                    ) : isEditable ? (
+                    ) : isEditable && !canApprove ? (
                       <Button
                         size="sm"
                         onClick={submitForApproval}
@@ -885,9 +981,6 @@ export default function SurveyBuilderDetailPage({
               </p>
             ) : null}
             {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
-            {message ? (
-              <p className="text-badge-success-foreground mb-4 text-sm">{message}</p>
-            ) : null}
 
             {need?.status === "ai_classification_failed" ? (
               // Manual-classification gate — AI could not classify this
@@ -1011,6 +1104,134 @@ export default function SurveyBuilderDetailPage({
                         ? t("methodologyVersionHint")
                         : t("methodologyVersionLockedHint")}
                     </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="space-y-4 p-6">
+                    <div>
+                      <h2 className="text-foreground text-sm font-semibold">
+                        {t("sampleDescriptionTitle")}
+                      </h2>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {t("sampleDescriptionSubtitle")}
+                      </p>
+                    </div>
+
+                    {isEditable ? (
+                      <>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="sample-target-group">
+                              {t("targetGroupLabel")}
+                            </Label>
+                            <Input
+                              id="sample-target-group"
+                              value={targetGroup}
+                              onChange={(e) => setTargetGroup(e.target.value)}
+                              placeholder={t("targetGroupPlaceholder")}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="sample-expected-size">
+                              {t("expectedSampleSizeLabel")}
+                            </Label>
+                            <Input
+                              id="sample-expected-size"
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={expectedSampleSize}
+                              onChange={(e) => setExpectedSampleSize(e.target.value)}
+                              placeholder={t("expectedSampleSizePlaceholder")}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="sample-selection-approach">
+                            {t("selectionApproachLabel")}
+                          </Label>
+                          <Textarea
+                            id="sample-selection-approach"
+                            rows={3}
+                            value={selectionApproach}
+                            onChange={(e) => setSelectionApproach(e.target.value)}
+                            placeholder={t("selectionApproachPlaceholder")}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="sample-geographic-coverage">
+                            {t("geographicCoverageLabel")}
+                          </Label>
+                          <Input
+                            id="sample-geographic-coverage"
+                            value={geographicCoverage}
+                            onChange={(e) => setGeographicCoverage(e.target.value)}
+                            placeholder={t("geographicCoveragePlaceholder")}
+                          />
+                        </div>
+                        {sampleDescriptionError ? (
+                          <p className="text-destructive text-sm">
+                            {sampleDescriptionError}
+                          </p>
+                        ) : null}
+                        <div className="flex items-center justify-between">
+                          <p className="text-muted-foreground text-xs">
+                            {t("sampleDescriptionHint")}
+                          </p>
+                          <LoadingButton
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            isLoading={savingSampleDescription}
+                            onClick={saveSampleDescription}
+                            text={
+                              savingSampleDescription
+                                ? t("saving")
+                                : t("sampleDescriptionSave")
+                            }
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <dt className="text-muted-foreground text-xs">
+                            {t("targetGroupLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm">
+                            {survey.targetGroup ?? t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground text-xs">
+                            {t("expectedSampleSizeLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm tabular-nums">
+                            {survey.expectedSampleSize ??
+                              t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-muted-foreground text-xs">
+                            {t("selectionApproachLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm whitespace-pre-wrap">
+                            {survey.selectionApproach ??
+                              t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-muted-foreground text-xs">
+                            {t("geographicCoverageLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm">
+                            {survey.geographicCoverage ??
+                              t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -1588,9 +1809,46 @@ export default function SurveyBuilderDetailPage({
                   : t("rejectDialogDescription")}
               </DialogDescription>
             </DialogHeader>
+            {survey?.status === "SUBMITTED" ? (
+              <div className="space-y-2">
+                <Label htmlFor="reject-reason-code">
+                  {t("rejectReasonCodeLabel")} <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={reasonCode}
+                  onValueChange={(value) => {
+                    setReasonCode(value as RejectionReasonCode);
+                    if (reasonCodeError) setReasonCodeError(null);
+                    if (value !== "REJ_99" && commentsError) setCommentsError(null);
+                  }}
+                >
+                  <SelectTrigger
+                    id="reject-reason-code"
+                    aria-invalid={reasonCodeError ? true : undefined}
+                  >
+                    <SelectValue placeholder={t("rejectReasonCodePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(REJECTION_REASON_LABELS).map(([code, label]) => (
+                      <SelectItem key={code} value={code}>
+                        {code.replace("_", "-")} — {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {reasonCodeError ? (
+                  <p className="text-destructive text-sm">{reasonCodeError}</p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="reject-comments">
-                {t("commentsLabel")} <span className="text-destructive">*</span>
+                {t("commentsLabel")}{" "}
+                {!survey || survey.status !== "SUBMITTED" || reasonCode === "REJ_99" ? (
+                  <span className="text-destructive">*</span>
+                ) : (
+                  <span className="text-muted-foreground text-xs">({t("optional")})</span>
+                )}
               </Label>
               <Textarea
                 id="reject-comments"

@@ -58,6 +58,7 @@ export const endpoints = {
     recommendQuestions: (needId: string) => `/needs/${needId}/recommend-questions`,
     updateQuestions: (id: string) => `/surveys/${id}/questions`,
     setMethodologyVersion: (id: string) => `/surveys/${id}/methodology-version`,
+    setSampleDescription: (id: string) => `/surveys/${id}/sample-description`,
     // Approval workflow — Researcher submits, Approver approves/rejects.
     // See SurveysService's state machine on the backend.
     submit: (id: string) => `/surveys/${id}/submit`,
@@ -221,6 +222,10 @@ export const endpoints = {
     list: "/sharing-alerts",
   },
   collectiveDashboard: "/collective-dashboard",
+  ncnpReport: {
+    get: "/ncnp-report",
+    export: (format: "pdf" | "excel") => `/ncnp-report/export?format=${format}`,
+  },
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",
