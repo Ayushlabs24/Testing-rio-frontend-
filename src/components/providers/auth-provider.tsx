@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { clearRioSessionStorage } from "@/lib/client-storage";
 import { authService } from "@/services/auth/auth.service";
 import type { SessionContext } from "@/services/auth/auth.types";
 
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       setSession: setSessionState,
       logout: async () => {
+        const departingUserId = session?.user.id;
         await authService.logout();
         // The backend clears rio_session/rio_csrf itself (see
         // AuthController#logout), but per-user client-side caches (reviewer
@@ -56,10 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // use-sharing-notifications.ts) live in localStorage and are never
         // otherwise cleared, so they'd persist into a next session in the
         // same browser (e.g. a different account signing in right after).
-        if (typeof window !== "undefined") {
-          window.localStorage.clear();
-          window.sessionStorage.clear();
-        }
+        // Only ever removes RIO-owned (`rio.`-prefixed) keys — never a
+        // blanket clear() of everything sharing this origin.
+        clearRioSessionStorage(departingUserId);
         setSessionState(null);
       },
     }),

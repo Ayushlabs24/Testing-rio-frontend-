@@ -1,7 +1,5 @@
 import { apiClient } from "@/services/api/client";
-import { apiConfig } from "@/services/api/config";
 import { endpoints } from "@/services/api/endpoints";
-import { ApiError } from "@/services/api/types";
 import type {
   CreateReportPayload,
   ExportFormat,
@@ -38,29 +36,17 @@ export const reportsService = {
     return apiClient.patch<Report>(endpoints.reports.archive(id));
   },
   /**
-   * Export returns a binary file, not JSON — bypasses apiClient (which
-   * assumes a JSON response body) and triggers a real browser download from
-   * the Blob response. The placeholder stub today has the same
+   * Export returns a binary file, not JSON — goes through apiClient.download
+   * (blob handling, not response.json()) and triggers a real browser
+   * download from the result. The placeholder stub today has the same
    * content-type/filename contract the real PDF/Excel export will have
    * later, so this download path doesn't change when that lands.
    */
   async download(id: string, format: ExportFormat): Promise<void> {
-    const url = new URL(
-      endpoints.reports.export(id, format).replace(/^\//, ""),
-      `${apiConfig.baseUrl}/`,
+    const { blob, filename } = await apiClient.download(
+      endpoints.reports.export(id, format),
+      `report.${format === "pdf" ? "pdf" : "xlsx"}`,
     );
-    const response = await fetch(url, { credentials: "include" });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => undefined);
-      throw new ApiError({
-        message: payload?.error?.message ?? response.statusText,
-        status: response.status,
-      });
-    }
-    const blob = await response.blob();
-    const disposition = response.headers.get("content-disposition") ?? "";
-    const filenameMatch = /filename="([^"]+)"/.exec(disposition);
-    const filename = filenameMatch?.[1] ?? `report.${format === "pdf" ? "pdf" : "xlsx"}`;
 
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement("a");

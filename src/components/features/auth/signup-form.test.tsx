@@ -75,9 +75,19 @@ beforeEach(() => {
   vi.mocked(geographyService.listCenters).mockResolvedValue([CENTER]);
 });
 
+// Required-field <Label>s render "{label} *" (the asterisk marker is part of
+// the label text), so their accessible name is never the bare translation
+// string — match by substring instead of exact string everywhere a label
+// query is used below.
+function byLabel(text: string): RegExp {
+  return new RegExp(text);
+}
+
 async function selectSector(name: string) {
   const user = userEvent.setup();
-  await user.click(screen.getByRole("combobox", { name: en.auth.signup.sectorLabel }));
+  await user.click(
+    screen.getByRole("combobox", { name: byLabel(en.auth.signup.sectorLabel) }),
+  );
   await user.click(await screen.findByRole("option", { name }));
   return user;
 }
@@ -103,7 +113,9 @@ describe("SignupForm sector field", () => {
   it("lists every live domain plus a fixed Other option", async () => {
     render(<SignupForm />);
     const user = userEvent.setup();
-    await user.click(screen.getByRole("combobox", { name: en.auth.signup.sectorLabel }));
+    await user.click(
+      screen.getByRole("combobox", { name: byLabel(en.auth.signup.sectorLabel) }),
+    );
 
     for (const option of SECTOR_OPTIONS) {
       expect(await screen.findByRole("option", { name: option })).toBeInTheDocument();
@@ -130,14 +142,14 @@ describe("SignupForm sector field", () => {
     const user = userEvent.setup();
 
     await user.type(
-      screen.getByLabelText(en.auth.signup.organizationNameLabel),
+      screen.getByLabelText(byLabel(en.auth.signup.organizationNameLabel)),
       "Sunrise Village Fund",
     );
     await user.type(
-      screen.getByLabelText(en.auth.signup.registrationNumberLabel),
+      screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       "REG-1",
     );
-    await user.type(screen.getByLabelText(en.auth.signup.emailLabel), "a@b.org");
+    await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
     await user.click(screen.getByRole("button", { name: en.auth.signup.submit }));
 
     expect(
@@ -156,14 +168,14 @@ describe("SignupForm sector field", () => {
     await selectGeography(user);
 
     await user.type(
-      screen.getByLabelText(en.auth.signup.organizationNameLabel),
+      screen.getByLabelText(byLabel(en.auth.signup.organizationNameLabel)),
       "Sunrise Village Fund",
     );
     await user.type(
-      screen.getByLabelText(en.auth.signup.registrationNumberLabel),
+      screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       "REG-1",
     );
-    await user.type(screen.getByLabelText(en.auth.signup.emailLabel), "a@b.org");
+    await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
     await user.click(screen.getByRole("button", { name: en.auth.signup.submit }));
 
     await waitFor(() =>
@@ -189,7 +201,7 @@ describe("SignupForm sector field", () => {
     await selectGeography(user);
 
     await user.type(
-      screen.getByLabelText(en.auth.signup.organizationNameLabel),
+      screen.getByLabelText(byLabel(en.auth.signup.organizationNameLabel)),
       "Sunrise Village Fund",
     );
     await user.type(
@@ -197,10 +209,10 @@ describe("SignupForm sector field", () => {
       "Community Health",
     );
     await user.type(
-      screen.getByLabelText(en.auth.signup.registrationNumberLabel),
+      screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       "REG-1",
     );
-    await user.type(screen.getByLabelText(en.auth.signup.emailLabel), "a@b.org");
+    await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
     await user.click(screen.getByRole("button", { name: en.auth.signup.submit }));
 
     await waitFor(() =>

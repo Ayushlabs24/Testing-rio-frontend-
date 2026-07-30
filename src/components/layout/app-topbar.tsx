@@ -164,11 +164,18 @@ function NotificationsBell({
   const reviewerSlaCount = canSeeReviewerSla ? reviewerSla.count : 0;
   const sharingCount = canSeeSharing ? sharingUnreadCount : 0;
   // Decides the summary row's wording below — a Reviewer/Approver's count
-  // is surveys awaiting THEIR decision; anyone else seeing this bell (a
-  // Research Officer) is looking at their OWN submitted surveys' resolved
-  // status instead (see ReviewerSlaService.listAlerts).
+  // is surveys AND reports awaiting THEIR decision; anyone else seeing this
+  // bell (a Research Officer) is looking at their OWN submitted surveys'
+  // and generated reports' resolved status instead (see
+  // ReviewerSlaService.listAlerts). Checked as an OR across both modules
+  // since they happen to be approved by the same roles today, but aren't
+  // structurally guaranteed to be — this stays correct even if that ever
+  // changes.
   const canApproveSurveys =
-    session?.role.permissions.find((p) => p.module === "surveyBuilder")?.approve ?? false;
+    (session?.role.permissions.find((p) => p.module === "surveyBuilder")?.approve ??
+      false) ||
+    (session?.role.permissions.find((p) => p.module === "reportsDashboards")?.approve ??
+      false);
   const totalCount = reviewerSlaCount + sharingCount;
 
   // Same color language as the Reviewer SLA Alerts page's own status

@@ -28,12 +28,11 @@ import {
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
-import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
 import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
-import { needsService } from "@/services/needs/needs.service";
-import { surveysService } from "@/services/surveys/surveys.service";
+import type { Need } from "@/services/needs/needs.types";
+import type { Survey } from "@/services/surveys/surveys.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeverityDashboard } from "@/components/features/insights/severity-dashboard";
 import {
@@ -42,6 +41,7 @@ import {
 } from "@/services/priority/severity-scoring.service";
 import { AiPrioritySummaryPanel } from "@/components/features/insights/ai-priority-summary-panel";
 import { SupportingEvidencePanel } from "@/components/features/insights/supporting-evidence-panel";
+import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
 
 const CONSOLIDATED = "consolidated";
 
@@ -63,10 +63,8 @@ export default function PriorityDetailInsightsPage({
     null,
   );
   const [priorityV2, setPriorityV2] = useState<VillagePriorityResult | null>(null);
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [need, setNeed] = useState<any | null>(null);
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [survey, setSurvey] = useState<any | null>(null);
+  const [need, setNeed] = useState<Need | null>(null);
+  const [survey, setSurvey] = useState<Survey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [assessing, setAssessing] = useState(false);
@@ -74,38 +72,29 @@ export default function PriorityDetailInsightsPage({
   const [summaryKey, setSummaryKey] = useState(0);
 
   useEffect(() => {
-    publicSurveysService
-      .listLinks(needId)
-      .then(setLinks)
-      .catch(() => setLinks([]));
+    let stale = false;
+    loadSurveyLinks(needId, () => stale, setLinks);
+    return () => {
+      stale = true;
+    };
   }, [needId]);
 
-  function load() {
-    needsService
-      .getById(needId)
-      .then(setNeed)
-      .catch(() => undefined);
-    surveysService
-      .getSurveyByNeedId(needId)
-      .then((srv) => {
-        setSurvey(srv);
-        if (srv) {
-          severityScoringService
-            .getVillagePriority(srv.studyId, srv.id, null)
-            .then(setPriorityV2)
-            .catch(() => setPriorityV2(null));
-        }
-      })
-      .catch(() => undefined);
-    responseQualityService
-      .list(needId, surveyLinkId)
-      .then(setQualityResults)
-      .catch(() => setQualityResults([]));
-  }
-
+  // `needId` (route param) and `surveyLinkId` (scope filter) can both change
+  // while a previous loadPriorityInsights() from an earlier value is still
+  // in flight — e.g. switching the Scope Filter twice in quick succession.
+  // See load-insights.ts's own comment for how the stale guard prevents an
+  // obsolete request from overwriting state a newer one already produced.
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let stale = false;
+    loadPriorityInsights(needId, surveyLinkId, () => stale, {
+      setNeed,
+      setSurvey,
+      setPriorityV2,
+      setQualityResults,
+    });
+    return () => {
+      stale = true;
+    };
   }, [needId, surveyLinkId]);
 
   async function handleAssess() {

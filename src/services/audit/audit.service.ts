@@ -3,7 +3,6 @@ import { findUserById } from "@/mocks/db";
 import { mockSession } from "@/mocks/session";
 import { generateId } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
-import { apiConfig } from "@/services/api/config";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
 import type {
@@ -87,33 +86,25 @@ export const auditService = {
 
   /**
    * CSV export (real, not a placeholder stub — audit rows are plain text
-   * and don't need PDF/Excel rendering to be useful). Bypasses apiClient
-   * (JSON-only) the same way reportsService.download() does, and triggers
-   * a real browser download from the response.
+   * and don't need PDF/Excel rendering to be useful). Goes through
+   * apiClient.download (blob handling, not response.json()), the same way
+   * reportsService.download() does.
    */
   async downloadCsv(filters: AuditExportFilters = {}): Promise<void> {
-    const url = new URL(
-      endpoints.audit.export.replace(/^\//, ""),
-      `${apiConfig.baseUrl}/`,
-    );
     // Mirrors the Audit Log page's own filters so the CSV contains exactly
     // the rows the user is looking at — an export that quietly ignored the
-    // active filters would be worse than no export at all.
+    // active filters would be worse than no export at all. Falsy values
+    // (including "") are dropped, same as the old manual param loop.
+    const params: Record<string, string> = {};
     for (const [key, value] of Object.entries(filters)) {
-      if (value) url.searchParams.set(key, value);
+      if (value) params[key] = value;
     }
-    const response = await fetch(url, { credentials: "include" });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => undefined);
-      throw new ApiError({
-        message: payload?.error?.message ?? response.statusText,
-        status: response.status,
-      });
-    }
-    const blob = await response.blob();
-    const disposition = response.headers.get("content-disposition") ?? "";
-    const filenameMatch = /filename="([^"]+)"/.exec(disposition);
-    const filename = filenameMatch?.[1] ?? "audit-log.csv";
+
+    const { blob, filename } = await apiClient.download(
+      endpoints.audit.export,
+      "audit-log.csv",
+      { params },
+    );
 
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement("a");

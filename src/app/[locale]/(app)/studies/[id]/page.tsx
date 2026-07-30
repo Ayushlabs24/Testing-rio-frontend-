@@ -372,6 +372,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                   <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     placeholder={t("searchNeedsPlaceholder")}
+                    aria-label={t("searchNeedsPlaceholder")}
                     value={needQuery}
                     onChange={(event) => setNeedQuery(event.target.value)}
                     className="h-9 pl-9"
@@ -467,7 +468,10 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                             </TableCell>
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Link href={`/survey-builder/${need.id}`}>
-                                <Badge variant={SURVEY_STATUS_VARIANT[surveyStatus]} className="hover:opacity-80 transition-opacity cursor-pointer">
+                                <Badge
+                                  variant={SURVEY_STATUS_VARIANT[surveyStatus]}
+                                  className="cursor-pointer transition-opacity hover:opacity-80"
+                                >
                                   {t(`surveyStatus.${surveyStatus}`)} ↗
                                 </Badge>
                               </Link>

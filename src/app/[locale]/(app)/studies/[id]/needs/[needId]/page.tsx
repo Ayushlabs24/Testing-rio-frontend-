@@ -443,7 +443,7 @@ export default function NeedWorkspacePage({
   // happen once, synchronously, at mount — needId is already known by then.
   const [failedEvidenceNames] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
-    const key = `need-evidence-upload-failed:${needId}`;
+    const key = `rio.needEvidenceUploadFailed.${needId}`;
     const raw = sessionStorage.getItem(key);
     if (!raw) return [];
     sessionStorage.removeItem(key);

@@ -44,6 +44,10 @@ import {
   PrioritySummaryResponse,
   SummaryScopeType,
 } from "@/services/reports/priority-summary.service";
+import {
+  parsePrioritySummarySnapshot,
+  type PrioritySummarySnapshot,
+} from "@/services/reports/priority-summary.schemas";
 import { GenerateSummaryModal } from "./generate-summary-modal";
 import { SaveReportModal } from "./save-report-modal";
 
@@ -68,8 +72,7 @@ export function AiPrioritySummaryPanel({
 
   const [activeScope, setActiveScope] = useState<SummaryScopeType>("VILLAGE");
   const [record, setRecord] = useState<PrioritySummaryRecord | null>(null);
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const [snapshot, setSnapshot] = useState<any | null>(null);
+  const [snapshot, setSnapshot] = useState<PrioritySummarySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -100,7 +103,7 @@ export function AiPrioritySummaryPanel({
         .then((res) => {
           if (res && res.summary) {
             setRecord(res.summary);
-            setSnapshot(res.snapshot);
+            setSnapshot(parsePrioritySummarySnapshot(res.snapshot));
             const activeOutput =
               res.summary.officerEditedOutputJson || res.summary.aiOutputJson;
             setDraftOutput(activeOutput);
@@ -108,7 +111,9 @@ export function AiPrioritySummaryPanel({
             setEditedPriorityExplanation(activeOutput.priorityExplanation || "");
           } else {
             setRecord(null);
-            setSnapshot(res?.snapshot || null);
+            setSnapshot(
+              res?.snapshot ? parsePrioritySummarySnapshot(res.snapshot) : null,
+            );
             setDraftOutput(null);
           }
         })
@@ -194,7 +199,9 @@ export function AiPrioritySummaryPanel({
   };
 
   const isReady = hasSeverityScoring && hasPriorityScoring && Boolean(surveyId);
-  const approvedEvidenceCount = snapshot?.evidence?.length || 0;
+  const approvedEvidenceCount = Array.isArray(snapshot?.evidence)
+    ? snapshot.evidence.length
+    : 0;
 
   if (loading) {
     return (
@@ -517,8 +524,7 @@ export function AiPrioritySummaryPanel({
               <TableBody>
                 {savedSummaries.map((s) => {
                   const out = s.officerEditedOutputJson || s.aiOutputJson;
-                  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                  const filters = (s.scopeFilters as any) || {};
+                  const filters = s.scopeFilters || {};
                   const filterLabel =
                     filters.domainKey ||
                     filters.regionId ||

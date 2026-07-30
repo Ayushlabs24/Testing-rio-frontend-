@@ -16,6 +16,38 @@ function readCsrfCookie(): string | undefined {
   return match ? decodeURIComponent(match[1]!) : undefined;
 }
 
+/**
+ * Combines the internal timeout signal with an optional caller-supplied
+ * signal so a caller's own `AbortSignal` never disables the timeout (and
+ * vice versa) — both must be able to abort the same request independently.
+ * Prefers the native `AbortSignal.any` (all evergreen browsers since 2023);
+ * falls back to manual event forwarding, cleaned up by the caller via the
+ * returned `cleanup()`.
+ */
+function composeSignals(signals: AbortSignal[]): {
+  signal: AbortSignal;
+  cleanup: () => void;
+} {
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any(signals), cleanup: () => {} };
+  }
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  for (const s of signals) {
+    if (s.aborted) {
+      controller.abort();
+      break;
+    }
+    s.addEventListener("abort", onAbort);
+  }
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      for (const s of signals) s.removeEventListener("abort", onAbort);
+    },
+  };
+}
+
 function buildUrl(path: string, params?: QueryParams): string {
   const url = new URL(path.replace(/^\//, ""), `${apiConfig.baseUrl}/`);
 
@@ -30,17 +62,67 @@ function buildUrl(path: string, params?: QueryParams): string {
   return url.toString();
 }
 
+/**
+ * Sets up the composed timeout+caller signal for one request and returns
+ * everything both `request()` and `download()` need to run it and clean up
+ * afterward — shared so the two transports can never drift on timeout or
+ * cancellation behavior.
+ */
+function beginAbortable(options: Pick<RequestOptions, "signal" | "timeoutMs">) {
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(
+    () => timeoutController.abort(),
+    options.timeoutMs ?? apiConfig.timeoutMs,
+  );
+  // Both the internal timeout and a caller-supplied signal must be able to
+  // abort independently — passing only one or the other (as this used to)
+  // silently disabled whichever wasn't chosen. See composeSignals' comment.
+  const { signal, cleanup } = composeSignals(
+    options.signal
+      ? [timeoutController.signal, options.signal]
+      : [timeoutController.signal],
+  );
+  return {
+    signal,
+    finish: () => {
+      clearTimeout(timeout);
+      cleanup();
+    },
+    /**
+     * Maps a caught error to the right typed `ApiError` — distinguishing a
+     * caller-initiated cancellation (`options.signal` aborted, timeout
+     * didn't) from the internal timeout firing, from a genuine network
+     * failure. Both abort causes surface as the same DOMException from
+     * `fetch`, so checking which underlying signal actually aborted is the
+     * only way to tell them apart afterward.
+     */
+    toApiError: (error: unknown): ApiError => {
+      if (error instanceof ApiError) return error;
+      if (error instanceof DOMException && error.name === "AbortError") {
+        if (options.signal?.aborted && !timeoutController.signal.aborted) {
+          return new ApiError({
+            message: "Request cancelled",
+            status: 0,
+            cancelled: true,
+          });
+        }
+        return new ApiError({ message: "Request timed out", status: 408 });
+      }
+      return new ApiError({
+        message: error instanceof Error ? error.message : "Network error",
+        status: 0,
+      });
+    },
+  };
+}
+
 async function request<TResponse>(
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
   options: RequestOptions = {},
 ): Promise<TResponse> {
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    options.timeoutMs ?? apiConfig.timeoutMs,
-  );
+  const { signal, finish, toApiError } = beginAbortable(options);
 
   try {
     const csrfToken = SAFE_METHODS.has(method) ? undefined : readCsrfCookie();
@@ -52,7 +134,7 @@ async function request<TResponse>(
         ...options.headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: options.signal ?? controller.signal,
+      signal,
       cache: options.cache,
       // The backend's session lives in an httpOnly cookie (see
       // auth.service.ts) — required for it to be sent/stored cross-origin
@@ -76,16 +158,58 @@ async function request<TResponse>(
 
     return payload as TResponse;
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError({ message: "Request timed out", status: 408 });
-    }
-    throw new ApiError({
-      message: error instanceof Error ? error.message : "Network error",
-      status: 0,
-    });
+    throw toApiError(error);
   } finally {
-    clearTimeout(timeout);
+    finish();
+  }
+}
+
+export interface DownloadResult {
+  blob: Blob;
+  /** Resolved from the response's `Content-Disposition` header when
+   * present, otherwise the caller-supplied fallback. */
+  filename: string;
+}
+
+/**
+ * Binary/blob downloads (report/export PDFs, Excel, CSV) — a GET request
+ * that returns a file body instead of JSON, so it can't go through
+ * `request()`'s `response.json()` parsing. Shares the same base URL,
+ * timeout/cancellation, credentials, and `ApiError` envelope handling as
+ * every other request; the one thing it doesn't share is a JSON body, since
+ * there isn't one.
+ */
+async function download(
+  path: string,
+  defaultFilename: string,
+  options: RequestOptions = {},
+): Promise<DownloadResult> {
+  const { signal, finish, toApiError } = beginAbortable(options);
+
+  try {
+    const response = await fetch(buildUrl(path, options.params), {
+      signal,
+      cache: options.cache,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => undefined);
+      throw new ApiError({
+        message: payload?.error?.message ?? payload?.message ?? response.statusText,
+        status: response.status,
+        details: payload?.error?.details ?? payload,
+      });
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const filenameMatch = /filename="([^"]+)"/.exec(disposition);
+    return { blob, filename: filenameMatch?.[1] ?? defaultFilename };
+  } catch (error) {
+    throw toApiError(error);
+  } finally {
+    finish();
   }
 }
 
@@ -221,4 +345,5 @@ export const apiClient = {
     request<TResponse>("DELETE", path, undefined, options),
   downloadBlob,
   uploadForm,
+  download,
 };

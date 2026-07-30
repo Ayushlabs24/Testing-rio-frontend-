@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import { authService } from "@/services/auth/auth.service";
@@ -33,10 +33,13 @@ const apiSession = {
     purpose: "Community Health",
     registrationNumber: "REG-1",
     logoUrl: null,
-    region: null,
+    region: [],
     email: null,
     sector: null,
     villages: [],
+    regionId: "region_1",
+    governorateIds: [],
+    centerIds: [],
     isActive: true,
     createdAt: "2026-01-01T00:00:00.000Z",
   },
@@ -234,11 +237,166 @@ describe("authService", () => {
   it("rejects with a 500 if the server returns a role key the frontend doesn't recognise", async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       ...apiSession,
-      role: { key: "not_a_real_role" },
+      // Structurally valid (passes runtime schema validation) but not a key
+      // the frontend's local roles.ts matrix recognizes — the case this
+      // test actually targets.
+      role: { key: "not_a_real_role", crossEntity: false, permissions: [] },
     });
 
     await expect(
       authService.login({ email: "priya@demo.org", password: "password123" }),
     ).rejects.toMatchObject({ status: 500 });
+  });
+
+  describe("runtime response validation", () => {
+    it("rejects a session response missing a required field with a typed ApiError", async () => {
+      const { token: _omit, ...withoutToken } = apiSession;
+      vi.mocked(apiClient.post).mockResolvedValue(withoutToken);
+
+      await expect(
+        authService.login({ email: "priya@demo.org", password: "password123" }),
+      ).rejects.toMatchObject({ status: 502 });
+    });
+
+    it("rejects a session response with a field of the wrong primitive type", async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        ...apiSession,
+        // mustChangePassword must be boolean — a real backend regression
+        // (e.g. returning "false" as a string) must not silently pass
+        // through as truthy.
+        mustChangePassword: "false",
+      });
+
+      await expect(
+        authService.login({ email: "priya@demo.org", password: "password123" }),
+      ).rejects.toMatchObject({ status: 502 });
+    });
+
+    it("rejects a permission entry with an invalid module enum value", async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        ...apiSession,
+        role: {
+          ...apiSession.role,
+          permissions: [
+            {
+              module: "notARealModule",
+              read: true,
+              write: true,
+              create: true,
+              approve: true,
+              export: true,
+              share: true,
+            },
+          ],
+        },
+      });
+
+      await expect(
+        authService.login({ email: "priya@demo.org", password: "password123" }),
+      ).rejects.toMatchObject({ status: 502 });
+    });
+
+    it("accepts an otherwise-empty successful response shape for endpoints with no body contract", async () => {
+      vi.mocked(apiClient.post).mockResolvedValue(undefined);
+
+      await expect(authService.logout()).resolves.toBeUndefined();
+    });
+
+    // Regression: a real signup response had organization.purpose === null
+    // (the backend's own SessionOrg type — session.types.ts — has always
+    // declared purpose/registrationNumber as `string | null`; the frontend
+    // schema incorrectly required non-null strings, so a real org that
+    // hadn't picked "other" as its sector was rejected as "an unexpected
+    // signup response shape" at signup time).
+    it("accepts a null organization.purpose/registrationNumber and coalesces them to empty strings", async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        ...apiSession,
+        organization: {
+          ...apiSession.organization,
+          purpose: null,
+          registrationNumber: null,
+        },
+      });
+
+      const session = await authService.login({
+        email: "priya@demo.org",
+        password: "password123",
+      });
+
+      expect(session.organization.purpose).toBe("");
+      expect(session.organization.registrationNumber).toBe("");
+    });
+  });
+
+  describe("requestOtp/verifyOtp — production vs. explicit mock-auth flag", () => {
+    const originalFlag = process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH;
+
+    afterEach(() => {
+      if (originalFlag === undefined) {
+        delete process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH;
+      } else {
+        process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH = originalFlag;
+      }
+    });
+
+    it("requestOtp() calls the real backend endpoint by default (flag unset)", async () => {
+      delete process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH;
+      vi.mocked(apiClient.post).mockResolvedValue({ message: "Code sent." });
+
+      await authService.requestOtp({ email: "priya@demo.org" });
+
+      expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.requestOtp, {
+        email: "priya@demo.org",
+      });
+    });
+
+    it("verifyOtp() calls the real backend endpoint by default and never compares against a fixed code", async () => {
+      delete process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH;
+      vi.mocked(apiClient.post).mockResolvedValue(apiSession);
+
+      const session = await authService.verifyOtp({
+        email: "priya@demo.org",
+        code: "000000",
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.verifyOtp, {
+        email: "priya@demo.org",
+        code: "000000",
+      });
+      expect(session.token).toBe("jwt-token");
+    });
+
+    it("verifyOtp() rejects whatever the backend rejects (flag unset) — no client-side '123456' short-circuit", async () => {
+      delete process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH;
+      vi.mocked(apiClient.post).mockRejectedValue({
+        status: 401,
+        message: "Invalid or expired code.",
+      });
+
+      await expect(
+        authService.verifyOtp({ email: "priya@demo.org", code: "123456" }),
+      ).rejects.toMatchObject({ status: 401 });
+    });
+
+    it("requestOtp()/verifyOtp() use the isolated mock only when NEXT_PUBLIC_ENABLE_MOCK_AUTH=true", async () => {
+      process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH = "true";
+      const { mockOtpCodeForTests } = await import("@/services/auth/otp.mock");
+
+      // The mock path resolves against the mock user directory, not the
+      // (mocked-away) apiClient — apiClient must never be called here.
+      await expect(
+        authService.requestOtp({ email: "not-a-real-mock-user@example.com" }),
+      ).rejects.toMatchObject({ status: 404 });
+      expect(apiClient.post).not.toHaveBeenCalled();
+
+      // A wrong code is rejected without ever reaching apiClient either.
+      await expect(
+        authService.verifyOtp({
+          email: "not-a-real-mock-user@example.com",
+          code: mockOtpCodeForTests(),
+        }),
+      ).rejects.toMatchObject({ status: 401 });
+      expect(apiClient.post).not.toHaveBeenCalled();
+    });
   });
 });

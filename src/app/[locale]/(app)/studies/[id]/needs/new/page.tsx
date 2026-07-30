@@ -198,7 +198,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
         .filter((name): name is string => name !== null);
       if (failedNames.length > 0) {
         sessionStorage.setItem(
-          `need-evidence-upload-failed:${created.id}`,
+          `rio.needEvidenceUploadFailed.${created.id}`,
           JSON.stringify(failedNames),
         );
       }

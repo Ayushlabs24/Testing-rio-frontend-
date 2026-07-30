@@ -293,6 +293,21 @@ test("users table paginates once results exceed the page size", async ({ page })
 });
 
 test("otp sign-in flow with the mock code", async ({ page }) => {
+  // The mock staff-OTP flow (src/services/auth/otp.mock.ts) is disabled by
+  // default — requestOtp/verifyOtp call the real backend endpoint unless
+  // NEXT_PUBLIC_ENABLE_MOCK_AUTH=true was set when the app under test was
+  // *built* (playwright.config.ts's webServer runs `npm run build && npm run
+  // start`, so this is a build-time flag, not something this test can flip
+  // at runtime). Run with `E2E_MOCK_AUTH=1 NEXT_PUBLIC_ENABLE_MOCK_AUTH=true
+  // npm run build && E2E_BACKEND=1 E2E_MOCK_AUTH=1 npx playwright test
+  // e2e/auth-flows.spec.ts` to exercise this specific flow; the default
+  // E2E_BACKEND=1 run skips it, since the real /auth/otp/* endpoints don't
+  // exist on the backend yet (see auth.service.ts).
+  test.skip(
+    !process.env.E2E_MOCK_AUTH,
+    "requires a build with NEXT_PUBLIC_ENABLE_MOCK_AUTH=true — see the comment above",
+  );
+
   await page.goto("/otp");
 
   await page.getByLabel("Work email").fill("admin@demo.org");

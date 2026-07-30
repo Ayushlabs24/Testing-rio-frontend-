@@ -248,6 +248,7 @@ export default function AuditSettingsPage() {
                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
+                  aria-label={t("searchPlaceholder")}
                   value={query}
                   onChange={(event) => {
                     setQuery(event.target.value);

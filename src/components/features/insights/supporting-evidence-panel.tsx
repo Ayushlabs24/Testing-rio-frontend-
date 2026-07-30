@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { evidenceService } from "@/services/evidence/evidence.service";
+import { parseRawEvidenceList } from "@/services/evidence/evidence.schemas";
 import { prioritySummaryService } from "@/services/reports/priority-summary.service";
 
 export interface SupportingEvidenceItem {
@@ -39,10 +40,9 @@ export function SupportingEvidencePanel({
     setLoading(true);
     evidenceService
       .listByNeed(needId)
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      .then((items: any[]) => {
+      .then((items) => {
         setEvidenceList(
-          items.map((item) => ({
+          parseRawEvidenceList(items).map((item) => ({
             id: String(item.id || ""),
             fileName: String(item.fileName || ""),
             title: String(item.title || item.fileName || ""),

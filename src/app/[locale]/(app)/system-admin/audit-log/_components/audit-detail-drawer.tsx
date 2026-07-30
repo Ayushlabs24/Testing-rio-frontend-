@@ -72,7 +72,7 @@ export function AuditDetailDrawer({ eventId, open, onClose }: AuditDetailDrawerP
               </h2>
               <p className="text-muted-foreground mt-0.5 font-mono text-xs">{eventId}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("close")}>
               <X className="size-5" />
             </Button>
           </div>
