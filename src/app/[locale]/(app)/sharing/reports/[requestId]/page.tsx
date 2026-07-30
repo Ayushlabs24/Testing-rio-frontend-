@@ -36,6 +36,11 @@ function toReport(snapshot: SharedReportSnapshot): Report {
     status: "released",
     title: snapshot.title,
     studyId: null,
+    // A shared snapshot carries content only, not the owner's own scoping ids —
+    // and the survey title would be a cross-org lookup this view has no right
+    // to make. Null here means the viewer simply omits the survey sub-line.
+    surveyId: null,
+    surveyTitle: null,
     filters: {},
     content: snapshot.content,
     generatedBy: "",

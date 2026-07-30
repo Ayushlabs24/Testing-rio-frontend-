@@ -17,6 +17,7 @@ export const reportsService = {
         reportType: params.reportType,
         status: params.status,
         studyId: params.studyId,
+        surveyId: params.surveyId,
       },
     });
   },
