@@ -470,6 +470,11 @@ export default function AuditSettingsPage() {
                                 }
                               })()}
                             </span>
+                            {event.sourceRef ? (
+                              <span className="text-muted-foreground text-xs">
+                                {t("sourceRefLabel", { ref: event.sourceRef })}
+                              </span>
+                            ) : null}
                           </div>
                           {event.changes && event.changes.length > 0 ? (
                             <ChangeDetailsDialog

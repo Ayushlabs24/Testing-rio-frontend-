@@ -91,6 +91,18 @@ const GENDER_LABELS: Record<string, string> = {
   prefer_not_to_say: "Prefer not to say",
 };
 
+// Matches the Prisma NeedSource enum's values, in the client's own Report
+// Type terminology — see the backend's copy of this same map
+// (ncnp-report-pdf.ts) for why 'manual_entry' displays as "Survey" and why
+// 'citizen_input'/'field_survey' are kept even though nothing produces them
+// yet.
+const NEED_SOURCE_LABELS: Record<string, string> = {
+  manual_entry: "Survey",
+  file_upload: "Uploaded Document",
+  citizen_input: "Citizen Input",
+  field_survey: "Field Survey",
+};
+
 // A validated 7-hue categorical set (CVD-safe adjacent pairs) — the design
 // system's own --chart-N tokens only cover 5 slots, which forced two of these
 // 7 brackets to repeat a color when cycled. These are scoped to this one
@@ -207,6 +219,8 @@ function NcnpReportContent() {
     orgHealth,
     orgSummary,
     needDomains,
+    needSubDomains,
+    needsGeography,
     studyStatus,
     publicLinkStatus,
     studyOverview,
@@ -216,6 +230,9 @@ function NcnpReportContent() {
     regionSummary,
     responseAnalytics,
     priorityOverview,
+    criticalNeeds,
+    dataQualityNotes,
+    domainRegionIntersections,
   } = report;
 
   const disclaimer = t("footerDisclaimer");
@@ -352,6 +369,12 @@ function NcnpReportContent() {
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
+                {summary.totals.needs.toLocaleString()}
+              </p>
+              <p className="text-muted-foreground text-xs">{t("totalNeeds")}</p>
+            </div>
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-3xl font-bold tabular-nums">
                 {publicLinkStatus.open.toLocaleString()}
               </p>
               <p className="text-muted-foreground text-xs">{t("openSurveys")}</p>
@@ -428,6 +451,59 @@ function NcnpReportContent() {
               periodLabel={periodLabel}
             />
           </div>
+        </section>
+
+        <section className="mt-8">
+          <SectionLabel num="04" title={t("topCriticalNeedsTitle")} />
+          {criticalNeeds.topCriticalNeeds.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t("topCriticalNeedsEmpty")}</p>
+          ) : (
+            <>
+              <p className="text-muted-foreground mb-4 text-xs">
+                {t("topCriticalNeedsCaption", {
+                  rankable: criticalNeeds.totalRankableNeeds,
+                  total: criticalNeeds.totalNeeds,
+                })}
+              </p>
+              <ul className="space-y-3">
+                {criticalNeeds.topCriticalNeeds.map((n, i) => (
+                  <li
+                    key={n.needId}
+                    className="border-border/60 bg-muted/20 flex items-start justify-between gap-4 rounded-xl border p-4"
+                  >
+                    <div>
+                      <p className="text-foreground text-sm font-semibold">
+                        {i + 1}. {n.needTitle}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {[
+                          n.organizationName,
+                          n.domain,
+                          n.primaryGap
+                            ? t("primaryGapLabel", { gap: n.primaryGap })
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <Badge
+                        variant={
+                          n.priorityStatus === "HIGH" ? "destructive" : "secondary"
+                        }
+                      >
+                        {n.priorityStatus}
+                      </Badge>
+                      <p className="text-foreground mt-1 text-sm font-semibold tabular-nums">
+                        {n.priorityScore.toFixed(1)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </section>
       </ReportPageShell>
 
@@ -709,12 +785,99 @@ function NcnpReportContent() {
           </div>
         </section>
 
-        <section>
+        <section className="mb-10">
           <SectionLabel num="04" title={t("studiesCreatedTrend")} />
           <TrendLineChart
             points={studyOverview.studiesCreatedTrend}
             emptyText={t("noDataAvailable")}
           />
+        </section>
+
+        <section className="mb-10">
+          <SectionLabel num="05" title={t("needsGeographyTitle")} />
+          <p className="text-muted-foreground mb-4 text-xs">{t("needsGeographyNote")}</p>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div>
+              <p className="text-foreground mb-3 text-sm font-semibold">
+                {t("needsByRegion")}
+              </p>
+              <NamedBarList
+                items={needsGeography.byRegion}
+                limit={REGION_LIST_LIMIT}
+                emptyText={t("geographyEmpty")}
+                formatCaption={formatCaption}
+              />
+            </div>
+            <div>
+              <p className="text-foreground mb-3 text-sm font-semibold">
+                {t("needsByGovernorate")}
+              </p>
+              <NamedBarList
+                items={needsGeography.byGovernorate}
+                limit={GEO_LIST_LIMIT}
+                emptyText={t("geographyEmpty")}
+                formatCaption={formatCaption}
+              />
+            </div>
+          </div>
+          <div className="mt-6">
+            <p className="text-foreground mb-3 text-sm font-semibold">
+              {t("needsByCenter")}
+            </p>
+            <NamedBarList
+              items={needsGeography.byCenter}
+              limit={GEO_LIST_LIMIT}
+              emptyText={t("geographyEmpty")}
+              formatCaption={formatCaption}
+            />
+          </div>
+        </section>
+
+        <section className="mb-10">
+          <SectionLabel num="06" title={t("needsBySubDomainTitle")} />
+          <NamedBarList
+            items={needSubDomains.map((d, i) => ({
+              id: `${d.domainName}-${d.subDomainName}-${i}`,
+              name: `${d.domainName} — ${d.subDomainName}`,
+              count: d.needCount,
+            }))}
+            limit={GEO_LIST_LIMIT}
+            emptyText={t("noDataAvailable")}
+            formatCaption={formatCaption}
+          />
+        </section>
+
+        <section>
+          <SectionLabel num="07" title={t("patternIntersectionTitle")} />
+          <p className="text-muted-foreground mb-4 text-xs">
+            {t("patternIntersectionNote")}
+          </p>
+          {domainRegionIntersections.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t("noDataAvailable")}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("region")}</TableHead>
+                    <TableHead>{t("domainColumn")}</TableHead>
+                    <TableHead className="text-right">{t("needsColumn")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {domainRegionIntersections.map((c, i) => (
+                    <TableRow key={`${c.regionName}-${c.domainName}-${i}`}>
+                      <TableCell className="font-medium">{c.regionName}</TableCell>
+                      <TableCell>{c.domainName}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {c.needCount}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </section>
       </ReportPageShell>
 
@@ -789,7 +952,7 @@ function NcnpReportContent() {
             <NamedBarList
               items={surveyAnalytics.rejectionReasonBreakdown.map((r) => ({
                 id: r.reasonCode,
-                name: REJECTION_REASON_LABELS[r.reasonCode] ?? r.reasonCode,
+                name: `${r.reasonCode} — ${REJECTION_REASON_LABELS[r.reasonCode] ?? r.reasonCode}`,
                 count: r.count,
               }))}
               limit={surveyAnalytics.rejectionReasonBreakdown.length}
@@ -1071,7 +1234,7 @@ function NcnpReportContent() {
             emptyText={t("noDataAvailable")}
           />
         </section>
-        <section>
+        <section className="mb-8">
           <SectionLabel num="03" title={t("topPriorityVillages")} />
           {priorityOverview.topPriorityVillages.length === 0 ? (
             <p className="text-muted-foreground text-sm">
@@ -1109,6 +1272,132 @@ function NcnpReportContent() {
               </TableBody>
             </Table>
           )}
+        </section>
+
+        <section className="mb-8">
+          <SectionLabel num="04" title={t("priorityNeedsTitle")} />
+          <p className="text-muted-foreground mb-4 text-xs">{t("priorityNeedsNote")}</p>
+          {criticalNeeds.priorityNeeds.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t("priorityNeedsEmpty")}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("needColumn")}</TableHead>
+                    <TableHead>{t("domainColumn")}</TableHead>
+                    <TableHead className="text-right">
+                      {t("priorityScoreColumn")}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t("priorityStatusColumn")}
+                    </TableHead>
+                    <TableHead className="text-right">{t("equityFlagColumn")}</TableHead>
+                    <TableHead>{t("primaryGapColumn")}</TableHead>
+                    <TableHead>{t("indicatorColumn")}</TableHead>
+                    <TableHead>{t("unitGeoColumn")}</TableHead>
+                    <TableHead className="text-right">{t("evidenceColumn")}</TableHead>
+                    <TableHead>{t("sourceColumn")}</TableHead>
+                    <TableHead>{t("sourceRefColumn")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {criticalNeeds.priorityNeeds.map((n) => (
+                    <TableRow key={n.needId}>
+                      <TableCell className="font-medium">{n.needTitle}</TableCell>
+                      <TableCell>{n.domain ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {n.priorityScore.toFixed(1)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge
+                          variant={
+                            n.priorityStatus === "HIGH" ? "destructive" : "secondary"
+                          }
+                        >
+                          {n.priorityStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="outline">
+                          {n.equityFlag ? t("yes") : t("no")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{n.primaryGap ?? "—"}</TableCell>
+                      <TableCell>{n.indicatorId ?? "—"}</TableCell>
+                      <TableCell>{n.unitGeoRegion ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {n.evidenceCount}
+                      </TableCell>
+                      <TableCell>{NEED_SOURCE_LABELS[n.source] ?? n.source}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {n.sourceRef ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {criticalNeeds.totalRankableNeeds > criticalNeeds.priorityNeeds.length ? (
+                <p className="text-muted-foreground mt-3 text-xs italic">
+                  {t("showingOf", {
+                    shown: criticalNeeds.priorityNeeds.length,
+                    total: criticalNeeds.totalRankableNeeds,
+                  })}
+                </p>
+              ) : null}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <SectionLabel num="05" title={t("dataQualityNotesTitle")} />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-2xl font-bold tabular-nums">
+                {dataQualityNotes.assessedResponses} / {dataQualityNotes.totalResponses}
+              </p>
+              <p className="text-muted-foreground text-xs">{t("responsesAssessed")}</p>
+            </div>
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-2xl font-bold tabular-nums">
+                {dataQualityNotes.lowConfidenceCount}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("lowConfidenceResponses")}
+              </p>
+            </div>
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-2xl font-bold tabular-nums">
+                {dataQualityNotes.duplicateFlaggedCount}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("duplicateFlaggedResponses")}
+              </p>
+            </div>
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-2xl font-bold tabular-nums">
+                {dataQualityNotes.needsWithEvidence} / {dataQualityNotes.totalNeeds}
+              </p>
+              <p className="text-muted-foreground text-xs">{t("needsWithEvidence")}</p>
+            </div>
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-2xl font-bold tabular-nums">
+                {dataQualityNotes.needsWithoutEvidence}
+              </p>
+              <p className="text-muted-foreground text-xs">{t("needsWithoutEvidence")}</p>
+            </div>
+            <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
+              <p className="text-foreground text-2xl font-bold tabular-nums">
+                {dataQualityNotes.needsUnclassified}
+              </p>
+              <p className="text-muted-foreground text-xs">{t("needsUnclassified")}</p>
+            </div>
+          </div>
+          {dataQualityNotes.assessedResponses === 0 ? (
+            <p className="text-muted-foreground mt-4 text-xs italic">
+              {t("dataQualityNotesEmpty")}
+            </p>
+          ) : null}
         </section>
       </ReportPageShell>
 

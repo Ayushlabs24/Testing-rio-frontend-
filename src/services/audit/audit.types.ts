@@ -57,6 +57,14 @@ export interface AuditEvent {
   changes?: AuditFieldChange[];
   /** Free-form context bag — maps to `audit_logs.metadata` (JSONB). */
   metadata?: Record<string, unknown>;
+  /**
+   * The entity's own external tracking id (e.g. a Need's `referenceId` — a
+   * field form number or partner org's case id) — a first-class, indexed
+   * column on `audit_logs.source_ref`, not another metadata key. Null (or
+   * absent, from the mock-only record() path — see its own comment) for
+   * events whose entity has no such reference.
+   */
+  sourceRef?: string | null;
   /** Captured server-side; maps to `audit_logs.ip_address`. */
   ipAddress?: string | null;
   /** Captured server-side; maps to `audit_logs.user_agent`. */

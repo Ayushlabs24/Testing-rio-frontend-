@@ -14,6 +14,7 @@ export interface NcnpReportSummary {
     studies: number;
     surveys: number;
     responses: number;
+    needs: number;
   };
   newThisPeriod: {
     periodDays: number;
@@ -68,6 +69,19 @@ export interface NcnpGeographyOverview {
   organizationsByGovernorate: NcnpNamedBreakdown[];
   organizationsByCenter: NcnpNamedBreakdown[];
   studiesByRegion: NcnpNamedBreakdown[];
+}
+
+// Kingdom-wide rollup of Needs themselves (not orgs, not surveys).
+export interface NcnpNeedsGeography {
+  byRegion: NcnpNamedBreakdown[];
+  byGovernorate: NcnpNamedBreakdown[];
+  byCenter: NcnpNamedBreakdown[];
+}
+
+export interface NcnpSubDomainBreakdown {
+  domainName: string;
+  subDomainName: string;
+  needCount: number;
 }
 
 export interface NcnpOrgSummaryRow {
@@ -208,12 +222,62 @@ export interface NcnpPriorityOverview {
   topPriorityVillages: NcnpVillageScorecard[];
 }
 
+// A single Need, ranked by its own survey's village-priority assessment —
+// see the backend's NcnpReportService.buildCriticalNeeds for exactly how
+// "critical" and `primaryGap` are derived from real, existing data (there is
+// no need-level severity_score/gap_type field in the schema).
+export interface NcnpPriorityNeedRow {
+  needId: string;
+  needTitle: string;
+  domain: string | null;
+  subDomain: string | null;
+  organizationName: string;
+  priorityScore: number;
+  priorityStatus: string;
+  primaryGap: string | null;
+  evidenceCount: number;
+  source: string;
+  // Unified Need Record Schema fields — all derived/joined from existing
+  // data on the backend, no new columns.
+  equityFlag: boolean;
+  indicatorId: string | null;
+  unitGeoRegion: string | null;
+  sourceRef: string | null;
+}
+
+export interface NcnpCriticalNeedsOverview {
+  topCriticalNeeds: NcnpPriorityNeedRow[];
+  priorityNeeds: NcnpPriorityNeedRow[];
+  totalRankableNeeds: number;
+  totalNeeds: number;
+}
+
+// Always present, even when every count is zero.
+export interface NcnpDataQualityNotes {
+  totalResponses: number;
+  assessedResponses: number;
+  lowConfidenceCount: number;
+  duplicateFlaggedCount: number;
+  totalNeeds: number;
+  needsWithEvidence: number;
+  needsWithoutEvidence: number;
+  needsUnclassified: number;
+}
+
+export interface NcnpDomainRegionIntersection {
+  regionName: string;
+  domainName: string;
+  needCount: number;
+}
+
 export interface NcnpReport {
   generatedAt: string;
   summary: NcnpReportSummary;
   orgHealth: NcnpOrgHealth;
   orgSummary: NcnpOrgSummary;
   needDomains: NcnpDomainBreakdown[];
+  needSubDomains: NcnpSubDomainBreakdown[];
+  needsGeography: NcnpNeedsGeography;
   studyStatus: NcnpStudyStatus;
   publicLinkStatus: NcnpPublicLinkStatus;
   studyOverview: NcnpStudyOverview;
@@ -223,4 +287,7 @@ export interface NcnpReport {
   regionSummary: NcnpRegionSummaryRow[];
   responseAnalytics: NcnpResponseAnalytics;
   priorityOverview: NcnpPriorityOverview;
+  criticalNeeds: NcnpCriticalNeedsOverview;
+  dataQualityNotes: NcnpDataQualityNotes;
+  domainRegionIntersections: NcnpDomainRegionIntersection[];
 }
