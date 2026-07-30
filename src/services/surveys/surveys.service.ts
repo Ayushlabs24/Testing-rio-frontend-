@@ -71,8 +71,8 @@ export interface ReusableCustomQuestion {
 export type SurveyStatus = "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED";
 
 /** Matches the Prisma RejectionReasonCode enum's identifiers exactly (see
- * schema.prisma). REJ_99 is "Other" — the only code that also requires
- * `approverComments` to be filled in; see the reject dialog's validation. */
+ * schema.prisma). REJ_99 is "Other". `approverComments` (reviewer notes) is
+ * required for every code now; see the reject dialog's validation. */
 export type RejectionReasonCode =
   "REJ_01" | "REJ_02" | "REJ_03" | "REJ_04" | "REJ_05" | "REJ_06" | "REJ_07" | "REJ_99";
 
@@ -107,9 +107,11 @@ export interface Survey {
   selectionApproach: string | null;
   geographicCoverage: string | null;
   submittedAt: string | null;
-  /** The Approver's reason for the most recent rejection — only set while
-   * `status === "REJECTED"`; cleared the next time the survey is
-   * resubmitted, so it never lingers as stale feedback. */
+  /** The Approver's reviewer notes for the most recent decision — mandatory
+   * on both Approve & Publish and Reject. Set on REJECTED and on PUBLISHED
+   * now; cleared the next time a rejected survey is resubmitted (never
+   * cleared once PUBLISHED, since that's terminal). Null only for surveys
+   * approved/rejected before this requirement existed. */
   approverComments: string | null;
   /** The Approver's structured rejection reason, alongside the free-text
    * approverComments above — same lifecycle (only set while REJECTED,
@@ -226,14 +228,17 @@ export const surveysService = {
   },
 
   /** Custom questions previously added to some other survey for this exact
-   * Domain/Sub-domain — see ReusableCustomQuestion's own doc comment. */
+   * Domain/Sub-domain — see ReusableCustomQuestion's own doc comment. Called
+   * with no arguments for the allDomainsSelected case (AI couldn't classify)
+   * — every reusable custom question is in scope then, same "match all"
+   * convention as getQuestions([]) for the Question Bank tab. */
   async getReusableCustomQuestions(
-    domain: string,
-    subDomain: string,
+    domain?: string,
+    subDomain?: string,
   ): Promise<ReusableCustomQuestion[]> {
     return apiClient.get<ReusableCustomQuestion[]>(
       endpoints.surveys.reusableCustomQuestions,
-      { params: { domain, subDomain } },
+      { params: domain && subDomain ? { domain, subDomain } : {} },
     );
   },
 
@@ -296,18 +301,22 @@ export const surveysService = {
   },
 
   /** Approver-only. Combines approve + publish — there's no intermediate
-   * "approved but not yet published" state. */
-  async approveAndPublish(surveyId: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId));
+   * "approved but not yet published" state. `comments` (reviewer notes) is
+   * mandatory — enforced both here (the approve dialog) and again on the
+   * backend. */
+  async approveAndPublish(surveyId: string, comments: string): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId), {
+      comments,
+    });
   },
 
-  /** Approver-only. `reasonCode` is always required; `comments` is required
-   * only when reasonCode is "REJ_99" (Other) — enforced both here (the
+  /** Approver-only. `reasonCode` and `comments` (reviewer notes) are both
+   * always required now, regardless of reasonCode — enforced both here (the
    * reject dialog) and again on the backend. */
   async rejectSurvey(
     surveyId: string,
     reasonCode: RejectionReasonCode,
-    comments?: string,
+    comments: string,
   ): Promise<SurveyRecord> {
     return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), {
       reasonCode,

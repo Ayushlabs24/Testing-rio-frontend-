@@ -1782,6 +1782,12 @@
         "optional": "optional",
         "confirmReject": "Reject",
         "rejecting": "Rejecting...",
+        "reviewerNotesTitle": "Reviewer Notes",
+        "approveDialogTitle": "Approve & Publish this survey",
+        "approveDialogDescription": "Reviewer notes are required and will be recorded in the audit trail.",
+        "approveCommentsPlaceholder": "Explain your decision to approve and publish this survey...",
+        "approveCommentsRequired": "Enter reviewer notes before approving.",
+        "confirmApprove": "Approve & Publish",
         "status": {
           "DRAFT": "Draft",
           "SUBMITTED": "Submitted for Approval",
