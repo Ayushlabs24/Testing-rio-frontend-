@@ -16,6 +16,7 @@ import { PageContainer } from "@/components/common/page-container";
 import { CollectiveDashboard } from "@/components/features/dashboard/collective-dashboard";
 import { ResearchOfficerDashboard } from "@/components/features/dashboard/research-officer-dashboard";
 import { ReviewerDashboard } from "@/components/features/dashboard/reviewer-dashboard";
+import { SystemReviewerDashboard } from "@/components/features/dashboard/system-reviewer-dashboard";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
 import SystemAdminDashboardPage from "../system-admin/dashboard/page";
@@ -81,6 +82,9 @@ export default function DashboardPage() {
   }
   if (session?.role.key === "ngo_research_officer") {
     return <ResearchOfficerDashboard userName={session.user.name} />;
+  }
+  if (session?.role.key === "system_reviewer") {
+    return <SystemReviewerDashboard userName={session.user.name} />;
   }
 
   /* ── NGO Admin Dashboard ────────────────────────────────────────────── */

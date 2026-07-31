@@ -1,13 +1,17 @@
 "use client";
 
-import { BarChart3, Eye, Globe2, Plus } from "lucide-react";
+import { BarChart3, Eye, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { NcnpReportReviewActions } from "@/components/features/ncnp-report/ncnp-report-review-actions";
+import { NcnpReportReviewBadge } from "@/components/features/ncnp-report/ncnp-report-review-badge";
+import { reportId as consolidatedReportId } from "@/components/features/ncnp-report/ncnp-report-content-view";
 import { ReportActions } from "@/components/features/reports/report-actions";
 import { ReportStatusBadge } from "@/components/features/reports/report-status-badge";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
@@ -19,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -41,11 +46,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Link } from "@/i18n/navigation";
-import { useAuth } from "@/components/providers/auth-provider";
+import { Link, useRouter } from "@/i18n/navigation";
+import { REPORTS_PAGE_SIZE, REPORTS_PAGE_SIZE_OPTIONS } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
+import {
+  ncnpReportReviewService,
+  type NcnpReportReviewSummary,
+} from "@/services/ncnp-report-review/ncnp-report-review.service";
 import { reportsService } from "@/services/reports/reports.service";
 import {
   GENERATABLE_REPORT_TYPES,
@@ -59,6 +68,21 @@ import type { StudySummary } from "@/services/studies/studies.types";
 import { surveysService, type SurveyListItem } from "@/services/surveys/surveys.service";
 
 const ALL = "all";
+
+// Distinguishes the org-scoped RPT01-14 reports from the cross-org NCNP
+// Compiled Report — the two live in entirely different backend tables
+// (Report is per-org with RLS; NcnpReportReview has none, by design — see
+// this feature's original architecture notes), but the client wants them
+// presented as one unified "Reports" surface, not two separate screens.
+type ReportCategory = "ngo" | "consolidated";
+type UnifiedRow =
+  | { category: "ngo"; id: string; generatedAt: string; report: Report }
+  | {
+      category: "consolidated";
+      id: string;
+      generatedAt: string;
+      review: NcnpReportReviewSummary;
+    };
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -304,22 +328,31 @@ function GenerateReportDialog({
 
 export default function ReportsPage() {
   const t = useTranslations("app.reports");
+  const tr = useTranslations("systemAdmin.ncnpReport.review");
+  const router = useRouter();
   const canCreate = usePermission("reportsDashboards", "create");
-  const { session } = useAuth();
-  // NCNP Consolidated Report is a live, cross-org view with no per-org orgId
-  // to persist against — it's not a `Report` row, so it can't live inside the
-  // create dialog (system_admin/center_supervisor hold reportsDashboards
-  // read+export only, no create, so that dialog is invisible to them anyway).
-  // This button navigates straight to the live view instead.
-  const canViewNcnp = session?.role.crossEntity ?? false;
+  const canGenerateConsolidated = usePermission("ncnpReport", "write");
+  // Only System Admin and System Reviewer hold any `ncnpReport` grant today
+  // (Center Supervisor and NCNP User both hold none — see role-matrix.ts) —
+  // the Consolidated category filter/column is real signal only for those
+  // two roles; every other role would only ever see "NGO Report" rows, so
+  // showing it is pure clutter for them.
+  const canSeeConsolidated = usePermission("ncnpReport", "read");
 
   const [generateOpen, setGenerateOpen] = useState(false);
+  const [generatingConsolidated, setGeneratingConsolidated] = useState(false);
   const [reports, setReports] = useState<Report[] | null>(null);
+  const [consolidatedReviews, setConsolidatedReviews] = useState<
+    NcnpReportReviewSummary[] | null
+  >(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [studyFilter, setStudyFilter] = useState<string | typeof ALL>(ALL);
   const [statusFilter, setStatusFilter] = useState<ReportStatus | typeof ALL>(ALL);
+  const [categoryFilter, setCategoryFilter] = useState<ReportCategory | typeof ALL>(ALL);
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(REPORTS_PAGE_SIZE);
 
   useEffect(() => {
     studiesService
@@ -342,12 +375,71 @@ export default function ReportsPage() {
         setReports([]);
         setLoadFailed(true);
       });
+    // Fetched unconditionally rather than gated on `canReadConsolidated` —
+    // that permission check depends on the auth session having loaded,
+    // which can still be in flight on first mount; a 403 here (a role with
+    // no `ncnpReport:read`, e.g. a plain NGO role) is expected and just
+    // means an empty consolidated-reports list, not a real failure.
+    ncnpReportReviewService
+      .list()
+      .then(setConsolidatedReviews)
+      .catch(() => setConsolidatedReviews([]));
   }
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studyFilter, statusFilter]);
+
+  async function handleGenerateConsolidated() {
+    setActionError("");
+    setGeneratingConsolidated(true);
+    try {
+      const created = await ncnpReportReviewService.generate();
+      router.push(`/reports/${created.id}?type=consolidated`);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : tr("actionError"));
+      setGeneratingConsolidated(false);
+    }
+  }
+
+  const loading = reports === null || consolidatedReviews === null;
+  const unified: UnifiedRow[] = [
+    ...(reports ?? []).map((report): UnifiedRow => ({
+      category: "ngo",
+      id: report.id,
+      generatedAt: report.generatedAt,
+      report,
+    })),
+    ...(consolidatedReviews ?? []).map((review): UnifiedRow => ({
+      category: "consolidated",
+      id: review.id,
+      generatedAt: review.generatedAt,
+      review,
+    })),
+  ]
+    .filter((row) => categoryFilter === ALL || row.category === categoryFilter)
+    // Best-effort: the Status filter's values (draft/released/archived/
+    // rejected) are Report's own enum — "approved" (a consolidated-only
+    // status) has no filter option, so it's excluded whenever a status
+    // filter is active. Matches literally where the two enums overlap.
+    .filter(
+      (row) =>
+        statusFilter === ALL ||
+        (row.category === "ngo"
+          ? row.report.status === statusFilter
+          : row.review.status === statusFilter),
+    )
+    .sort(
+      (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime(),
+    );
+
+  const pageCount = Math.max(1, Math.ceil(unified.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const paged = unified.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // Title, [Category], Type, Status, Generated, Actions — Category only
+  // exists for roles that can actually see Consolidated rows.
+  const columnCount = canSeeConsolidated ? 6 : 5;
 
   return (
     <PermissionGuard module="reportsDashboards" action="read">
@@ -357,12 +449,16 @@ export default function ReportsPage() {
           description={t("description")}
           actions={
             <div className="flex items-center gap-2">
-              {canViewNcnp ? (
-                <Button asChild variant="outline" className="gap-2">
-                  <Link href="/system-admin/ncnp-report">
-                    <Globe2 className="size-4" />
-                    {t("ncnpReportButton")}
-                  </Link>
+              {canGenerateConsolidated ? (
+                <Button
+                  className="gap-2"
+                  disabled={generatingConsolidated}
+                  onClick={handleGenerateConsolidated}
+                >
+                  <Plus className="size-4" />
+                  {generatingConsolidated
+                    ? tr("generating")
+                    : t("generateConsolidatedButton")}
                 </Button>
               ) : null}
               {canCreate ? (
@@ -385,7 +481,36 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
-              <Select value={studyFilter} onValueChange={setStudyFilter}>
+              {canSeeConsolidated ? (
+                <Select
+                  value={categoryFilter}
+                  onValueChange={(v) => {
+                    setCategoryFilter(v as ReportCategory | typeof ALL);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-48"
+                    aria-label={t("filterCategoryLabel")}
+                  >
+                    <SelectValue placeholder={t("filterCategoryAll")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>{t("filterCategoryAll")}</SelectItem>
+                    <SelectItem value="ngo">{t("filterCategoryNgo")}</SelectItem>
+                    <SelectItem value="consolidated">
+                      {t("filterCategoryConsolidated")}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : null}
+              <Select
+                value={studyFilter}
+                onValueChange={(v) => {
+                  setStudyFilter(v);
+                  setPage(1);
+                }}
+              >
                 <SelectTrigger
                   className="h-8 w-full sm:w-56"
                   aria-label={t("filterStudyLabel")}
@@ -403,7 +528,10 @@ export default function ReportsPage() {
               </Select>
               <Select
                 value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as ReportStatus | typeof ALL)}
+                onValueChange={(v) => {
+                  setStatusFilter(v as ReportStatus | typeof ALL);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger
                   className="h-8 w-full sm:w-40"
@@ -421,31 +549,34 @@ export default function ReportsPage() {
               </Select>
             </div>
 
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("titleColumn")}</TableHead>
+                  {canSeeConsolidated ? (
+                    <TableHead className="w-36">{t("categoryColumn")}</TableHead>
+                  ) : null}
                   <TableHead className="w-24">{t("typeColumn")}</TableHead>
-                  <TableHead className="w-28">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-56">{t("statusColumn")}</TableHead>
                   <TableHead className="w-44">{t("generatedColumn")}</TableHead>
-                  <TableHead className="w-80" />
+                  <TableHead className="w-56" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reports === null ? (
+                {loading ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 5 }).map((__, cell) => (
+                      {Array.from({ length: columnCount }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <Skeleton className="h-4 w-20" />
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
-                ) : reports.length === 0 ? (
+                ) : unified.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={columnCount}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -457,29 +588,44 @@ export default function ReportsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  reports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="py-4 text-sm font-medium">
-                        {report.title}
-                        {/* Survey-scoped types (RPT01/RPT15) only. Shown as a
-                            sub-line rather than a sixth column so two reports
-                            from sibling surveys are still tellable apart
-                            without widening an already-full table. */}
-                        {report.surveyTitle ? (
-                          <span className="text-muted-foreground block text-xs font-normal">
-                            {t("surveyColumn")}: {report.surveyTitle}
-                          </span>
-                        ) : null}
+                  paged.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="max-w-0 truncate py-4 text-sm font-medium">
+                        {row.category === "ngo"
+                          ? row.report.title
+                          : consolidatedReportId(row.review.generatedAt)}
                       </TableCell>
-                      <TableCell className="text-sm">{report.reportType}</TableCell>
+                      {canSeeConsolidated ? (
+                        <TableCell className="text-sm">
+                          <Badge
+                            variant={
+                              row.category === "consolidated" ? "default" : "outline"
+                            }
+                          >
+                            {row.category === "ngo"
+                              ? t("filterCategoryNgo")
+                              : t("filterCategoryConsolidated")}
+                          </Badge>
+                        </TableCell>
+                      ) : null}
+                      <TableCell className="text-sm">
+                        {row.category === "ngo" ? row.report.reportType : null}
+                      </TableCell>
                       <TableCell>
-                        <ReportStatusBadge status={report.status} />
+                        {row.category === "ngo" ? (
+                          <ReportStatusBadge status={row.report.status} />
+                        ) : (
+                          <NcnpReportReviewBadge
+                            status={row.review.status}
+                            label={tr(`status.${row.review.status}`)}
+                          />
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(report.generatedAt)}
+                        {formatDate(row.generatedAt)}
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        <div className="flex flex-nowrap items-center justify-end gap-1.5">
                           <TooltipProvider delayDuration={200}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -489,7 +635,13 @@ export default function ReportsPage() {
                                   variant="outline"
                                   aria-label={t("tooltip.view")}
                                 >
-                                  <Link href={`/reports/${report.id}`}>
+                                  <Link
+                                    href={
+                                      row.category === "ngo"
+                                        ? `/reports/${row.id}`
+                                        : `/reports/${row.id}?type=consolidated`
+                                    }
+                                  >
                                     <Eye />
                                   </Link>
                                 </Button>
@@ -497,11 +649,19 @@ export default function ReportsPage() {
                               <TooltipContent>{t("tooltip.view")}</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          <ReportActions
-                            report={report}
-                            onChanged={load}
-                            onError={(m) => setActionError(m || null)}
-                          />
+                          {row.category === "ngo" ? (
+                            <ReportActions
+                              report={row.report}
+                              onChanged={load}
+                              onError={(m) => setActionError(m || null)}
+                            />
+                          ) : (
+                            <NcnpReportReviewActions
+                              review={row.review}
+                              onChanged={load}
+                              onError={(m) => setActionError(m || null)}
+                            />
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -509,6 +669,41 @@ export default function ReportsPage() {
                 )}
               </TableBody>
             </Table>
+
+            {unified.length > 0 ? (
+              <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-40"
+                    aria-label={t("pagination.rowsPerPage")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPORTS_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {t("pagination.rowsPerPage")}: {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                  className="sm:w-auto"
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

@@ -26,7 +26,8 @@ export interface Role {
     | "read_only_viewer"
     | "center_supervisor"
     | "citizen_guest"
-    | "ncnp_user";
+    | "ncnp_user"
+    | "system_reviewer";
   name: string;
   description: string;
   /** Entity-scoped roles see only their own organization's data; these two don't. */
@@ -71,16 +72,25 @@ function perm(module: PermissionModule, grant: AccessGrant = {}): ModulePermissi
   };
 }
 
+// "Full access to every module within its own entity" — `ncnpReport` is
+// excluded (left at no access) since it's the one module that isn't
+// entity-scoped: the cross-org, kingdom-wide NCNP Compiled Report, gated
+// to System Admin/System Reviewer only. Mirrors the same fix in the
+// backend's role-matrix.ts — without it, NGO Admin (the only role using
+// this helper) silently inherits full access here too, and this file
+// backs the Roles admin page display, so it should stay truthful.
 function fullAccess(): ModulePermission[] {
   return PERMISSION_MODULES.map((module) =>
-    perm(module, {
-      read: true,
-      write: true,
-      create: true,
-      approve: true,
-      export: true,
-      share: true,
-    }),
+    module === "ncnpReport"
+      ? perm(module)
+      : perm(module, {
+          read: true,
+          write: true,
+          create: true,
+          approve: true,
+          export: true,
+          share: true,
+        }),
   );
 }
 
@@ -163,6 +173,7 @@ export const roles: Role[] = [
       perm("archiveSharingAudit", { read: true, create: true }),
       // The role responsible for creating and managing questionnaires.
       perm("surveyBuilder", { read: true, write: true, create: true }),
+      perm("ncnpReport"),
     ],
   },
   {
@@ -186,6 +197,7 @@ export const roles: Role[] = [
       perm("reportsDashboards"),
       perm("archiveSharingAudit"),
       perm("surveyBuilder"),
+      perm("ncnpReport"),
     ],
   },
   {
@@ -215,6 +227,7 @@ export const roles: Role[] = [
       // Survey Approval workflow: reviews and decides (approve/reject/
       // publish), never a co-author — no write/create on survey content.
       perm("surveyBuilder", { read: true, approve: true }),
+      perm("ncnpReport"),
     ],
   },
   {
@@ -244,6 +257,7 @@ export const roles: Role[] = [
       perm("reportsDashboards", { read: true, write: true, create: true, export: true }),
       perm("archiveSharingAudit", READ_ONLY),
       perm("surveyBuilder"),
+      perm("ncnpReport"),
     ],
   },
   {
@@ -277,6 +291,11 @@ export const roles: Role[] = [
       perm("reportsDashboards", READ_ONLY),
       perm("archiveSharingAudit", READ_ONLY),
       perm("surveyBuilder"),
+      // Generate a new NCNP Compiled Report snapshot for review, and publish
+      // one a System Reviewer has already approved — `write` covers both;
+      // this role never Approves/Rejects itself (that's system_reviewer's
+      // `approve` bit).
+      perm("ncnpReport", { read: true, write: true }),
     ],
   },
   {
@@ -301,6 +320,7 @@ export const roles: Role[] = [
       perm("reportsDashboards", { read: true, export: true }),
       perm("archiveSharingAudit", READ_ONLY),
       perm("surveyBuilder"),
+      perm("ncnpReport"),
     ],
   },
   {
@@ -328,6 +348,7 @@ export const roles: Role[] = [
       perm("reportsDashboards", { read: true, export: true }),
       perm("archiveSharingAudit", READ_ONLY),
       perm("surveyBuilder"),
+      perm("ncnpReport"),
     ],
   },
   {
@@ -351,5 +372,32 @@ export const roles: Role[] = [
     crossEntity: true,
     enabled: true,
     permissions: PERMISSION_MODULES.map((module) => perm(module)),
+  },
+  {
+    id: "role_system_reviewer",
+    key: "system_reviewer",
+    name: "System Reviewer",
+    description:
+      "Reviews the NCNP Compiled Report — approves or rejects (with mandatory notes) before System Admin publishes it. Read-only everywhere else.",
+    crossEntity: true,
+    enabled: true,
+    permissions: [
+      perm("entityTeam"),
+      perm("rolesPermissions"),
+      perm("onboardingConsent"),
+      perm("methodologyQuestionBank", READ_ONLY),
+      perm("studySurvey", READ_ONLY),
+      perm("dataCollection", READ_ONLY),
+      perm("dataImport", READ_ONLY),
+      perm("citizenChannel"),
+      perm("aiReview", READ_ONLY),
+      perm("priorityScoring", READ_ONLY),
+      // Read + export — the "Documents" menu reuses this existing Reports
+      // module/page (view + download NGO reports); no approve/write.
+      perm("reportsDashboards", { read: true, export: true }),
+      perm("archiveSharingAudit"),
+      perm("surveyBuilder", READ_ONLY),
+      perm("ncnpReport", { read: true, approve: true }),
+    ],
   },
 ];

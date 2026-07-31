@@ -23,6 +23,7 @@ import {
   markReviewerSlaAlertsSeen,
   useReviewerSlaBadge,
 } from "@/hooks/use-reviewer-sla-badge";
+import { useNcnpReportBadge } from "@/hooks/use-ncnp-report-badge";
 import { useSharingNotifications } from "@/hooks/use-sharing-notifications";
 import type { SharingNotification } from "@/hooks/use-sharing-notifications";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -145,9 +146,11 @@ function timeAgo(iso: string): string {
 function NotificationsBell({
   canSeeReviewerSla,
   canSeeSharing,
+  canSeeNcnpReport,
 }: {
   canSeeReviewerSla: boolean;
   canSeeSharing: boolean;
+  canSeeNcnpReport: boolean;
 }) {
   const t = useTranslations("app.topbar");
   const router = useRouter();
@@ -159,10 +162,18 @@ function NotificationsBell({
     markSeen,
     markAllSeen,
   } = useSharingNotifications();
+  const ncnpReport = useNcnpReportBadge();
   const [open, setOpen] = useState(false);
 
   const reviewerSlaCount = canSeeReviewerSla ? reviewerSla.count : 0;
   const sharingCount = canSeeSharing ? sharingUnreadCount : 0;
+  const ncnpReportCount = canSeeNcnpReport ? ncnpReport.unreadCount : 0;
+  // The backend already branches listAlerts() by role — a System Reviewer
+  // only ever gets "pending_review" alerts, a System Admin only ever gets
+  // "ready_to_publish" ones — so the first alert's type is enough to pick
+  // the right copy for the whole count.
+  const ncnpReportReadyToPublish =
+    ncnpReport.alerts[0]?.type === "ncnp_report_ready_to_publish";
   // Decides the summary row's wording below — a Reviewer/Approver's count
   // is surveys AND reports awaiting THEIR decision; anyone else seeing this
   // bell (a Research Officer) is looking at their OWN submitted surveys'
@@ -176,7 +187,7 @@ function NotificationsBell({
       false) ||
     (session?.role.permissions.find((p) => p.module === "reportsDashboards")?.approve ??
       false);
-  const totalCount = reviewerSlaCount + sharingCount;
+  const totalCount = reviewerSlaCount + sharingCount + ncnpReportCount;
 
   // Same color language as the Reviewer SLA Alerts page's own status
   // badges (STATUS_VARIANT in reviewer-sla/page.tsx) — breached escalates
@@ -223,6 +234,15 @@ function NotificationsBell({
       // interval — clicking "mark all as read" would look like a no-op
       // until that next tick fires.
       reviewerSla.refresh();
+    }
+    if (canSeeNcnpReport) {
+      ncnpReport.markAllSeen();
+      // Same reasoning as reviewerSla.refresh() above — approve/reject/
+      // publish happen in a completely different component tree (the
+      // report detail page), so without an on-demand refetch here this
+      // notification only clears on the hook's own 30s poll, making "mark
+      // all as read" look like it did nothing for up to that long.
+      ncnpReport.refresh();
     }
     setOpen(false);
   }
@@ -284,8 +304,24 @@ function NotificationsBell({
           </DropdownMenuItem>
         ) : null}
 
-        {canSeeReviewerSla && reviewerSlaCount > 0 && canSeeSharing ? (
-          <DropdownMenuSeparator />
+        {canSeeNcnpReport && ncnpReportCount > 0 ? (
+          <DropdownMenuItem asChild onClick={() => setOpen(false)}>
+            <Link href="/reports" className="flex items-center gap-2">
+              <span className="bg-primary size-2 shrink-0 rounded-full" />
+              <span className="text-sm">
+                {ncnpReportReadyToPublish
+                  ? t("ncnpReportReadyToPublishCount", { count: ncnpReportCount })
+                  : t("ncnpReportPendingReviewCount", { count: ncnpReportCount })}
+              </span>
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+
+        {(canSeeReviewerSla && reviewerSlaCount > 0) ||
+        (canSeeNcnpReport && ncnpReportCount > 0) ? (
+          canSeeSharing ? (
+            <DropdownMenuSeparator />
+          ) : null
         ) : null}
 
         {canSeeSharing ? (
@@ -316,7 +352,7 @@ function NotificationsBell({
           )
         ) : null}
 
-        {!canSeeSharing && reviewerSlaCount === 0 ? (
+        {!canSeeSharing && reviewerSlaCount === 0 && ncnpReportCount === 0 ? (
           <p className="text-muted-foreground px-2 py-4 text-center text-sm">
             {t("sharingAlertsEmpty")}
           </p>
@@ -359,6 +395,11 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
     session.role.enabled &&
     (session.role.permissions.find((p) => p.module === "archiveSharingAudit")?.read ??
       false);
+  // System Reviewer/System Admin, the only two roles holding any grant on
+  // ncnpReport (see role-matrix.ts) — everyone else gets no row at all.
+  const canSeeNcnpReport =
+    session.role.enabled &&
+    (session.role.permissions.find((p) => p.module === "ncnpReport")?.read ?? false);
 
   return (
     <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6 lg:px-8">
@@ -421,10 +462,11 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
             {tSysAdmin("platformContext")}
           </Badge>
         ) : null}
-        {canSeeReviewerSla || canSeeSharing ? (
+        {canSeeReviewerSla || canSeeSharing || canSeeNcnpReport ? (
           <NotificationsBell
             canSeeReviewerSla={canSeeReviewerSla}
             canSeeSharing={canSeeSharing}
+            canSeeNcnpReport={canSeeNcnpReport}
           />
         ) : null}
         <ThemeToggle />

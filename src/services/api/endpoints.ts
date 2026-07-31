@@ -229,6 +229,18 @@ export const endpoints = {
     get: "/ncnp-report",
     export: (format: "pdf" | "excel") => `/ncnp-report/export?format=${format}`,
   },
+  ncnpReportReview: {
+    list: (status?: string) =>
+      status ? `/ncnp-report-reviews?status=${status}` : "/ncnp-report-reviews",
+    generate: "/ncnp-report-reviews",
+    byId: (id: string) => `/ncnp-report-reviews/${id}`,
+    approve: (id: string) => `/ncnp-report-reviews/${id}/approve`,
+    reject: (id: string) => `/ncnp-report-reviews/${id}/reject`,
+    publish: (id: string) => `/ncnp-report-reviews/${id}/publish`,
+    alerts: "/ncnp-report-reviews/alerts",
+    export: (id: string, format: "pdf" | "excel") =>
+      `/ncnp-report-reviews/${id}/export?format=${format}`,
+  },
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",

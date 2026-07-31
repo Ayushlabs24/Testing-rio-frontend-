@@ -21,12 +21,18 @@ interface RejectReasonDialogProps {
   reasonRequiredError: string;
   cancelLabel: string;
   confirmLabel: string;
+  /** Defaults to "destructive" — every existing Sharing/Report-sharing
+   * reject call site is unaffected. Pass "default" to reuse this same
+   * dialog for a non-destructive mandatory-notes action (e.g. the NCNP
+   * Report Review's Approve step) instead of writing a near-duplicate
+   * dialog component for that one difference. */
+  confirmVariant?: "destructive" | "default";
 }
 
-/** Shared by both Study-sharing and Report-sharing's reject action — the
- * requesting org otherwise has no idea what to change before asking again,
- * so a reason is mandatory here (both client-side and re-enforced by
- * SharingService/ReportSharingService.decide() on the backend). */
+/** Shared by Study-sharing/Report-sharing's reject action and the NCNP
+ * Report Review's approve/reject actions — anywhere a single mandatory
+ * free-text reason gates a decision (both client-side here and
+ * re-enforced server-side). */
 export function RejectReasonDialog({
   open,
   onOpenChange,
@@ -36,6 +42,7 @@ export function RejectReasonDialog({
   reasonRequiredError,
   cancelLabel,
   confirmLabel,
+  confirmVariant = "destructive",
 }: RejectReasonDialogProps) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +102,7 @@ export function RejectReasonDialog({
           >
             {cancelLabel}
           </Button>
-          <Button variant="destructive" onClick={handleConfirm} disabled={submitting}>
+          <Button variant={confirmVariant} onClick={handleConfirm} disabled={submitting}>
             {confirmLabel}
           </Button>
         </DialogFooter>

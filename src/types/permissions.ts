@@ -21,6 +21,13 @@ export const PERMISSION_MODULES = [
   // its own module rather than reusing studySurvey. Publish Survey/QR and
   // the Citizen public flow are unrelated and keep their existing modules.
   "surveyBuilder",
+  // The NCNP Compiled Report's own review workflow — deliberately not a
+  // reuse of reportsDashboards (see the backend role-matrix.ts comment):
+  // granting reportsDashboards:approve to System Reviewer would also grant
+  // approve rights over the unrelated RPT01-14 Reports feature. `approve` =
+  // System Reviewer's approve/reject decision; `write` = System Admin's
+  // generate/publish actions.
+  "ncnpReport",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
