@@ -28,15 +28,13 @@ export function SystemStatusPanel({
       title: t("aiService"),
       statusText:
         aiServiceOnline === undefined
-          ? t("statusUnavailable", { defaultValue: "Unavailable" })
+          ? t("statusUnavailable")
           : aiServiceOnline
             ? t("aiServiceOnline")
             : t("aiServiceOffline"),
       statusVariant: aiServiceOnline ? "ok" : "attention",
       detail:
-        aiServiceOnline === undefined
-          ? t("statusNotConfigured", { defaultValue: "Not configured" })
-          : t("aiServiceDetail"),
+        aiServiceOnline === undefined ? t("statusNotConfigured") : t("aiServiceDetail"),
       href: "/settings/methodology",
       manageLabel: t("manage"),
     },
@@ -45,9 +43,7 @@ export function SystemStatusPanel({
       icon: Clock,
       iconColor: "text-amber-500",
       title: t("reviewSla"),
-      statusText: reviewSlaHours
-        ? t("reviewSlaStatus")
-        : t("statusUnavailable", { defaultValue: "Unavailable" }),
+      statusText: reviewSlaHours ? t("reviewSlaStatus") : t("statusUnavailable"),
       statusVariant: reviewSlaHours ? "ok" : "attention",
       detail: reviewSlaHours
         ? t("reviewSlaDetail", {
@@ -55,7 +51,7 @@ export function SystemStatusPanel({
             reports: reviewSlaHours.reports,
             sharing: reviewSlaHours.sharing,
           })
-        : t("statusNotConfigured", { defaultValue: "Not configured" }),
+        : t("statusNotConfigured"),
       href: "/settings/methodology",
       manageLabel: t("manage"),
     },
@@ -64,12 +60,9 @@ export function SystemStatusPanel({
       icon: FileText,
       iconColor: "text-emerald-500",
       title: t("consentInstruments"),
-      statusText:
-        consentVersion ?? t("statusUnavailable", { defaultValue: "Unavailable" }),
+      statusText: consentVersion ?? t("statusUnavailable"),
       statusVariant: consentVersion ? "ok" : "attention",
-      detail: consentVersion
-        ? t("consentDetail")
-        : t("statusNotConfigured", { defaultValue: "Not configured" }),
+      detail: consentVersion ? t("consentDetail") : t("statusNotConfigured"),
       href: "/settings/organization",
       manageLabel: t("manage"),
     },

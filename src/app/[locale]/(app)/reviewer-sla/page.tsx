@@ -44,17 +44,16 @@ const STATUS_DOT_CLASS: Record<SlaAlertStatus, string> = {
   breached: "bg-destructive",
 };
 
-// Links straight to the Need detail page rather than the separate Survey
-// Builder Review page — one destination for the Approver to Override the
-// domain, curate questions, and Approve & Publish, instead of two different
-// screens. Same destination works for a Research Officer's own resolved
-// alerts (survey_approved/survey_rejected) — the Need workspace page shows
-// the Survey's current state either way. Report alerts have no Need/Study
-// concept to link through (a Report can be org-wide) — those go straight
-// to the Report detail page instead.
+// Survey-related alerts (survey_approval, survey_approved, survey_rejected)
+// link straight to the Survey Builder page for that Need — the Approver acts
+// there (Override domain, curate questions, Approve & Publish/Reject), and a
+// Research Officer's own resolved alerts land on the same page to see the
+// current state/feedback. Report alerts have no Need/Study concept to link
+// through (a Report can be org-wide) — those go straight to the Report
+// detail page instead.
 function alertHref(alert: SlaAlert): string {
   if (alert.type.startsWith("report_")) return `/reports/${alert.reportId}`;
-  return `/studies/${alert.studyId}/needs/${alert.needId}`;
+  return `/survey-builder/${alert.needId}`;
 }
 
 function formatDate(iso: string): string {

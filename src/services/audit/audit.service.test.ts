@@ -149,7 +149,6 @@ describe("auditService", () => {
       }),
     ).toThrow();
   });
-
   describe("downloadCsv()", () => {
     let createObjectURL: ReturnType<typeof vi.fn>;
     let revokeObjectURL: ReturnType<typeof vi.fn>;

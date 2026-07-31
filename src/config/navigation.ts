@@ -7,6 +7,7 @@ import {
   ClipboardEdit,
   ClipboardList,
   Gauge,
+  Globe2,
   LayoutDashboard,
   // ListChecks,
   ListTree,
@@ -79,6 +80,17 @@ export const appNav: NavItem[] = [
     href: "/reports",
     icon: BarChart3,
     module: "reportsDashboards",
+  },
+  // No `module` — the NCNP Compiled Report page gates itself on
+  // `role.crossEntity` only (see NcnpReportService.assertCrossEntity), not
+  // a reportsDashboards permission, so the NCNP User role (which holds no
+  // module permissions at all) can still reach it directly without going
+  // through the RPT01-14 report list on /reports, which it has no access to.
+  {
+    labelKey: "ncnpReport",
+    href: "/system-admin/ncnp-report",
+    icon: Globe2,
+    scope: "crossEntity",
   },
   {
     labelKey: "archive",
@@ -204,6 +216,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "studies",
     "publicSurveys",
     "reports",
+    "ncnpReport",
     "archive",
     "reviewerSla",
     "audit",
@@ -216,7 +229,11 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "organizations",
     "priorityDashboard",
     "reports",
+    "ncnpReport",
     "sharing",
     "audit",
   ],
+  // National Council for NGO Partnerships — sees the NCNP Compiled Report
+  // only, nothing else (no module permissions on any other screen).
+  ncnp_user: ["dashboard", "ncnpReport"],
 };

@@ -1,79 +1,140 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiClient } from "@/services/api/client";
-import { endpoints } from "@/services/api/endpoints";
 import { reportsService } from "@/services/reports/reports.service";
 
-vi.mock("@/services/api/client", () => ({
-  apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), download: vi.fn() },
-}));
-
-describe("reportsService.download()", () => {
-  let createObjectURL: ReturnType<typeof vi.fn>;
-  let revokeObjectURL: ReturnType<typeof vi.fn>;
-  let clickSpy: ReturnType<typeof vi.spyOn>;
+/**
+ * download() bypasses apiClient entirely (binary response, not JSON) and
+ * triggers a real browser download — same shape as auditService.downloadCsv
+ * (see audit.service.test.ts), just keyed by report id + ExportFormat
+ * instead of date-range filters.
+ */
+describe("reportsService.download", () => {
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
 
   beforeEach(() => {
-    vi.mocked(apiClient.download).mockReset();
-    createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
-    revokeObjectURL = vi.fn();
-    vi.stubGlobal("URL", { ...URL, createObjectURL, revokeObjectURL });
-    clickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => {});
+    URL.createObjectURL = vi.fn(() => "blob:mock-url");
+    URL.revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
     vi.unstubAllGlobals();
-    clickSpy.mockRestore();
   });
 
-  it("goes through apiClient.download with the export path and a PDF default filename", async () => {
-    const blob = new Blob(["%PDF"], { type: "application/pdf" });
-    vi.mocked(apiClient.download).mockResolvedValue({ blob, filename: "report.pdf" });
-
-    await reportsService.download("report_1", "pdf");
-
-    expect(apiClient.download).toHaveBeenCalledWith(
-      endpoints.reports.export("report_1", "pdf"),
-      "report.pdf",
+  function mockFetchResponse({
+    ok = true,
+    status = 200,
+    statusText = "OK",
+    disposition,
+    body,
+  }: {
+    ok?: boolean;
+    status?: number;
+    statusText?: string;
+    disposition?: string;
+    body?: unknown;
+  } = {}) {
+    const headers = new Headers();
+    if (disposition) headers.set("content-disposition", disposition);
+    const blob = new Blob(["binary-content"], { type: "application/octet-stream" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok,
+        status,
+        statusText,
+        headers,
+        blob: vi.fn().mockResolvedValue(blob),
+        json: vi.fn().mockResolvedValue(body),
+      }),
     );
-    expect(createObjectURL).toHaveBeenCalledWith(blob);
+  }
+
+  /** Creates a real anchor (jsdom rejects `href`/`download` on a faked prototype) with `click` spied. */
+  function spyOnAnchorClick() {
+    const clickSpy = vi.fn();
+    const anchor = document.createElement("a");
+    anchor.click = clickSpy;
+    vi.spyOn(document, "createElement").mockReturnValueOnce(anchor);
+    return { anchor, clickSpy };
+  }
+
+  it("downloads a PDF export and triggers a browser save via an anchor click", async () => {
+    mockFetchResponse({ disposition: 'attachment; filename="village-report.pdf"' });
+    const { anchor, clickSpy } = spyOnAnchorClick();
+
+    await reportsService.download("report-1", "pdf");
+
+    const [calledUrl, calledInit] = vi.mocked(global.fetch).mock.calls[0];
+    const url = calledUrl as URL;
+    expect(url.pathname).toBe("/api/reports/report-1/export");
+    expect(url.searchParams.get("format")).toBe("pdf");
+    expect(calledInit).toEqual({ credentials: "include" });
+    expect(anchor.download).toBe("village-report.pdf");
     expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
   });
 
-  it("defaults to an .xlsx filename for the excel format", async () => {
-    vi.mocked(apiClient.download).mockResolvedValue({
-      blob: new Blob(),
-      filename: "report.xlsx",
+  it("downloads an Excel export using the excel format param", async () => {
+    mockFetchResponse({ disposition: 'attachment; filename="village-report.xlsx"' });
+    const { anchor, clickSpy } = spyOnAnchorClick();
+
+    await reportsService.download("report-1", "excel");
+
+    const [calledUrl] = vi.mocked(global.fetch).mock.calls[0];
+    expect((calledUrl as URL).searchParams.get("format")).toBe("excel");
+    expect(anchor.download).toBe("village-report.xlsx");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to a default 'report.pdf' filename when no content-disposition header is present", async () => {
+    mockFetchResponse({});
+    const { anchor } = spyOnAnchorClick();
+
+    await reportsService.download("report-1", "pdf");
+
+    expect(anchor.download).toBe("report.pdf");
+  });
+
+  it("falls back to a default 'report.xlsx' filename for excel when no content-disposition header is present", async () => {
+    mockFetchResponse({});
+    const { anchor } = spyOnAnchorClick();
+
+    await reportsService.download("report-1", "excel");
+
+    expect(anchor.download).toBe("report.xlsx");
+  });
+
+  it("throws with the server's parsed error message when the export request fails", async () => {
+    mockFetchResponse({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      body: { error: { message: "RPT08 doesn't support pdf export." } },
     });
 
-    await reportsService.download("report_1", "excel");
-
-    expect(apiClient.download).toHaveBeenCalledWith(
-      endpoints.reports.export("report_1", "excel"),
-      "report.xlsx",
+    await expect(reportsService.download("report-1", "pdf")).rejects.toThrow(
+      "RPT08 doesn't support pdf export.",
     );
   });
 
-  it("uses the filename apiClient.download resolves from Content-Disposition", async () => {
-    vi.mocked(apiClient.download).mockResolvedValue({
-      blob: new Blob(),
-      filename: "RPT01-village-a-2026.pdf",
-    });
-
-    await reportsService.download("report_1", "pdf");
-
-    const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement;
-    expect(anchor.download).toBe("RPT01-village-a-2026.pdf");
-  });
-
-  it("propagates a download failure instead of silently swallowing it", async () => {
-    vi.mocked(apiClient.download).mockRejectedValue(new Error("network error"));
-
-    await expect(reportsService.download("report_1", "pdf")).rejects.toThrow(
-      "network error",
+  it("falls back to the response status text when the error body can't be parsed as JSON", async () => {
+    const headers = new Headers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        headers,
+        json: vi.fn().mockRejectedValue(new Error("not json")),
+      }),
     );
-    expect(clickSpy).not.toHaveBeenCalled();
+
+    await expect(reportsService.download("report-1", "pdf")).rejects.toThrow(
+      "Internal Server Error",
+    );
   });
 });
