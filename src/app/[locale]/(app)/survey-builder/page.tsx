@@ -2,7 +2,7 @@
 
 import { FileQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DomainChips } from "@/components/common/domain-chips";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -10,6 +10,14 @@ import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -18,11 +26,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  SURVEY_BUILDER_PAGE_SIZE,
+  SURVEY_BUILDER_PAGE_SIZE_OPTIONS,
+} from "@/config/pagination";
 import { Link } from "@/i18n/navigation";
+import { domainsService } from "@/services/domains/domains.service";
+import type { Domain } from "@/services/domains/domains.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
+
+const ALL = "all";
 
 interface Row {
   need: Need;
@@ -44,6 +60,18 @@ export default function SurveyBuilderPage() {
   const tClassification = useTranslations("app.studies.classification");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [domainFilter, setDomainFilter] = useState<string>(ALL);
+  const [statusFilter, setStatusFilter] = useState<string>(ALL);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(SURVEY_BUILDER_PAGE_SIZE);
+
+  useEffect(() => {
+    domainsService
+      .list()
+      .then(setDomains)
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     studiesService
@@ -84,6 +112,25 @@ export default function SurveyBuilderPage() {
       });
   }, []);
 
+  const filtered = useMemo(() => {
+    return (rows ?? []).filter((row) => {
+      if (statusFilter !== ALL && row.survey.status.toUpperCase() !== statusFilter) {
+        return false;
+      }
+      if (domainFilter !== ALL) {
+        const matchesDomain =
+          row.need.needDomains.some((d) => d.domain === domainFilter) ||
+          row.need.domain === domainFilter;
+        if (!matchesDomain) return false;
+      }
+      return true;
+    });
+  }, [rows, statusFilter, domainFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <PermissionGuard module="surveyBuilder" action="read">
       <PageContainer>
@@ -91,13 +138,59 @@ export default function SurveyBuilderPage() {
 
         <Card>
           <CardContent className="p-0">
+            <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
+              <Select
+                value={domainFilter}
+                onValueChange={(value) => {
+                  setDomainFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-56"
+                  aria-label={t("filterDomainLabel")}
+                >
+                  <SelectValue placeholder={t("filterDomainAll")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("filterDomainAll")}</SelectItem>
+                  {domains.map((domain) => (
+                    <SelectItem key={domain.id} value={domain.name}>
+                      {domain.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-48"
+                  aria-label={t("filterStatusLabel")}
+                >
+                  <SelectValue placeholder={t("filterStatusAll")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("filterStatusAll")}</SelectItem>
+                  <SelectItem value="DRAFT">{t("status.DRAFT")}</SelectItem>
+                  <SelectItem value="SUBMITTED">{t("status.SUBMITTED")}</SelectItem>
+                  <SelectItem value="PUBLISHED">{t("status.PUBLISHED")}</SelectItem>
+                  <SelectItem value="REJECTED">{t("status.REJECTED")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("studyColumn")}</TableHead>
-                  <TableHead>{t("needColumn")}</TableHead>
-                  <TableHead>{t("domainColumn")}</TableHead>
-                  <TableHead>{t("statusColumn")}</TableHead>
+                  <TableHead className="w-[18%]">{t("studyColumn")}</TableHead>
+                  <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
+                  <TableHead className="w-[38%]">{t("domainColumn")}</TableHead>
+                  <TableHead className="w-[12%]">{t("statusColumn")}</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
@@ -112,7 +205,7 @@ export default function SurveyBuilderPage() {
                       ))}
                     </TableRow>
                   ))
-                ) : rows.length === 0 ? (
+                ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={5}
@@ -127,7 +220,7 @@ export default function SurveyBuilderPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map(({ need, studyTitle, survey }) => (
+                  paged.map(({ need, studyTitle, survey }) => (
                     <TableRow key={need.id}>
                       <TableCell className="py-4 align-middle text-sm font-medium break-words whitespace-normal">
                         {studyTitle}
@@ -188,6 +281,41 @@ export default function SurveyBuilderPage() {
                 )}
               </TableBody>
             </Table>
+
+            {filtered.length > 0 ? (
+              <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-40"
+                    aria-label={t("pagination.rowsPerPage")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SURVEY_BUILDER_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {t("pagination.rowsPerPage")}: {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                  className="sm:w-auto"
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </PageContainer>

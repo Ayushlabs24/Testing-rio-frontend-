@@ -12,6 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -21,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { STUDIES_PAGE_SIZE } from "@/config/pagination";
+import { STUDIES_PAGE_SIZE, STUDIES_PAGE_SIZE_OPTIONS } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
 import { Link, useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
@@ -49,6 +56,7 @@ export default function StudiesPage() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(STUDIES_PAGE_SIZE);
 
   // No synchronous setState here: doing that inside the effect would trigger a
   // cascading render. Both flags are set from the settled promise instead.
@@ -100,12 +108,9 @@ export default function StudiesPage() {
     });
   }, [studies, query]);
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / STUDIES_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const paged = filtered.slice(
-    (currentPage - 1) * STUDIES_PAGE_SIZE,
-    currentPage * STUDIES_PAGE_SIZE,
-  );
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columnCount = 5;
 
@@ -230,7 +235,28 @@ export default function StudiesPage() {
             </Table>
 
             {filtered.length > 0 ? (
-              <div className="border-border border-t px-4 py-3">
+              <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-40"
+                    aria-label={t("pagination.rowsPerPage")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STUDIES_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {t("pagination.rowsPerPage")}: {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Pagination
                   page={currentPage}
                   pageCount={pageCount}
@@ -238,6 +264,7 @@ export default function StudiesPage() {
                   previousLabel={t("pagination.previous")}
                   nextLabel={t("pagination.next")}
                   pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                  className="sm:w-auto"
                 />
               </div>
             ) : null}

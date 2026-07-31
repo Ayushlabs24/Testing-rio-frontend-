@@ -7,7 +7,6 @@ import {
   ClipboardEdit,
   ClipboardList,
   Gauge,
-  Globe2,
   LayoutDashboard,
   // ListChecks,
   ListTree,
@@ -80,17 +79,6 @@ export const appNav: NavItem[] = [
     href: "/reports",
     icon: BarChart3,
     module: "reportsDashboards",
-  },
-  // No `module` — the NCNP Compiled Report page gates itself on
-  // `role.crossEntity` only (see NcnpReportService.assertCrossEntity), not
-  // a reportsDashboards permission, so the NCNP User role (which holds no
-  // module permissions at all) can still reach it directly without going
-  // through the RPT01-14 report list on /reports, which it has no access to.
-  {
-    labelKey: "ncnpReport",
-    href: "/system-admin/ncnp-report",
-    icon: Globe2,
-    scope: "crossEntity",
   },
   {
     labelKey: "archive",
@@ -216,7 +204,6 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "studies",
     "publicSurveys",
     "reports",
-    "ncnpReport",
     "archive",
     "reviewerSla",
     "audit",
@@ -229,11 +216,23 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "organizations",
     "priorityDashboard",
     "reports",
-    "ncnpReport",
     "sharing",
     "audit",
   ],
-  // National Council for NGO Partnerships — sees the NCNP Compiled Report
-  // only, nothing else (no module permissions on any other screen).
-  ncnp_user: ["dashboard", "ncnpReport"],
+  // National Council for NGO Partnerships — sees the NCNP Compiled Report,
+  // now folded into the unified /reports page (Category: Consolidated).
+  // NOTE: this role otherwise holds no module permissions at all (see
+  // role-matrix.ts) — it currently has no grant on `reportsDashboards`
+  // either, so it has no way to actually reach /reports post-consolidation.
+  // Flagged for the team to confirm: either grant read-only
+  // `reportsDashboards` (which would also expose RPT01-14 NGO reports to
+  // this role, not just the Consolidated ones), or add a role-specific
+  // filter on the reports page. Left as-is until that's decided.
+  ncnp_user: ["dashboard"],
+  // System Reviewer — reviews the NCNP Compiled Report (approve/reject with
+  // mandatory notes) via the unified /reports page (Category: Consolidated),
+  // plus read-only access to Needs, Surveys, and Documents per the client's
+  // scope. No dedicated NCNP nav item — reduces sidebar clutter per the
+  // client's explicit ask.
+  system_reviewer: ["dashboard", "studies", "surveyBuilder", "reports"],
 };
