@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/table";
 import { flattenReportContent } from "@/lib/report-content-flatten";
 import type { Report } from "@/services/reports/reports.types";
-import { BarChart, DonutChart, Gauge, RadarChart, StatTiles } from "./report-charts";
+import {
+  BarChart,
+  DonutChart,
+  Gauge,
+  GroupedBarChart,
+  RadarChart,
+  StatTiles,
+} from "./report-charts";
 
 type Dict = Record<string, unknown>;
 
@@ -179,9 +186,15 @@ function Section({
 export function ReportContentView({ report }: { report: Report }) {
   const t = useTranslations("app.reports.content");
   const c = report.content as Dict;
+  // KEEP IN SYNC with the identical predicate in the backend doc builder
+  // (Project-RIO-Backend/src/modules/reports/report-doc.ts#buildReportDoc).
+  // If the two drift, a report renders rich in one place and as a flat
+  // key/value dump in the other.
   const isCore =
     isObj(c.header) &&
     (isObj(c.severity) ||
+      isObj(c.coverage) ||
+      isObj(c.dashboard) ||
       isObjArray(c.domains) ||
       isObjArray(c.regions) ||
       isObjArray(c.topPriorities) ||
@@ -290,6 +303,125 @@ export function ReportContentView({ report }: { report: Report }) {
             ) : null}
           </div>
         </div>
+      ),
+    });
+  }
+
+  // Survey identity (RPT01/RPT15) — which survey, under which need. Without it
+  // a survey-scoped report is indistinguishable from its sibling.
+  if (isObj(c.survey)) {
+    const sv = c.survey as Dict;
+    sections.push({
+      title: t("survey"),
+      node: (
+        <KeyValues
+          obj={{
+            surveyTitle: sv.surveyTitle,
+            surveyStatus: sv.surveyStatus,
+            needStatement: sv.needStatement,
+            villageName: sv.villageName,
+            assessmentCycle: sv.assessmentCycle,
+            assessmentPeriod: sv.assessmentPeriod,
+            methodologyVersion: sv.methodologyVersion,
+          }}
+        />
+      ),
+    });
+  }
+
+  // Coverage tiles — how much data this report actually rests on.
+  if (isObj(c.coverage)) {
+    const cv = c.coverage as Dict;
+    const submitted = num(cv.responsesSubmitted) ?? 0;
+    const valid = num(cv.responsesValid) ?? 0;
+    sections.push({
+      title: t("coverage"),
+      node: (
+        <StatTiles
+          items={[
+            {
+              label: t("cov.needs"),
+              value: scalar(cv.needsInStudy),
+              sub: `${scalar(cv.needsCoveredByThisSurvey)} ${t("cov.coveredHere")}`,
+            },
+            { label: t("cov.surveys"), value: scalar(cv.surveysInStudy) },
+            {
+              label: t("cov.villages"),
+              value: scalar(cv.villagesCovered),
+              sub: `${scalar(cv.governoratesCovered)} ${t("cov.governorates")}`,
+            },
+            {
+              label: t("cov.questions"),
+              value: scalar(cv.surveyQuestionsTotal),
+              sub: `${scalar(cv.surveyQuestionsFromBank)} / ${scalar(cv.surveyQuestionsCustom)} ${t("cov.bankCustom")}`,
+            },
+            {
+              label: t("cov.links"),
+              value: scalar(cv.publicSurveyLinks),
+              sub: `${scalar(cv.activeSurveyLinks)} ${t("cov.active")}`,
+            },
+            {
+              label: t("cov.submitted"),
+              value: scalar(cv.responsesSubmitted),
+              sub: scalar(cv.assessmentPeriod),
+            },
+            {
+              label: t("cov.valid"),
+              value: scalar(cv.responsesValid),
+              sub: `${submitted > 0 ? Math.round((valid / submitted) * 100) : 0}% ${t("cov.ofSubmitted")}`,
+            },
+            {
+              label: t("cov.excluded"),
+              value: scalar(cv.responsesExcluded),
+              sub: `${scalar(cv.dontKnowRatePct)}% ${t("cov.dontKnow")}`,
+            },
+            {
+              label: t("cov.documents"),
+              value: scalar(cv.evidenceFilesTotal),
+              sub: `${scalar(cv.evidenceIncludedInReport)} ${t("cov.included")}`,
+            },
+            { label: t("cov.domainsScored"), value: scalar(cv.domainsScored) },
+            { label: t("cov.kpisScored"), value: scalar(cv.kpisScored) },
+            {
+              label: t("cov.flagged"),
+              value: String(
+                (num(cv.duplicateResponses) ?? 0) + (num(cv.lowConfidenceResponses) ?? 0),
+              ),
+              sub: `${scalar(cv.duplicateResponses)} / ${scalar(cv.lowConfidenceResponses)} ${t("cov.dupLowConf")}`,
+            },
+          ]}
+        />
+      ),
+    });
+  }
+
+  // Organisation portfolio (RPT15) — volumes only, never performance.
+  if (isObj(c.portfolio)) {
+    const p = c.portfolio as Dict;
+    sections.push({
+      title: t("portfolio"),
+      node: (
+        <StatTiles
+          items={[
+            { label: t("port.studies"), value: scalar(p.studiesTotal) },
+            { label: t("port.needs"), value: scalar(p.needsTotal) },
+            { label: t("port.surveys"), value: scalar(p.surveysTotal) },
+            { label: t("port.links"), value: scalar(p.publicLinksTotal) },
+            {
+              label: t("port.responses"),
+              value: scalar(p.responsesTotal),
+              sub: `${t("port.thisSurvey")} ${scalar(p.thisSurveyShareOfResponsesPct)}%`,
+            },
+            { label: t("port.documents"), value: scalar(p.evidenceFilesTotal) },
+            { label: t("port.reports"), value: scalar(p.reportsTotal) },
+            { label: t("port.sharing"), value: scalar(p.sharingRequestsTotal) },
+            {
+              label: t("port.villages"),
+              value: scalar(p.villagesCovered),
+              sub: `${scalar(p.governoratesCovered)} ${t("cov.governorates")}`,
+            },
+          ]}
+        />
       ),
     });
   }
@@ -410,6 +542,123 @@ export function ReportContentView({ report }: { report: Report }) {
               <p className="text-foreground">{scalar(priority.overrideReason)}</p>
             </div>
           ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // Data-collection funnel + questionnaire weighting, side by side.
+  if (isObjArray(c.responseFunnel) || isObjArray(c.questionCoverage)) {
+    const funnel = isObjArray(c.responseFunnel)
+      ? toBars(c.responseFunnel, "stage", "count")
+      : null;
+    const qcov = isObjArray(c.questionCoverage)
+      ? toBars(c.questionCoverage, "domain", "count")
+      : null;
+    sections.push({
+      title: t("dataCollection"),
+      node: (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {funnel ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">{t("funnel")}</p>
+              <BarChart bars={funnel} max={Math.max(1, ...funnel.map((b) => b.value))} />
+            </div>
+          ) : null}
+          {qcov ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("questionsPerDomain")}
+              </p>
+              <BarChart bars={qcov} max={Math.max(1, ...qcov.map((b) => b.value))} />
+            </div>
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // ── RPT15's dashboard half ──
+  if (isObj(c.dashboard)) {
+    const d = c.dashboard as Dict;
+    const kpis = isObj(d.kpis) ? d.kpis : null;
+    const slaPct = kpis ? num(kpis.slaCompliancePct) : null;
+    const dist = isObjArray(d.scoringDistribution)
+      ? toBars(d.scoringDistribution, "band", "count")
+      : null;
+
+    sections.push({
+      title: t("orgDashboard"),
+      node: (
+        <div className="space-y-4">
+          {/* The two halves were captured at different moments and must never
+              read as simultaneous. */}
+          <p className="text-muted-foreground text-xs">
+            {t("dashboardCapturedAt")}: {scalar(d.capturedAt)}
+          </p>
+          <div className="flex flex-wrap items-start gap-6">
+            {slaPct !== null ? (
+              <Gauge value={slaPct} max={100} label={t("slaCompliance")} sub="%" />
+            ) : null}
+            {kpis ? (
+              <div className="min-w-56 flex-1">
+                <KeyValues obj={kpis} />
+              </div>
+            ) : null}
+          </div>
+          {dist ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("orgScoringDistribution")}
+              </p>
+              <BarChart bars={dist} max={Math.max(1, ...dist.map((b) => b.value))} />
+            </div>
+          ) : null}
+          {isObjArray(d.topPriorities) ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("orgTopPriorities")}
+              </p>
+              <DataTable rows={d.topPriorities} />
+            </div>
+          ) : null}
+          {Array.isArray(d.anomalies) && d.anomalies.length > 0 ? (
+            <ul className="text-foreground list-disc space-y-1 pl-5 text-sm">
+              {d.anomalies.map((a, i) => (
+                <li key={i}>{scalar(a)}</li>
+              ))}
+            </ul>
+          ) : null}
+          {isObjArray(d.reviewerNotes) ? <DataTable rows={d.reviewerNotes} /> : null}
+        </div>
+      ),
+    });
+  }
+
+  // The reconciliation band — paired bars, then the exact figures beneath.
+  if (isObjArray(c.comparison)) {
+    const rows = c.comparison;
+    sections.push({
+      title: t("comparison"),
+      node: (
+        <div className="space-y-4">
+          <GroupedBarChart
+            groups={rows.map((r) => scalar(r.metric))}
+            max={100}
+            series={[
+              {
+                name: t("thisSurvey"),
+                values: rows.map((r) => num(r.surveyValue) ?? 0),
+                color: "var(--chart-1)",
+              },
+              {
+                name: t("organisation"),
+                values: rows.map((r) => num(r.orgAverage) ?? 0),
+                color: "var(--chart-2)",
+              },
+            ]}
+          />
+          <DataTable rows={rows} />
         </div>
       ),
     });

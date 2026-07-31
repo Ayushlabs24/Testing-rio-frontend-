@@ -8,16 +8,84 @@
 export function StatTiles({
   items,
 }: {
-  items: Array<{ label: string; value: string | number }>;
+  // `sub` is a qualifier under the label ("38 of 42 valid", "2 active") — the
+  // context that stops a bare count being read out of proportion.
+  items: Array<{ label: string; value: string | number; sub?: string }>;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {items.map((it) => (
-        <div key={it.label} className="border-border bg-muted/30 rounded-lg border p-3">
+      {/* Label alone is not a safe key — two domains can legitimately share a
+          name (e.g. duplicate "Social Development" rollups), which React
+          reports as a duplicate-key error and can drop a tile. */}
+      {items.map((it, i) => (
+        <div
+          key={`${it.label}-${i}`}
+          className="border-border bg-muted/30 rounded-lg border p-3"
+        >
           <p className="text-foreground text-xl font-semibold tabular-nums">{it.value}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{it.label}</p>
+          {it.sub ? (
+            <p className="text-muted-foreground/80 mt-0.5 text-[11px]">{it.sub}</p>
+          ) : null}
         </div>
       ))}
+    </div>
+  );
+}
+
+// Paired bars for one set of categories across two series — the gap between the
+// two bars is the point, so they share a scale and sit adjacent rather than in
+// two separate charts the reader has to mentally align.
+export function GroupedBarChart({
+  groups,
+  series,
+  max,
+}: {
+  groups: string[];
+  series: Array<{ name: string; values: number[]; color: string }>;
+  max: number;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-3">
+        {groups.map((group, gi) => (
+          <div key={`${group}-${gi}`} className="space-y-1">
+            <p className="text-muted-foreground truncate text-xs" title={group}>
+              {group}
+            </p>
+            {series.map((s) => (
+              <div
+                key={s.name}
+                className="grid grid-cols-[1fr_2.5rem] items-center gap-3 text-sm"
+              >
+                <div className="bg-muted h-2.5 overflow-hidden rounded-full">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${max > 0 ? Math.min(100, ((s.values[gi] ?? 0) / max) * 100) : 0}%`,
+                      background: s.color,
+                    }}
+                  />
+                </div>
+                <span className="text-foreground text-right font-medium tabular-nums">
+                  {Math.round(s.values[gi] ?? 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        {series.map((s) => (
+          <span
+            key={s.name}
+            className="text-muted-foreground flex items-center gap-1.5 text-xs"
+          >
+            <span className="size-2.5 rounded-sm" style={{ background: s.color }} />
+            {s.name}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -31,9 +99,10 @@ export function BarChart({
 }) {
   return (
     <div className="space-y-2.5">
-      {bars.map((b) => (
+      {/* Index-suffixed key — bar labels repeat (duplicate domain names). */}
+      {bars.map((b, i) => (
         <div
-          key={b.label}
+          key={`${b.label}-${i}`}
           className="grid grid-cols-[10rem_1fr_2.5rem] items-center gap-3 text-sm"
         >
           <span className="text-muted-foreground truncate" title={b.label}>
@@ -183,7 +252,7 @@ export function RadarChart({
           const cos = Math.cos(angle(i));
           const anchor = Math.abs(cos) < 0.3 ? "middle" : cos > 0 ? "start" : "end";
           return (
-            <g key={a}>
+            <g key={`${a}-${i}`}>
               <line
                 x1={cx}
                 y1={cy}
@@ -257,7 +326,7 @@ export function DonutChart({
     const offset = (priorValue / total) * circ;
     return (
       <circle
-        key={d.label}
+        key={`${d.label}-${i}`}
         cx={cx}
         cy={cy}
         r={r}
@@ -312,7 +381,7 @@ export function DonutChart({
         {data.map((d, i) => {
           const pct = Math.round((d.value / total) * 100);
           return (
-            <li key={d.label} className="flex items-center gap-2">
+            <li key={`${d.label}-${i}`} className="flex items-center gap-2">
               <span
                 className="size-2.5 shrink-0 rounded-full"
                 style={{ background: colorVars[i % colorVars.length] }}

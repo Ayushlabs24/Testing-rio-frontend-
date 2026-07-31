@@ -70,6 +70,9 @@ export const endpoints = {
     // Org-wide, not needId-scoped — a reusable custom question can have
     // come from any survey (see SurveysController.listReusableCustomQuestions).
     reusableCustomQuestions: "/custom-questions",
+    // Filterable survey list (?studyId=&status=) — feeds the survey picker on
+    // the Generate Report dialog for the survey-scoped types (RPT01/RPT15).
+    list: "/surveys",
   },
   roles: {
     list: "/roles",
