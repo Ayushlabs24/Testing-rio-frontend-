@@ -341,21 +341,28 @@ export function NcnpReportContentView({
 
         <section className="mb-8">
           <SectionLabel num="02" title={t("surveyStatusPlatformGrowthTitle")} />
-          <p className="text-muted-foreground mb-4 text-xs">
-            {t("publicLinkStatusCaption")}
-          </p>
           <StatusDonut
             centerLabel={t("surveysCenterLabel")}
             segments={[
               {
-                label: t("surveyStatusOpen"),
-                count: publicLinkStatus.open,
+                label: t("surveyDraft"),
+                count: surveyAnalytics.statusPlatformWide.draft,
+                colorVar: "--muted-foreground",
+              },
+              {
+                label: t("surveySubmitted"),
+                count: surveyAnalytics.statusPlatformWide.submitted,
                 colorVar: "--warning",
               },
               {
-                label: t("surveyStatusClosed"),
-                count: publicLinkStatus.closed,
-                colorVar: "--chart-4",
+                label: t("surveyPublished"),
+                count: surveyAnalytics.statusPlatformWide.published,
+                colorVar: "--success",
+              },
+              {
+                label: t("surveyRejected"),
+                count: surveyAnalytics.statusPlatformWide.rejected,
+                colorVar: "--destructive",
               },
             ]}
           />
