@@ -17,16 +17,19 @@ export const REPORT_TYPES = [
 ] as const;
 export type ReportTypeCode = (typeof REPORT_TYPES)[number];
 
-// Report types offered in the "Generate Report" dialog — the ones this feature
-// builds real reports for (the client's expected set). Placeholder/unrequested
-// types (RPT03/05/07–12) stay hidden from generation. Ordered survey-scoped
-// first (the two that ask "which survey?"), then the study-scoped aggregates.
+// Report types offered in the "Generate Report" dialog.
+//
+// Only the survey-scoped reports and the Executive Summary are offered. The
+// Village (RPT14), Domain-wise Needs (RPT04) and Region / Governorate (RPT06)
+// reports are withheld from generation: they are study-scoped aggregates whose
+// content contract has not been reworked to the Unified Narrative structure, so
+// offering them alongside a conformant RPT01 would put two different report
+// standards in front of the same reader. Their generators, contracts and
+// renderers are untouched — already-generated reports still open and export.
+// Re-listing a code here is all that is needed to bring one back.
 export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT01", // Individual Survey Report (single survey)
   "RPT15", // Survey & Dashboard Report
-  "RPT14", // Village Report
-  "RPT04", // Sector (Domain-wise Needs)
-  "RPT06", // Region / Governorate
   "RPT13", // Executive Summary
 ];
 

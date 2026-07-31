@@ -905,7 +905,6 @@
         "ranked": "Severity by Domain",
         "severityLabel": "Severity",
         "performanceLabel": "Performance",
-        "trendNotes": "Domain Trend Notes",
         "override": "Critical Domain Override",
         "analysis": "Analysis & Recommendations",
         "dataQualityNote": "Data Quality Note",
@@ -925,7 +924,6 @@
         "sharingSummary": "Sharing Summary",
         "sharingRequests": "Sharing Requests",
         "regions": "Regions",
-        "evidence": "Qualitative Evidence",
         "aiSummary": "AI Summary",
         "recommendations": "Recommendations",
         "anomalies": "Anomalies Flagged",
@@ -971,7 +969,9 @@
           "domainsScored": "Domains scored",
           "kpisScored": "KPIs scored",
           "flagged": "Flagged responses",
-          "dupLowConf": "dup / low-conf"
+          "dupLowConf": "dup / low-conf",
+          "asked": "asked",
+          "notMeasurable": "not measurable"
         },
         "port": {
           "studies": "Studies",
@@ -984,6 +984,60 @@
           "reports": "Reports",
           "sharing": "Sharing requests",
           "villages": "Villages covered"
+        },
+        "reportBasis": "Report Basis",
+        "geographicScope": "Geographic Scope",
+        "summaryOfNeeds": "Summary of Needs",
+        "needsByDomain": "Needs by Domain, Sub-domain and Indicator",
+        "patternAnalysis": "Pattern & Intersection Analysis",
+        "priorityNeeds": "Priority Needs",
+        "dataQualityNotes": "Data Quality Notes",
+        "needRecords": "All Need Records",
+        "badge": {
+          "surveyOnly": "SURVEY-ONLY",
+          "quantitative": "QUANTITATIVE"
+        },
+        "basis": {
+          "sourceBasis": "Derived from survey responses only — no document evidence",
+          "evidenceType": "Quantitative — every finding carries a measured severity score or an explicit reason it has none"
+        },
+        "es": {
+          "needsExtracted": "Needs extracted",
+          "measured": "measured",
+          "notMeasurable": "not measurable",
+          "quantitative": "Quantitative",
+          "qualitative": "Qualitative",
+          "domainsAssessed": "Domains assessed",
+          "of": "of",
+          "domainCoverage": "Domain coverage — all methodology domains",
+          "topCritical": "Top 3 critical needs",
+          "topHighest": "Top 3 highest-severity needs"
+        },
+        "hier": {
+          "severity": "Severity",
+          "measured": "indicators measured"
+        },
+        "pa": {
+          "intersections": "Intersections (equity)"
+        },
+        "pn": {
+          "notMeasured": "Not measured — excluded from the ranking"
+        },
+        "dq": {
+          "submitted": "Submitted",
+          "valid": "Valid",
+          "excluded": "Excluded",
+          "dontKnow": "Don't-know rate",
+          "confidence": "Confidence",
+          "sample": "sample",
+          "notMeasured": "Not measured",
+          "answerStatus": "Answer status breakdown",
+          "notMeasuredList": "Indicators with no measurable response",
+          "domainsNotAssessed": "Domains not assessed",
+          "trend": "Trend"
+        },
+        "scale": {
+          "severity": "0-100 · higher = worse"
         }
       },
       "detail": {

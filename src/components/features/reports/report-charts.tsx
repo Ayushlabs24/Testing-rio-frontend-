@@ -131,15 +131,19 @@ export function Gauge({
   label,
   sub,
   color = "var(--chart-1)",
+  scaleNote,
 }: {
   value: number;
   max: number;
   label: string;
   sub?: string;
   color?: string;
+  /** States the scale the dial is on — a ring with a bare number in it does not
+   *  say whether 51 is good or bad, or out of what. */
+  scaleNote?: string;
 }) {
-  const size = 128;
-  const stroke = 12;
+  const size = 168;
+  const stroke = 15;
   const r = (size - stroke) / 2;
   const cx = size / 2;
   const cy = size / 2;
@@ -179,22 +183,25 @@ export function Gauge({
           x={cx}
           y={cy - 1}
           textAnchor="middle"
-          className="fill-foreground text-2xl font-bold"
+          className="fill-foreground text-3xl font-bold"
         >
           {Math.round(value)}
         </text>
         {sub ? (
           <text
             x={cx}
-            y={cy + 16}
+            y={cy + 20}
             textAnchor="middle"
-            className="fill-muted-foreground text-[10px]"
+            className="fill-muted-foreground text-xs font-semibold"
           >
             {sub}
           </text>
         ) : null}
       </svg>
-      <p className="text-muted-foreground mt-1.5 text-center text-xs">{label}</p>
+      <p className="text-foreground mt-1.5 text-center text-xs font-medium">{label}</p>
+      {scaleNote ? (
+        <p className="text-muted-foreground text-center text-[11px]">{scaleNote}</p>
+      ) : null}
     </div>
   );
 }
