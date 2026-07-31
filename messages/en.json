@@ -979,8 +979,7 @@
           "measured": "indicators measured"
         },
         "pa": {
-          "intersections": "Intersections (equity)",
-          "observed": "Observed, not asserted"
+          "intersections": "Intersections (equity)"
         },
         "pn": {
           "notMeasured": "Not measured — excluded from the ranking"
@@ -995,7 +994,8 @@
           "notMeasured": "Not measured",
           "answerStatus": "Answer status breakdown",
           "notMeasuredList": "Indicators with no measurable response",
-          "domainsNotAssessed": "Domains not assessed"
+          "domainsNotAssessed": "Domains not assessed",
+          "trend": "Trend"
         },
         "scale": {
           "severity": "0-100 · higher = worse"

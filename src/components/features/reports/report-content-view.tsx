@@ -412,6 +412,11 @@ export function ReportContentView({ report }: { report: Report }) {
     const cv = c.coverage as Dict;
     const submitted = num(cv.responsesSubmitted) ?? 0;
     const valid = num(cv.responsesValid) ?? 0;
+    // KEEP IN SYNC with coverageStats in the backend's report-doc.ts: a
+    // SURVEY-ONLY report drops the documents tile, which would otherwise
+    // contradict the Report Basis line above it.
+    const surveyOnly =
+      isObj(c.reportMeta) && (c.reportMeta as Dict).sourceBasis === "SURVEY_ONLY";
     sections.push({
       title: t("coverage"),
       node: (
@@ -453,11 +458,15 @@ export function ReportContentView({ report }: { report: Report }) {
               value: scalar(cv.responsesExcluded),
               sub: `${scalar(cv.dontKnowRatePct)}% ${t("cov.dontKnow")}`,
             },
-            {
-              label: t("cov.documents"),
-              value: scalar(cv.evidenceFilesTotal),
-              sub: `${scalar(cv.evidenceIncludedInReport)} ${t("cov.included")}`,
-            },
+            ...(surveyOnly
+              ? []
+              : [
+                  {
+                    label: t("cov.documents"),
+                    value: scalar(cv.evidenceFilesTotal),
+                    sub: `${scalar(cv.evidenceIncludedInReport)} ${t("cov.included")}`,
+                  },
+                ]),
             { label: t("cov.domainsScored"), value: scalar(cv.domainsScored) },
             {
               label: t("cov.kpisScored"),
@@ -710,22 +719,21 @@ export function ReportContentView({ report }: { report: Report }) {
     });
   }
 
-  // 4 — Pattern & Intersection Analysis. On thin data the honest version is a
-  // stated suppression with its threshold, not an invented pattern.
+  // 4 — Pattern & Intersection Analysis. On thin data the honest version is the
+  // real observations plus the sample they rest on — never an invented pattern,
+  // but never an empty section either. The caveat qualifies the tables below it.
   if (isObj(c.patternAnalysis)) {
     const pa = c.patternAnalysis as Dict;
     sections.push({
       title: t("patternAnalysis"),
       node: (
         <div className="space-y-4">
-          {pa.status === "insufficient_data" ? (
+          {pa.evidenceNote ? (
             <p className="text-foreground text-sm leading-relaxed">
-              {scalar(pa.suppressionReason)}
+              {scalar(pa.evidenceNote)}
             </p>
           ) : null}
-          {isObjArray(pa.crossDomainPatterns) ? (
-            <DataTable rows={pa.crossDomainPatterns} />
-          ) : null}
+          {isObjArray(pa.patterns) ? <DataTable rows={pa.patterns} /> : null}
           {isObjArray(pa.intersections) ? (
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">
@@ -734,19 +742,9 @@ export function ReportContentView({ report }: { report: Report }) {
               <DataTable rows={pa.intersections} />
             </div>
           ) : null}
-          {Array.isArray(pa.observedBelowThreshold) &&
-          pa.observedBelowThreshold.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-medium">
-                {t("pa.observed")}
-              </p>
-              <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
-                {pa.observedBelowThreshold.map((o, i) => (
-                  <li key={i}>{scalar(o)}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+          {/* observedIntersections and gaps stay in the payload but are not
+              rendered — matching report-doc.ts, so the PDF, the DOCX and this
+              view cannot show different sections for the same report. */}
         </div>
       ),
     });
@@ -1081,6 +1079,14 @@ export function ReportContentView({ report }: { report: Report }) {
           />
           {typeof dq.narrative === "string" ? (
             <p className="text-foreground text-sm leading-relaxed">{dq.narrative}</p>
+          ) : null}
+          {/* Survey-level cycle-over-cycle note. KEEP IN SYNC with
+              dataQualitySections in the backend's report-doc.ts. */}
+          {typeof dq.trendNote === "string" && dq.trendNote ? (
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium">{t("dq.trend")}</p>
+              <p className="text-foreground text-sm leading-relaxed">{dq.trendNote}</p>
+            </div>
           ) : null}
           {isObjArray(dq.exclusionBreakdown) ? (
             <div className="space-y-2">
