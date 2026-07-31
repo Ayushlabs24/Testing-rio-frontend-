@@ -70,6 +70,20 @@ export interface ReusableCustomQuestion {
  * machine and who's allowed to make each transition. */
 export type SurveyStatus = "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED";
 
+/** One row of GET /surveys — the shape the survey picker needs. */
+export interface SurveyListItem {
+  id: string;
+  title: string;
+  needId: string;
+  studyId: string | null;
+  studyTitle: string | null;
+  status: SurveyStatus | string;
+  /** Responses collected for this survey's Need — 0 means nothing to report on. */
+  responseCount: number;
+  publishedAt: string | null;
+  createdAt: string | null;
+}
+
 export interface Survey {
   id: string;
   needId: string;
@@ -172,6 +186,15 @@ export type AdditionalQuestionAnswerType =
   (typeof ADDITIONAL_QUESTION_ANSWER_TYPES)[number];
 
 export const surveysService = {
+  /** Surveys under a study — the picker for survey-scoped reports (RPT01/RPT15).
+   *  Returns the list ordered newest-first, exactly as the API sends it. */
+  async listByStudy(studyId: string): Promise<SurveyListItem[]> {
+    const res = await apiClient.get<{ items: SurveyListItem[] }>(endpoints.surveys.list, {
+      params: { studyId },
+    });
+    return res.items ?? [];
+  },
+
   async getDomainOptions(): Promise<QuestionOption[]> {
     return apiClient.get<QuestionOption[]>(endpoints.questionBank.domainOptions);
   },
