@@ -45,10 +45,23 @@ export interface VerifyOtpPayload {
 
 export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
 
+/** Matches the Prisma AgeBracket enum's identifiers exactly (see
+ * schema.prisma) — never exact age/DOB. "prefer_not_to_say" is the
+ * respondent's opt-out; unlike Gender, this field is mandatory. */
+export type AgeBracket =
+  | "age_15_24"
+  | "age_25_34"
+  | "age_35_44"
+  | "age_45_54"
+  | "age_55_64"
+  | "age_65_plus"
+  | "prefer_not_to_say";
+
 export interface SubmitResponsePayload {
   challengeId: string;
   contactName?: string;
   gender?: Gender;
+  ageBracket: AgeBracket;
   answers: Record<string, string>;
 }
 

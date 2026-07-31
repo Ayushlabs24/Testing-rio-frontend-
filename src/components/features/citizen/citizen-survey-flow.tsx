@@ -18,7 +18,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { citizenService } from "@/services/citizen/citizen.service";
-import type { Gender, ResolvedSurvey } from "@/services/citizen/citizen.types";
+import type {
+  AgeBracket,
+  Gender,
+  ResolvedSurvey,
+} from "@/services/citizen/citizen.types";
 import { ApiError } from "@/services/api/types";
 import {
   Select,
@@ -140,6 +144,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   const contact = email.trim();
   const mobile = `${dialCode}${mobileNumber.replace(/\D/g, "")}`;
   const [gender, setGender] = useState<Gender | "">("");
+  const [ageBracket, setAgeBracket] = useState<AgeBracket | "">("");
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   // Set only when NEITHER channel could be delivered (no mailer/SMS
@@ -179,8 +184,25 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   // their contact details — before any OTP challenge (or any other record)
   // is created. Nothing is persisted until the final Submit.
   async function submitDetails() {
-    // An unticked box is a validation failure to name, not a silently
-    // disabled button — mirrors the admin consent gate.
+    // Every mandatory field here is a named validation failure, not a
+    // silently disabled button — mirrors the existing consent gate below,
+    // now extended to Name/Mobile/Email/Age Bracket.
+    if (!name.trim()) {
+      setError(t("details.nameRequired"));
+      return;
+    }
+    if (!mobileNumber.trim()) {
+      setError(t("details.mobileRequired"));
+      return;
+    }
+    if (!email.trim()) {
+      setError(t("details.emailRequired"));
+      return;
+    }
+    if (!ageBracket) {
+      setError(t("details.ageBracketRequired"));
+      return;
+    }
     if (!consented) {
       setError(t("details.consentRequired"));
       return;
@@ -257,7 +279,10 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   }
 
   async function submitSurvey() {
-    if (!challengeId) return;
+    // ageBracket is mandatory (see the details-phase Submit button's
+    // disabled condition) — this guard is just for type-safety here, since
+    // SubmitResponsePayload.ageBracket isn't optional.
+    if (!challengeId || !ageBracket) return;
     setSubmitting(true);
     setTerminal("submitting");
     setError(null);
@@ -266,6 +291,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         challengeId,
         contactName: name || undefined,
         gender: gender || undefined,
+        ageBracket,
         answers,
       });
       setTerminal("submitted");
@@ -486,6 +512,30 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="citizen-age-bracket">{t("details.ageBracketLabel")}</Label>
+            <Select
+              value={ageBracket}
+              onValueChange={(value) => setAgeBracket(value as AgeBracket)}
+            >
+              <SelectTrigger id="citizen-age-bracket" className="w-full">
+                <SelectValue placeholder={t("details.ageBracketPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="age_15_24">{t("details.ageBracket15to24")}</SelectItem>
+                <SelectItem value="age_25_34">{t("details.ageBracket25to34")}</SelectItem>
+                <SelectItem value="age_35_44">{t("details.ageBracket35to44")}</SelectItem>
+                <SelectItem value="age_45_54">{t("details.ageBracket45to54")}</SelectItem>
+                <SelectItem value="age_55_64">{t("details.ageBracket55to64")}</SelectItem>
+                <SelectItem value="age_65_plus">
+                  {t("details.ageBracket65plus")}
+                </SelectItem>
+                <SelectItem value="prefer_not_to_say">
+                  {t("details.ageBracketPreferNotToSay")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="border-border space-y-3 border-t pt-5">
             <div className="space-y-1.5">
@@ -532,7 +582,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         <Button
           className="mt-6 w-full"
           size="lg"
-          disabled={submitting || !name || !mobileNumber.trim() || !email.trim()}
+          disabled={submitting}
           onClick={submitDetails}
         >
           {submitting ? t("details.submitting") : t("details.submit")}

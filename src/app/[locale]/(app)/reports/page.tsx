@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Eye, Plus } from "lucide-react";
+import { BarChart3, Eye, Globe2, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
@@ -42,6 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
@@ -304,6 +305,13 @@ function GenerateReportDialog({
 export default function ReportsPage() {
   const t = useTranslations("app.reports");
   const canCreate = usePermission("reportsDashboards", "create");
+  const { session } = useAuth();
+  // NCNP Consolidated Report is a live, cross-org view with no per-org orgId
+  // to persist against — it's not a `Report` row, so it can't live inside the
+  // create dialog (system_admin/center_supervisor hold reportsDashboards
+  // read+export only, no create, so that dialog is invisible to them anyway).
+  // This button navigates straight to the live view instead.
+  const canViewNcnp = session?.role.crossEntity ?? false;
 
   const [generateOpen, setGenerateOpen] = useState(false);
   const [reports, setReports] = useState<Report[] | null>(null);
@@ -348,12 +356,22 @@ export default function ReportsPage() {
           title={t("title")}
           description={t("description")}
           actions={
-            canCreate ? (
-              <Button onClick={() => setGenerateOpen(true)} className="gap-2">
-                <Plus className="size-4" />
-                {t("newReport")}
-              </Button>
-            ) : null
+            <div className="flex items-center gap-2">
+              {canViewNcnp ? (
+                <Button asChild variant="outline" className="gap-2">
+                  <Link href="/system-admin/ncnp-report">
+                    <Globe2 className="size-4" />
+                    {t("ncnpReportButton")}
+                  </Link>
+                </Button>
+              ) : null}
+              {canCreate ? (
+                <Button onClick={() => setGenerateOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  {t("newReport")}
+                </Button>
+              ) : null}
+            </div>
           }
         />
 

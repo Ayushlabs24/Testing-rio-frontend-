@@ -25,7 +25,8 @@ export interface Role {
     | "system_admin"
     | "read_only_viewer"
     | "center_supervisor"
-    | "citizen_guest";
+    | "citizen_guest"
+    | "ncnp_user";
   name: string;
   description: string;
   /** Entity-scoped roles see only their own organization's data; these two don't. */
@@ -340,5 +341,15 @@ export const roles: Role[] = [
     permissions: PERMISSION_MODULES.map((module) =>
       module === "citizenChannel" ? perm(module, { create: true }) : perm(module),
     ),
+  },
+  {
+    id: "role_ncnp_user",
+    key: "ncnp_user",
+    name: "NCNP User",
+    description:
+      "Views the national, kingdom-wide NCNP Compiled Report. No access to any other module.",
+    crossEntity: true,
+    enabled: true,
+    permissions: PERMISSION_MODULES.map((module) => perm(module)),
   },
 ];

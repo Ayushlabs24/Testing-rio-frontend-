@@ -70,6 +70,23 @@ export interface ReusableCustomQuestion {
  * machine and who's allowed to make each transition. */
 export type SurveyStatus = "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED";
 
+/** Matches the Prisma RejectionReasonCode enum's identifiers exactly (see
+ * schema.prisma). REJ_99 is "Other". `approverComments` (reviewer notes) is
+ * required for every code now; see the reject dialog's validation. */
+export type RejectionReasonCode =
+  "REJ_01" | "REJ_02" | "REJ_03" | "REJ_04" | "REJ_05" | "REJ_06" | "REJ_07" | "REJ_99";
+
+export const REJECTION_REASON_LABELS: Record<RejectionReasonCode, string> = {
+  REJ_01: "Incomplete survey design",
+  REJ_02: "Methodology non-compliance",
+  REJ_03: "Duplicate of an existing survey",
+  REJ_04: "Incorrect need or study linkage",
+  REJ_05: "Out-of-scope geography or target population",
+  REJ_06: "Data quality concerns",
+  REJ_07: "Missing required attachments or approvals",
+  REJ_99: "Other",
+};
+
 /** One row of GET /surveys — the shape the survey picker needs. */
 export interface SurveyListItem {
   id: string;
@@ -95,11 +112,26 @@ export interface Survey {
    * live reference: a later Methodology/Question Bank change never
    * retroactively changes what an already-published Survey shows here. */
   methodologyVersion: string | null;
+  /** Survey Design step, completed before Submit for Approval — all four
+   * null together until the Researcher saves this step (or on a survey
+   * created before this feature existed). Shown read-only to the Approver
+   * during review for context on who's being surveyed and how. */
+  targetGroup: string | null;
+  expectedSampleSize: number | null;
+  selectionApproach: string | null;
+  geographicCoverage: string | null;
   submittedAt: string | null;
-  /** The Approver's reason for the most recent rejection — only set while
-   * `status === "REJECTED"`; cleared the next time the survey is
-   * resubmitted, so it never lingers as stale feedback. */
+  /** The Approver's reviewer notes for the most recent decision — mandatory
+   * on both Approve & Publish and Reject. Set on REJECTED and on PUBLISHED
+   * now; cleared the next time a rejected survey is resubmitted (never
+   * cleared once PUBLISHED, since that's terminal). Null only for surveys
+   * approved/rejected before this requirement existed. */
   approverComments: string | null;
+  /** The Approver's structured rejection reason, alongside the free-text
+   * approverComments above — same lifecycle (only set while REJECTED,
+   * cleared on resubmit). Null for surveys rejected before this field
+   * existed. */
+  rejectionReasonCode: RejectionReasonCode | null;
   approvedAt: string | null;
   approvedBy: string | null;
   approvedByName: string | null;
@@ -219,14 +251,17 @@ export const surveysService = {
   },
 
   /** Custom questions previously added to some other survey for this exact
-   * Domain/Sub-domain — see ReusableCustomQuestion's own doc comment. */
+   * Domain/Sub-domain — see ReusableCustomQuestion's own doc comment. Called
+   * with no arguments for the allDomainsSelected case (AI couldn't classify)
+   * — every reusable custom question is in scope then, same "match all"
+   * convention as getQuestions([]) for the Question Bank tab. */
   async getReusableCustomQuestions(
-    domain: string,
-    subDomain: string,
+    domain?: string,
+    subDomain?: string,
   ): Promise<ReusableCustomQuestion[]> {
     return apiClient.get<ReusableCustomQuestion[]>(
       endpoints.surveys.reusableCustomQuestions,
-      { params: { domain, subDomain } },
+      { params: domain && subDomain ? { domain, subDomain } : {} },
     );
   },
 
@@ -263,6 +298,25 @@ export const surveysService = {
     });
   },
 
+  /** Researcher: the Sample Description step — one Save action for all four
+   * fields together, mandatory before submitForApproval. Same editable-only
+   * window as updateQuestions (DRAFT/REJECTED). Shown read-only to the
+   * Approver on the Survey object returned by every other endpoint here. */
+  async setSampleDescription(
+    surveyId: string,
+    input: {
+      targetGroup: string;
+      expectedSampleSize: number;
+      selectionApproach: string;
+      geographicCoverage: string;
+    },
+  ): Promise<Survey> {
+    return apiClient.patch<Survey>(
+      endpoints.surveys.setSampleDescription(surveyId),
+      input,
+    );
+  },
+
   /** Researcher: hands the current content to the Approver. Valid from
    * DRAFT (first submission) or REJECTED (resubmission). */
   async submitForApproval(surveyId: string): Promise<SurveyRecord> {
@@ -270,15 +324,27 @@ export const surveysService = {
   },
 
   /** Approver-only. Combines approve + publish — there's no intermediate
-   * "approved but not yet published" state. */
-  async approveAndPublish(surveyId: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId));
+   * "approved but not yet published" state. `comments` (reviewer notes) is
+   * mandatory — enforced both here (the approve dialog) and again on the
+   * backend. */
+  async approveAndPublish(surveyId: string, comments: string): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId), {
+      comments,
+    });
   },
 
-  /** Approver-only. `comments` is required — explains what needs to change
-   * before the Researcher resubmits. */
-  async rejectSurvey(surveyId: string, comments: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), { comments });
+  /** Approver-only. `reasonCode` and `comments` (reviewer notes) are both
+   * always required now, regardless of reasonCode — enforced both here (the
+   * reject dialog) and again on the backend. */
+  async rejectSurvey(
+    surveyId: string,
+    reasonCode: RejectionReasonCode,
+    comments: string,
+  ): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), {
+      reasonCode,
+      comments,
+    });
   },
 
   async getPublicSurvey(id: string): Promise<Survey> {

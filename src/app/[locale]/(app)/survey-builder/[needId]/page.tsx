@@ -31,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -51,8 +52,10 @@ import type { MethodologyVersionOption } from "@/services/methodology-config/met
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import {
+  REJECTION_REASON_LABELS,
   surveysService,
   type Question,
+  type RejectionReasonCode,
   type ReusableCustomQuestion,
   type SaveSurveyQuestionInput,
   type Survey,
@@ -114,6 +117,15 @@ export default function SurveyBuilderDetailPage({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // A fixed-position toast, not an inline banner buried below the page
+  // header — Save Draft (and every other action that sets `message`) needs
+  // to be noticeable without scrolling, and auto-dismisses on its own.
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [message]);
   // Approve/Reject a survey the Researcher already explicitly submitted
   // (Survey.status === SUBMITTED) — a plain decision on exactly what was
   // submitted, no editing (the backend's assertEditable blocks
@@ -132,6 +144,19 @@ export default function SurveyBuilderDetailPage({
   const [rejecting, setRejecting] = useState(false);
   const [comments, setComments] = useState("");
   const [commentsError, setCommentsError] = useState<string | null>(null);
+  // Only meaningful for the surveysService.rejectSurvey branch (SUBMITTED) —
+  // the aiReviewService.reject branch has no reason-code concept of its own.
+  const [reasonCode, setReasonCode] = useState<RejectionReasonCode | "">("");
+  const [reasonCodeError, setReasonCodeError] = useState<string | null>(null);
+
+  // Approve & Publish — reviewer notes are mandatory here too (client
+  // requirement), so this now goes through its own confirmation dialog
+  // instead of firing straight off the button, same "open dialog, validate,
+  // confirm" shape as reject above. Loading state is still whichever of
+  // submitting/approvingSubmitted already tracks the DRAFT vs SUBMITTED path.
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [approveComments, setApproveComments] = useState("");
+  const [approveCommentsError, setApproveCommentsError] = useState<string | null>(null);
 
   // TEMPORARY — see MethodologyVersionOption's doc comment. Mandatory
   // before Submit for Approval; the Researcher picks it here, the Approver
@@ -140,6 +165,21 @@ export default function SurveyBuilderDetailPage({
     MethodologyVersionOption[]
   >([]);
   const [savingMethodologyVersion, setSavingMethodologyVersion] = useState(false);
+
+  // Sample Description step — Target Group / Expected Sample Size /
+  // Selection Approach / Geographic Coverage, saved together as one Save
+  // action (see setSampleDescription). Local editable copies rather than
+  // binding straight to `survey` since these are free-text/number inputs,
+  // not a single-value Select like Methodology Version above — synced from
+  // `survey` whenever it (re)loads, see the effect below.
+  const [targetGroup, setTargetGroup] = useState("");
+  const [expectedSampleSize, setExpectedSampleSize] = useState("");
+  const [selectionApproach, setSelectionApproach] = useState("");
+  const [geographicCoverage, setGeographicCoverage] = useState("");
+  const [savingSampleDescription, setSavingSampleDescription] = useState(false);
+  const [sampleDescriptionError, setSampleDescriptionError] = useState<string | null>(
+    null,
+  );
 
   // The Researcher only edits/saves/submits from DRAFT or REJECTED — once
   // SUBMITTED, content is frozen for the Researcher; once PUBLISHED, it's
@@ -187,6 +227,11 @@ export default function SurveyBuilderDetailPage({
     setRecommended((s?.questions ?? []).filter((q) => !q.isCustom));
     setAdditional((s?.questions ?? []).filter((q) => q.isCustom));
     setDirty(false);
+    setTargetGroup(s?.targetGroup ?? "");
+    setExpectedSampleSize(s?.expectedSampleSize ? String(s.expectedSampleSize) : "");
+    setSelectionApproach(s?.selectionApproach ?? "");
+    setGeographicCoverage(s?.geographicCoverage ?? "");
+    setSampleDescriptionError(null);
   }
 
   // The Question Bank browse tab's source pairs — which field is
@@ -274,6 +319,14 @@ export default function SurveyBuilderDetailPage({
             });
             setReusableQuestions(merged);
           });
+        } else if (pairs && pairs.length === 0) {
+          // allDomainsSelected (AI couldn't classify) — every reusable
+          // custom question is in scope, same "match all" convention the
+          // Question Bank tab above already uses via getQuestions([]).
+          surveysService
+            .getReusableCustomQuestions()
+            .then(setReusableQuestions)
+            .catch(() => setReusableQuestions([]));
         } else {
           setReusableQuestions([]);
         }
@@ -361,6 +414,41 @@ export default function SurveyBuilderDetailPage({
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setSavingMethodologyVersion(false);
+    }
+  }
+
+  async function saveSampleDescription() {
+    if (!survey) return;
+    const trimmedTargetGroup = targetGroup.trim();
+    const trimmedSelectionApproach = selectionApproach.trim();
+    const trimmedGeographicCoverage = geographicCoverage.trim();
+    const sampleSize = Number(expectedSampleSize);
+    if (
+      !trimmedTargetGroup ||
+      !trimmedSelectionApproach ||
+      !trimmedGeographicCoverage ||
+      !Number.isInteger(sampleSize) ||
+      sampleSize < 1
+    ) {
+      setSampleDescriptionError(t("sampleDescriptionValidationError"));
+      return;
+    }
+    setSavingSampleDescription(true);
+    setSampleDescriptionError(null);
+    setError(null);
+    try {
+      const updated = await surveysService.setSampleDescription(survey.id, {
+        targetGroup: trimmedTargetGroup,
+        expectedSampleSize: sampleSize,
+        selectionApproach: trimmedSelectionApproach,
+        geographicCoverage: trimmedGeographicCoverage,
+      });
+      setSurvey(updated);
+      setMessage(t("saved"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setSavingSampleDescription(false);
     }
   }
 
@@ -574,7 +662,7 @@ export default function SurveyBuilderDetailPage({
   // the classification decision (as-is, or with whatever Domain Override
   // was staged on the Need workspace page — see pending-override-storage.ts),
   // save the current question list, then submit and publish the Survey.
-  async function saveAndPublish() {
+  async function saveAndPublish(comments: string) {
     if (!survey || !need) return;
     if (!survey.methodologyVersion) {
       setError(t("methodologyVersionRequiredNote"));
@@ -596,9 +684,13 @@ export default function SurveyBuilderDetailPage({
         // the Researcher who submitted it — regardless of whose session
         // this is. The backend clears both fields once this Approve call
         // consumes them (see AiDecisionsService.review).
+        // reason is required going forward (see overrideDomainPreview), so
+        // proposedReason is only ever missing here for a staged override
+        // that predates that requirement — treat it the same as "no staged
+        // override" rather than sending a reason-less override.
         const domainOverride =
-          need.proposedDomains && need.proposedDomains.length > 0
-            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? undefined }
+          need.proposedDomains && need.proposedDomains.length > 0 && need.proposedReason
+            ? { pairs: need.proposedDomains, reason: need.proposedReason }
             : undefined;
         await aiReviewService.approve(needId, { domainOverride });
       }
@@ -622,7 +714,7 @@ export default function SurveyBuilderDetailPage({
       ];
       const saved = await surveysService.updateQuestions(survey.id, payload);
       const submitted = await surveysService.submitForApproval(saved.id);
-      await surveysService.approveAndPublish(submitted.id);
+      await surveysService.approveAndPublish(submitted.id, comments);
       const [published, updatedNeed] = await Promise.all([
         surveysService.getSurveyByNeedId(needId),
         needsService.getById(needId),
@@ -631,6 +723,7 @@ export default function SurveyBuilderDetailPage({
       loadDraftFromSurvey(published);
       setNeed(updatedNeed);
       setMessage(t("publishedMessage"));
+      setApproveOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
@@ -649,16 +742,20 @@ export default function SurveyBuilderDetailPage({
   // Survey publishes fine but the Need's domain/subDomain/needDomains are
   // never actually written, leaving "Awaiting Approver review" showing
   // forever even after the Survey is done.
-  async function approveSubmittedSurvey() {
+  async function approveSubmittedSurvey(comments: string) {
     if (!survey || !need) return;
     setApprovingSubmitted(true);
     setError(null);
     setMessage(null);
     try {
       if (need.status === "ai_classified") {
+        // reason is required going forward (see overrideDomainPreview), so
+        // proposedReason is only ever missing here for a staged override
+        // that predates that requirement — treat it the same as "no staged
+        // override" rather than sending a reason-less override.
         const domainOverride =
-          need.proposedDomains && need.proposedDomains.length > 0
-            ? { pairs: need.proposedDomains, reason: need.proposedReason ?? undefined }
+          need.proposedDomains && need.proposedDomains.length > 0 && need.proposedReason
+            ? { pairs: need.proposedDomains, reason: need.proposedReason }
             : undefined;
         await aiReviewService.approve(needId, { domainOverride });
       }
@@ -681,7 +778,7 @@ export default function SurveyBuilderDetailPage({
         })),
       ];
       await surveysService.updateQuestions(survey.id, payload);
-      await surveysService.approveAndPublish(survey.id);
+      await surveysService.approveAndPublish(survey.id, comments);
       const [published, updatedNeed] = await Promise.all([
         surveysService.getSurveyByNeedId(needId),
         needsService.getById(needId),
@@ -690,6 +787,7 @@ export default function SurveyBuilderDetailPage({
       loadDraftFromSurvey(published);
       setNeed(updatedNeed);
       setMessage(t("publishedMessage"));
+      setApproveOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
@@ -697,27 +795,62 @@ export default function SurveyBuilderDetailPage({
     }
   }
 
+  function openApproveDialog() {
+    setApproveComments("");
+    setApproveCommentsError(null);
+    setApproveOpen(true);
+  }
+
+  function confirmApprove() {
+    const trimmed = approveComments.trim();
+    if (!trimmed) {
+      setApproveCommentsError(t("approveCommentsRequired"));
+      return;
+    }
+    if (survey?.status === "SUBMITTED") {
+      approveSubmittedSurvey(trimmed);
+    } else {
+      saveAndPublish(trimmed);
+    }
+  }
+
   function openRejectDialog() {
     setComments("");
     setCommentsError(null);
+    setReasonCode("");
+    setReasonCodeError(null);
     setRejectOpen(true);
   }
 
   async function confirmReject() {
     const trimmed = comments.trim();
+    const isSurveyReject = survey?.status === "SUBMITTED";
+
+    if (isSurveyReject && !reasonCode) {
+      setReasonCodeError(t("rejectReasonCodeRequired"));
+      return;
+    }
+    // Comments (reviewer notes) are always required now, for both the
+    // AI-review-reject branch and every survey-reject reason code — no
+    // longer conditional on "Other" being selected.
     if (!trimmed) {
       setCommentsError(t("rejectCommentsRequired"));
       return;
     }
+
     setRejecting(true);
     setError(null);
     try {
-      if (survey?.status === "SUBMITTED") {
+      if (isSurveyReject && survey) {
         // The Survey's content itself is what's being rejected here (it was
         // explicitly submitted) — sends it back to REJECTED so the
         // Researcher can edit and resubmit. The Need's own domain/subDomain
         // decision is untouched.
-        await surveysService.rejectSurvey(survey.id, trimmed);
+        await surveysService.rejectSurvey(
+          survey.id,
+          reasonCode as RejectionReasonCode,
+          trimmed,
+        );
       } else {
         // Rejecting the classification decision itself — the Need resets to
         // pending_ai_classification for a fresh reclassification. The
@@ -736,6 +869,14 @@ export default function SurveyBuilderDetailPage({
 
   return (
     <PermissionGuard module="surveyBuilder" action="read">
+      {message ? (
+        <div
+          role="status"
+          className="border-badge-success bg-badge-success text-badge-success-foreground fixed top-20 right-4 z-[9999] rounded-md border px-4 py-3 text-sm font-medium shadow-lg"
+        >
+          {message}
+        </div>
+      ) : null}
       <PageContainer>
         <div className="mb-6 flex justify-start">
           <BackButton href="/survey-builder" label={t("backToList")} />
@@ -792,7 +933,7 @@ export default function SurveyBuilderDetailPage({
                         </Button>
                         <Button
                           size="sm"
-                          onClick={approveSubmittedSurvey}
+                          onClick={openApproveDialog}
                           disabled={approvingSubmitted}
                         >
                           {approvingSubmitted ? t("publishing") : t("saveAndPublish")}
@@ -811,7 +952,7 @@ export default function SurveyBuilderDetailPage({
                         {saving ? t("saving") : t("saveDraft")}
                       </Button>
                     ) : null}
-                    {isEditable && canApprove ? (
+                    {isEditable && canApprove && survey.status === "DRAFT" ? (
                       <>
                         <Button
                           size="sm"
@@ -823,11 +964,15 @@ export default function SurveyBuilderDetailPage({
                           <XCircle className="size-3.5" />
                           {t("reject")}
                         </Button>
-                        <Button size="sm" onClick={saveAndPublish} disabled={submitting}>
+                        <Button
+                          size="sm"
+                          onClick={openApproveDialog}
+                          disabled={submitting}
+                        >
                           {submitting ? t("publishing") : t("saveAndPublish")}
                         </Button>
                       </>
-                    ) : isEditable ? (
+                    ) : isEditable && !canApprove ? (
                       <Button
                         size="sm"
                         onClick={submitForApproval}
@@ -871,15 +1016,29 @@ export default function SurveyBuilderDetailPage({
               </div>
             ) : null}
 
+            {survey?.status === "PUBLISHED" && survey.approverComments ? (
+              <div
+                role="status"
+                className="border-border bg-muted/40 mb-4 flex items-start gap-2.5 rounded-md border p-3.5"
+              >
+                <Check className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-foreground text-sm font-medium">
+                    {t("reviewerNotesTitle")}
+                  </p>
+                  <p className="text-foreground text-sm whitespace-pre-wrap">
+                    {survey.approverComments}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {dirty ? (
               <p className="text-muted-foreground mb-4 text-xs">
                 {t("unsavedChangesNote")}
               </p>
             ) : null}
             {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
-            {message ? (
-              <p className="text-badge-success-foreground mb-4 text-sm">{message}</p>
-            ) : null}
 
             {need?.status === "ai_classification_failed" ? (
               // Manual-classification gate — AI could not classify this
@@ -1003,6 +1162,134 @@ export default function SurveyBuilderDetailPage({
                         ? t("methodologyVersionHint")
                         : t("methodologyVersionLockedHint")}
                     </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="space-y-4 p-6">
+                    <div>
+                      <h2 className="text-foreground text-sm font-semibold">
+                        {t("sampleDescriptionTitle")}
+                      </h2>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {t("sampleDescriptionSubtitle")}
+                      </p>
+                    </div>
+
+                    {isEditable ? (
+                      <>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="sample-target-group">
+                              {t("targetGroupLabel")}
+                            </Label>
+                            <Input
+                              id="sample-target-group"
+                              value={targetGroup}
+                              onChange={(e) => setTargetGroup(e.target.value)}
+                              placeholder={t("targetGroupPlaceholder")}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="sample-expected-size">
+                              {t("expectedSampleSizeLabel")}
+                            </Label>
+                            <Input
+                              id="sample-expected-size"
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={expectedSampleSize}
+                              onChange={(e) => setExpectedSampleSize(e.target.value)}
+                              placeholder={t("expectedSampleSizePlaceholder")}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="sample-selection-approach">
+                            {t("selectionApproachLabel")}
+                          </Label>
+                          <Textarea
+                            id="sample-selection-approach"
+                            rows={3}
+                            value={selectionApproach}
+                            onChange={(e) => setSelectionApproach(e.target.value)}
+                            placeholder={t("selectionApproachPlaceholder")}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="sample-geographic-coverage">
+                            {t("geographicCoverageLabel")}
+                          </Label>
+                          <Input
+                            id="sample-geographic-coverage"
+                            value={geographicCoverage}
+                            onChange={(e) => setGeographicCoverage(e.target.value)}
+                            placeholder={t("geographicCoveragePlaceholder")}
+                          />
+                        </div>
+                        {sampleDescriptionError ? (
+                          <p className="text-destructive text-sm">
+                            {sampleDescriptionError}
+                          </p>
+                        ) : null}
+                        <div className="flex items-center justify-between">
+                          <p className="text-muted-foreground text-xs">
+                            {t("sampleDescriptionHint")}
+                          </p>
+                          <LoadingButton
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            isLoading={savingSampleDescription}
+                            onClick={saveSampleDescription}
+                            text={
+                              savingSampleDescription
+                                ? t("saving")
+                                : t("sampleDescriptionSave")
+                            }
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <dt className="text-muted-foreground text-xs">
+                            {t("targetGroupLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm">
+                            {survey.targetGroup ?? t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground text-xs">
+                            {t("expectedSampleSizeLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm tabular-nums">
+                            {survey.expectedSampleSize ??
+                              t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-muted-foreground text-xs">
+                            {t("selectionApproachLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm whitespace-pre-wrap">
+                            {survey.selectionApproach ??
+                              t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <dt className="text-muted-foreground text-xs">
+                            {t("geographicCoverageLabel")}
+                          </dt>
+                          <dd className="text-foreground text-sm">
+                            {survey.geographicCoverage ??
+                              t("sampleDescriptionNotProvided")}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -1580,6 +1867,39 @@ export default function SurveyBuilderDetailPage({
                   : t("rejectDialogDescription")}
               </DialogDescription>
             </DialogHeader>
+            {survey?.status === "SUBMITTED" ? (
+              <div className="space-y-2">
+                <Label htmlFor="reject-reason-code">
+                  {t("rejectReasonCodeLabel")} <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={reasonCode}
+                  onValueChange={(value) => {
+                    setReasonCode(value as RejectionReasonCode);
+                    if (reasonCodeError) setReasonCodeError(null);
+                    if (value !== "REJ_99" && commentsError) setCommentsError(null);
+                  }}
+                >
+                  <SelectTrigger
+                    id="reject-reason-code"
+                    className="w-full"
+                    aria-invalid={reasonCodeError ? true : undefined}
+                  >
+                    <SelectValue placeholder={t("rejectReasonCodePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent className="w-(--radix-select-trigger-width)">
+                    {Object.entries(REJECTION_REASON_LABELS).map(([code, label]) => (
+                      <SelectItem key={code} value={code} className="whitespace-normal">
+                        {code.replace("_", "-")} — {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {reasonCodeError ? (
+                  <p className="text-destructive text-sm">{reasonCodeError}</p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="reject-comments">
                 {t("commentsLabel")} <span className="text-destructive">*</span>
@@ -1614,6 +1934,58 @@ export default function SurveyBuilderDetailPage({
                 isLoading={rejecting}
                 onClick={confirmReject}
                 text={rejecting ? t("rejecting") : t("confirmReject")}
+              />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={approveOpen}
+          onOpenChange={(open) => {
+            if (submitting || approvingSubmitted) return;
+            setApproveOpen(open);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("approveDialogTitle")}</DialogTitle>
+              <DialogDescription>{t("approveDialogDescription")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="approve-comments">
+                {t("commentsLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="approve-comments"
+                rows={5}
+                value={approveComments}
+                onChange={(e) => {
+                  setApproveComments(e.target.value);
+                  if (approveCommentsError) setApproveCommentsError(null);
+                }}
+                placeholder={t("approveCommentsPlaceholder")}
+                aria-invalid={approveCommentsError ? true : undefined}
+              />
+              {approveCommentsError ? (
+                <p className="text-destructive text-sm">{approveCommentsError}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setApproveOpen(false)}
+                disabled={submitting || approvingSubmitted}
+              >
+                {t("cancel")}
+              </Button>
+              <LoadingButton
+                type="button"
+                isLoading={submitting || approvingSubmitted}
+                onClick={confirmApprove}
+                text={
+                  submitting || approvingSubmitted ? t("publishing") : t("confirmApprove")
+                }
               />
             </DialogFooter>
           </DialogContent>

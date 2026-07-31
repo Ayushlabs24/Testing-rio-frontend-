@@ -5,6 +5,12 @@ export function createMarkerIconElement(
   isSelected: boolean,
   size: number,
   onActivate: () => void,
+  // [singular, plural] unit label for the aria-label — defaults to this
+  // component's original "study"/"studies" wording so the one existing
+  // caller (GeographicDistribution) is unaffected; other maps reusing this
+  // same marker engine for a different metric (e.g. organization counts)
+  // pass their own.
+  unitLabel: readonly [string, string] = ["study", "studies"],
 ): HTMLElement {
   const root = document.createElement("div");
   root.className =
@@ -13,7 +19,7 @@ export function createMarkerIconElement(
   root.role = "button";
   root.setAttribute(
     "aria-label",
-    `${marker.name}: ${marker.studyCount} ${marker.studyCount === 1 ? "study" : "studies"}`,
+    `${marker.name}: ${marker.studyCount} ${marker.studyCount === 1 ? unitLabel[0] : unitLabel[1]}`,
   );
   root.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
