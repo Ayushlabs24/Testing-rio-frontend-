@@ -41,6 +41,8 @@ import {
 } from "@/services/priority/severity-scoring.service";
 import { AiPrioritySummaryPanel } from "@/components/features/insights/ai-priority-summary-panel";
 import { SupportingEvidencePanel } from "@/components/features/insights/supporting-evidence-panel";
+import { DocumentBasedSummaryTab } from "@/components/features/priority/document-based-summary-tab";
+import { CombinedSummaryTab } from "@/components/features/priority/combined-summary-tab";
 import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
 
 const CONSOLIDATED = "consolidated";
@@ -142,7 +144,7 @@ export default function PriorityDetailInsightsPage({
     <PermissionGuard module="priorityScoring" action="read">
       <PageContainer>
         <div className="mb-6 flex justify-start">
-          <BackButton href="/priority-dashboard" label="Back to Priority Dashboard" />
+          <BackButton href="/priority-dashboard" label={t("backToDashboard")} />
         </div>
 
         <PageHeader
@@ -163,14 +165,14 @@ export default function PriorityDetailInsightsPage({
           actions={
             <div className="space-y-1.5">
               <span className="text-muted-foreground text-xs font-medium">
-                Scope Filter
+                {t("scopeFilter")}
               </span>
               <Select value={scope} onValueChange={setScope}>
-                <SelectTrigger className="w-full sm:w-64" aria-label="Scope Filter">
+                <SelectTrigger className="w-full sm:w-64" aria-label={t("scopeFilter")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={CONSOLIDATED}>Consolidated (All Links)</SelectItem>
+                  <SelectItem value={CONSOLIDATED}>{t("consolidated")}</SelectItem>
                   {links.map((link) => (
                     <SelectItem key={link.id} value={link.id}>
                       {link.label}
@@ -184,12 +186,14 @@ export default function PriorityDetailInsightsPage({
 
         {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
 
-        {/* Tab 1: Severity Score | Tab 2: Priority Score | Tab 3: AI Summary */}
+        {/* 5-Tab Layout: Severity Score, Priority Score, Score-Based AI Summary, Document-Based Summary, Combined Summary */}
         <Tabs defaultValue="severity" className="mt-6">
-          <TabsList variant="line" className="mb-6">
+          <TabsList variant="line" className="mb-6 flex-wrap">
             <TabsTrigger value="severity">{t("tab1")}</TabsTrigger>
             <TabsTrigger value="priority">{t("tab2")}</TabsTrigger>
-            <TabsTrigger value="summary">{t("tab3")}</TabsTrigger>
+            <TabsTrigger value="summary">{t("tabs.scoreBased")}</TabsTrigger>
+            <TabsTrigger value="doc-summary">{t("tabs.documentBased")}</TabsTrigger>
+            <TabsTrigger value="combined-summary">{t("tabs.combined")}</TabsTrigger>
           </TabsList>
 
           {/* TAB 1: Severity Score (Severity Dashboard + Response Quality) */}
@@ -433,7 +437,7 @@ export default function PriorityDetailInsightsPage({
             ) : null}
           </TabsContent>
 
-          {/* TAB 3: AI Summary */}
+          {/* TAB 3: Score-Based AI Summary */}
           <TabsContent value="summary">
             {survey ? (
               <AiPrioritySummaryPanel
@@ -445,6 +449,24 @@ export default function PriorityDetailInsightsPage({
                 hasSeverityScoring={Boolean(priorityV2)}
                 hasPriorityScoring={Boolean(priorityV2)}
               />
+            ) : (
+              <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>
+            )}
+          </TabsContent>
+
+          {/* TAB 4: Document-Based Summary */}
+          <TabsContent value="doc-summary">
+            {survey ? (
+              <DocumentBasedSummaryTab studyId={survey.studyId} needId={needId} />
+            ) : (
+              <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>
+            )}
+          </TabsContent>
+
+          {/* TAB 5: Combined Summary */}
+          <TabsContent value="combined-summary">
+            {survey ? (
+              <CombinedSummaryTab studyId={survey.studyId} />
             ) : (
               <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>
             )}

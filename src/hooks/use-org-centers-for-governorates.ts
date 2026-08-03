@@ -30,10 +30,12 @@ export function useOrgCentersForGovernorates(governorateIds: string[]): {
       ids.length === 0
         ? Promise.resolve([])
         : organizationsService.getCurrent().then(async (org) => {
-            if (org.centerIds.length === 0) return [];
             const lists = await Promise.all(
               ids.map((id) => geographyService.listCenters(id)),
             );
+            if (!org.centerIds || org.centerIds.length === 0) {
+              return lists.flat();
+            }
             const idSet = new Set(org.centerIds);
             return lists.flat().filter((c) => idSet.has(c.id));
           });

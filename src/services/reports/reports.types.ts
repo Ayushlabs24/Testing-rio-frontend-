@@ -14,6 +14,8 @@ export const REPORT_TYPES = [
   "RPT13",
   "RPT14",
   "RPT15",
+  "RPT16",
+  "RPT17",
 ] as const;
 export type ReportTypeCode = (typeof REPORT_TYPES)[number];
 
@@ -31,6 +33,8 @@ export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT01", // Individual Survey Report (single survey)
   "RPT15", // Survey & Dashboard Report
   "RPT13", // Executive Summary
+  "RPT16", // Combined Evidence & Score Report
+  "RPT17", // Evidence Document-Based Report
 ];
 
 export type ReportStatus = "draft" | "rejected" | "released" | "archived";
@@ -141,6 +145,18 @@ export const REPORT_TYPE_META: Record<
     exportFormats: ["pdf", "excel"],
     requiresStudyId: true,
     requiresSurveyId: true,
+  },
+  RPT16: {
+    name: "Combined Evidence & Score Report",
+    exportFormats: ["pdf", "excel"],
+    requiresStudyId: true,
+    requiresSurveyId: false,
+  },
+  RPT17: {
+    name: "Evidence Document-Based Report",
+    exportFormats: ["pdf", "excel"],
+    requiresStudyId: true,
+    requiresSurveyId: false,
   },
 };
 

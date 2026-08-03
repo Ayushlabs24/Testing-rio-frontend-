@@ -1,8 +1,14 @@
 "use client";
 
-import { FileText, Sparkles, Table2 } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Table2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -13,6 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { flattenReportContent } from "@/lib/report-content-flatten";
+import { RegionMap } from "@/components/features/ncnp-report/region-map";
+import { StatusDonut } from "@/components/features/ncnp-report/status-donut";
+import { NamedBarList } from "@/components/features/ncnp-report/named-bar-list";
+import { TwoStateBar } from "@/components/features/ncnp-report/two-state-bar";
+import type { NcnpNamedBreakdown } from "@/services/ncnp-report/ncnp-report.types";
 import type { Report } from "@/services/reports/reports.types";
 import {
   BarChart,
@@ -84,6 +95,11 @@ function priorityColor(status: string): string {
       return "var(--chart-1)";
   }
 }
+
+// Module-level, not inline literals: RegionMap rebuilds every marker when its
+// `unitLabel` prop is a fresh array each render (see its own comment).
+const DOCUMENT_UNIT_LABEL = ["document", "documents"] as const;
+const DATA_POINT_UNIT_LABEL = ["data point", "data points"] as const;
 
 const GENDER_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-5)"];
 const RURAL_COLORS = ["var(--chart-3)", "var(--chart-4)"];
@@ -172,6 +188,28 @@ const NEED_RECORD_COLUMNS: ColSpec[] = [
   { key: "notMeasuredReason", label: "Notes", format: needNotes },
 ];
 
+// Summary status as a reserved status colour PLUS its written label — the
+// badge never communicates state by colour alone. Tinted backgrounds pair with
+// `text-foreground`, not the matching `*-foreground` token: those are
+// near-white/near-black steps meant for a solid fill and vanish on a 10% tint.
+function EvidenceStatusBadge({ status }: { status: string }) {
+  const tone: Record<string, string> = {
+    OFFICER_CONFIRMED: "border-success/40 bg-success/10",
+    DRAFT: "border-warning/40 bg-warning/10",
+    SUPERSEDED: "border-border bg-muted/40",
+    NO_SUMMARY: "border-destructive/40 bg-destructive/10",
+  };
+  return (
+    <span
+      className={`text-foreground rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+        tone[status] ?? "border-border bg-muted/40"
+      }`}
+    >
+      {status.replace(/_/g, " ")}
+    </span>
+  );
+}
+
 // Response Quality, in reading order with explicit labels. The confidence BAND,
 // the REASON for it and the valid-response RATE are three distinct facts; the
 // auto-derived labels turned `dontKnowBand` into "Dont Know Band" and printed
@@ -249,7 +287,9 @@ export function ReportContentView({ report }: { report: Report }) {
       isObjArray(c.topPriorities) ||
       isObj(c.kpis) ||
       isObjArray(c.scoringDistribution) ||
-      isObjArray(c.requests));
+      isObjArray(c.requests) ||
+      isObj(c.evidenceSection) ||
+      isObj(c.geography));
 
   if (!isCore) {
     const flat = flattenReportContent(c);
@@ -313,6 +353,13 @@ export function ReportContentView({ report }: { report: Report }) {
   const priorityStatus = priority ? scalar(priority.priorityStatus) : "";
 
   const sections: Array<{ title: string; node: ReactNode }> = [];
+
+  // Evidence-backed reports (RPT16 / RPT17) only. Gated on `evidenceSection`,
+  // which no other report type carries, so the survey-scoped and dashboard
+  // reports are untouched by everything keyed off this.
+  const evidence = isObj(c.evidenceSection) ? (c.evidenceSection as Dict) : null;
+  const evidenceDocs =
+    evidence && isObjArray(evidence.documents) ? (evidence.documents as Dict[]) : [];
 
   // 0 — Report basis. Renders first so the SURVEY-ONLY / QUANTITATIVE basis is
   // established before any number is read (the client's "clearly marked
@@ -618,6 +665,209 @@ export function ReportContentView({ report }: { report: Report }) {
       title: t("regionGovernorate"),
       node: (
         <KeyValues obj={{ coverage: scope.villages, governorate: scope.governorate }} />
+      ),
+    });
+  }
+
+  // Evidence hero row. Headline counts belong as stat tiles, not a chart —
+  // four single numbers have no shape to plot. Reads before the map so the
+  // scale of the evidence base is established first.
+  if (evidence) {
+    const rq = isObj(c.responseQuality) ? (c.responseQuality as Dict) : {};
+    const withSummary = evidenceDocs.filter((d) => isObj(d.aiSummary)).length;
+    const confirmed = evidenceDocs.filter(
+      (d) => scalar(d.summaryStatus) === "OFFICER_CONFIRMED",
+    ).length;
+    sections.push({
+      title: "Evidence Base",
+      node: (
+        <StatTiles
+          items={[
+            { label: "Documents", value: evidenceDocs.length },
+            { label: "With AI summary", value: withSummary },
+            { label: "Officer confirmed", value: confirmed },
+            {
+              label: "Valid responses",
+              value: scalar(rq.validResponses),
+              sub: scalar(rq.overallConfidence),
+            },
+          ]}
+        />
+      ),
+    });
+  }
+
+  // Evidence composition. Three different jobs, three different forms:
+  // part-of-whole for summary status (a donut, few slices, sums to the whole),
+  // magnitude-by-identity for document types and themes (horizontal bars —
+  // the labels are long and a pie cannot be read at this cardinality), and a
+  // skewed two-category split for response validity (a single bar, per
+  // TwoStateBar's own note that a donut is wrong for that shape).
+  if (evidence && evidenceDocs.length > 0) {
+    const statusCounts = new Map<string, number>();
+    for (const d of evidenceDocs) {
+      const k = scalar(d.summaryStatus) || "NO_SUMMARY";
+      statusCounts.set(k, (statusCounts.get(k) ?? 0) + 1);
+    }
+    // Reserved status colours, each carrying its own written label in the
+    // donut legend — never colour alone.
+    const STATUS_COLORS: Record<string, string> = {
+      OFFICER_CONFIRMED: "--success",
+      DRAFT: "--warning",
+      SUPERSEDED: "--muted-foreground",
+      NO_SUMMARY: "--destructive",
+    };
+    const statusSegments = [...statusCounts.entries()].map(([label, count]) => ({
+      label: label.replace(/_/g, " "),
+      count,
+      colorVar: STATUS_COLORS[label] ?? "--chart-1",
+    }));
+
+    const tally = (pick: (d: Dict) => string) => {
+      const m = new Map<string, number>();
+      for (const d of evidenceDocs) {
+        const k = pick(d);
+        if (!k || k === "—") continue;
+        m.set(k, (m.get(k) ?? 0) + 1);
+      }
+      return [...m.entries()]
+        .map(([name, count]) => ({ id: name, name, count }))
+        .sort((a, b) => b.count - a.count);
+    };
+
+    const byType = tally((d) => scalar(d.documentType));
+    // Themes live inside each document's AI summary; counted across documents
+    // so a theme raised by several documents ranks above a one-off.
+    const themeCounts = new Map<string, number>();
+    for (const d of evidenceDocs) {
+      const ai = isObj(d.aiSummary) ? (d.aiSummary as Dict) : null;
+      if (!ai || !isObjArray(ai.themes)) continue;
+      for (const th of ai.themes as Dict[]) {
+        const name = typeof th === "string" ? th : scalar(th.theme);
+        if (!name || name === "—") continue;
+        themeCounts.set(name, (themeCounts.get(name) ?? 0) + 1);
+      }
+    }
+    const byTheme = [...themeCounts.entries()]
+      .map(([name, count]) => ({ id: name, name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const rq = isObj(c.responseQuality) ? (c.responseQuality as Dict) : {};
+    const submitted = num(rq.submittedResponses);
+    const valid = num(rq.validResponses);
+
+    sections.push({
+      title: "Evidence Composition",
+      node: (
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">Summary status</p>
+              {/* StatusDonut renders the total itself; centerLabel is the
+                  caption under it, not the number. */}
+              <StatusDonut segments={statusSegments} centerLabel="Documents" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                Documents by type
+              </p>
+              <NamedBarList
+                items={byType}
+                limit={8}
+                emptyText="No document types recorded."
+              />
+            </div>
+          </div>
+          {byTheme.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                Themes across documents
+              </p>
+              <NamedBarList items={byTheme} limit={8} emptyText="No themes identified." />
+            </div>
+          ) : null}
+          {submitted !== null && valid !== null && submitted > 0 ? (
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                Response validity
+              </p>
+              <TwoStateBar
+                primaryLabel="Valid"
+                primaryCount={valid}
+                secondaryLabel="Excluded"
+                secondaryCount={Math.max(0, submitted - valid)}
+              />
+            </div>
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // Structured Geography Hierarchy
+  if (isObj(c.geography)) {
+    const geo = c.geography as Dict;
+    // Region-level map, same component and coordinate table the NCNP report
+    // uses. `regions` is region-level only (no governorate GPS data exists),
+    // so the text hierarchy below carries the governorate/center detail the
+    // map cannot show.
+    const mapRegions = isObjArray(geo.regions)
+      ? (geo.regions as unknown as NcnpNamedBreakdown[])
+      : [];
+    const unitLabel =
+      Array.isArray(geo.mapUnitLabel) && geo.mapUnitLabel[0] === "data point"
+        ? DATA_POINT_UNIT_LABEL
+        : DOCUMENT_UNIT_LABEL;
+    sections.push({
+      title: "Geography Hierarchy",
+      node: (
+        // Map and text side by side, each taking half the width. The map is
+        // region-level only, so the hierarchy beside it is what actually
+        // carries governorate and center — they are read together, not one
+        // scrolled past the other.
+        <div
+          className={
+            mapRegions.length > 0
+              ? "grid gap-4 lg:grid-cols-2 lg:items-stretch"
+              : "grid gap-4"
+          }
+        >
+          {mapRegions.length > 0 ? (
+            <div className="bg-muted/20 rounded-lg border p-4">
+              <p className="text-foreground mb-1 text-sm font-semibold">Kingdom Map</p>
+              <p className="text-muted-foreground mb-4 text-xs">
+                Markers are region-level, sized by {unitLabel[1]} in this report.
+              </p>
+              <RegionMap data={mapRegions} unitLabel={unitLabel} />
+            </div>
+          ) : null}
+          <div className="bg-muted/20 flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-foreground text-sm font-semibold">Location Hierarchy</p>
+            {(
+              [
+                ["Region", geo.region],
+                ["Governorate", geo.governorate],
+                ["Center", geo.center],
+              ] as const
+            ).map(([label, value], i) => (
+              <div
+                key={label}
+                className={
+                  i === 0
+                    ? "bg-card rounded-md border p-3"
+                    : "bg-card border-l-primary/40 ml-3 rounded-md border border-l-2 p-3"
+                }
+              >
+                <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                  {label}
+                </p>
+                <p className="text-foreground mt-1 text-sm font-semibold break-words">
+                  {scalar(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       ),
     });
   }
@@ -969,6 +1219,397 @@ export function ReportContentView({ report }: { report: Report }) {
   }
   if (isObjArray(c.requests))
     sections.push({ title: t("sharingRequests"), node: <DataTable rows={c.requests} /> });
+
+  // Qualitative evidence
+  if (isObjArray(c.qualitativeEvidence))
+    sections.push({
+      title: t("evidence"),
+      node: <DataTable rows={c.qualitativeEvidence} />,
+    });
+
+  // Evidence Documents & Formatted AI Summaries (RPT15 / RPT16)
+  if (isObj(c.evidenceSection) && isObjArray((c.evidenceSection as Dict).documents)) {
+    const evDocs = (c.evidenceSection as Dict).documents as Dict[];
+    sections.push({
+      title: "Evidence Documents & AI Summaries",
+      node: (
+        // One accordion row per document instead of every summary expanded at
+        // once: with several documents the old layout was an unreadable wall of
+        // stacked blocks. The trigger carries enough to scan on (title, type,
+        // status, finding count) so a reader can go straight to the one they
+        // want. First row starts open so the section is never a row of closed
+        // bars. Collapsing is web-only — the PDF/Excel export renders through
+        // report-doc.ts and is unaffected.
+        <Accordion
+          type="multiple"
+          defaultValue={evDocs.length > 0 ? ["ev-0"] : []}
+          className="space-y-3"
+        >
+          {evDocs.map((doc: Dict, idx: number) => {
+            const ai = doc.aiSummary as Dict | null;
+            const status = scalar(doc.summaryStatus);
+            const findingCount = isObjArray(ai?.keyFindings)
+              ? (ai!.keyFindings as unknown[]).length
+              : 0;
+            return (
+              <AccordionItem
+                key={idx}
+                value={`ev-${idx}`}
+                className="bg-card rounded-lg border px-4"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 pr-2 text-left">
+                    <span className="text-muted-foreground text-[11px] font-semibold tabular-nums">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-foreground text-sm font-semibold">
+                      {scalar(doc.title)}
+                    </span>
+                    <EvidenceStatusBadge status={status} />
+                    <span className="text-muted-foreground ml-auto text-[10px]">
+                      {findingCount > 0
+                        ? `${findingCount} finding${findingCount === 1 ? "" : "s"}`
+                        : "No summary"}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 pb-4 text-xs">
+                  {/* Metadata as chips rather than a run-on bullet line. */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {(
+                      [
+                        ["Ref", doc.sourceReferenceId],
+                        ["Type", doc.documentType],
+                        ["Collected", doc.collectedDate],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <span
+                        key={label}
+                        className="bg-muted/50 text-muted-foreground rounded-full border px-2 py-0.5 text-[10px]"
+                      >
+                        <span className="font-medium">{label}:</span> {scalar(value)}
+                      </span>
+                    ))}
+                  </div>
+                  {ai && (
+                    <div className="space-y-3">
+                      {ai.evidenceNote ? (
+                        <div className="bg-info/10 border-info/30 text-foreground rounded border p-2.5 text-[10px] font-medium">
+                          {String(scalar(ai.evidenceNote))}
+                        </div>
+                      ) : null}
+                      <div>
+                        <p className="text-foreground text-[11px] font-semibold">
+                          Executive Qualitative Summary
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 leading-relaxed">
+                          {String(scalar(ai.summary))}
+                        </p>
+                      </div>
+                      {isObjArray(ai.keyFindings) ? (
+                        <div>
+                          <p className="text-foreground mb-1 text-[11px] font-semibold">
+                            Key Findings
+                          </p>
+                          <div className="space-y-1.5">
+                            {(ai.keyFindings as Dict[]).map(
+                              (kf: Dict | string, i: number) => (
+                                <div key={i} className="bg-muted/20 rounded border p-2">
+                                  <p className="text-foreground font-medium">
+                                    {typeof kf === "string"
+                                      ? kf
+                                      : String(scalar(kf.finding))}
+                                  </p>
+                                  {typeof kf !== "string" &&
+                                  (kf.sourceReferenceId || kf.pageOrSection) ? (
+                                    <p className="text-muted-foreground mt-0.5 text-[10px]">
+                                      Ref: {String(scalar(kf.sourceReferenceId))} •{" "}
+                                      {String(scalar(kf.pageOrSection))}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                      {isObjArray(ai.themes) ? (
+                        <div>
+                          <p className="text-foreground mb-1 text-[11px] font-semibold">
+                            Themes
+                          </p>
+                          <div className="space-y-1.5">
+                            {(ai.themes as Dict[]).map((th: Dict | string, i: number) => (
+                              <div key={i} className="bg-card rounded border p-2">
+                                <p className="text-primary font-semibold">
+                                  {typeof th === "string" ? th : String(scalar(th.theme))}
+                                </p>
+                                {typeof th !== "string" && th.description ? (
+                                  <p className="text-muted-foreground mt-0.5">
+                                    {String(scalar(th.description))}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {isObjArray(ai.supportingStatements) ? (
+                        <div>
+                          <p className="text-foreground mb-1 text-[11px] font-semibold">
+                            Supporting Statements
+                          </p>
+                          <div className="space-y-1.5">
+                            {(ai.supportingStatements as Dict[]).map(
+                              (st: Dict | string, i: number) => (
+                                <div
+                                  key={i}
+                                  className="border-primary bg-muted/10 border-l-2 py-1 pl-2.5"
+                                >
+                                  <p className="text-foreground font-medium">
+                                    &quot;
+                                    {typeof st === "string"
+                                      ? st
+                                      : String(scalar(st.statement))}
+                                    &quot;
+                                  </p>
+                                  {typeof st !== "string" &&
+                                  (st.sourceReferenceId ||
+                                    st.pageOrSection ||
+                                    st.sectionOrPageRef) ? (
+                                    <p className="text-muted-foreground mt-0.5 text-[10px]">
+                                      Ref: {String(scalar(st.sourceReferenceId))} •{" "}
+                                      {String(
+                                        scalar(st.pageOrSection || st.sectionOrPageRef),
+                                      )}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                      {isObjArray(ai.risksOrConcerns) ? (
+                        <div>
+                          <p className="text-foreground mb-1 text-[11px] font-semibold">
+                            Risks / Concerns
+                          </p>
+                          <div className="space-y-1">
+                            {(ai.risksOrConcerns as Dict[]).map(
+                              (r: Dict | string, i: number) => (
+                                <div
+                                  key={i}
+                                  className="border-warning/30 bg-warning/10 text-foreground rounded border p-2"
+                                >
+                                  <p className="font-medium">
+                                    {typeof r === "string"
+                                      ? r
+                                      : String(scalar(r.concern))}
+                                  </p>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      ),
+    });
+  }
+
+  // Combined AI summary (RPT16). Previously stored but rendered nowhere — the
+  // whole combined narrative was invisible in both the web view and the exports.
+  // Quantitative and qualitative halves stay in separate blocks, matching the
+  // separation the generating prompt enforces.
+  if (isObj(c.combinedSummarySection)) {
+    const cs = c.combinedSummarySection as Dict;
+    const score = isObj(cs.scoreBasedFindings) ? (cs.scoreBasedFindings as Dict) : null;
+    sections.push({
+      title: "Combined Summary",
+      node: (
+        <div className="space-y-4 text-xs">
+          {typeof cs.executiveSummary === "string" && cs.executiveSummary ? (
+            <p className="text-muted-foreground leading-relaxed">{cs.executiveSummary}</p>
+          ) : null}
+
+          {score
+            ? // Was three bare numbers on one sparse row, with `topDomainsOrKpis`
+              // — the only part of this block with any shape to it — dropped
+              // entirely. Now: the two scores as gauges (a 0–100 score against a
+              // fixed scale is exactly what a gauge is for), the ranked
+              // domains/KPIs as bars beside them, and the confidence note as a
+              // footnote rather than a floating sentence.
+              (() => {
+                const sev = num(score.overallSeverityScore);
+                const pri = num(score.priorityScore);
+                const tops = isObjArray(score.topDomainsOrKpis)
+                  ? (score.topDomainsOrKpis as Dict[])
+                  : [];
+                const topBars = tops
+                  .map((d) => ({ label: scalar(d.name), value: num(d.score) ?? 0 }))
+                  .sort((a, b) => b.value - a.value);
+                return (
+                  <div className="bg-muted/20 space-y-4 rounded-lg border p-4">
+                    <p className="text-foreground text-[11px] font-semibold uppercase">
+                      Score-Based Findings
+                    </p>
+                    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+                      <div className="flex flex-wrap items-center gap-5">
+                        {sev !== null ? (
+                          <Gauge value={sev} max={100} label="Overall Severity" />
+                        ) : null}
+                        {pri !== null ? (
+                          <Gauge
+                            value={pri}
+                            max={100}
+                            label="Priority Score"
+                            sub={scalar(score.priorityStatus)}
+                          />
+                        ) : null}
+                      </div>
+                      {topBars.length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="text-muted-foreground text-xs font-medium">
+                            Top domains / KPIs by severity
+                          </p>
+                          <BarChart bars={topBars} max={100} />
+                        </div>
+                      ) : null}
+                    </div>
+                    {score.confidenceDataQualityNote ? (
+                      <p className="text-muted-foreground border-t pt-3 text-[11px] leading-relaxed">
+                        {scalar(score.confidenceDataQualityNote)}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })()
+            : null}
+
+          {isObjArray(cs.documentBasedEvidence) ? (
+            <div>
+              <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
+                Document-Based Evidence
+              </p>
+              <div className="space-y-1.5">
+                {(cs.documentBasedEvidence as Dict[]).map((e, i) => (
+                  <div key={i} className="bg-card rounded border p-2">
+                    <p className="text-foreground font-medium">
+                      {scalar(e.documentTitle)}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {scalar(e.keyEvidenceFinding)}
+                    </p>
+                    <p className="text-muted-foreground text-[10px]">
+                      Ref: {scalar(e.sourceReferenceId)} • {scalar(e.linkedNeedOrDomain)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // Score-based AI narrative (RPT16). The combined report is the union of the
+  // score report and the evidence report, so it carries this in full alongside
+  // the combined narrative. `recommendations` is deliberately absent here — the
+  // backend hoists both summaries' lists into one de-duplicated top-level list.
+  if (isObj(c.scoreSummarySection)) {
+    const ss = c.scoreSummarySection as Dict;
+    sections.push({
+      title: "Score-Based Summary",
+      node: (
+        <div className="space-y-4 text-xs">
+          {typeof ss.executiveSummary === "string" && ss.executiveSummary ? (
+            <p className="text-muted-foreground leading-relaxed">{ss.executiveSummary}</p>
+          ) : null}
+
+          {typeof ss.priorityExplanation === "string" && ss.priorityExplanation ? (
+            <div className="bg-muted/20 rounded-lg border p-3">
+              <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
+                Priority Explanation
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                {ss.priorityExplanation}
+              </p>
+            </div>
+          ) : null}
+
+          {isObjArray(ss.keyFindings) ? (
+            <div>
+              <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
+                Key Findings
+              </p>
+              <div className="space-y-1.5">
+                {(ss.keyFindings as Dict[]).map((f, i) => (
+                  <div key={i} className="bg-card rounded border p-2">
+                    <p className="text-foreground font-medium">{scalar(f.title)}</p>
+                    <p className="text-muted-foreground">{scalar(f.summary)}</p>
+                    <p className="text-muted-foreground text-[10px]">
+                      {scalar(f.domain)} • {scalar(f.kpi)} • Confidence:{" "}
+                      {scalar(f.confidence)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {isObjArray(ss.domainInsights) ? (
+            <div>
+              <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
+                Domain Insights
+              </p>
+              <DataTable rows={ss.domainInsights as Dict[]} />
+            </div>
+          ) : null}
+
+          {ss.criticalOverrideNote ? (
+            <p className="border-warning/30 bg-warning/10 text-foreground rounded border p-2">
+              {scalar(ss.criticalOverrideNote)}
+            </p>
+          ) : null}
+
+          {ss.dataQualityNote ? (
+            <p className="text-muted-foreground">{scalar(ss.dataQualityNote)}</p>
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // Top-level recommendations (RPT15 / RPT16). The block further down handles
+  // `aiSummary.recommendations`, which is a different field.
+  if (Array.isArray(c.recommendations) && c.recommendations.length > 0) {
+    sections.push({
+      title: t("recommendations"),
+      node: (
+        <ul className="space-y-1.5">
+          {(c.recommendations as unknown[]).map((r, i) => (
+            <li
+              key={i}
+              className="bg-muted/20 flex items-start gap-2 rounded border p-2 text-xs"
+            >
+              <ArrowRight className="text-primary mt-0.5 size-3.5 shrink-0" />
+              <span className="text-foreground">
+                {isObj(r) ? scalar((r as Dict).intervention) : String(r)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
 
   // Demographics (pies)
   if (isNeedsReport) {

@@ -817,7 +817,6 @@
       "summaryLow": "Low",
       "notScoredBadge": "Not scored yet",
       "statusColumn": "Study status",
-      "actionsColumn": "Actions",
       "viewMatrix": "View Matrix"
     },
     "reports": {
@@ -1838,6 +1837,7 @@
     },
     "surveyBuilder": {
       "title": "Survey Builder",
+      "subtitle": "Build and manage assessment surveys for community needs.",
       "description": "AI-assisted questionnaires, built from the Question Bank for each study.",
       "studyColumn": "Study",
       "domainColumn": "Domain / Sub-domain",
@@ -1950,7 +1950,11 @@
           "DRAFT": "Draft",
           "SUBMITTED": "Submitted for Approval",
           "REJECTED": "Rejected",
-          "PUBLISHED": "Published"
+          "PUBLISHED": "Published",
+          "draft": "Draft",
+          "submitted": "Submitted for Approval",
+          "rejected": "Rejected",
+          "published": "Published"
         },
         "methodologyVersionPlaceholder": "Select a methodology version",
         "methodologyVersionHint": "Required before submitting for approval. The Approver publishes exactly the version selected here — they cannot change it.",
@@ -2010,7 +2014,11 @@
           "DRAFT": "Draft",
           "SUBMITTED": "Submitted for Approval",
           "REJECTED": "Rejected",
-          "PUBLISHED": "Published"
+          "PUBLISHED": "Published",
+          "draft": "Draft",
+          "submitted": "Submitted for Approval",
+          "rejected": "Rejected",
+          "published": "Published"
         },
         "genericError": "Something went wrong. Please try again.",
         "aiSuggestedNote": "AI suggested: {domain} / {subDomain} (for reference only)",
@@ -2020,7 +2028,11 @@
         "DRAFT": "Draft",
         "SUBMITTED": "Submitted for Approval",
         "REJECTED": "Rejected",
-        "PUBLISHED": "Published"
+        "PUBLISHED": "Published",
+        "draft": "Draft",
+        "submitted": "Submitted for Approval",
+        "rejected": "Rejected",
+        "published": "Published"
       }
     }
   },
@@ -2242,9 +2254,17 @@
     },
     "detailPage": {
       "title": "Priority Dashboard & Needs Insights",
+      "backToDashboard": "Back to Priority Dashboard",
+      "scopeFilter": "Scope Filter",
+      "consolidated": "Consolidated (All Links)",
       "tab1": "1. Severity Score",
       "tab2": "2. Priority Score",
       "tab3": "3. AI Summary",
+      "tabs": {
+        "scoreBased": "Score-Based AI Summary",
+        "documentBased": "Document-Based Summary",
+        "combined": "Combined Summary"
+      },
       "responseQualityTitle": "Response Quality Results",
       "responseQualityDesc": "Completeness check, confidence level flags, and duplicate detection for submitted survey responses.",
       "assessing": "Assessing...",
@@ -2438,9 +2458,7 @@
       "noSurveys": "No surveys available.",
       "noStudies": "No studies available.",
       "responsesCount": "{count} responses",
-      "cycleBadge": "Cycle #{number}",
-      "statusUnavailable": "Unavailable",
-      "statusNotConfigured": "Not configured"
+      "cycleBadge": "Cycle #{number}"
     },
     "organizations": {
       "title": "Organizations",
@@ -2984,6 +3002,9 @@
       "geographicPerformanceTitle": "Geographic Performance",
       "orgResponsePerformanceTitle": "Organization Response Performance",
       "demographicsTitle": "Demographics",
+      "content": {
+        "evidence": "Supporting Evidence"
+      },
       "pageOf": "Page {page} of {total}",
       "pageLabel": "Page {page}",
       "priorityPageDescription": "Platform-wide priority classification, domain comparison, and the highest-priority villages, from the scoring engine.",
@@ -3072,7 +3093,6 @@
       "needsBySubDomainTitle": "Needs by Sub-Domain",
       "patternIntersectionTitle": "Pattern & Intersection Analysis",
       "patternIntersectionNote": "Strongest Region x Domain combinations — where Needs concentrate by both dimensions at once.",
-      "region": "Region",
       "domainColumn": "Domain",
       "needsColumn": "Needs",
       "priorityNeedsTitle": "Priority Needs",
@@ -3138,6 +3158,141 @@
           "label": "Page {page} of {count}"
         }
       }
+    }
+  },
+  "EvidenceDocuments": {
+    "title": "Evidence Documents",
+    "subtitle": "Upload, parse, view, and summarize supporting documents.",
+    "uploadButton": "Upload Evidence Document",
+    "unsupportedFileWarning": "Scanned PDFs and image-based documents are not supported in this version.",
+    "fields": {
+      "title": "Document Title",
+      "file": "Document File",
+      "documentType": "Document Type",
+      "sourceReferenceId": "Source / Reference ID",
+      "collectedDate": "Collected Date",
+      "linkedNeed": "Linked Need",
+      "linkedDomain": "Linked Domain",
+      "linkedKpi": "Linked KPI",
+      "description": "Description"
+    },
+    "table": {
+      "title": "Document Title",
+      "fileName": "File Name",
+      "fileType": "File Type",
+      "documentType": "Type",
+      "uploadedBy": "Uploaded By",
+      "uploadedDate": "Uploaded Date",
+      "parsingStatus": "Parsing Status",
+      "summaryStatus": "Summary Status",
+      "linkedDomainKpi": "Linked Domain/KPI",
+      "includeInReport": "Include in Combined Report",
+      "actions": "Actions"
+    },
+    "actions": {
+      "viewDetails": "View Details & Text",
+      "generateSummary": "Generate Document Summary",
+      "viewSummary": "View / Edit Summary",
+      "confirmSummary": "Confirm Summary",
+      "delete": "Delete Document"
+    },
+    "status": {
+      "uploaded": "UPLOADED",
+      "parsing": "PARSING",
+      "parsed": "PARSED",
+      "failed": "FAILED",
+      "notGenerated": "NOT GENERATED",
+      "draft": "DRAFT",
+      "officerConfirmed": "CONFIRMED",
+      "stale": "STALE",
+      "superseded": "SUPERSEDED"
+    },
+    "drawer": {
+      "detailsTitle": "Document Details & Extracted Text",
+      "metadata": "Document Metadata",
+      "extractedText": "Extracted Text",
+      "chunkCount": "Chunk Count",
+      "summaryTitle": "AI Document Summary",
+      "keyFindings": "Key Findings",
+      "themes": "Themes",
+      "risksOrConcerns": "Risks & Concerns",
+      "supportingStatements": "Supporting Statements",
+      "dataLimitations": "Data Limitations"
+    },
+    "backToStudy": "Back to Study",
+    "studyName": "Study Name",
+    "assessmentCycle": "Assessment Cycle",
+    "methodologyVersion": "Methodology Version",
+    "totalDocuments": "Total Documents",
+    "uploadedEvidenceDocuments": "Uploaded Evidence Documents",
+    "loadingDocuments": "Loading documents...",
+    "placeholders": {
+      "title": "e.g. Health Infrastructure Field Assessment",
+      "refId": "REF-2026-001",
+      "description": "Optional brief description of evidence context..."
+    },
+    "docTypes": {
+      "fieldReport": "Field Report",
+      "assessmentNote": "Assessment Note",
+      "interviewTranscript": "Interview Transcript",
+      "statisticalTable": "Statistical Table"
+    },
+    "sections": {
+      "extractedText": "Extracted Text",
+      "executiveSummary": "Executive Summary",
+      "summary": "Summary",
+      "keyFindings": "Key Findings",
+      "supportingStatements": "Supporting Statements",
+      "documentLimitations": "Document Limitations",
+      "themes": "Themes",
+      "risksOrConcerns": "Risks / Concerns"
+    }
+  },
+  "CombinedReport": {
+    "title": "Combined Report",
+    "subtitle": "Create an AI Combined Summary from existing confirmed Score-Based Summary and selected confirmed Document Summaries.",
+    "scoringSnapshot": "Current scoring snapshot date",
+    "status": "Combined Summary Status",
+    "scoreSummarySection": {
+      "title": "Score-Based Summary",
+      "unconfirmedWarning": "Confirm the Score-Based Summary before generating a Combined Summary."
+    },
+    "docSummarySelection": {
+      "title": "Document Summary Selection",
+      "subtitle": "Select confirmed document summaries to include in the combined summary."
+    },
+    "generateButton": "Generate Combined Summary",
+    "generating": "Generating Combined Summary...",
+    "confirmButton": "Officer Confirm Combined Summary",
+    "generateReportPreview": "Generate Report Preview",
+    "staleWarning": "Combined Summary is stale because underlying score or document evidence changed. Please regenerate and confirm.",
+    "backToEvidenceDocuments": "Back to Evidence Documents",
+    "studyName": "Study Name",
+    "combinedStatus": "Combined Status",
+    "confirmationStatus": "Confirmation Status",
+    "confirmedTimestamp": "Confirmed Timestamp",
+    "methodologyVersion": "Methodology Version",
+    "table": {
+      "select": "Select",
+      "documentTitle": "Document Title",
+      "refId": "Ref ID",
+      "type": "Type",
+      "scope": "Scope",
+      "scores": "Scores",
+      "generated": "Generated",
+      "status": "Status",
+      "generatedBy": "Generated By",
+      "actions": "Actions"
+    },
+    "metrics": {
+      "executiveSummary": "Executive Summary",
+      "severityScore": "Severity Score",
+      "priorityScore": "Priority Score",
+      "priorityStatus": "Priority Status",
+      "narrative": "Executive Summary Narrative",
+      "severityIndex": "Severity Index",
+      "priorityLevel": "Priority Level",
+      "scoreVsDocAlignment": "Score vs. Document Alignment"
     }
   }
 }
