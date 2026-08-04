@@ -79,6 +79,7 @@ function formatTimestamp(value?: string | null): string {
 export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   const router = useRouter();
   const canAi = usePermission("aiReview", "write");
+  const canCreateReport = usePermission("reportsDashboards", "create");
 
   const [context, setContext] = useState<CombinedReportContext | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,6 +184,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   };
 
   const handleGenerateCombinedSummary = async () => {
+    if (!canAi) return;
     if (!selectedScoreSummaryId) {
       alert(
         "Select a score-based AI summary to combine. If the list is empty, generate one from the Score-Based AI Summary tab first.",
@@ -216,7 +218,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   };
 
   const handleConfirmCombinedSummary = async () => {
-    if (!activeSummary) return;
+    if (!canAi || !activeSummary) return;
     setConfirming(true);
     try {
       const confirmed = await saveAndConfirmCombinedSummary({
@@ -240,6 +242,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   };
 
   const handleGenerateReportPreview = async () => {
+    if (!canCreateReport) return;
     setGeneratingReport(true);
     try {
       if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
@@ -513,7 +516,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
         <Button
           size="lg"
           onClick={handleGenerateCombinedSummary}
-          disabled={generating || !canGenerateCombined}
+          disabled={!canAi || generating || !canGenerateCombined}
           className="from-primary to-primary/90 flex items-center gap-2 bg-gradient-to-r px-8 font-bold shadow-md"
         >
           <Sparkles className="size-5" />
@@ -579,7 +582,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
               <Button
                 size="sm"
                 onClick={handleGenerateReportPreview}
-                disabled={generatingReport}
+                disabled={!canCreateReport || generatingReport}
                 className="flex items-center gap-1.5 font-bold"
               >
                 <FileCheck className="size-4" />

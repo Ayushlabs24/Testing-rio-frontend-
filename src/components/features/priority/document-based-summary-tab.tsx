@@ -92,6 +92,7 @@ export function DocumentBasedSummaryTab({
 
   const canWrite = usePermission("dataCollection", "write");
   const canAi = usePermission("aiReview", "write");
+  const canCreateReport = usePermission("reportsDashboards", "create");
 
   const [documents, setDocuments] = useState<EvidenceDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +172,7 @@ export function DocumentBasedSummaryTab({
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!canWrite || !selectedFile) return;
 
     setUploading(true);
     setUnsupportedError(null);
@@ -210,6 +211,7 @@ export function DocumentBasedSummaryTab({
   };
 
   const handleToggleInclusion = async (docId: string, currentVal: boolean) => {
+    if (!canWrite) return;
     try {
       await evidenceDocumentsService.toggleInclusion(studyId, docId, !currentVal);
       setDocuments((prev) =>
@@ -225,6 +227,7 @@ export function DocumentBasedSummaryTab({
   };
 
   const handleDelete = async (docId: string) => {
+    if (!canWrite) return;
     if (!confirm("Are you sure you want to delete this evidence document?")) return;
     try {
       await evidenceDocumentsService.deleteDocument(studyId, docId);
@@ -277,6 +280,7 @@ export function DocumentBasedSummaryTab({
   };
 
   const handleGenerateSummary = async (doc: EvidenceDocument) => {
+    if (!canAi) return;
     setActiveDocForSummary(doc);
     setSummaryModalOpen(true);
     setGeneratingSummary(true);
@@ -298,7 +302,7 @@ export function DocumentBasedSummaryTab({
   };
 
   const handleConfirmSummary = async () => {
-    if (!currentSummary || !activeDocForSummary) return;
+    if (!canAi || !currentSummary || !activeDocForSummary) return;
     setConfirmingSummary(true);
     try {
       if (editingSummary && editedSummaryJson) {
@@ -327,6 +331,7 @@ export function DocumentBasedSummaryTab({
   };
 
   const handleGenerateDocReport = async () => {
+    if (!canCreateReport) return;
     setGeneratingReport(true);
     try {
       const report = await reportsService.create({
@@ -370,7 +375,7 @@ export function DocumentBasedSummaryTab({
             variant="outline"
             size="sm"
             onClick={handleGenerateDocReport}
-            disabled={generatingReport}
+            disabled={!canCreateReport || generatingReport}
             className="flex items-center gap-2"
           >
             <FileCheck className="size-4" />
@@ -473,6 +478,7 @@ export function DocumentBasedSummaryTab({
                       <TableCell>
                         <Switch
                           checked={doc.isIncludedInCombinedReport}
+                          disabled={!canWrite}
                           onCheckedChange={() =>
                             handleToggleInclusion(doc.id, doc.isIncludedInCombinedReport)
                           }
@@ -1058,7 +1064,7 @@ export function DocumentBasedSummaryTab({
               <div className="flex flex-wrap justify-end gap-3 border-t pt-4">
                 <Button
                   onClick={handleConfirmSummary}
-                  disabled={confirmingSummary}
+                  disabled={!canAi || confirmingSummary}
                   variant="outline"
                   className="gap-2"
                 >
@@ -1067,7 +1073,7 @@ export function DocumentBasedSummaryTab({
                 </Button>
                 <Button
                   onClick={handleGenerateDocReport}
-                  disabled={generatingReport}
+                  disabled={!canCreateReport || generatingReport}
                   className="gap-2"
                 >
                   <FileText className="size-4" />
