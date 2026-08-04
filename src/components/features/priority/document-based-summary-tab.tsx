@@ -96,7 +96,7 @@ export function DocumentBasedSummaryTab({
 
   const [documents, setDocuments] = useState<EvidenceDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [_error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -412,6 +412,20 @@ export function DocumentBasedSummaryTab({
           {loading ? (
             <div className="text-muted-foreground p-8 text-center text-sm">
               Loading documents...
+            </div>
+          ) : error ? (
+            <div
+              role="alert"
+              className="border-destructive/40 bg-destructive/10 m-4 flex items-center justify-between gap-4 rounded-lg border p-4 text-sm"
+            >
+              <div>
+                <p className="font-semibold">{t("loadErrorTitle")}</p>
+                <p className="text-muted-foreground mt-1">{error}</p>
+              </div>
+              <Button variant="outline" onClick={() => void loadData()} className="gap-2">
+                <RefreshCw className="size-4" />
+                {t("retry")}
+              </Button>
             </div>
           ) : documents.length === 0 ? (
             <div className="text-muted-foreground p-8 text-center text-sm">

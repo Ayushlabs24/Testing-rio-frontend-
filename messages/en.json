@@ -3163,6 +3163,8 @@
   "EvidenceDocuments": {
     "title": "Evidence Documents",
     "subtitle": "Upload, parse, view, and summarize supporting documents.",
+    "loadErrorTitle": "Couldn't load evidence documents.",
+    "retry": "Retry",
     "uploadButton": "Upload Evidence Document",
     "unsupportedFileWarning": "Scanned PDFs and image-based documents are not supported in this version.",
     "fields": {
