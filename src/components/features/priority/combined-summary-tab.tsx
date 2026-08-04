@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Sparkles,
   CheckCircle2,
@@ -45,22 +45,18 @@ import {
 interface SaveAndConfirmCombinedSummaryOptions {
   studyId: string;
   summary: CombinedReportSummary;
-  editing: boolean;
+  dirty: boolean;
   editedJson: Record<string, unknown> | null;
   update: typeof combinedReportService.updateCombinedSummary;
   confirm: typeof combinedReportService.confirmCombinedSummary;
-  createReport?: () => Promise<unknown>;
 }
 
 export async function saveAndConfirmCombinedSummary(
   options: SaveAndConfirmCombinedSummaryOptions,
 ): Promise<CombinedReportSummary> {
-  const { studyId, summary, editing, editedJson, update, confirm, createReport } =
-    options;
-  if (editing && editedJson) await update(studyId, summary.id, editedJson);
-  const confirmed = await confirm(studyId, summary.id);
-  if (createReport) await createReport();
-  return confirmed;
+  const { studyId, summary, dirty, editedJson, update, confirm } = options;
+  if (dirty && editedJson) await update(studyId, summary.id, editedJson);
+  return confirm(studyId, summary.id);
 }
 
 import { reportsService } from "@/services/reports/reports.service";
@@ -95,8 +91,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   const [activeSummary, setActiveSummary] = useState<CombinedReportSummary | null>(null);
   const [editedJson, setEditedJson] = useState<Record<string, unknown> | null>(null);
   const [editing, setEditing] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [generatingReport, setGeneratingReport] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const mutationLockRef = useRef(false);
+  const [activeMutation, setActiveMutation] = useState<"save" | "report" | null>(null);
 
   // Log of RPT16 report records already generated for this study, shown below
   // the generation controls so each run leaves a visible trail.
@@ -142,6 +139,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
           ctx.latestCombinedSummary.officerEditedOutputJson ||
             ctx.latestCombinedSummary.aiOutputJson,
         );
+        setDirty(false);
       }
     } catch (err: unknown) {
       const errorMsg =
@@ -207,6 +205,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
       );
       setActiveSummary(summary);
       setEditedJson(summary.officerEditedOutputJson || summary.aiOutputJson);
+      setDirty(false);
       await loadData();
     } catch (err: unknown) {
       const errorMsg =
@@ -218,18 +217,20 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   };
 
   const handleConfirmCombinedSummary = async () => {
-    if (!canAi || !activeSummary) return;
-    setConfirming(true);
+    if (!canAi || !activeSummary || mutationLockRef.current) return;
+    mutationLockRef.current = true;
+    setActiveMutation("save");
     try {
       const confirmed = await saveAndConfirmCombinedSummary({
         studyId,
         summary: activeSummary,
-        editing,
+        dirty,
         editedJson,
         update: combinedReportService.updateCombinedSummary,
         confirm: combinedReportService.confirmCombinedSummary,
       });
       setActiveSummary(confirmed);
+      setDirty(false);
       setEditing(false);
       await loadData();
     } catch (err: unknown) {
@@ -237,30 +238,30 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
         err instanceof Error ? err.message : "Failed to save combined summary.";
       alert(errorMsg);
     } finally {
-      setConfirming(false);
+      mutationLockRef.current = false;
+      setActiveMutation(null);
     }
   };
 
   const handleGenerateReportPreview = async () => {
     if (!canCreateReport || (activeSummary?.status !== "OFFICER_CONFIRMED" && !canAi))
       return;
-    setGeneratingReport(true);
+    if (mutationLockRef.current) return;
+    mutationLockRef.current = true;
+    setActiveMutation("report");
     try {
       if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
         const confirmed = await saveAndConfirmCombinedSummary({
           studyId,
           summary: activeSummary,
-          editing,
+          dirty,
           editedJson,
           update: combinedReportService.updateCombinedSummary,
           confirm: combinedReportService.confirmCombinedSummary,
-          createReport: () => reportsService.create({ reportType: "RPT16", studyId }),
         });
         setActiveSummary(confirmed);
+        setDirty(false);
         setEditing(false);
-        await loadReportLog();
-        await loadData();
-        return;
       }
       await reportsService.create({
         reportType: "RPT16",
@@ -275,7 +276,8 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
         err instanceof Error ? err.message : "Failed to generate combined report.";
       alert(errorMsg);
     } finally {
-      setGeneratingReport(false);
+      mutationLockRef.current = false;
+      setActiveMutation(null);
     }
   };
 
@@ -564,7 +566,12 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
 
             <div className="flex items-center gap-2">
               {canAi && activeSummary.status !== "OFFICER_CONFIRMED" && (
-                <Button size="sm" variant="outline" onClick={() => setEditing(!editing)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing(!editing)}
+                  disabled={activeMutation !== null}
+                >
                   <Edit3 className="mr-1 size-4" />
                   {editing ? "Preview View" : "Edit Draft"}
                 </Button>
@@ -574,10 +581,10 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                   size="sm"
                   variant="secondary"
                   onClick={handleConfirmCombinedSummary}
-                  disabled={confirming}
+                  disabled={activeMutation !== null}
                 >
                   <Save className="mr-1 size-4" />
-                  {confirming ? "Saving..." : "Save Summary"}
+                  {activeMutation === "save" ? "Saving..." : "Save Summary"}
                 </Button>
               )}
               <Button
@@ -586,12 +593,14 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                 disabled={
                   !canCreateReport ||
                   (activeSummary.status !== "OFFICER_CONFIRMED" && !canAi) ||
-                  generatingReport
+                  activeMutation !== null
                 }
                 className="flex items-center gap-1.5 font-bold"
               >
                 <FileCheck className="size-4" />
-                {generatingReport ? "Generating Report..." : "Generate Combined Report"}
+                {activeMutation === "report"
+                  ? "Generating Report..."
+                  : "Generate Combined Report"}
               </Button>
             </div>
           </CardHeader>
@@ -606,9 +615,10 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                   <Textarea
                     rows={6}
                     value={String(editedJson?.executiveSummary || "")}
-                    onChange={(e) =>
-                      setEditedJson({ ...editedJson, executiveSummary: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setEditedJson({ ...editedJson, executiveSummary: e.target.value });
+                      setDirty(true);
+                    }}
                     className="mt-1 text-xs"
                   />
                 </div>

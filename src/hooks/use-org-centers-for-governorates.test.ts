@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Center } from "@/services/geography/geography.types";
 import type { Organization } from "@/services/organizations/organizations.types";
@@ -93,5 +93,36 @@ describe("useOrgCentersForGovernorates", () => {
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
     expect(result.current.centers).toEqual([centers[0]]);
+  });
+
+  it("hides centers from the prior key while the next key is pending and after it fails", async () => {
+    let rejectNextCenters!: (reason: unknown) => void;
+    const nextCenters = new Promise<Center[]>((_, reject) => {
+      rejectNextCenters = reject;
+    });
+    getCurrentMock.mockResolvedValue(organization(["center-allowed"]));
+    listCentersMock.mockResolvedValueOnce(centers).mockReturnValueOnce(nextCenters);
+
+    const { result, rerender } = renderHook(
+      ({ governorateIds }: { governorateIds: string[] }) =>
+        useOrgCentersForGovernorates(governorateIds),
+      { initialProps: { governorateIds: ["gov-1"] } },
+    );
+
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.centers).toEqual([centers[0]]);
+
+    rerender({ governorateIds: ["gov-2"] });
+
+    expect(result.current.loaded).toBe(false);
+    expect(result.current.centers).toEqual([]);
+
+    await act(async () => {
+      rejectNextCenters(new Error("governorate lookup failed"));
+      await nextCenters.catch(() => undefined);
+    });
+
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+    expect(result.current.centers).toEqual([]);
   });
 });

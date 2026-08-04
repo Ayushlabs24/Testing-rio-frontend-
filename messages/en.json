@@ -3164,6 +3164,7 @@
     "title": "Evidence Documents",
     "subtitle": "Upload, parse, view, and summarize supporting documents.",
     "loadErrorTitle": "Couldn't load evidence documents.",
+    "actionErrorTitle": "Couldn't update the evidence document.",
     "retry": "Retry",
     "uploadButton": "Upload Evidence Document",
     "unsupportedFileWarning": "Scanned PDFs and image-based documents are not supported in this version.",

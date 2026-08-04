@@ -24,7 +24,7 @@ describe("saveAndConfirmCombinedSummary", () => {
       saveAndConfirmCombinedSummary({
         studyId: "study-1",
         summary,
-        editing: true,
+        dirty: true,
         editedJson,
         update,
         confirm,
@@ -45,7 +45,7 @@ describe("saveAndConfirmCombinedSummary", () => {
       saveAndConfirmCombinedSummary({
         studyId: "study-1",
         summary,
-        editing: true,
+        dirty: true,
         editedJson,
         update,
         confirm,
@@ -55,7 +55,7 @@ describe("saveAndConfirmCombinedSummary", () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 
-  it("creates only after update and confirmation", async () => {
+  it("allows report creation only after update and confirmation", async () => {
     const calls: string[] = [];
     const update = vi.fn(async () => {
       calls.push("update");
@@ -71,16 +71,16 @@ describe("saveAndConfirmCombinedSummary", () => {
     await saveAndConfirmCombinedSummary({
       studyId: "study-1",
       summary,
-      editing: true,
+      dirty: true,
       editedJson,
       update,
       confirm,
-      createReport,
     });
+    await createReport();
     expect(calls).toEqual(["update", "confirm", "create"]);
   });
 
-  it("does not create when confirmation fails", async () => {
+  it("does not let the caller create when confirmation fails", async () => {
     const failure = new Error("confirm failed");
     const update = vi.fn().mockResolvedValue(undefined);
     const confirm = vi.fn().mockRejectedValue(failure);
@@ -89,11 +89,10 @@ describe("saveAndConfirmCombinedSummary", () => {
       saveAndConfirmCombinedSummary({
         studyId: "study-1",
         summary,
-        editing: true,
+        dirty: true,
         editedJson,
         update,
         confirm,
-        createReport,
       }),
     ).rejects.toBe(failure);
     expect(createReport).not.toHaveBeenCalled();
@@ -112,8 +111,8 @@ const componentMocks = vi.hoisted(() => ({
   push: vi.fn(),
   generateCombinedSummary: vi.fn(),
   permissions: {
-    aiReview: true,
-    reportsDashboards: true,
+    "aiReview.write": true,
+    "reportsDashboards.create": true,
   } as Record<string, boolean>,
 }));
 
@@ -121,7 +120,8 @@ vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: componentMocks.push }),
 }));
 vi.mock("@/hooks/use-permission", () => ({
-  usePermission: (resource: string) => componentMocks.permissions[resource] ?? false,
+  usePermission: (module: string, action: string) =>
+    componentMocks.permissions[`${module}.${action}`] ?? false,
 }));
 vi.mock("@/services/reports/combined-report.service", () => ({
   combinedReportService: {
@@ -144,8 +144,8 @@ describe("CombinedSummaryTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("alert", vi.fn());
-    componentMocks.permissions.aiReview = true;
-    componentMocks.permissions.reportsDashboards = true;
+    componentMocks.permissions["aiReview.write"] = true;
+    componentMocks.permissions["reportsDashboards.create"] = true;
     componentMocks.getContext.mockResolvedValue({
       confirmedDocumentSummaries: [],
       availableScoreSummaries: [],
@@ -164,9 +164,8 @@ describe("CombinedSummaryTab", () => {
     });
     componentMocks.createReport.mockResolvedValue({ id: "report-1" });
   });
-  it("disables report creation for a user without report create permission", async () => {
-    const user = userEvent.setup();
-    componentMocks.permissions.reportsDashboards = false;
+  it("disables and defensively blocks reports without create permission", async () => {
+    componentMocks.permissions["reportsDashboards.create"] = false;
 
     render(<CombinedSummaryTab studyId="study-1" />);
 
@@ -174,12 +173,13 @@ describe("CombinedSummaryTab", () => {
       name: "Generate Combined Report",
     });
     expect(button).toBeDisabled();
-    await user.click(button);
+    button.removeAttribute("disabled");
+    button.click();
     expect(componentMocks.createReport).not.toHaveBeenCalled();
   });
-  it("blocks draft report creation without AI write permission", async () => {
+  it("disables and defensively blocks draft reports without AI write", async () => {
     const user = userEvent.setup();
-    componentMocks.permissions.aiReview = false;
+    componentMocks.permissions["aiReview.write"] = false;
 
     render(<CombinedSummaryTab studyId="study-1" />);
 
@@ -188,13 +188,15 @@ describe("CombinedSummaryTab", () => {
     });
     expect(button).toBeDisabled();
     await user.click(button);
+    button.removeAttribute("disabled");
+    button.click();
     expect(componentMocks.update).not.toHaveBeenCalled();
     expect(componentMocks.confirm).not.toHaveBeenCalled();
     expect(componentMocks.createReport).not.toHaveBeenCalled();
   });
   it("allows report creation from a confirmed summary without AI write permission", async () => {
     const user = userEvent.setup();
-    componentMocks.permissions.aiReview = false;
+    componentMocks.permissions["aiReview.write"] = false;
     componentMocks.getContext.mockResolvedValue({
       confirmedDocumentSummaries: [],
       availableScoreSummaries: [],
@@ -251,6 +253,50 @@ describe("CombinedSummaryTab", () => {
     await user.click(screen.getByRole("button", { name: "Generate Combined Report" }));
     await waitFor(() => expect(componentMocks.update).toHaveBeenCalled());
     expect(componentMocks.confirm).not.toHaveBeenCalled();
+    expect(componentMocks.createReport).not.toHaveBeenCalled();
+  });
+  it("persists a dirty edit after returning to preview before report generation", async () => {
+    const user = userEvent.setup();
+    render(<CombinedSummaryTab studyId="study-1" />);
+    await user.click(await screen.findByRole("button", { name: "Edit Draft" }));
+    const editor = screen.getByRole("textbox");
+    await user.clear(editor);
+    await user.type(editor, "Previewed officer edit");
+    await user.click(screen.getByRole("button", { name: "Preview View" }));
+    await user.click(screen.getByRole("button", { name: "Generate Combined Report" }));
+    await waitFor(() =>
+      expect(componentMocks.createReport).toHaveBeenCalledWith({
+        reportType: "RPT16",
+        studyId: "study-1",
+      }),
+    );
+    expect(componentMocks.update).toHaveBeenCalledWith("study-1", "summary-1", {
+      executiveSummary: "Previewed officer edit",
+    });
+  });
+
+  it("keeps the locally confirmed state when report creation fails", async () => {
+    const user = userEvent.setup();
+    componentMocks.createReport.mockRejectedValueOnce(new Error("create rejected"));
+    render(<CombinedSummaryTab studyId="study-1" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Generate Combined Report" }),
+    );
+    await waitFor(() => expect(vi.mocked(alert)).toHaveBeenCalledWith("create rejected"));
+    expect(screen.getByText("CONFIRMED & SAVED")).toBeInTheDocument();
+  });
+
+  it("cross-disables and defensively rejects report generation while save is pending", async () => {
+    componentMocks.confirm.mockImplementationOnce(() => new Promise(() => undefined));
+    const user = userEvent.setup();
+    render(<CombinedSummaryTab studyId="study-1" />);
+    await user.click(await screen.findByRole("button", { name: "Save Summary" }));
+    await waitFor(() => expect(componentMocks.confirm).toHaveBeenCalledTimes(1));
+    const generate = screen.getByRole("button", { name: "Generate Combined Report" });
+    expect(generate).toBeDisabled();
+    generate.removeAttribute("disabled");
+    generate.click();
+    expect(componentMocks.confirm).toHaveBeenCalledTimes(1);
     expect(componentMocks.createReport).not.toHaveBeenCalled();
   });
 });

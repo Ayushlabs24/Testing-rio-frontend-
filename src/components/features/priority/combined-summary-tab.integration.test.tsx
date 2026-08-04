@@ -87,11 +87,10 @@ describe("CombinedSummaryTab report generation", () => {
       saveAndConfirmCombinedSummary({
         studyId: "study-1",
         summary: { id: "summary-1" } as never,
-        editing: true,
+        dirty: true,
         editedJson: { executiveSummary: "Officer edit" },
         update: vi.fn().mockRejectedValue(new Error("update failed")),
         confirm: vi.fn(),
-        createReport,
       }),
     ).rejects.toThrow("update failed");
     expect(createReport).not.toHaveBeenCalled();

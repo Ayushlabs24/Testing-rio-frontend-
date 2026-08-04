@@ -10,9 +10,9 @@ const mocks = vi.hoisted(() => ({
   createReport: vi.fn(),
   push: vi.fn(),
   permissions: {
-    dataCollection: true,
-    aiReview: true,
-    reportsDashboards: true,
+    "dataCollection.write": true,
+    "aiReview.write": true,
+    "reportsDashboards.create": true,
   } as Record<string, boolean>,
 }));
 
@@ -20,12 +20,14 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       loadErrorTitle: "Couldn't load evidence documents.",
+      actionErrorTitle: "Couldn't update the evidence document.",
       retry: "Retry",
     })[key] ?? key,
 }));
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/hooks/use-permission", () => ({
-  usePermission: (resource: string) => mocks.permissions[resource] ?? false,
+  usePermission: (module: string, action: string) =>
+    mocks.permissions[`${module}.${action}`] ?? false,
 }));
 vi.mock("@/services/evidence/evidence-documents.service", () => ({
   evidenceDocumentsService: {
@@ -44,9 +46,9 @@ import { DocumentBasedSummaryTab } from "./document-based-summary-tab";
 describe("DocumentBasedSummaryTab mutation permissions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.permissions.dataCollection = true;
-    mocks.permissions.aiReview = true;
-    mocks.permissions.reportsDashboards = true;
+    mocks.permissions["dataCollection.write"] = true;
+    mocks.permissions["aiReview.write"] = true;
+    mocks.permissions["reportsDashboards.create"] = true;
     mocks.listDocuments.mockResolvedValue([
       {
         id: "doc-1",
@@ -78,27 +80,27 @@ describe("DocumentBasedSummaryTab mutation permissions", () => {
     mocks.createReport.mockResolvedValue({ id: "report-1" });
   });
 
-  it("disables evidence inclusion without data write permission", async () => {
-    const user = userEvent.setup();
-    mocks.permissions.dataCollection = false;
+  it("disables and defensively blocks inclusion without data write permission", async () => {
+    mocks.permissions["dataCollection.write"] = false;
     render(<DocumentBasedSummaryTab studyId="study-1" needId="need-1" />);
 
     const inclusion = await screen.findByRole("switch");
     expect(inclusion).toBeDisabled();
-    await user.click(inclusion);
+    inclusion.removeAttribute("disabled");
+    inclusion.click();
     expect(mocks.toggleInclusion).not.toHaveBeenCalled();
   });
 
-  it("disables document report creation without report create permission", async () => {
-    const user = userEvent.setup();
-    mocks.permissions.reportsDashboards = false;
+  it("disables and defensively blocks reports without create permission", async () => {
+    mocks.permissions["reportsDashboards.create"] = false;
     render(<DocumentBasedSummaryTab studyId="study-1" needId="need-1" />);
 
     const createReport = await screen.findByRole("button", {
       name: "Generate Document-Based Report",
     });
     expect(createReport).toBeDisabled();
-    await user.click(createReport);
+    createReport.removeAttribute("disabled");
+    createReport.click();
     expect(mocks.createReport).not.toHaveBeenCalled();
   });
 
@@ -108,12 +110,13 @@ describe("DocumentBasedSummaryTab mutation permissions", () => {
     await user.click(await screen.findByRole("button", { name: "Summary" }));
     expect(await screen.findByRole("button", { name: "Save Summary" })).toBeEnabled();
 
-    mocks.permissions.aiReview = false;
+    mocks.permissions["aiReview.write"] = false;
     view.rerender(<DocumentBasedSummaryTab studyId="study-1" needId="need-1" />);
 
     const confirmSummary = screen.getByRole("button", { name: "Save Summary" });
     expect(confirmSummary).toBeDisabled();
-    await user.click(confirmSummary);
+    confirmSummary.removeAttribute("disabled");
+    confirmSummary.click();
     expect(mocks.confirmDocumentSummary).not.toHaveBeenCalled();
   });
 
@@ -151,5 +154,22 @@ describe("DocumentBasedSummaryTab mutation permissions", () => {
     ).toBeInTheDocument();
     expect(mocks.listDocuments).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps the loaded table visible when inclusion fails", async () => {
+    const user = userEvent.setup();
+    mocks.toggleInclusion.mockRejectedValueOnce(new Error("Inclusion failed."));
+
+    render(<DocumentBasedSummaryTab studyId="study-1" needId="need-1" />);
+
+    await user.click(await screen.findByRole("switch"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Couldn't update the evidence document.");
+    expect(alert).toHaveTextContent("Inclusion failed.");
+    expect(screen.getAllByText("Field report").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText("Couldn't load evidence documents."),
+    ).not.toBeInTheDocument();
   });
 });

@@ -75,11 +75,13 @@ export default function EvidenceDocumentsPage({
 
   const canWrite = usePermission("dataCollection", "write");
   const canAi = usePermission("aiReview", "write");
+  const canCreateReport = usePermission("reportsDashboards", "create");
 
   const [study, setStudy] = useState<Study | null>(null);
   const [documents, setDocuments] = useState<EvidenceDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -119,7 +121,8 @@ export default function EvidenceDocumentsPage({
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
+    setActionError(null);
     try {
       const [studyData, docsData] = await Promise.all([
         studiesService.getById(studyId),
@@ -130,7 +133,7 @@ export default function EvidenceDocumentsPage({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to load evidence documents data.";
-      setError(errorMsg);
+      setLoadError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -150,7 +153,7 @@ export default function EvidenceDocumentsPage({
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!canWrite || !selectedFile) return;
 
     setUploading(true);
     setUnsupportedError(null);
@@ -193,6 +196,8 @@ export default function EvidenceDocumentsPage({
   };
 
   const handleToggleInclusion = async (docId: string, currentVal: boolean) => {
+    if (!canWrite) return;
+    setActionError(null);
     try {
       await evidenceDocumentsService.toggleInclusion(studyId, docId, !currentVal);
       setDocuments((prev) =>
@@ -203,11 +208,12 @@ export default function EvidenceDocumentsPage({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to update report inclusion.";
-      setError(errorMsg);
+      setActionError(errorMsg);
     }
   };
 
   const handleDelete = async (docId: string) => {
+    if (!canWrite) return;
     if (!confirm("Are you sure you want to delete this evidence document?")) return;
     try {
       await evidenceDocumentsService.deleteDocument(studyId, docId);
@@ -231,6 +237,7 @@ export default function EvidenceDocumentsPage({
   };
 
   const handleGenerateSummary = async (doc: EvidenceDocument) => {
+    if (!canAi) return;
     setActiveDocForSummary(doc);
     setSummaryModalOpen(true);
     setGeneratingSummary(true);
@@ -252,7 +259,7 @@ export default function EvidenceDocumentsPage({
   };
 
   const handleConfirmSummary = async () => {
-    if (!currentSummary || !activeDocForSummary) return;
+    if (!canAi || !currentSummary || !activeDocForSummary) return;
     setConfirmingSummary(true);
     try {
       if (editingSummary && editedSummaryJson) {
@@ -281,6 +288,7 @@ export default function EvidenceDocumentsPage({
   };
 
   const handleGenerateDocReport = async () => {
+    if (!canCreateReport) return;
     setGeneratingReport(true);
     try {
       const report = await reportsService.create({
@@ -311,7 +319,7 @@ export default function EvidenceDocumentsPage({
               <Button
                 variant="outline"
                 onClick={handleGenerateDocReport}
-                disabled={generatingReport}
+                disabled={!canCreateReport || generatingReport}
                 className="flex items-center gap-2"
               >
                 <FileCheck className="size-4" />
@@ -390,6 +398,16 @@ export default function EvidenceDocumentsPage({
           )}
         </div>
 
+        {actionError ? (
+          <div
+            role="alert"
+            className="border-destructive/40 bg-destructive/10 mb-4 rounded-lg border p-4 text-sm"
+          >
+            <p className="font-semibold">{t("actionErrorTitle")}</p>
+            <p className="text-muted-foreground mt-1">{actionError}</p>
+          </div>
+        ) : null}
+
         {/* Documents Table */}
         <Card className="border-border">
           <CardContent className="p-0">
@@ -397,14 +415,14 @@ export default function EvidenceDocumentsPage({
               <div className="text-muted-foreground p-8 text-center text-sm">
                 Loading documents...
               </div>
-            ) : error ? (
+            ) : loadError ? (
               <div
                 role="alert"
                 className="border-destructive/40 bg-destructive/10 m-4 flex items-center justify-between gap-4 rounded-lg border p-4 text-sm"
               >
                 <div>
                   <p className="font-semibold">{t("loadErrorTitle")}</p>
-                  <p className="text-muted-foreground mt-1">{error}</p>
+                  <p className="text-muted-foreground mt-1">{loadError}</p>
                 </div>
                 <Button
                   variant="outline"
@@ -480,6 +498,7 @@ export default function EvidenceDocumentsPage({
                         <TableCell>
                           <Switch
                             checked={doc.isIncludedInCombinedReport}
+                            disabled={!canWrite}
                             onCheckedChange={() =>
                               handleToggleInclusion(
                                 doc.id,
@@ -497,11 +516,12 @@ export default function EvidenceDocumentsPage({
                             <Eye className="size-4" />
                           </Button>
 
-                          {doc.parsingStatus === "PARSED" && canAi && (
+                          {doc.parsingStatus === "PARSED" && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleGenerateSummary(doc)}
+                              disabled={!canAi}
                               className="gap-1"
                             >
                               <Sparkles className="size-3.5" />
@@ -731,7 +751,7 @@ export default function EvidenceDocumentsPage({
                 </div>
 
                 {/* Summary content viewer / editor */}
-                {editingSummary ? (
+                {editingSummary && canAi ? (
                   <div className="space-y-4">
                     <div>
                       <Label>Executive Summary</Label>
@@ -806,11 +826,11 @@ export default function EvidenceDocumentsPage({
                   </div>
                 )}
 
-                {canAi && currentSummary.status !== "OFFICER_CONFIRMED" && (
+                {currentSummary.status !== "OFFICER_CONFIRMED" && (
                   <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
                     <Button
                       onClick={handleConfirmSummary}
-                      disabled={confirmingSummary}
+                      disabled={!canAi || confirmingSummary}
                       className="gap-2"
                     >
                       <CheckCircle2 className="size-4" />

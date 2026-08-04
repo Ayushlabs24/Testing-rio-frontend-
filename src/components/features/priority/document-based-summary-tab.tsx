@@ -96,7 +96,8 @@ export function DocumentBasedSummaryTab({
 
   const [documents, setDocuments] = useState<EvidenceDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Upload dialog state
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -145,14 +146,15 @@ export function DocumentBasedSummaryTab({
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
+    setActionError(null);
     try {
       const docsData = await evidenceDocumentsService.listDocuments(studyId);
       setDocuments(docsData);
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to load evidence documents data.";
-      setError(errorMsg);
+      setLoadError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -212,6 +214,7 @@ export function DocumentBasedSummaryTab({
 
   const handleToggleInclusion = async (docId: string, currentVal: boolean) => {
     if (!canWrite) return;
+    setActionError(null);
     try {
       await evidenceDocumentsService.toggleInclusion(studyId, docId, !currentVal);
       setDocuments((prev) =>
@@ -222,7 +225,7 @@ export function DocumentBasedSummaryTab({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to update report inclusion.";
-      setError(errorMsg);
+      setActionError(errorMsg);
     }
   };
 
@@ -406,6 +409,16 @@ export function DocumentBasedSummaryTab({
         )}
       </div>
 
+      {actionError ? (
+        <div
+          role="alert"
+          className="border-destructive/40 bg-destructive/10 rounded-lg border p-4 text-sm"
+        >
+          <p className="font-semibold">{t("actionErrorTitle")}</p>
+          <p className="text-muted-foreground mt-1">{actionError}</p>
+        </div>
+      ) : null}
+
       {/* Documents Table */}
       <Card className="border-border">
         <CardContent className="p-0">
@@ -413,14 +426,14 @@ export function DocumentBasedSummaryTab({
             <div className="text-muted-foreground p-8 text-center text-sm">
               Loading documents...
             </div>
-          ) : error ? (
+          ) : loadError ? (
             <div
               role="alert"
               className="border-destructive/40 bg-destructive/10 m-4 flex items-center justify-between gap-4 rounded-lg border p-4 text-sm"
             >
               <div>
                 <p className="font-semibold">{t("loadErrorTitle")}</p>
-                <p className="text-muted-foreground mt-1">{error}</p>
+                <p className="text-muted-foreground mt-1">{loadError}</p>
               </div>
               <Button variant="outline" onClick={() => void loadData()} className="gap-2">
                 <RefreshCw className="size-4" />
