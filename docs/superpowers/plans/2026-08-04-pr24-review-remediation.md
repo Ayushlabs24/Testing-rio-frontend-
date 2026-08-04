@@ -21,10 +21,12 @@
 ### Task 1: Restore fail-closed organization center scoping
 
 **Files:**
+
 - Create: `src/hooks/use-org-centers-for-governorates.test.ts`
 - Modify: `src/hooks/use-org-centers-for-governorates.ts:29-40`
 
 **Interfaces:**
+
 - Consumes: `organizationsService.getCurrent()` and `geographyService.listCenters(governorateId)`.
 - Produces: `useOrgCentersForGovernorates(governorateIds)` whose `centers` contains only IDs listed by the current organization.
 
@@ -58,10 +60,12 @@ git commit -m "fix: keep organization center selection tenant scoped"
 ### Task 2: Persist edited combined summaries before report generation
 
 **Files:**
+
 - Create: `src/components/features/priority/combined-summary-tab.test.tsx`
 - Modify: `src/components/features/priority/combined-summary-tab.tsx:180-240`
 
 **Interfaces:**
+
 - Consumes: `combinedReportService.updateCombinedSummary`, `confirmCombinedSummary`, and `reportsService.create`.
 - Produces: an internal async save/confirm helper used by both explicit save and report generation.
 
@@ -95,12 +99,14 @@ git commit -m "fix: persist combined summary edits before report generation"
 ### Task 3: Enforce mutation permissions in priority summary tabs
 
 **Files:**
+
 - Modify: `src/components/features/priority/combined-summary-tab.test.tsx`
 - Create: `src/components/features/priority/document-based-summary-tab.test.tsx`
 - Modify: `src/components/features/priority/combined-summary-tab.tsx:55-65,180-240,420-555`
 - Modify: `src/components/features/priority/document-based-summary-tab.tsx:90-100,212-225,300-345,470-510,850-875,1055-1075`
 
 **Interfaces:**
+
 - Consumes: `usePermission("aiReview", "write")`, `usePermission("dataCollection", "write")`, and `usePermission("reportsDashboards", "create")`.
 - Produces: mutation controls and handlers that require the matching permission.
 
@@ -134,6 +140,7 @@ git commit -m "fix: gate priority report mutations by permission"
 ### Task 4: Distinguish evidence loading errors from empty results
 
 **Files:**
+
 - Modify: `src/components/features/priority/document-based-summary-tab.test.tsx`
 - Create: `src/app/[locale]/(app)/studies/[id]/evidence-documents/page.test.tsx`
 - Modify: `src/components/features/priority/document-based-summary-tab.tsx:96-160,350-410`
@@ -141,6 +148,7 @@ git commit -m "fix: gate priority report mutations by permission"
 - Modify: `messages/en.json`
 
 **Interfaces:**
+
 - Consumes: the existing `loadData` callbacks and `EvidenceDocuments` translation namespace.
 - Produces: a visible error alert with retry button; empty copy only follows a successful empty response.
 
@@ -174,9 +182,11 @@ git commit -m "fix: surface evidence document loading failures"
 ### Task 5: Full verification
 
 **Files:**
+
 - Verify all files changed in Tasks 1-4.
 
 **Interfaces:**
+
 - Consumes: completed remediation changes.
 - Produces: fresh evidence that the branch is review-ready.
 

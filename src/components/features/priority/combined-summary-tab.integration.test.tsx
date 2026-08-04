@@ -27,7 +27,10 @@ vi.mock("@/services/reports/reports.service", () => ({
   },
 }));
 
-import { CombinedSummaryTab, saveAndConfirmCombinedSummary } from "./combined-summary-tab";
+import {
+  CombinedSummaryTab,
+  saveAndConfirmCombinedSummary,
+} from "./combined-summary-tab";
 
 afterEach(() => vi.resetAllMocks());
 
@@ -66,9 +69,7 @@ describe("CombinedSummaryTab report generation", () => {
     const editor = screen.getByRole("textbox");
     await user.clear(editor);
     await user.type(editor, "Officer edit");
-    await user.click(
-      screen.getByRole("button", { name: "Generate Combined Report" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Generate Combined Report" }));
 
     await waitFor(() => expect(calls).toEqual(["update", "confirm", "create"]));
     expect(serviceMocks.update).toHaveBeenCalledWith("study-1", "summary-1", {

@@ -15,9 +15,8 @@ vi.mock("@/services/geography/geography.service", () => ({
   geographyService: { listCenters: listCentersMock },
 }));
 
-const { useOrgCentersForGovernorates } = await import(
-  "@/hooks/use-org-centers-for-governorates"
-);
+const { useOrgCentersForGovernorates } =
+  await import("@/hooks/use-org-centers-for-governorates");
 
 const centers: Center[] = [
   {
@@ -54,7 +53,7 @@ function organization(centerIds?: string[]): Organization {
   };
 
   return centerIds === undefined
-    ? (org as Organization)
+    ? (org as unknown as Organization)
     : { ...org, centerIds };
 }
 
@@ -67,9 +66,7 @@ describe("useOrgCentersForGovernorates", () => {
     getCurrentMock.mockResolvedValue(organization([]));
     listCentersMock.mockResolvedValue(centers);
 
-    const { result } = renderHook(() =>
-      useOrgCentersForGovernorates(["gov-1"]),
-    );
+    const { result } = renderHook(() => useOrgCentersForGovernorates(["gov-1"]));
 
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
@@ -80,9 +77,7 @@ describe("useOrgCentersForGovernorates", () => {
     getCurrentMock.mockResolvedValue(organization());
     listCentersMock.mockResolvedValue(centers);
 
-    const { result } = renderHook(() =>
-      useOrgCentersForGovernorates(["gov-1"]),
-    );
+    const { result } = renderHook(() => useOrgCentersForGovernorates(["gov-1"]));
 
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
@@ -93,9 +88,7 @@ describe("useOrgCentersForGovernorates", () => {
     getCurrentMock.mockResolvedValue(organization(["center-allowed"]));
     listCentersMock.mockResolvedValue(centers);
 
-    const { result } = renderHook(() =>
-      useOrgCentersForGovernorates(["gov-1"]),
-    );
+    const { result } = renderHook(() => useOrgCentersForGovernorates(["gov-1"]));
 
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
