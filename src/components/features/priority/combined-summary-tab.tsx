@@ -258,10 +258,6 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
         await loadData();
         return;
       }
-
-      if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
-        await combinedReportService.confirmCombinedSummary(studyId, activeSummary.id);
-      }
       await reportsService.create({
         reportType: "RPT16",
         studyId,
