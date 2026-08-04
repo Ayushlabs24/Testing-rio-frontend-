@@ -42,6 +42,27 @@ import {
   CombinedReportContext,
   CombinedReportSummary,
 } from "@/services/reports/combined-report.service";
+interface SaveAndConfirmCombinedSummaryOptions {
+  studyId: string;
+  summary: CombinedReportSummary;
+  editing: boolean;
+  editedJson: Record<string, unknown> | null;
+  update: typeof combinedReportService.updateCombinedSummary;
+  confirm: typeof combinedReportService.confirmCombinedSummary;
+  createReport?: () => Promise<unknown>;
+}
+
+export async function saveAndConfirmCombinedSummary(
+  options: SaveAndConfirmCombinedSummaryOptions,
+): Promise<CombinedReportSummary> {
+  const { studyId, summary, editing, editedJson, update, confirm, createReport } =
+    options;
+  if (editing && editedJson) await update(studyId, summary.id, editedJson);
+  const confirmed = await confirm(studyId, summary.id);
+  if (createReport) await createReport();
+  return confirmed;
+}
+
 import { reportsService } from "@/services/reports/reports.service";
 import type { Report } from "@/services/reports/reports.types";
 
@@ -198,17 +219,14 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
     if (!activeSummary) return;
     setConfirming(true);
     try {
-      if (editing && editedJson) {
-        await combinedReportService.updateCombinedSummary(
-          studyId,
-          activeSummary.id,
-          editedJson,
-        );
-      }
-      const confirmed = await combinedReportService.confirmCombinedSummary(
+      const confirmed = await saveAndConfirmCombinedSummary({
         studyId,
-        activeSummary.id,
-      );
+        summary: activeSummary,
+        editing,
+        editedJson,
+        update: combinedReportService.updateCombinedSummary,
+        confirm: combinedReportService.confirmCombinedSummary,
+      });
       setActiveSummary(confirmed);
       setEditing(false);
       await loadData();
@@ -224,6 +242,23 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   const handleGenerateReportPreview = async () => {
     setGeneratingReport(true);
     try {
+      if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
+        const confirmed = await saveAndConfirmCombinedSummary({
+          studyId,
+          summary: activeSummary,
+          editing,
+          editedJson,
+          update: combinedReportService.updateCombinedSummary,
+          confirm: combinedReportService.confirmCombinedSummary,
+          createReport: () => reportsService.create({ reportType: "RPT16", studyId }),
+        });
+        setActiveSummary(confirmed);
+        setEditing(false);
+        await loadReportLog();
+        await loadData();
+        return;
+      }
+
       if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
         await combinedReportService.confirmCombinedSummary(studyId, activeSummary.id);
       }
