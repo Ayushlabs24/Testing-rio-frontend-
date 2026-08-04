@@ -34,7 +34,7 @@ export function useOrgCentersForGovernorates(governorateIds: string[]): {
               ids.map((id) => geographyService.listCenters(id)),
             );
             if (!org.centerIds || org.centerIds.length === 0) {
-              return lists.flat();
+              return [];
             }
             const idSet = new Set(org.centerIds);
             return lists.flat().filter((c) => idSet.has(c.id));
