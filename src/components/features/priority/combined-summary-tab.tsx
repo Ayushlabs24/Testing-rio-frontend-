@@ -242,7 +242,8 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   };
 
   const handleGenerateReportPreview = async () => {
-    if (!canCreateReport) return;
+    if (!canCreateReport || (activeSummary?.status !== "OFFICER_CONFIRMED" && !canAi))
+      return;
     setGeneratingReport(true);
     try {
       if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
@@ -582,7 +583,11 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
               <Button
                 size="sm"
                 onClick={handleGenerateReportPreview}
-                disabled={!canCreateReport || generatingReport}
+                disabled={
+                  !canCreateReport ||
+                  (activeSummary.status !== "OFFICER_CONFIRMED" && !canAi) ||
+                  generatingReport
+                }
                 className="flex items-center gap-1.5 font-bold"
               >
                 <FileCheck className="size-4" />

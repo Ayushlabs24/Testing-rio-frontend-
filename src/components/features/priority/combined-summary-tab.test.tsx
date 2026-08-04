@@ -177,6 +177,50 @@ describe("CombinedSummaryTab", () => {
     await user.click(button);
     expect(componentMocks.createReport).not.toHaveBeenCalled();
   });
+  it("blocks draft report creation without AI write permission", async () => {
+    const user = userEvent.setup();
+    componentMocks.permissions.aiReview = false;
+
+    render(<CombinedSummaryTab studyId="study-1" />);
+
+    const button = await screen.findByRole("button", {
+      name: "Generate Combined Report",
+    });
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(componentMocks.update).not.toHaveBeenCalled();
+    expect(componentMocks.confirm).not.toHaveBeenCalled();
+    expect(componentMocks.createReport).not.toHaveBeenCalled();
+  });
+  it("allows report creation from a confirmed summary without AI write permission", async () => {
+    const user = userEvent.setup();
+    componentMocks.permissions.aiReview = false;
+    componentMocks.getContext.mockResolvedValue({
+      confirmedDocumentSummaries: [],
+      availableScoreSummaries: [],
+      latestCombinedSummary: {
+        id: "summary-1",
+        status: "OFFICER_CONFIRMED",
+        aiOutputJson: initialOutput,
+      },
+    });
+
+    render(<CombinedSummaryTab studyId="study-1" />);
+
+    const button = await screen.findByRole("button", {
+      name: "Generate Combined Report",
+    });
+    expect(button).toBeEnabled();
+    await user.click(button);
+    await waitFor(() =>
+      expect(componentMocks.createReport).toHaveBeenCalledWith({
+        reportType: "RPT16",
+        studyId: "study-1",
+      }),
+    );
+    expect(componentMocks.update).not.toHaveBeenCalled();
+    expect(componentMocks.confirm).not.toHaveBeenCalled();
+  });
   it("persists edited JSON before confirming and creating a combined report", async () => {
     const user = userEvent.setup();
     render(<CombinedSummaryTab studyId="study-1" />);
