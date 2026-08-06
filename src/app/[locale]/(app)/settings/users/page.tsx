@@ -601,7 +601,7 @@ export default function UsersSettingsPage() {
           <CardContent className="p-0">
             <div className="border-border flex items-center border-b px-4 py-3">
               <div className="relative w-full">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={query}
@@ -609,7 +609,7 @@ export default function UsersSettingsPage() {
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 pl-9"
+                  className="h-8 ps-9"
                 />
               </div>
             </div>

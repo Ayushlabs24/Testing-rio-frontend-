@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { citizenService } from "@/services/citizen/citizen.service";
 import type {
   AgeBracket,
@@ -37,6 +38,9 @@ import {
 // common codes. A respondent whose country isn't listed can still pick the
 // closest match; the actual OTP delivery only cares that the combined
 // number is a valid phone shape.
+// Displayed consent copy version — tracks the legal text in messages/*.json.
+const CONSENT_COPY_VERSION = "1.0";
+
 const COUNTRY_DIAL_CODES = [
   { code: "SA", dialCode: "+966", label: "Saudi Arabia (+966)" },
   { code: "AE", dialCode: "+971", label: "UAE (+971)" },
@@ -61,11 +65,19 @@ type TerminalPhase = "submitting" | "submitted";
 
 /** Mobile-first full-page shell — no theme toggle, no logo, no app-shell
  * chrome. Citizens reach this by scanning a QR code on their phone; the
- * only thing on screen should be the survey itself. */
+ * only thing on screen should be the survey itself. The one exception is
+ * the language switcher: the shared link carries no locale segment, so it
+ * always opens in the default locale — without this, a respondent who
+ * needs Arabic has no way to get it. */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-background flex min-h-screen justify-center">
-      <div className="flex w-full max-w-md flex-col px-5 py-8 sm:py-12">{children}</div>
+      <div className="flex w-full max-w-md flex-col px-5 py-8 sm:py-12">
+        <div className="mb-2 flex justify-end">
+          <LanguageSwitcher />
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
@@ -101,7 +113,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="text-muted-foreground hover:text-foreground mb-4 -ml-1 inline-flex h-9 items-center gap-1.5 rounded-md px-1 text-sm"
     >
-      <ArrowLeft className="size-3.5" />
+      <ArrowLeft className="size-3.5 rtl:rotate-180" />
       {t("back")}
     </button>
   );
@@ -542,12 +554,46 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               <h2 className="text-foreground text-sm font-semibold">
                 {t("details.consentTitle")}
               </h2>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                {t("details.consentBody", {
-                  organization: survey.organizationName || t("details.consentThisOrg"),
-                })}
+              <p className="text-muted-foreground text-[11px]">
+                {t("details.consentVersionLine", { version: CONSENT_COPY_VERSION })}
               </p>
             </div>
+            <dl className="text-muted-foreground space-y-2.5 text-xs leading-relaxed">
+              <div>
+                <dt className="text-foreground font-medium">
+                  {t("details.consentPurposeLabel")}
+                </dt>
+                <dd>{t("details.consentPurposeBody")}</dd>
+              </div>
+              <div>
+                <dt className="text-foreground font-medium">
+                  {t("details.consentCollectLabel")}
+                </dt>
+                <dd>{t("details.consentCollectBody")}</dd>
+              </div>
+              <div>
+                <dt className="text-foreground font-medium">
+                  {t("details.consentHandlingLabel")}
+                </dt>
+                <dd>{t("details.consentHandlingBody")}</dd>
+              </div>
+              <div>
+                <dt className="text-foreground font-medium">
+                  {t("details.consentRightsLabel")}
+                </dt>
+                <dd>
+                  {t("details.consentRightsBody", {
+                    contactChannel: t("details.consentContactChannelPlaceholder"),
+                  })}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-foreground font-medium">
+                  {t("details.consentRetentionLabel")}
+                </dt>
+                <dd>{t("details.consentRetentionBody")}</dd>
+              </div>
+            </dl>
             <div className="flex items-start gap-3">
               <Checkbox
                 id="citizen-consent"
@@ -655,10 +701,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         <BackButton onClick={goBackFromQuestion} />
         <div className="flex-1 space-y-4">
           <div className="space-y-3">
-            <Label className="text-foreground text-lg leading-snug font-semibold">
+            <Label
+              dir="auto"
+              className="text-foreground text-lg leading-snug font-semibold"
+            >
               {question.text}
               {question.required ? (
-                <span className="text-destructive ml-1">{t("form.requiredMark")}</span>
+                <span className="text-destructive ms-1">{t("form.requiredMark")}</span>
               ) : null}
             </Label>
             {question.type === "scale" || question.type === "single_choice" ? (
@@ -755,7 +804,9 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
                 className="flex items-start justify-between gap-3 py-3.5"
               >
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-muted-foreground text-xs">{question.text}</p>
+                  <p dir="auto" className="text-muted-foreground text-xs">
+                    {question.text}
+                  </p>
                   {scaleMax && scaleValue >= 0 ? (
                     <ScaleStars value={scaleValue + 1} max={scaleMax} />
                   ) : (

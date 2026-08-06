@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bell, CheckCircle2, ClipboardList, FileClock, XCircle } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -21,12 +22,6 @@ import {
   type NcnpReportReviewAlert,
   type NcnpReportReviewSummary,
 } from "@/services/ncnp-report-review/ncnp-report-review.service";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 export function SystemReviewerDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.systemReviewer");
@@ -132,7 +127,7 @@ export function SystemReviewerDashboard({ userName }: { userName: string }) {
                         {review.generatedByName ?? "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm font-medium">
-                        {formatDate(review.generatedAt)}
+                        <FormattedDate value={review.generatedAt} />
                       </TableCell>
                       <TableCell className="text-right">
                         <Link
@@ -195,7 +190,7 @@ export function SystemReviewerDashboard({ userName }: { userName: string }) {
                         {t(`alertType.${alert.type}`)}
                       </span>
                       <span className="text-muted-foreground text-xs">
-                        {formatDate(alert.generatedAt)}
+                        <FormattedDate value={alert.generatedAt} />
                       </span>
                     </li>
                   ))}

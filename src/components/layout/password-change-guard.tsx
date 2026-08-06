@@ -140,7 +140,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
             disabled={isSubmitting}
           >
             {isSubmitting ? t("submitting") : t("submit")}
-            {!isSubmitting && <ArrowRight className="size-4" />}
+            {!isSubmitting && <ArrowRight className="size-4 rtl:rotate-180" />}
           </Button>
         </form>
       </div>

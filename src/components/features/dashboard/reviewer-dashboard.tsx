@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlarmClock, CheckCircle2, Clock3, ShieldAlert } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
@@ -24,12 +25,6 @@ import type {
 } from "@/services/reviewer-sla/reviewer-sla.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 const STATUS_RANK: Record<SlaAlertStatus, number> = {
   breached: 2,
@@ -210,7 +205,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                         ) : null}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm font-medium">
-                        {formatDate(row.earliestDueAt)}
+                        <FormattedDate value={row.earliestDueAt} />
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm font-semibold">
                         <Badge
@@ -265,7 +260,7 @@ export function ReviewerDashboard({ userName }: { userName: string }) {
                       {study.title}
                     </span>
                     <span className="text-muted-foreground shrink-0 text-xs font-medium">
-                      {formatDate(study.updatedAt)}
+                      <FormattedDate value={study.updatedAt} />
                     </span>
                   </Link>
                 ))}

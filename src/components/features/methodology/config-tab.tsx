@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
@@ -27,14 +28,6 @@ import type { MethodologyConfig } from "@/services/methodology-config/methodolog
 // percentage is exact, so "exactly 100%" is checked with a small tolerance
 // rather than strict equality.
 const WEIGHT_SUM_TOLERANCE = 0.01;
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 function VersionCard({
   config,
@@ -124,13 +117,17 @@ function VersionCard({
           <div>
             <p className="text-muted-foreground text-xs">{t("publishedAtLabel")}</p>
             <p className="text-foreground text-sm font-medium">
-              {formatDate(config.publishedAt)}
+              {config.publishedAt ? (
+                <FormattedDate value={config.publishedAt} withTime />
+              ) : (
+                "—"
+              )}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t("lastUpdatedLabel")}</p>
             <p className="text-foreground text-sm font-medium">
-              {formatDate(config.updatedAt)}
+              <FormattedDate value={config.updatedAt} withTime />
             </p>
           </div>
         </div>

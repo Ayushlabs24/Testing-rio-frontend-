@@ -4,6 +4,7 @@ import { Archive as ArchiveIcon, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -31,12 +32,6 @@ import { archiveService } from "@/services/archive/archive.service";
 import type { ArchiveEntry, ArchiveEntryKind } from "@/services/archive/archive.types";
 
 const ALL = "all";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 export default function ArchivePage() {
   const t = useTranslations("app.archive");
@@ -121,13 +116,13 @@ export default function ArchivePage() {
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
-                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     placeholder={t("searchPlaceholder")}
                     aria-label={t("searchPlaceholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="h-8 pl-9"
+                    className="h-8 ps-9"
                   />
                 </div>
                 <Select
@@ -285,7 +280,7 @@ export default function ArchivePage() {
                         {entry.villages.join(", ") || "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(entry.date)}
+                        <FormattedDate value={entry.date} />
                       </TableCell>
                     </TableRow>
                   ))

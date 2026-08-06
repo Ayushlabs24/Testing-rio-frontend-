@@ -4,15 +4,9 @@ import { ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { consentService } from "@/services/consent/consent.service";
 import type { OrganizationConsentStatus } from "@/services/consent/consent.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 /**
  * Read-only — Organization Settings' Consent card. Deliberately its own
@@ -52,7 +46,11 @@ export function OrganizationConsentCard() {
             <div>
               <dt className="text-muted-foreground text-xs">{t("acceptedAtLabel")}</dt>
               <dd className="text-foreground font-medium">
-                {status.acceptedAt ? formatDate(status.acceptedAt) : "—"}
+                {status.acceptedAt ? (
+                  <FormattedDate value={status.acceptedAt} withTime />
+                ) : (
+                  "—"
+                )}
               </dd>
             </div>
             <div>

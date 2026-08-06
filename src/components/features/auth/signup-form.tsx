@@ -74,7 +74,7 @@ function SignupConfirmation({
         onClick={onGoToSignIn}
       >
         {t("goToSignInButton")}
-        <ArrowRight className="size-4" />
+        <ArrowRight className="size-4 rtl:rotate-180" />
       </Button>
     </div>
   );
@@ -400,7 +400,7 @@ export function SignupForm() {
           className="h-11 w-full gap-2 px-6"
           isLoading={isSubmitting}
           text={isSubmitting ? t("submitting") : t("submit")}
-          endIcon={<ArrowRight className="size-4" />}
+          endIcon={<ArrowRight className="size-4 rtl:rotate-180" />}
         />
       </form>
 

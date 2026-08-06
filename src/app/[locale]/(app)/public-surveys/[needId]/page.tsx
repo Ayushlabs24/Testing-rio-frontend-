@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { FormattedDate } from "@/components/common/formatted-date";
 
 // A genuinely heavy, below-the-fold, conditionally-rendered widget (only
 // shown inside the "View QR" dialog, not on initial page load) — code-split
@@ -97,12 +98,6 @@ function daysBetween(from: string, to: string): number | null {
   return diff > 0 ? diff : null;
 }
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
-
 function LinkRow({
   needId,
   link,
@@ -164,10 +159,10 @@ function LinkRow({
         {link.label}
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
-        {formatDate(link.createdAt)}
+        <FormattedDate value={link.createdAt} />
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
-        {link.expiresAt ? formatDate(link.expiresAt) : t("neverExpires")}
+        {link.expiresAt ? <FormattedDate value={link.expiresAt} /> : t("neverExpires")}
       </TableCell>
       <TableCell className="text-muted-foreground text-sm tabular-nums">
         {link.responseCount}

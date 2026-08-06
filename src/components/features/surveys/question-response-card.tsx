@@ -39,7 +39,9 @@ export function QuestionResponseCard({
       <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-foreground text-sm font-semibold">{stat.questionText}</p>
+            <p dir="auto" className="text-foreground text-sm font-semibold">
+              {stat.questionText}
+            </p>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-normal">
                 {describeAnswerType(stat.answerType)}
@@ -102,7 +104,9 @@ export function QuestionResponseCard({
                 className="text-foreground flex gap-2 text-sm"
               >
                 <span className="text-muted-foreground">•</span>
-                <span className="min-w-0 flex-1 break-words">{truncate(answer)}</span>
+                <span dir="auto" className="min-w-0 flex-1 break-words">
+                  {truncate(answer)}
+                </span>
               </li>
             ))}
           </ul>

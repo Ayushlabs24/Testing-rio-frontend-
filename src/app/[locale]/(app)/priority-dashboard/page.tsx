@@ -3,6 +3,7 @@
 import { Gauge } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -42,12 +43,6 @@ const LEVEL_VARIANT: Record<
   medium: "secondary",
   low: "outline",
 };
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 export default function PriorityDashboardPage() {
   const t = useTranslations("app.priorityDashboard");
@@ -196,7 +191,11 @@ export default function PriorityDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {entry.score ? formatDate(entry.score.scoredAt) : "—"}
+                        {entry.score ? (
+                          <FormattedDate value={entry.score.scoredAt} />
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button asChild size="sm" variant="outline" className="gap-1.5">

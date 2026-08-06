@@ -1,8 +1,10 @@
 "use client";
 
 import { ArrowRight, FileText, Sparkles, Table2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { localizeReportText } from "@/lib/report-narrative-i18n";
+import type { AppLocale } from "@/i18n/routing";
 import {
   Accordion,
   AccordionContent,
@@ -144,7 +146,11 @@ function DataTable({ rows, columns }: { rows: Dict[]; columns?: ColSpec[] }) {
           {rows.map((r, i) => (
             <TableRow key={i}>
               {cols.map((c) => (
-                <TableCell key={c.key} className="text-sm whitespace-nowrap">
+                <TableCell
+                  key={c.key}
+                  dir="auto"
+                  className="text-sm break-words whitespace-normal"
+                >
                   {c.format ? c.format(r) : scalar(r[c.key], c.key)}
                 </TableCell>
               ))}
@@ -272,6 +278,7 @@ function Section({
 
 export function ReportContentView({ report }: { report: Report }) {
   const t = useTranslations("app.reports.content");
+  const locale = useLocale() as AppLocale;
   const c = report.content as Dict;
   // KEEP IN SYNC with the identical predicate in the backend doc builder
   // (Project-RIO-Backend/src/modules/reports/report-doc.ts#buildReportDoc).
@@ -1600,7 +1607,7 @@ export function ReportContentView({ report }: { report: Report }) {
               key={i}
               className="bg-muted/20 flex items-start gap-2 rounded border p-2 text-xs"
             >
-              <ArrowRight className="text-primary mt-0.5 size-3.5 shrink-0" />
+              <ArrowRight className="text-primary mt-0.5 size-3.5 shrink-0 rtl:rotate-180" />
               <span className="text-foreground">
                 {isObj(r) ? scalar((r as Dict).intervention) : String(r)}
               </span>
@@ -1665,7 +1672,9 @@ export function ReportContentView({ report }: { report: Report }) {
             ai[k] ? (
               <div key={k}>
                 <p className="text-muted-foreground text-xs font-medium">{label(k)}</p>
-                <p className="text-foreground text-sm leading-relaxed">{scalar(ai[k])}</p>
+                <p className="text-foreground text-sm leading-relaxed">
+                  {localizeReportText(scalar(ai[k]), locale)}
+                </p>
               </div>
             ) : null,
           )}
@@ -1726,7 +1735,9 @@ export function ReportContentView({ report }: { report: Report }) {
           {typeof dq.trendNote === "string" && dq.trendNote ? (
             <div className="space-y-1">
               <p className="text-muted-foreground text-xs font-medium">{t("dq.trend")}</p>
-              <p className="text-foreground text-sm leading-relaxed">{dq.trendNote}</p>
+              <p className="text-foreground text-sm leading-relaxed">
+                {localizeReportText(dq.trendNote, locale)}
+              </p>
             </div>
           ) : null}
           {isObjArray(dq.exclusionBreakdown) ? (
@@ -1791,7 +1802,9 @@ export function ReportContentView({ report }: { report: Report }) {
     sections.push({
       title: t("trendNote"),
       node: (
-        <p className="text-foreground text-sm leading-relaxed">{scalar(c.trendNote)}</p>
+        <p className="text-foreground text-sm leading-relaxed">
+          {localizeReportText(scalar(c.trendNote), locale)}
+        </p>
       ),
     });
   }

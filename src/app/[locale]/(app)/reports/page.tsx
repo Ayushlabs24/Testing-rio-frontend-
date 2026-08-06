@@ -3,6 +3,7 @@
 import { BarChart3, Eye, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { NcnpReportReviewActions } from "@/components/features/ncnp-report/ncnp-report-review-actions";
@@ -83,13 +84,6 @@ type UnifiedRow =
       generatedAt: string;
       review: NcnpReportReviewSummary;
     };
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 const REPORT_TYPE_ITEMS = GENERATABLE_REPORT_TYPES.map((code) => ({
   value: code,
@@ -590,7 +584,10 @@ export default function ReportsPage() {
                 ) : (
                   paged.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell className="max-w-0 truncate py-4 text-sm font-medium">
+                      <TableCell
+                        dir="auto"
+                        className="max-w-sm py-4 text-sm font-medium break-words whitespace-normal"
+                      >
                         {row.category === "ngo"
                           ? row.report.title
                           : consolidatedReportId(row.review.generatedAt)}
@@ -622,7 +619,7 @@ export default function ReportsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(row.generatedAt)}
+                        <FormattedDate value={row.generatedAt} withTime />
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex flex-nowrap items-center justify-end gap-1.5">
