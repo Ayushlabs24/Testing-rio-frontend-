@@ -126,19 +126,29 @@ async function request<TResponse>(
 
   try {
     const csrfToken = SAFE_METHODS.has(method) ? undefined : readCsrfCookie();
+    // Evidence-document uploads send a FormData body. Content-Type must be
+    // omitted for those so the browser sets it with the multipart boundary —
+    // forcing application/json makes the backend reject the upload. Kept as a
+    // plain object rather than a Headers instance so callers (and tests) can
+    // read individual headers back off the request init.
+    const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+    const reqHeaders: Record<string, string> = {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
+      ...(options.headers as Record<string, string> | undefined),
+    };
+
     const response = await fetch(buildUrl(path, options.params), {
       method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
-        ...options.headers,
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: reqHeaders,
+      body:
+        body !== undefined
+          ? isFormData
+            ? (body as FormData)
+            : JSON.stringify(body)
+          : undefined,
       signal,
       cache: options.cache,
-      // The backend's session lives in an httpOnly cookie (see
-      // auth.service.ts) — required for it to be sent/stored cross-origin
-      // (frontend :3000, backend :4000). Harmless for same-origin calls.
       credentials: "include",
     });
 

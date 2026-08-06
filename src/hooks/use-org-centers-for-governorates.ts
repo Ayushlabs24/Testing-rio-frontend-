@@ -19,8 +19,10 @@ export function useOrgCentersForGovernorates(governorateIds: string[]): {
   centers: Center[];
   loaded: boolean;
 } {
-  const [centers, setCenters] = useState<Center[]>([]);
-  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
+  const [resolved, setResolved] = useState<{
+    key: string | null;
+    centers: Center[];
+  }>({ key: null, centers: [] });
   const key = [...governorateIds].sort().join(",");
 
   useEffect(() => {
@@ -30,27 +32,29 @@ export function useOrgCentersForGovernorates(governorateIds: string[]): {
       ids.length === 0
         ? Promise.resolve([])
         : organizationsService.getCurrent().then(async (org) => {
-            if (org.centerIds.length === 0) return [];
             const lists = await Promise.all(
               ids.map((id) => geographyService.listCenters(id)),
             );
+            if (!org.centerIds || org.centerIds.length === 0) {
+              return [];
+            }
             const idSet = new Set(org.centerIds);
             return lists.flat().filter((c) => idSet.has(c.id));
           });
     load
-      .then((resolved) => {
+      .then((loadedCenters) => {
         if (cancelled) return;
-        setCenters(resolved);
-        setResolvedKey(key);
+        setResolved({ key, centers: loadedCenters });
       })
       .catch(() => {
         // Non-fatal — see doc comment above.
-        if (!cancelled) setResolvedKey(key);
+        if (!cancelled) setResolved({ key, centers: [] });
       });
     return () => {
       cancelled = true;
     };
   }, [key]);
 
-  return { centers, loaded: resolvedKey === key };
+  const loaded = resolved.key === key;
+  return { centers: loaded ? resolved.centers : [], loaded };
 }
