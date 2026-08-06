@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { authService } from "@/services/auth/auth.service";
 import { consentService } from "@/services/consent/consent.service";
 
@@ -17,6 +19,11 @@ import { consentService } from "@/services/consent/consent.service";
 // is asked for it. Everyone else an admin adds via the Users page is
 // covered by that acceptance and never sees this gate.
 const CONSENTING_ROLE_KEY = "ngo_admin";
+
+// Displayed consent copy version — tracks the legal text in messages/*.json,
+// independent of the backend's ActiveConsentPolicy.version (an opaque
+// gating key used only to detect "policy changed, re-prompt").
+const CONSENT_COPY_VERSION = "1.0";
 
 /**
  * Blocks the NGO Admin until they have accepted the *currently active*
@@ -83,22 +90,44 @@ export function ConsentGuard({ children }: { children: ReactNode }) {
     }
   };
 
+  const organizationName = session.organization.name;
+
   return (
     <div className="bg-muted/30 flex min-h-screen flex-col items-center justify-center gap-8 p-6">
+      <div className="fixed end-4 top-4 flex items-center gap-1 sm:end-6 sm:top-6">
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </div>
+
       <Logo />
 
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-2xl">
         <CardContent className="p-10">
           <div className="bg-primary/10 text-primary mb-6 flex size-12 items-center justify-center rounded-full">
             <ShieldCheck className="size-6" />
           </div>
 
           <h1 className="text-foreground text-xl font-semibold">{t("title")}</h1>
-          <p className="text-muted-foreground mt-2 text-xs">{t("description")}</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {t("versionLine", {
+              version: CONSENT_COPY_VERSION,
+              effectiveDate: t("effectiveDatePlaceholder"),
+            })}
+          </p>
 
           <p className="text-muted-foreground border-border mt-6 border-t pt-6 text-xs leading-relaxed">
-            {t("body")}
+            {t("description", { organization: organizationName })}
           </p>
+
+          <ul className="text-muted-foreground mt-3 space-y-3 text-xs leading-relaxed">
+            <li>{t("bodyParagraph1")}</li>
+            <li>{t("bodyParagraph2")}</li>
+            <li>{t("bodyParagraph3")}</li>
+            <li>{t("bodyParagraph4")}</li>
+            <li>
+              {t("bodyParagraph5", { contactChannel: t("contactChannelPlaceholder") })}
+            </li>
+          </ul>
 
           <div className="mt-6 flex items-start gap-3">
             <Checkbox
@@ -115,7 +144,7 @@ export function ConsentGuard({ children }: { children: ReactNode }) {
               htmlFor="consentAgree"
               className="text-muted-foreground text-xs leading-relaxed font-normal"
             >
-              {t("agreeLabel")}
+              {t("agreeLabel", { version: CONSENT_COPY_VERSION })}
             </Label>
           </div>
 
@@ -127,7 +156,7 @@ export function ConsentGuard({ children }: { children: ReactNode }) {
             className="mt-8 h-11 w-full gap-2 text-sm"
           >
             {isSubmitting ? t("accepting") : t("accept")}
-            {!isSubmitting && <ArrowRight className="size-4" />}
+            {!isSubmitting && <ArrowRight className="size-4 rtl:rotate-180" />}
           </Button>
         </CardContent>
       </Card>

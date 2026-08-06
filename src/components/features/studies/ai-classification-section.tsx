@@ -559,7 +559,10 @@ export function AiClassificationSection({
                 </div>
               ) : null}
               {latest?.suggestion.rationale ? (
-                <p className="text-foreground/80 text-xs leading-relaxed italic">
+                <p
+                  dir="auto"
+                  className="text-foreground/80 text-xs leading-relaxed italic"
+                >
                   {latest.suggestion.rationale}
                 </p>
               ) : null}
@@ -678,7 +681,10 @@ export function AiClassificationSection({
                   </div>
                 ) : null}
                 {latest?.suggestion.rationale ? (
-                  <p className="text-foreground/80 text-xs leading-relaxed italic">
+                  <p
+                    dir="auto"
+                    className="text-foreground/80 text-xs leading-relaxed italic"
+                  >
                     {latest.suggestion.rationale}
                   </p>
                 ) : null}

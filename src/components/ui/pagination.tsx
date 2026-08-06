@@ -45,7 +45,7 @@ export function Pagination({
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
-          <ChevronLeft className="size-3.5" />
+          <ChevronLeft className="size-3.5 rtl:rotate-180" />
           {previousLabel}
         </Button>
         <Button
@@ -57,7 +57,7 @@ export function Pagination({
           onClick={() => onPageChange(page + 1)}
         >
           {nextLabel}
-          <ChevronRight className="size-3.5" />
+          <ChevronRight className="size-3.5 rtl:rotate-180" />
         </Button>
       </div>
     </nav>

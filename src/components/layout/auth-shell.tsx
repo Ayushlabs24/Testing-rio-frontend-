@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/common/logo";
 import { ContactDialog } from "@/components/features/auth/contact-dialog";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 interface AuthShellProps {
@@ -58,7 +59,8 @@ export function AuthShell({
       </div>
 
       <div className="bg-auth-surface relative flex items-center justify-center p-6 sm:p-8 lg:p-12">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+        <div className="absolute end-4 top-4 flex items-center gap-1 sm:end-6 sm:top-6">
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
         {children}

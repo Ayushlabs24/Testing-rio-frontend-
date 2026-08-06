@@ -89,7 +89,8 @@
   --palette-info-700: oklch(0.46 0.12 230);
 
   /* Fonts */
-  --font-sans-token: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-sans-token:
+    var(--font-geist-sans), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
   --font-mono-token: var(--font-geist-mono, ui-monospace, monospace);
 
   /* ---------------------------------------------------------------- */

@@ -73,7 +73,7 @@ export function Combobox({
             !selected && "text-muted-foreground",
           )}
         >
-          <span className="min-w-0 flex-1 truncate text-left">
+          <span className="min-w-0 flex-1 truncate text-start">
             {selected ? selected.label : placeholder}
           </span>
           <ChevronsUpDown className="text-muted-foreground size-4 shrink-0" />
@@ -124,7 +124,7 @@ export function Combobox({
                   onSelect(item.value);
                   setOpen(false);
                 }}
-                className="hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-md px-2.5 py-1.5 text-left text-sm"
+                className="hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-md px-2.5 py-1.5 text-start text-sm"
               >
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{item.label}</span>

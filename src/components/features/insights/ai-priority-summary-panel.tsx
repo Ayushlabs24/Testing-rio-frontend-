@@ -477,7 +477,7 @@ export function AiPrioritySummaryPanel({
                 >
                   <FileText className="size-3.5" />
                   {t("generateReportButton", { scope: record.summaryScope })}
-                  <ArrowRight className="size-3.5" />
+                  <ArrowRight className="size-3.5 rtl:rotate-180" />
                 </Button>
               )}
             </div>

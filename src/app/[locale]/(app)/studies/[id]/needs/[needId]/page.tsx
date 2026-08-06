@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { BackButton } from "@/components/common/back-button";
@@ -42,13 +43,6 @@ interface NeedFormValues {
   centerIds: string[];
 }
 
-function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
-
 function VillageChips({ villages }: { villages: string[] }) {
   const t = useTranslations("app.studies.detail");
   if (villages.length === 0) {
@@ -66,9 +60,18 @@ function VillageChips({ villages }: { villages: string[] }) {
   );
 }
 
+// dir="auto" lets the browser pick this block's own direction from its
+// actual first strong-directional character, instead of inheriting the
+// page's RTL — free-form content (statements, notes) can be in either
+// language regardless of UI locale, and without this, English text ending
+// in punctuation visually reorders (the trailing "." or "?" jumps to the
+// start of the line) inside an RTL-directioned ancestor.
 function FilledTextBlock({ children }: { children: ReactNode }) {
   return (
-    <div className="border-border bg-muted/40 min-h-24 rounded-md border px-3.5 py-3 text-sm whitespace-pre-wrap">
+    <div
+      dir="auto"
+      className="border-border bg-muted/40 min-h-24 rounded-md border px-3.5 py-3 text-sm whitespace-pre-wrap"
+    >
       {children}
     </div>
   );
@@ -405,7 +408,7 @@ function NeedDetailsCard({
                 {need.createdByName ?? t("enteredByUnknown")}
               </FilledField>
               <FilledField label={t("captureDateLabel")}>
-                {formatDateTime(need.createdAt)}
+                <FormattedDate value={need.createdAt} withTime />
               </FilledField>
             </div>
           </div>

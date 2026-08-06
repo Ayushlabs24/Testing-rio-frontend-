@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { appNav } from "@/config/navigation";
 import {
@@ -453,7 +454,7 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
         ) : null}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ms-auto flex items-center gap-2">
         {isSystemAdmin ? (
           <Badge
             variant="outline"
@@ -469,6 +470,7 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
             canSeeNcnpReport={canSeeNcnpReport}
           />
         ) : null}
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
     </header>

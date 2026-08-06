@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   FileText,
   AlertTriangle,
@@ -53,6 +53,8 @@ import {
 } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
+import type { AppLocale } from "@/i18n/routing";
+import { formatDateTime } from "@/lib/format-date";
 import {
   evidenceDocumentsService,
   EvidenceDocument,
@@ -65,10 +67,41 @@ interface DocumentBasedSummaryTabProps {
   needId: string;
 }
 
-function formatTimestamp(value?: string | null): string {
+type TFunc = ReturnType<typeof useTranslations>;
+
+const DOC_TYPE_KEY: Record<string, string> = {
+  FIELD_REPORT: "fieldReport",
+  ASSESSMENT_NOTE: "assessmentNote",
+  INTERVIEW_TRANSCRIPT: "interviewTranscript",
+  STATISTICAL_TABLE: "statisticalTable",
+};
+
+function docTypeLabel(type: string, t: TFunc): string {
+  const key = DOC_TYPE_KEY[type];
+  return key ? t(`docTypes.${key}` as Parameters<TFunc>[0]) : type;
+}
+
+const STATUS_KEY: Record<string, string> = {
+  UPLOADED: "uploaded",
+  PARSING: "parsing",
+  PARSED: "parsed",
+  FAILED: "failed",
+  NOT_GENERATED: "notGenerated",
+  DRAFT: "draft",
+  OFFICER_CONFIRMED: "officerConfirmed",
+  STALE: "stale",
+  SUPERSEDED: "superseded",
+};
+
+function statusLabel(status: string, t: TFunc): string {
+  const key = STATUS_KEY[status];
+  return key ? t(`status.${key}` as Parameters<TFunc>[0]) : status;
+}
+
+function formatTimestamp(value: string | null | undefined, locale: AppLocale): string {
   if (!value) return "—";
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString();
+  return Number.isNaN(parsed.getTime()) ? "—" : formatDateTime(parsed, locale);
 }
 
 /** Summary payloads are stored as JSON but have historically also arrived as strings. */
@@ -88,6 +121,7 @@ export function DocumentBasedSummaryTab({
   needId,
 }: DocumentBasedSummaryTabProps) {
   const t = useTranslations("EvidenceDocuments");
+  const locale = useLocale() as AppLocale;
   const router = useRouter();
 
   const canWrite = usePermission("dataCollection", "write");
@@ -231,7 +265,7 @@ export function DocumentBasedSummaryTab({
 
   const handleDelete = async (docId: string) => {
     if (!canWrite) return;
-    if (!confirm("Are you sure you want to delete this evidence document?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       await evidenceDocumentsService.deleteDocument(studyId, docId);
       await loadData();
@@ -382,7 +416,7 @@ export function DocumentBasedSummaryTab({
             className="flex items-center gap-2"
           >
             <FileCheck className="size-4" />
-            Generate Document-Based Report
+            {t("generateReportButton")}
           </Button>
         )}
       </div>
@@ -390,13 +424,8 @@ export function DocumentBasedSummaryTab({
       {/* Action Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-foreground text-lg font-semibold">
-            Evidence Documents & Extracted Text
-          </h2>
-          <p className="text-muted-foreground text-xs">
-            Upload field reports, assessment notes, or transcripts associated with this
-            study.
-          </p>
+          <h2 className="text-foreground text-lg font-semibold">{t("title")}</h2>
+          <p className="text-muted-foreground text-xs">{t("subtitle")}</p>
         </div>
         {canWrite && (
           <Button
@@ -424,7 +453,7 @@ export function DocumentBasedSummaryTab({
         <CardContent className="p-0">
           {loading ? (
             <div className="text-muted-foreground p-8 text-center text-sm">
-              Loading documents...
+              {t("loadingDocuments")}
             </div>
           ) : loadError ? (
             <div
@@ -442,7 +471,7 @@ export function DocumentBasedSummaryTab({
             </div>
           ) : documents.length === 0 ? (
             <div className="text-muted-foreground p-8 text-center text-sm">
-              No supporting evidence documents uploaded yet for this study.
+              {t("noDocuments")}
             </div>
           ) : (
             <Table>
@@ -469,12 +498,17 @@ export function DocumentBasedSummaryTab({
                         <div>
                           <p className="text-sm font-semibold">{doc.title}</p>
                           <p className="text-muted-foreground text-xs">
-                            {doc.fileName} • Ref: {doc.sourceReferenceId}
+                            {t("refFileName", {
+                              fileName: doc.fileName,
+                              ref: doc.sourceReferenceId,
+                            })}
                           </p>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{doc.documentType}</Badge>
+                        <Badge variant="outline">
+                          {docTypeLabel(doc.documentType, t)}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -486,7 +520,7 @@ export function DocumentBasedSummaryTab({
                                 : "outline"
                           }
                         >
-                          {doc.parsingStatus}
+                          {statusLabel(doc.parsingStatus, t)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -499,7 +533,7 @@ export function DocumentBasedSummaryTab({
                                 : "secondary"
                           }
                         >
-                          {summaryStatus}
+                          {statusLabel(summaryStatus, t)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -528,7 +562,7 @@ export function DocumentBasedSummaryTab({
                             className="gap-1"
                           >
                             <Sparkles className="size-3.5" />
-                            Summary
+                            {t("sections.summary")}
                           </Button>
                         )}
 
@@ -563,7 +597,7 @@ export function DocumentBasedSummaryTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="text-primary size-5" />
-            Generated AI Evidence Summaries
+            {t("summaries.heading")}
             {allSummaries.length > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {allSummaries.length}
@@ -574,18 +608,17 @@ export function DocumentBasedSummaryTab({
         <CardContent className="p-0">
           {allSummaries.length === 0 ? (
             <div className="text-muted-foreground p-8 text-center text-sm">
-              No AI evidence summaries generated yet. Use the Summary action on a parsed
-              document above to generate one.
+              {t("summaries.empty")}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Document</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Generated</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("summaries.document")}</TableHead>
+                  <TableHead>{t("summaries.status")}</TableHead>
+                  <TableHead>{t("summaries.generated")}</TableHead>
+                  <TableHead>{t("summaries.model")}</TableHead>
+                  <TableHead className="text-right">{t("summaries.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -594,7 +627,10 @@ export function DocumentBasedSummaryTab({
                     <TableCell>
                       <p className="text-sm font-semibold">{doc.title}</p>
                       <p className="text-muted-foreground text-xs">
-                        {doc.fileName} • Ref: {doc.sourceReferenceId}
+                        {t("refFileName", {
+                          fileName: doc.fileName,
+                          ref: doc.sourceReferenceId,
+                        })}
                       </p>
                     </TableCell>
                     <TableCell>
@@ -607,11 +643,11 @@ export function DocumentBasedSummaryTab({
                               : "secondary"
                         }
                       >
-                        {summary.status}
+                        {statusLabel(summary.status, t)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {formatTimestamp(summary.generatedAt)}
+                      {formatTimestamp(summary.generatedAt, locale)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {summary.modelName}
@@ -621,7 +657,7 @@ export function DocumentBasedSummaryTab({
                       <Button
                         size="sm"
                         variant="ghost"
-                        aria-label={`View AI summary for ${doc.title}`}
+                        aria-label={t("summaries.viewAriaLabel", { title: doc.title })}
                         onClick={() => setViewSummary({ summary, doc })}
                       >
                         <Eye className="size-4" />
@@ -640,9 +676,7 @@ export function DocumentBasedSummaryTab({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{t("uploadButton")}</DialogTitle>
-            <DialogDescription>
-              Upload supporting text-based documents (.txt, .docx, text PDF, .csv, .xlsx).
-            </DialogDescription>
+            <DialogDescription>{t("uploadDialogDescription")}</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleUploadSubmit} className="space-y-4">
@@ -658,7 +692,7 @@ export function DocumentBasedSummaryTab({
                 required
                 value={uploadForm.title}
                 onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                placeholder="e.g. Health Infrastructure Field Assessment"
+                placeholder={t("placeholders.title")}
               />
             </div>
 
@@ -685,12 +719,18 @@ export function DocumentBasedSummaryTab({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="FIELD_REPORT">Field Report</SelectItem>
-                    <SelectItem value="ASSESSMENT_NOTE">Assessment Note</SelectItem>
-                    <SelectItem value="INTERVIEW_TRANSCRIPT">
-                      Interview Transcript
+                    <SelectItem value="FIELD_REPORT">
+                      {t("docTypes.fieldReport")}
                     </SelectItem>
-                    <SelectItem value="STATISTICAL_TABLE">Statistical Table</SelectItem>
+                    <SelectItem value="ASSESSMENT_NOTE">
+                      {t("docTypes.assessmentNote")}
+                    </SelectItem>
+                    <SelectItem value="INTERVIEW_TRANSCRIPT">
+                      {t("docTypes.interviewTranscript")}
+                    </SelectItem>
+                    <SelectItem value="STATISTICAL_TABLE">
+                      {t("docTypes.statisticalTable")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -702,7 +742,7 @@ export function DocumentBasedSummaryTab({
                   onChange={(e) =>
                     setUploadForm({ ...uploadForm, sourceReferenceId: e.target.value })
                   }
-                  placeholder="REF-2026-001"
+                  placeholder={t("placeholders.refId")}
                 />
               </div>
             </div>
@@ -726,7 +766,7 @@ export function DocumentBasedSummaryTab({
                 onChange={(e) =>
                   setUploadForm({ ...uploadForm, description: e.target.value })
                 }
-                placeholder="Optional brief description of evidence context..."
+                placeholder={t("placeholders.description")}
               />
             </div>
 
@@ -736,10 +776,10 @@ export function DocumentBasedSummaryTab({
                 variant="outline"
                 onClick={() => setUploadDialogOpen(false)}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button type="submit" disabled={uploading}>
-                {uploading ? "Uploading..." : "Upload & Parse"}
+                {uploading ? t("uploading") : t("uploadSubmit")}
               </Button>
             </div>
           </form>
@@ -752,7 +792,10 @@ export function DocumentBasedSummaryTab({
           <SheetHeader>
             <SheetTitle>{selectedDoc?.title}</SheetTitle>
             <SheetDescription>
-              Ref: {selectedDoc?.sourceReferenceId} • Type: {selectedDoc?.documentType}
+              {t("refType", {
+                ref: selectedDoc?.sourceReferenceId ?? "",
+                type: selectedDoc ? docTypeLabel(selectedDoc.documentType, t) : "",
+              })}
             </SheetDescription>
           </SheetHeader>
 
@@ -762,7 +805,7 @@ export function DocumentBasedSummaryTab({
                 <div>
                   <h3 className="text-primary mb-2 flex items-center gap-1.5 text-sm font-semibold">
                     <Sparkles className="size-4" />
-                    Saved AI Summary
+                    {t("savedAiSummary")}
                   </h3>
                   <div className="bg-card space-y-3 rounded-lg border p-4 text-xs">
                     {(() => {
@@ -779,16 +822,16 @@ export function DocumentBasedSummaryTab({
                                 : "secondary"
                             }
                           >
-                            Status: {latest.status}
+                            {t("statusLabel", { status: statusLabel(latest.status, t) })}
                           </Badge>
                           <p className="text-muted-foreground leading-relaxed">
-                            {String(json?.summary || "Summary saved.")}
+                            {String(json?.summary || t("summarySavedFallback"))}
                           </p>
                           {Array.isArray(json?.keyFindings) &&
                             json.keyFindings.length > 0 && (
                               <div className="border-t pt-2">
                                 <p className="text-foreground mb-1 font-semibold">
-                                  Key Findings:
+                                  {t("sections.keyFindings")}
                                 </p>
                                 <ul className="text-muted-foreground list-disc space-y-0.5 pl-4">
                                   {json.keyFindings.map(
@@ -817,10 +860,10 @@ export function DocumentBasedSummaryTab({
               */}
               <div>
                 <h3 className="text-foreground mb-2 text-sm font-semibold">
-                  Extracted Text
+                  {t("drawer.extractedText")}
                 </h3>
                 <div className="bg-muted/30 max-h-80 overflow-y-auto rounded-lg border p-4 font-mono text-xs whitespace-pre-wrap">
-                  {selectedDoc.extractedText || "No text extracted."}
+                  {selectedDoc.extractedText || t("noTextExtracted")}
                 </div>
                 {/* Link to the source file, at the end of the extracted text. */}
                 <Button
@@ -832,15 +875,15 @@ export function DocumentBasedSummaryTab({
                 >
                   <ExternalLink className="size-3.5" />
                   {openingFileId === selectedDoc.id
-                    ? "Opening…"
-                    : `Open original document (${selectedDoc.fileName})`}
+                    ? t("openingFile")
+                    : t("openOriginalDocument", { fileName: selectedDoc.fileName })}
                 </Button>
               </div>
 
               {selectedDoc.chunks && selectedDoc.chunks.length > 0 && (
                 <div>
                   <h3 className="text-foreground mb-2 text-sm font-semibold">
-                    Ordered Chunks ({selectedDoc.chunks.length})
+                    {t("orderedChunksHeading", { count: selectedDoc.chunks.length })}
                   </h3>
                   <div className="space-y-2">
                     {selectedDoc.chunks.map((chunk) => (
@@ -849,7 +892,8 @@ export function DocumentBasedSummaryTab({
                         className="bg-card rounded-md border p-3 text-xs"
                       >
                         <p className="text-primary font-semibold">
-                          {chunk.sectionReference || `Chunk #${chunk.chunkIndex + 1}`}
+                          {chunk.sectionReference ||
+                            t("chunkFallback", { index: chunk.chunkIndex + 1 })}
                         </p>
                         <p className="text-muted-foreground mt-1 line-clamp-3">
                           {chunk.chunkText}
@@ -870,14 +914,14 @@ export function DocumentBasedSummaryTab({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="text-primary size-5" />
-              AI Document Summary — {activeDocForSummary?.title}
+              {t("aiDocumentSummaryTitle", { title: activeDocForSummary?.title ?? "" })}
             </DialogTitle>
           </DialogHeader>
 
           {generatingSummary ? (
             <div className="text-muted-foreground flex flex-col items-center gap-2 p-8 text-center text-sm">
               <RefreshCw className="text-primary size-6 animate-spin" />
-              Analyzing extracted document text and generating qualitative summary...
+              {t("analyzingSummary")}
             </div>
           ) : currentSummary ? (
             <div className="space-y-6 pt-2">
@@ -889,7 +933,7 @@ export function DocumentBasedSummaryTab({
                       : "secondary"
                   }
                 >
-                  Status: {currentSummary.status}
+                  {t("statusLabel", { status: statusLabel(currentSummary.status, t) })}
                 </Badge>
                 {canAi && currentSummary.status !== "OFFICER_CONFIRMED" && (
                   <Button
@@ -898,7 +942,7 @@ export function DocumentBasedSummaryTab({
                     onClick={() => setEditingSummary(!editingSummary)}
                   >
                     <Edit3 className="mr-1 size-3.5" />
-                    {editingSummary ? "Preview" : "Edit Draft"}
+                    {editingSummary ? t("preview") : t("editDraft")}
                   </Button>
                 )}
               </div>
@@ -906,7 +950,7 @@ export function DocumentBasedSummaryTab({
               {editingSummary ? (
                 <div className="space-y-4">
                   <div>
-                    <Label>Executive Summary</Label>
+                    <Label>{t("sections.executiveSummary")}</Label>
                     <Textarea
                       rows={4}
                       value={String(editedSummaryJson?.summary || "")}
@@ -932,7 +976,7 @@ export function DocumentBasedSummaryTab({
 
                   <div>
                     <h4 className="text-foreground mb-1 text-sm font-semibold">
-                      Summary
+                      {t("sections.summary")}
                     </h4>
                     <p className="text-muted-foreground leading-relaxed">
                       {String(editedSummaryJson?.summary || "")}
@@ -943,7 +987,7 @@ export function DocumentBasedSummaryTab({
                     (editedSummaryJson.keyFindings as unknown[]).length > 0 && (
                       <div>
                         <h4 className="text-foreground mb-2 text-sm font-semibold">
-                          Key Findings
+                          {t("sections.keyFindings")}
                         </h4>
                         <div className="space-y-2">
                           {(
@@ -971,7 +1015,7 @@ export function DocumentBasedSummaryTab({
                     (editedSummaryJson.themes as unknown[]).length > 0 && (
                       <div>
                         <h4 className="text-foreground mb-2 text-sm font-semibold">
-                          Themes
+                          {t("sections.themes")}
                         </h4>
                         <div className="space-y-2">
                           {(
@@ -1004,7 +1048,7 @@ export function DocumentBasedSummaryTab({
                     (editedSummaryJson.supportingStatements as unknown[]).length > 0 && (
                       <div>
                         <h4 className="text-foreground mb-2 text-sm font-semibold">
-                          Supporting Statements
+                          {t("sections.supportingStatements")}
                         </h4>
                         <div className="space-y-2">
                           {(
@@ -1040,7 +1084,7 @@ export function DocumentBasedSummaryTab({
                     (editedSummaryJson.risksOrConcerns as unknown[]).length > 0 && (
                       <div>
                         <h4 className="text-foreground mb-2 text-sm font-semibold">
-                          Risks / Concerns
+                          {t("sections.risksOrConcerns")}
                         </h4>
                         <div className="space-y-2">
                           {(
@@ -1071,7 +1115,7 @@ export function DocumentBasedSummaryTab({
                     editedSummaryJson.documentLimitations.length > 0 && (
                       <div>
                         <h4 className="text-foreground mb-1 text-sm font-semibold">
-                          Document Limitations
+                          {t("sections.documentLimitations")}
                         </h4>
                         <ul className="text-muted-foreground list-disc space-y-1 pl-4">
                           {editedSummaryJson.documentLimitations.map(
@@ -1096,7 +1140,7 @@ export function DocumentBasedSummaryTab({
                   className="gap-2"
                 >
                   <CheckCircle2 className="size-4" />
-                  {confirmingSummary ? "Saving..." : "Save Summary"}
+                  {confirmingSummary ? t("savingSummary") : t("saveSummaryButton")}
                 </Button>
                 <Button
                   onClick={handleGenerateDocReport}
@@ -1104,7 +1148,7 @@ export function DocumentBasedSummaryTab({
                   className="gap-2"
                 >
                   <FileText className="size-4" />
-                  {generatingReport ? "Generating..." : "Generate Document-Based Report"}
+                  {generatingReport ? t("generatingReport") : t("generateReportButton")}
                 </Button>
               </div>
             </div>
@@ -1118,12 +1162,14 @@ export function DocumentBasedSummaryTab({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="text-primary size-5" />
-              AI Evidence Summary — {viewSummary?.doc.title}
+              {t("aiEvidenceSummaryTitle", { title: viewSummary?.doc.title ?? "" })}
             </DialogTitle>
             <DialogDescription>
-              Ref: {viewSummary?.doc.sourceReferenceId} • Generated{" "}
-              {formatTimestamp(viewSummary?.summary.generatedAt)} •{" "}
-              {viewSummary?.summary.modelName}
+              {t("refGeneratedModel", {
+                ref: viewSummary?.doc.sourceReferenceId ?? "",
+                date: formatTimestamp(viewSummary?.summary.generatedAt, locale),
+                model: viewSummary?.summary.modelName ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -1142,7 +1188,9 @@ export function DocumentBasedSummaryTab({
                           : "secondary"
                       }
                     >
-                      Status: {viewSummary.summary.status}
+                      {t("statusLabel", {
+                        status: statusLabel(viewSummary.summary.status, t),
+                      })}
                     </Badge>
 
                     {Boolean(json?.summary) && (
@@ -1154,7 +1202,7 @@ export function DocumentBasedSummaryTab({
                     {Array.isArray(json?.keyFindings) && json.keyFindings.length > 0 && (
                       <div className="border-t pt-3">
                         <h4 className="text-foreground mb-1 text-sm font-semibold">
-                          Key Findings
+                          {t("sections.keyFindings")}
                         </h4>
                         <ul className="text-muted-foreground list-disc space-y-0.5 pl-4">
                           {json.keyFindings.map(
@@ -1171,7 +1219,7 @@ export function DocumentBasedSummaryTab({
                     {Array.isArray(json?.themes) && json.themes.length > 0 && (
                       <div className="border-t pt-3">
                         <h4 className="text-foreground mb-1 text-sm font-semibold">
-                          Themes
+                          {t("sections.themes")}
                         </h4>
                         <ul className="text-muted-foreground list-disc space-y-0.5 pl-4">
                           {json.themes.map(
@@ -1189,7 +1237,7 @@ export function DocumentBasedSummaryTab({
                       json.risksOrConcerns.length > 0 && (
                         <div className="border-t pt-3">
                           <h4 className="text-foreground mb-1 text-sm font-semibold">
-                            Risks / Concerns
+                            {t("sections.risksOrConcerns")}
                           </h4>
                           <ul className="text-muted-foreground list-disc space-y-0.5 pl-4">
                             {json.risksOrConcerns.map(
@@ -1220,8 +1268,10 @@ export function DocumentBasedSummaryTab({
                       >
                         <ExternalLink className="size-3.5" />
                         {openingFileId === viewSummary.doc.id
-                          ? "Opening…"
-                          : `Open original document (${viewSummary.doc.fileName})`}
+                          ? t("openingFile")
+                          : t("openOriginalDocument", {
+                              fileName: viewSummary.doc.fileName,
+                            })}
                       </Button>
                     </div>
                   </div>

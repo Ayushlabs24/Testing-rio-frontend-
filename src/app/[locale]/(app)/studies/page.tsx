@@ -3,6 +3,7 @@
 import { ClipboardList, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
@@ -34,12 +35,6 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 export default function StudiesPage() {
   const t = useTranslations("app.studies");
@@ -134,7 +129,7 @@ export default function StudiesPage() {
           <CardContent className="p-0">
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   aria-label={t("searchPlaceholder")}
@@ -143,7 +138,7 @@ export default function StudiesPage() {
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 pl-9"
+                  className="h-8 ps-9"
                 />
               </div>
             </div>
@@ -206,7 +201,7 @@ export default function StudiesPage() {
                         {needCountByStudy[study.id] ?? 0}
                       </TableCell>
                       <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
-                        {formatDate(study.updatedAt)}
+                        <FormattedDate value={study.updatedAt} />
                       </TableCell>
                       <TableCell className="py-4 text-right align-middle">
                         {canWrite ? (

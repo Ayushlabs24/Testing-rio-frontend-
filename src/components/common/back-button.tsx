@@ -45,7 +45,7 @@ export function BackButton({ href, label }: { href: string; label: string }) {
 
   return (
     <Button type="button" variant="outline" className="gap-1.5" onClick={handleClick}>
-      <ArrowLeft className="size-3.5" />
+      <ArrowLeft className="size-3.5 rtl:rotate-180" />
       {label}
     </Button>
   );

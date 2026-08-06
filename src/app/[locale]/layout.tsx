@@ -8,7 +8,7 @@ import {
 } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { AppProviders } from "@/components/providers/app-providers";
-import { fontMono, fontSans } from "@/lib/fonts";
+import { fontArabic, fontMono, fontSans } from "@/lib/fonts";
 import { routing } from "@/i18n/routing";
 import { siteConfig } from "@/config/site";
 import "@/app/globals.css";
@@ -41,10 +41,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   setRequestLocale(locale);
   const [messages, timeZone] = await Promise.all([getMessages(), getTimeZone()]);
 
+  const dir = locale === "ar" ? "rtl" : "ltr";
+
   return (
     <html
       lang={locale}
-      className={`${fontSans.variable} ${fontMono.variable} h-full antialiased`}
+      dir={dir}
+      className={`${fontSans.variable} ${fontMono.variable} ${fontArabic.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>

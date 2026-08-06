@@ -4,6 +4,7 @@ import { Plus, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
 import type { SharingInnerTab } from "@/components/features/sharing/study-sharing-panel";
 import { Badge } from "@/components/ui/badge";
@@ -57,13 +58,6 @@ const STATUS_VARIANT: Record<
   rejected: "destructive",
   expired: "outline",
 };
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 function CreateReportSharingRequestDialog({
   open,
@@ -391,7 +385,7 @@ export function ReportSharingPanel({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(request.requestedAt)}
+                        <FormattedDate value={request.requestedAt} withTime />
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex justify-end gap-2">

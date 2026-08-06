@@ -3,6 +3,7 @@
 import { Download, History, Lock, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -122,14 +123,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
 /** A fetched page, tagged with the request object that produced it. */
 interface LoadedPage {
   request: AuditListParams;
@@ -245,7 +238,7 @@ export default function AuditSettingsPage() {
           <CardContent className="p-0">
             <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center">
               <div className="relative flex-1">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   aria-label={t("searchPlaceholder")}
@@ -254,7 +247,7 @@ export default function AuditSettingsPage() {
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 pl-9"
+                  className="h-8 ps-9"
                 />
               </div>
               <Select
@@ -407,7 +400,7 @@ export default function AuditSettingsPage() {
                   pagedEvents.map((event) => (
                     <TableRow key={event.id}>
                       <TableCell className="text-muted-foreground py-5 align-top text-sm tabular-nums">
-                        {formatTimestamp(event.createdAt)}
+                        <FormattedDate value={event.createdAt} withTime />
                       </TableCell>
                       <TableCell className="py-5">
                         <div className="flex items-center gap-3">

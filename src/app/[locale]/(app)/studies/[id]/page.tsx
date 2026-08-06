@@ -10,9 +10,14 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
+import type { AppLocale } from "@/i18n/routing";
+import {
+  formatDate as formatDateIntl,
+  formatDateTime as formatDateTimeIntl,
+} from "@/lib/format-date";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
@@ -72,19 +77,6 @@ const NEED_STATUSES: readonly NeedStatus[] = [
   "survey_published",
 ];
 
-function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
-
 const RELATIVE_DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[] = [
   { amount: 60, unit: "seconds" },
   { amount: 60, unit: "minutes" },
@@ -96,8 +88,10 @@ const RELATIVE_DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[
 ];
 
 /** "2 hours ago" instead of a raw timestamp — reads faster at a glance. */
-function formatRelativeTime(iso: string): string {
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+function formatRelativeTime(iso: string, locale: AppLocale): string {
+  const rtf = new Intl.RelativeTimeFormat(locale === "ar" ? "ar-SA-u-nu-latn" : "en-US", {
+    numeric: "auto",
+  });
   let duration = (new Date(iso).getTime() - Date.now()) / 1000;
   for (const division of RELATIVE_DIVISIONS) {
     if (Math.abs(duration) < division.amount) {
@@ -174,6 +168,7 @@ const SURVEY_STATUS_VARIANT: Record<
 export default function StudyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations("app.studies.detail");
+  const locale = useLocale() as AppLocale;
   const tStudies = useTranslations("app.studies");
   const tNeedDelete = useTranslations("app.studies.need.delete");
   const tStatus = useTranslations("app.studies.status");
@@ -369,13 +364,13 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
 
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative w-full sm:max-w-xs">
-                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     placeholder={t("searchNeedsPlaceholder")}
                     aria-label={t("searchNeedsPlaceholder")}
                     value={needQuery}
                     onChange={(event) => setNeedQuery(event.target.value)}
-                    className="h-9 pl-9"
+                    className="h-9 ps-9"
                   />
                 </div>
                 <Select
@@ -435,7 +430,10 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                               router.push(`/studies/${study.id}/needs/${need.id}`)
                             }
                           >
-                            <TableCell className="max-w-52 truncate text-sm font-medium">
+                            <TableCell
+                              dir="auto"
+                              className="max-w-52 text-sm font-medium break-words whitespace-normal"
+                            >
                               {need.title}
                             </TableCell>
                             <TableCell className="max-w-40 text-sm">
@@ -553,15 +551,15 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
               <dl className="flex flex-wrap items-start gap-x-10 gap-y-4 text-sm">
                 <div className="flex items-start gap-2.5">
                   <CalendarDays className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                  <span title={formatDateTime(study.createdAt)}>
-                    {t("createdOn", { date: formatDate(study.createdAt) })}
+                  <span title={formatDateTimeIntl(study.createdAt, locale)}>
+                    {t("createdOn", { date: formatDateIntl(study.createdAt, locale) })}
                   </span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <Clock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                  <span title={formatDateTime(study.updatedAt)}>
+                  <span title={formatDateTimeIntl(study.updatedAt, locale)}>
                     {t("updatedRelative", {
-                      time: formatRelativeTime(study.updatedAt),
+                      time: formatRelativeTime(study.updatedAt, locale),
                     })}
                   </span>
                 </div>
