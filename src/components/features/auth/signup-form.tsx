@@ -3,11 +3,20 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +32,8 @@ import { useSectorOptions } from "@/hooks/use-sector-options";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
+import { consentService } from "@/services/consent/consent.service";
+import type { ActiveConsentPolicies } from "@/services/consent/consent.types";
 import { geographyService } from "@/services/geography/geography.service";
 import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 
@@ -80,6 +91,256 @@ function SignupConfirmation({
   );
 }
 
+/**
+ * Reading dialog for one consent policy. The Accept button unlocks only once
+ * the reader reaches the bottom of the text, which is what makes "I have read
+ * this" more than a claim.
+ *
+ * Scroll position is measured on the scroll container rather than tracked as
+ * a percentage: `scrollTop + clientHeight >= scrollHeight - SCROLL_EPSILON`.
+ * The epsilon absorbs sub-pixel rounding — browsers report fractional heights
+ * at non-integer zoom levels, where an exact `>=` comparison can never be
+ * satisfied and would trap the reader at 99.6%.
+ */
+const SCROLL_EPSILON = 4;
+
+/**
+ * The scrollable policy body and its confirm button.
+ *
+ * Deliberately a separate component rendered *inside* DialogContent, which
+ * Radix unmounts on close: that makes "each open starts a fresh read" a
+ * consequence of unmounting rather than something an effect has to reset,
+ * so reopening an abandoned policy can never inherit a stale `reachedEnd`.
+ */
+function PolicyReader({
+  title,
+  policyText,
+  scrollHint,
+  confirmLabel,
+  onConfirm,
+}: {
+  title: string;
+  policyText: string;
+  scrollHint: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}) {
+  const [reachedEnd, setReachedEnd] = useState(false);
+
+  const measure = useCallback((el: HTMLDivElement) => {
+    // A policy short enough not to overflow is fully visible the moment it
+    // renders — there is no scrolling to do, so requiring a scroll event
+    // would leave the reader permanently stuck. Treat it as read.
+    const isScrollable = el.scrollHeight > el.clientHeight + SCROLL_EPSILON;
+    setReachedEnd(
+      !isScrollable || el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_EPSILON,
+    );
+  }, []);
+
+  // Measured from the ref callback rather than an effect: the node is in the
+  // DOM by the time this runs, and one frame's delay lets the dialog finish
+  // laying out so scrollHeight/clientHeight report real values, not 0.
+  const attachScrollRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (!el) return;
+      const frame = requestAnimationFrame(() => measure(el));
+      return () => cancelAnimationFrame(frame);
+    },
+    [measure],
+  );
+
+  return (
+    <>
+      <div
+        ref={attachScrollRef}
+        onScroll={(event) => measure(event.currentTarget)}
+        // Focusable so the policy can be scrolled by keyboard alone —
+        // otherwise a keyboard-only user could never satisfy the
+        // read-to-the-end gate.
+        tabIndex={0}
+        role="region"
+        aria-label={title}
+        className="border-border text-muted-foreground max-h-[45vh] min-h-24 overflow-y-auto rounded-md border p-4 text-sm leading-relaxed whitespace-pre-line"
+      >
+        {policyText}
+      </div>
+
+      <DialogFooter className="sm:justify-between sm:gap-4">
+        <p
+          className="text-muted-foreground text-xs"
+          // Announced when it changes, so a screen-reader user learns the
+          // confirm button has unlocked without hunting for it.
+          aria-live="polite"
+        >
+          {reachedEnd ? "" : scrollHint}
+        </p>
+        <Button type="button" disabled={!reachedEnd} onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function PolicyDialog({
+  open,
+  onOpenChange,
+  title,
+  policyText,
+  version,
+  versionLabel,
+  scrollHint,
+  confirmLabel,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  policyText: string;
+  version: string;
+  versionLabel: string;
+  scrollHint: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {versionLabel} {version}
+          </DialogDescription>
+        </DialogHeader>
+
+        <PolicyReader
+          title={title}
+          policyText={policyText}
+          scrollHint={scrollHint}
+          confirmLabel={confirmLabel}
+          onConfirm={onConfirm}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * One consent: a checkbox whose label opens the full policy in a dialog.
+ *
+ * The checkbox is disabled until the policy has been opened AND read to the
+ * end — the registrant cannot tick a box for wording they never saw. Reading
+ * only unlocks the checkbox; it never ticks it for them, so the acceptance
+ * stays a deliberate act.
+ *
+ * `policyText` is undefined only while the policies are still loading, which
+ * also keeps the label from opening an empty dialog.
+ */
+function ConsentCheckbox({
+  id,
+  checked,
+  onCheckedChange,
+  label,
+  linkLabel,
+  policyText,
+  version,
+  versionLabel,
+  dialogTitle,
+  scrollHint,
+  confirmLabel,
+  readHint,
+  error,
+}: {
+  id: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  label: string;
+  linkLabel: string;
+  policyText: string | undefined;
+  version: string | undefined;
+  versionLabel: string;
+  dialogTitle: string;
+  scrollHint: string;
+  confirmLabel: string;
+  readHint: string;
+  error: string | undefined;
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [hasRead, setHasRead] = useState(false);
+
+  const canTick = hasRead && Boolean(policyText);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id={id}
+          checked={checked}
+          disabled={!canTick}
+          aria-invalid={Boolean(error)}
+          // Explains the disabled state to assistive tech, which otherwise
+          // reports only "unavailable" with no reason.
+          aria-describedby={canTick ? undefined : `${id}-hint`}
+          onCheckedChange={(value) => onCheckedChange(value === true)}
+          className="mt-0.5"
+        />
+        <Label
+          htmlFor={id}
+          className="text-muted-foreground text-xs leading-relaxed font-normal"
+        >
+          {label}{" "}
+          {/* The policy opens from this button, not the whole label: clicking
+              the label must still toggle the checkbox (that's what a label is
+              for), so only this span is the dialog trigger. */}
+          <button
+            type="button"
+            disabled={!policyText}
+            onClick={() => setDialogOpen(true)}
+            className="text-foreground font-medium underline underline-offset-4 hover:no-underline disabled:no-underline disabled:opacity-60"
+          >
+            {linkLabel}
+          </button>
+          <span className="text-destructive ms-0.5">*</span>
+          {version ? (
+            <span className="text-muted-foreground/70 ms-1">
+              ({versionLabel} {version})
+            </span>
+          ) : null}
+        </Label>
+      </div>
+
+      {/* Screen-reader only: visually the disabled checkbox and the
+          underlined policy link are enough of a cue, but a disabled control
+          with no stated reason is opaque to assistive tech — this is what
+          `aria-describedby` above points at. */}
+      {!canTick ? (
+        <p id={`${id}-hint`} className="sr-only">
+          {readHint}
+        </p>
+      ) : null}
+
+      {error ? <p className="text-destructive ms-7 text-sm">{error}</p> : null}
+
+      {policyText && version ? (
+        <PolicyDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title={dialogTitle}
+          policyText={policyText}
+          version={version}
+          versionLabel={versionLabel}
+          scrollHint={scrollHint}
+          confirmLabel={confirmLabel}
+          onConfirm={() => {
+            setHasRead(true);
+            setDialogOpen(false);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
@@ -98,6 +359,12 @@ export function SignupForm() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [governorates, setGovernorates] = useState<Governorate[]>([]);
   const [centers, setCenters] = useState<Center[]>([]);
+  // RIO-DATA-001 — both consents are collected HERE, during registration,
+  // rather than by a gate after first login. `null` means the policies
+  // haven't loaded yet, which disables submit: without a version to submit
+  // there is nothing valid to send, and the backend would reject it anyway.
+  const [policies, setPolicies] = useState<ActiveConsentPolicies | null>(null);
+  const [policiesError, setPoliciesError] = useState(false);
 
   const signupSchema = z.object({
     organizationName: z
@@ -114,6 +381,16 @@ export function SignupForm() {
       .array(z.string())
       .min(1, { message: tValidation("governorateIdsRequired") }),
     centerIds: z.array(z.string()).min(1, { message: tValidation("centerIdsRequired") }),
+    // Both mandatory — registration cannot complete without accepting each
+    // one. `literal(true)` (rather than a boolean with a refine) is what
+    // makes an unticked box a field-level validation error shown next to
+    // that checkbox, instead of a form-wide one.
+    acceptedUsePolicy: z.literal(true, {
+      message: tValidation("usePolicyRequired"),
+    }),
+    acceptedDataSharing: z.literal(true, {
+      message: tValidation("dataSharingRequired"),
+    }),
   });
 
   type SignupValues = z.infer<typeof signupSchema>;
@@ -132,6 +409,10 @@ export function SignupForm() {
       regionId: "",
       governorateIds: [],
       centerIds: [],
+      // Deliberately unticked: consent must be an action the registrant
+      // takes, never a default they fail to notice.
+      acceptedUsePolicy: false as true,
+      acceptedDataSharing: false as true,
     },
   });
 
@@ -140,11 +421,31 @@ export function SignupForm() {
   const governorateIds = useWatch({ control, name: "governorateIds" });
   const centerIds = useWatch({ control, name: "centerIds" });
 
+  const acceptedUsePolicy = useWatch({ control, name: "acceptedUsePolicy" });
+  const acceptedDataSharing = useWatch({ control, name: "acceptedDataSharing" });
+
   useEffect(() => {
     geographyService
       .listRegions()
       .then(setRegions)
       .catch(() => setRegions([]));
+  }, []);
+
+  // Both consent policies, fetched from the open endpoint (no session exists
+  // yet at registration). The submitted version comes from here, so the
+  // server can verify the registrant agreed to the text that is actually
+  // live — see the backend's CONSENT_VERSION_STALE check.
+  useEffect(() => {
+    consentService
+      .getActive()
+      .then((active) => {
+        setPolicies(active);
+        setPoliciesError(false);
+      })
+      .catch(() => {
+        setPolicies(null);
+        setPoliciesError(true);
+      });
   }, []);
 
   // Governorate options are scoped to the single selected Region — there's
@@ -201,6 +502,13 @@ export function SignupForm() {
 
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
+    // Guarded by the disabled submit below, but re-checked here because the
+    // versions are what make the acceptance meaningful — never send a
+    // registration whose consent can't be pinned to a specific policy.
+    if (!policies) {
+      setFormError(t("consentUnavailableError"));
+      return;
+    }
     try {
       const { temporaryPasswordEmailed } = await authService.signup({
         organizationName: values.organizationName,
@@ -211,6 +519,11 @@ export function SignupForm() {
         regionId: values.regionId,
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
+        // The exact versions the two checkboxes above were rendered for.
+        consent: {
+          usePolicyVersion: policies.usePolicy.version,
+          dataSharingVersion: policies.dataSharing.version,
+        },
       });
       // Signup doesn't sign the admin in automatically — they confirm how
       // they got their password (emailed, or the not-emailed fallback
@@ -393,12 +706,64 @@ export function SignupForm() {
           ) : null}
         </div>
 
+        {/* RIO-DATA-001 — the two consents, accepted as part of registration
+            itself. Each opens its live policy in a dialog that must be read
+            to the end before its checkbox unlocks, so the acceptance is never
+            a tick against unseen wording. */}
+        <fieldset className="border-border space-y-4 border-t pt-5">
+          <legend className="sr-only">{t("consentLegend")}</legend>
+
+          <ConsentCheckbox
+            id="acceptedUsePolicy"
+            checked={acceptedUsePolicy === true}
+            onCheckedChange={(checked) =>
+              setValue("acceptedUsePolicy", checked as true, { shouldValidate: true })
+            }
+            label={t("usePolicyLabel")}
+            linkLabel={t("usePolicyLinkLabel")}
+            dialogTitle={t("usePolicyDialogTitle")}
+            policyText={policies?.usePolicy.text}
+            version={policies?.usePolicy.version}
+            versionLabel={t("policyVersion")}
+            scrollHint={t("scrollHint")}
+            confirmLabel={t("policyReadConfirm")}
+            readHint={t("mustReadHint")}
+            error={errors.acceptedUsePolicy?.message}
+          />
+
+          <ConsentCheckbox
+            id="acceptedDataSharing"
+            checked={acceptedDataSharing === true}
+            onCheckedChange={(checked) =>
+              setValue("acceptedDataSharing", checked as true, { shouldValidate: true })
+            }
+            label={t("dataSharingLabel")}
+            linkLabel={t("dataSharingLinkLabel")}
+            dialogTitle={t("dataSharingDialogTitle")}
+            policyText={policies?.dataSharing.text}
+            version={policies?.dataSharing.version}
+            versionLabel={t("policyVersion")}
+            scrollHint={t("scrollHint")}
+            confirmLabel={t("policyReadConfirm")}
+            readHint={t("mustReadHint")}
+            error={errors.acceptedDataSharing?.message}
+          />
+
+          {policiesError ? (
+            <p className="text-destructive text-sm">{t("consentUnavailableError")}</p>
+          ) : null}
+        </fieldset>
+
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
         <LoadingButton
           type="submit"
           className="h-11 w-full gap-2 px-6"
           isLoading={isSubmitting}
+          // Without the policies there is no version to pin the acceptance
+          // to, so registration genuinely cannot proceed — disabled rather
+          // than allowed-to-fail at the server.
+          disabled={!policies}
           text={isSubmitting ? t("submitting") : t("submit")}
           endIcon={<ArrowRight className="size-4" />}
         />

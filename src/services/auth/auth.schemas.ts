@@ -27,6 +27,11 @@ export const apiSessionViewSchema = z.object({
     email: z.string(),
     consentedAt: z.string().nullable(),
     consentedPolicyVersion: z.string().nullable(),
+    // RIO-DATA-001's data-sharing consent. Defaulted rather than required so
+    // a session minted by an older backend still parses — the nulls then put
+    // the user through the consent gate, which is the correct outcome.
+    sharingConsentedAt: z.string().nullable().default(null),
+    sharingConsentedPolicyVersion: z.string().nullable().default(null),
   }),
   organization: z.object({
     id: z.string().min(1),

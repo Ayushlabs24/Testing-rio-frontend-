@@ -61,7 +61,19 @@
       "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
       "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
       "temporaryPasswordNotEmailedNotice": "Use the temporary password provided to you to sign in. You'll be asked to set your own password the first time you sign in.",
-      "goToSignInButton": "Go to sign in"
+      "goToSignInButton": "Go to sign in",
+      "consentLegend": "Consent",
+      "usePolicyLabel": "I have read and accept the",
+      "dataSharingLabel": "I have read and consent to the",
+      "policyVersion": "version",
+      "consentUnavailableError": "The consent policies could not be loaded, so registration cannot be completed right now. Please refresh the page and try again.",
+      "usePolicyLinkLabel": "Terms of Use",
+      "usePolicyDialogTitle": "Terms of Use",
+      "dataSharingLinkLabel": "Data-Sharing Policy",
+      "dataSharingDialogTitle": "Data-Sharing Policy",
+      "scrollHint": "Scroll to the end to continue.",
+      "policyReadConfirm": "I have read this",
+      "mustReadHint": "Open and read the policy to enable this checkbox."
     },
     "forgotPassword": {
       "heroTitle": "We'll get you back in",
@@ -153,7 +165,9 @@
       "regionRequired": "Please enter your governorate or region.",
       "governorateIdsRequired": "Select at least one governorate.",
       "centerIdsRequired": "Select at least one center.",
-      "purposeMin": "Please give us a little more detail (at least 10 characters)."
+      "purposeMin": "Please give us a little more detail (at least 10 characters).",
+      "usePolicyRequired": "You must accept the Terms of Use to register.",
+      "dataSharingRequired": "You must accept the data-sharing consent to register."
     }
   },
   "app": {
@@ -186,7 +200,9 @@
       "mustAgree": "You must agree to the consent notice before continuing.",
       "accept": "I agree, continue",
       "accepting": "Saving...",
-      "genericError": "Something went wrong. Please try again."
+      "genericError": "Something went wrong. Please try again.",
+      "sharingBody": "By continuing, your organization consents to its data being shared as described in the data-sharing policy.",
+      "sharingAgreeLabel": "I consent to the sharing of my organization’s data."
     },
     "passwordChange": {
       "heroTitle": "Choose a new password",
@@ -555,7 +571,10 @@
           "noneYet": "No one in this organisation has accepted the current data-sharing policy yet.",
           "versionLabel": "Policy version",
           "acceptedAtLabel": "Accepted on",
-          "acceptedByLabel": "Accepted by"
+          "acceptedByLabel": "Accepted by",
+          "usePolicyLabel": "Terms of Use",
+          "dataSharingLabel": "Data-Sharing Consent",
+          "outstanding": "Not yet accepted"
         },
         "nameLabel": "Organisation name",
         "createdLabel": "Created",

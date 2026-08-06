@@ -40,6 +40,9 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
       // Mock accounts don't model policy versioning — null is equivalent to
       // "not yet consented under a version", same as a fresh real signup.
       consentedPolicyVersion: null,
+      // Same for RIO-DATA-001's data-sharing consent.
+      sharingConsentedAt: null,
+      sharingConsentedPolicyVersion: null,
     },
     organization: {
       id: context.organization.id,
