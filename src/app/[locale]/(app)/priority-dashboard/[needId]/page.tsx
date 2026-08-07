@@ -128,9 +128,7 @@ export default function PriorityDetailInsightsPage({
       setPriorityV2(result);
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to recalculate priority score",
-      );
+      setError(err instanceof ApiError ? err.message : t("recalculateError"));
     } finally {
       setScoring(false);
     }
@@ -149,18 +147,20 @@ export default function PriorityDetailInsightsPage({
 
         <PageHeader
           title={
-            need?.title
-              ? `${need.title} — Insights & Scoring`
-              : "Priority & Severity Insights"
+            need?.title ? t("titleSuffix", { title: need.title }) : t("titleFallback")
           }
           description={
             need?.allDomainsSelected
-              ? "Domain: All Domains"
+              ? t("domainAll")
               : need && need.needDomains.length > 0
-                ? `Domain: ${formatDomainSummary(need.needDomains.map((d: { domain: string }) => d.domain))}`
+                ? t("domainList", {
+                    domains: formatDomainSummary(
+                      need.needDomains.map((d: { domain: string }) => d.domain),
+                    ),
+                  })
                 : need?.domain
-                  ? `Domain: ${need.domain}`
-                  : "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights."
+                  ? t("domainSingle", { domain: need.domain })
+                  : t("descriptionFallback")
           }
           actions={
             <div className="space-y-1.5">

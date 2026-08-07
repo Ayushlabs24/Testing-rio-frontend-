@@ -393,7 +393,7 @@ export function SeverityDashboard({
                           </span>
                           <ChevronRight
                             className={cn(
-                              "text-muted-foreground size-4 transition-transform",
+                              "text-muted-foreground size-4 transition-transform rtl:-scale-x-100",
                               isSelected && "text-primary rotate-90",
                             )}
                           />
@@ -753,7 +753,7 @@ export function SeverityDashboard({
                                   }
                                 }}
                               >
-                                <ArrowRight className="text-muted-foreground size-3.5" />
+                                <ArrowRight className="text-muted-foreground size-3.5 rtl:rotate-180" />
                               </Button>
                             </TableCell>
                           </TableRow>

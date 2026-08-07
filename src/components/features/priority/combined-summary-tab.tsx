@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Sparkles,
   CheckCircle2,
@@ -36,6 +37,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { useRouter } from "@/i18n/navigation";
+import type { AppLocale } from "@/i18n/routing";
+import { formatDateTime } from "@/lib/format-date";
 import { usePermission } from "@/hooks/use-permission";
 import {
   combinedReportService,
@@ -66,13 +69,29 @@ interface CombinedSummaryTabProps {
   studyId: string;
 }
 
-function formatTimestamp(value?: string | null): string {
+function formatTimestamp(value: string | null | undefined, locale: AppLocale): string {
   if (!value) return "—";
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString();
+  return Number.isNaN(parsed.getTime()) ? "—" : formatDateTime(parsed, locale);
 }
 
+const SUMMARY_STATUS_KEY: Record<string, string> = {
+  UPLOADED: "uploaded",
+  PARSING: "parsing",
+  PARSED: "parsed",
+  FAILED: "failed",
+  NOT_GENERATED: "notGenerated",
+  DRAFT: "draft",
+  OFFICER_CONFIRMED: "officerConfirmed",
+  STALE: "stale",
+  SUPERSEDED: "superseded",
+};
+
 export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
+  const t = useTranslations("CombinedSummaryTab");
+  const tDocStatus = useTranslations("EvidenceDocuments.status");
+  const tReportStatus = useTranslations("app.reports.status");
+  const locale = useLocale() as AppLocale;
   const router = useRouter();
   const canAi = usePermission("aiReview", "write");
   const canCreateReport = usePermission("reportsDashboards", "create");
@@ -284,7 +303,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   if (loading) {
     return (
       <div className="text-muted-foreground flex items-center justify-center p-12 text-sm">
-        Loading combined report context...
+        {t("loadingContext")}
       </div>
     );
   }
@@ -316,29 +335,32 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold">
               <Gauge className="text-primary size-5" />
-              AI Score-Based Summaries ({scoreSummary ? 1 : 0} / {scoreSummaries.length}{" "}
-              selected)
+              {t("scoreSummaries.heading", {
+                selected: scoreSummary ? 1 : 0,
+                total: scoreSummaries.length,
+              })}
             </CardTitle>
             <CardDescription className="text-xs">
-              Choose which score-based AI summary generated for this study to combine.
+              {t("scoreSummaries.description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {scoreSummaries.length === 0 ? (
               <div className="text-muted-foreground rounded-lg border p-4 text-center text-xs">
-                No score-based AI summary has been generated for this study yet. Generate
-                one from the Score-Based AI Summary tab to include it here.
+                {t("scoreSummaries.empty")}
               </div>
             ) : (
               <div className="max-h-48 overflow-y-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10">Select</TableHead>
-                      <TableHead>Scope</TableHead>
-                      <TableHead>Scores</TableHead>
-                      <TableHead>Generated</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="w-10">
+                        {t("scoreSummaries.selectColumn")}
+                      </TableHead>
+                      <TableHead>{t("scoreSummaries.scopeColumn")}</TableHead>
+                      <TableHead>{t("scoreSummaries.scoresColumn")}</TableHead>
+                      <TableHead>{t("scoreSummaries.generatedColumn")}</TableHead>
+                      <TableHead>{t("scoreSummaries.statusColumn")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -367,7 +389,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                             {/* Single-select: picking a row replaces the choice. */}
                             <Checkbox
                               checked={isSelected}
-                              aria-label={`Select ${option.summaryScope || "score"} summary`}
+                              aria-label={t("scoreSummaries.selectAriaLabel", {
+                                scope: option.summaryScope || "score",
+                              })}
                               onCheckedChange={() => setSelectedScoreSummaryId(option.id)}
                             />
                           </TableCell>
@@ -381,18 +405,24 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                               <>
                                 {priority !== undefined && (
                                   <span className="block">
-                                    Priority {priority}
+                                    {t("scoreSummaries.priorityValue", {
+                                      value: priority,
+                                    })}
                                     {priorityStatus ? ` (${priorityStatus})` : ""}
                                   </span>
                                 )}
                                 {severity !== undefined && (
-                                  <span className="block">Severity {severity} / 100</span>
+                                  <span className="block">
+                                    {t("scoreSummaries.severityValue", {
+                                      value: severity,
+                                    })}
+                                  </span>
                                 )}
                               </>
                             )}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs">
-                            {formatTimestamp(option.generatedAt)}
+                            {formatTimestamp(option.generatedAt, locale)}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -403,7 +433,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                               }
                               className="text-[10px]"
                             >
-                              {option.status}
+                              {SUMMARY_STATUS_KEY[option.status]
+                                ? tDocStatus(SUMMARY_STATUS_KEY[option.status] as never)
+                                : option.status}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -422,8 +454,10 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base font-bold">
                 <FileText className="text-primary size-5" />
-                AI Evidence-Based Summaries ({selectedDocSummaryIds.length} /{" "}
-                {docs.length} selected)
+                {t("docSummaries.heading", {
+                  selected: selectedDocSummaryIds.length,
+                  total: docs.length,
+                })}
               </CardTitle>
               {docs.length > 0 && (
                 <div className="flex items-center gap-2 text-xs">
@@ -436,30 +470,31 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                     htmlFor="select-all-docs"
                     className="cursor-pointer text-xs font-semibold"
                   >
-                    Select All
+                    {t("docSummaries.selectAll")}
                   </Label>
                 </div>
               )}
             </div>
             <CardDescription className="text-xs">
-              Qualitative evidence documents belonging to this study & organization.
+              {t("docSummaries.description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {docs.length === 0 ? (
               <div className="text-muted-foreground rounded-lg border p-4 text-center text-xs">
-                No document summaries uploaded yet for this study. Upload a document in
-                the Document Summary tab to include it.
+                {t("docSummaries.empty")}
               </div>
             ) : (
               <div className="max-h-48 overflow-y-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-10">Select</TableHead>
-                      <TableHead>Document Title</TableHead>
-                      <TableHead>Ref ID</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="w-10">
+                        {t("docSummaries.selectColumn")}
+                      </TableHead>
+                      <TableHead>{t("docSummaries.titleColumn")}</TableHead>
+                      <TableHead>{t("docSummaries.refIdColumn")}</TableHead>
+                      <TableHead>{t("docSummaries.statusColumn")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -495,7 +530,15 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                               }
                               className="text-[10px]"
                             >
-                              {doc.confirmedSummary.status || "SAVED"}
+                              {doc.confirmedSummary.status
+                                ? SUMMARY_STATUS_KEY[doc.confirmedSummary.status]
+                                  ? tDocStatus(
+                                      SUMMARY_STATUS_KEY[
+                                        doc.confirmedSummary.status
+                                      ] as never,
+                                    )
+                                  : doc.confirmedSummary.status
+                                : t("docSummaries.savedStatus")}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -523,17 +566,15 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
           className="from-primary to-primary/90 flex items-center gap-2 bg-gradient-to-r px-8 font-bold shadow-md"
         >
           <Sparkles className="size-5" />
-          {generating
-            ? "Generating AI Combined Summary..."
-            : "Generate AI Combined Summary"}
+          {generating ? t("generate.generating") : t("generate.button")}
         </Button>
         {!canGenerateCombined && (
           <p className="text-muted-foreground text-xs">
             {!scoreSummary
               ? scoreSummaries.length === 0
-                ? "No score-based AI summary exists for this study yet. Generate one from the Score-Based AI Summary tab first."
-                : "Select which score-based AI summary to combine."
-              : "Select at least one AI evidence-based summary to combine with the score-based summary."}
+                ? t("generate.noScoreExists")
+                : t("generate.missingScore")
+              : t("generate.missingBothDocs")}
           </p>
         )}
       </div>
@@ -546,7 +587,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
               <div className="flex items-center gap-2">
                 <CardTitle className="flex items-center gap-2 text-xl font-bold">
                   <Sparkles className="text-primary size-5" />
-                  AI Combined Summary (Quantitative & Qualitative)
+                  {t("summary.title")}
                 </CardTitle>
                 <Badge
                   variant={
@@ -554,13 +595,12 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                   }
                 >
                   {activeSummary.status === "OFFICER_CONFIRMED"
-                    ? "CONFIRMED & SAVED"
-                    : "DRAFT"}
+                    ? t("summary.confirmedBadge")
+                    : t("summary.draftBadge")}
                 </Badge>
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                Synthesized from quantitative survey score baseline and{" "}
-                {selectedDocSummaryIds.length} qualitative evidence document summaries.
+                {t("summary.synthesizedFrom", { count: selectedDocSummaryIds.length })}
               </p>
             </div>
 
@@ -573,7 +613,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                   disabled={activeMutation !== null}
                 >
                   <Edit3 className="mr-1 size-4" />
-                  {editing ? "Preview View" : "Edit Draft"}
+                  {editing ? t("summary.previewView") : t("summary.editDraft")}
                 </Button>
               )}
               {canAi && (
@@ -584,7 +624,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                   disabled={activeMutation !== null}
                 >
                   <Save className="mr-1 size-4" />
-                  {activeMutation === "save" ? "Saving..." : "Save Summary"}
+                  {activeMutation === "save"
+                    ? t("summary.saving")
+                    : t("summary.saveSummary")}
                 </Button>
               )}
               <Button
@@ -599,8 +641,8 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
               >
                 <FileCheck className="size-4" />
                 {activeMutation === "report"
-                  ? "Generating Report..."
-                  : "Generate Combined Report"}
+                  ? t("summary.generatingReport")
+                  : t("summary.generateReport")}
               </Button>
             </div>
           </CardHeader>
@@ -610,7 +652,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
               <div className="space-y-4">
                 <div>
                   <Label className="text-xs font-semibold">
-                    Executive Summary Narrative
+                    {t("summary.executiveSummaryLabel")}
                   </Label>
                   <Textarea
                     rows={6}
@@ -629,12 +671,11 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                 <div className="bg-card space-y-2 rounded-lg border p-4">
                   <h3 className="text-foreground flex items-center gap-2 text-sm font-bold">
                     <Sparkles className="text-primary size-4" />
-                    1. Executive Combined Overview
+                    {t("summary.section1Heading")}
                   </h3>
                   <p className="text-muted-foreground text-xs leading-relaxed">
                     {String(
-                      editedJson?.executiveSummary ||
-                        "Unified synthesis of quantitative survey findings and qualitative field evidence.",
+                      editedJson?.executiveSummary || t("summary.section1Fallback"),
                     )}
                   </p>
                 </div>
@@ -643,7 +684,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                 <div className="bg-card space-y-3 rounded-lg border p-4">
                   <h3 className="text-foreground flex items-center gap-2 text-sm font-bold">
                     <BarChart2 className="text-primary size-4" />
-                    2. Quantitative Score-Based Metrics
+                    {t("summary.section2Heading")}
                   </h3>
                   {(() => {
                     const sb = editedJson?.scoreBasedFindings as
@@ -652,7 +693,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div className="bg-muted/20 rounded-md border p-3">
                           <p className="text-muted-foreground text-[10px] font-semibold uppercase">
-                            Severity Index
+                            {t("summary.severityIndex")}
                           </p>
                           <p className="text-foreground mt-0.5 text-xl font-bold">
                             {sb?.overallSeverityScore !== undefined
@@ -662,7 +703,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         </div>
                         <div className="bg-muted/20 rounded-md border p-3">
                           <p className="text-muted-foreground text-[10px] font-semibold uppercase">
-                            Priority Score
+                            {t("summary.priorityScore")}
                           </p>
                           <p className="text-foreground mt-0.5 text-xl font-bold">
                             {String(sb?.priorityScore ?? "—")}
@@ -670,7 +711,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         </div>
                         <div className="bg-muted/20 rounded-md border p-3">
                           <p className="text-muted-foreground text-[10px] font-semibold uppercase">
-                            Priority Level
+                            {t("summary.priorityLevel")}
                           </p>
                           <Badge className="mt-1 font-bold">
                             {String(sb?.priorityStatus ?? "—")}
@@ -685,8 +726,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                 <div className="bg-card space-y-3 rounded-lg border p-4">
                   <h3 className="text-foreground flex items-center gap-2 text-sm font-bold">
                     <Layers className="text-primary size-4" />
-                    3. Qualitative Evidence Documents (
-                    {(context?.confirmedDocumentSummaries || []).length} Documents)
+                    {t("summary.section3Heading", {
+                      count: (context?.confirmedDocumentSummaries || []).length,
+                    })}
                   </h3>
                   <div className="space-y-2">
                     {(
@@ -695,8 +737,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         documentTitle: d.documentTitle,
                         sourceReferenceId: d.sourceReferenceId,
                         documentType: d.documentType,
-                        keyEvidenceFinding:
-                          "Qualitative evidence document analysis integrated.",
+                        keyEvidenceFinding: t("summary.evidenceFindingFallback"),
                       }))
                     ).map((ev: Record<string, unknown>, i: number) => (
                       <div
@@ -708,7 +749,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                             {String(ev.documentTitle || "")}
                           </p>
                           <Badge variant="outline" className="text-[10px]">
-                            Ref: {String(ev.sourceReferenceId || "")}
+                            {t("summary.refLabel", {
+                              ref: String(ev.sourceReferenceId || ""),
+                            })}
                           </Badge>
                         </div>
                         <p className="text-muted-foreground text-xs leading-relaxed">
@@ -723,25 +766,23 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                 <div className="bg-card space-y-3 rounded-lg border p-4">
                   <h3 className="text-foreground flex items-center gap-2 text-sm font-bold">
                     <ShieldCheck className="text-primary size-4" />
-                    4. Comparative Analysis & Theme Comparison
+                    {t("summary.section4Heading")}
                   </h3>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="bg-primary/5 space-y-1 rounded-md border p-3">
                       <p className="text-primary text-xs font-bold">
-                        Score vs. Document Alignment
+                        {t("summary.alignmentTitle")}
                       </p>
                       <p className="text-muted-foreground text-xs leading-relaxed">
-                        Survey scores and qualitative field reports align on high severity
-                        in Water & Sanitation infrastructure.
+                        {t("summary.alignmentBody")}
                       </p>
                     </div>
                     <div className="bg-warning/10 space-y-1 rounded-md border p-3">
                       <p className="text-foreground text-xs font-bold">
-                        Operational Gaps &amp; Nuances
+                        {t("summary.gapsTitle")}
                       </p>
                       <p className="text-muted-foreground text-xs leading-relaxed">
-                        Field evidence highlights staffing shortages in primary health
-                        centers not fully reflected in raw quantitative survey scores.
+                        {t("summary.gapsBody")}
                       </p>
                     </div>
                   </div>
@@ -751,7 +792,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                 <div className="bg-card space-y-3 rounded-lg border p-4">
                   <h3 className="text-foreground flex items-center gap-2 text-sm font-bold">
                     <CheckCircle2 className="text-primary size-4" />
-                    5. Integrated Recommendations & Action Plan
+                    {t("summary.section5Heading")}
                   </h3>
                   <ul className="space-y-1.5">
                     {(
@@ -759,18 +800,15 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         Record<string, unknown> | string
                       )[]) || [
                         {
-                          intervention:
-                            "Prioritize municipal water line maintenance and filtration unit deployments.",
+                          intervention: t("summary.recFallback1"),
                           priority: "HIGH",
                         },
                         {
-                          intervention:
-                            "Schedule follow-up qualitative field assessments in secondary centers.",
+                          intervention: t("summary.recFallback2"),
                           priority: "MEDIUM",
                         },
                         {
-                          intervention:
-                            "Integrate document-based evidence findings into quarterly budget allocation.",
+                          intervention: t("summary.recFallback3"),
                           priority: "HIGH",
                         },
                       ]
@@ -779,7 +817,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         key={i}
                         className="bg-muted/20 flex items-start gap-2 rounded border p-2 text-xs"
                       >
-                        <ArrowRight className="text-primary mt-0.5 size-4 shrink-0" />
+                        <ArrowRight className="text-primary mt-0.5 size-4 shrink-0 rtl:rotate-180" />
                         <div>
                           <span className="text-foreground font-semibold">
                             {typeof r === "string" ? r : String(r.intervention || "")}
@@ -789,7 +827,9 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                               variant="outline"
                               className="ml-2 text-[9px] uppercase"
                             >
-                              {String(r.priority)} Priority
+                              {t("summary.priorityBadge", {
+                                priority: String(r.priority),
+                              })}
                             </Badge>
                           ) : null}
                         </div>
@@ -813,7 +853,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base font-bold">
             <FileCheck className="text-primary size-5" />
-            Generated Combined Reports
+            {t("reportLog.heading")}
             {reportLog.length > 0 && (
               <Badge variant="secondary" className="ml-1">
                 {reportLog.length}
@@ -821,7 +861,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
             )}
           </CardTitle>
           <CardDescription className="text-xs">
-            Combined Evidence &amp; Score Reports (RPT16) generated for this study.
+            {t("reportLog.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -829,17 +869,19 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
             <p className="text-destructive p-4 text-xs">{reportLogError}</p>
           ) : reportLog.length === 0 ? (
             <div className="text-muted-foreground p-8 text-center text-xs">
-              No combined reports generated yet for this study.
+              {t("reportLog.empty")}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Generated</TableHead>
-                  <TableHead>Generated By</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("reportLog.titleColumn")}</TableHead>
+                  <TableHead>{t("reportLog.statusColumn")}</TableHead>
+                  <TableHead>{t("reportLog.generatedColumn")}</TableHead>
+                  <TableHead>{t("reportLog.generatedByColumn")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("reportLog.actionsColumn")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -859,11 +901,11 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         }
                         className="text-[10px] uppercase"
                       >
-                        {report.status}
+                        {tReportStatus(report.status as never)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {formatTimestamp(report.generatedAt)}
+                      {formatTimestamp(report.generatedAt, locale)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {report.generatedByName || "—"}
@@ -876,7 +918,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
                         onClick={() => router.push(`/reports/${report.id}`)}
                       >
                         <Eye className="size-3.5" />
-                        View
+                        {t("reportLog.view")}
                       </Button>
                     </TableCell>
                   </TableRow>

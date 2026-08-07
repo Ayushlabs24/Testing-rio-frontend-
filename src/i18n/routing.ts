@@ -6,7 +6,7 @@ import { defineRouting } from "next-intl/routing";
  * 2) a new `messages/<locale>.json` file.
  */
 export const routing = defineRouting({
-  locales: ["en"],
+  locales: ["en", "ar"],
   defaultLocale: "en",
   localePrefix: "as-needed",
 });

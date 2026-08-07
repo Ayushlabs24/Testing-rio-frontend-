@@ -1342,7 +1342,7 @@ export default function SurveyBuilderDetailPage({
                                   )}
                                 >
                                   <div className="flex items-start justify-between gap-3">
-                                    <p className="text-foreground text-sm">
+                                    <p dir="auto" className="text-foreground text-sm">
                                       {q.questionText}
                                     </p>
                                     {canEditQuestions ? (
@@ -1478,7 +1478,7 @@ export default function SurveyBuilderDetailPage({
                                   )}
                                 >
                                   <div className="flex items-start justify-between gap-3">
-                                    <p className="text-foreground text-sm">
+                                    <p dir="auto" className="text-foreground text-sm">
                                       {q.questionText}
                                     </p>
                                     {canEditQuestions ? (
@@ -1648,7 +1648,7 @@ export default function SurveyBuilderDetailPage({
                                   <p className="text-muted-foreground text-xs font-medium">
                                     {t("questionLabel")}
                                   </p>
-                                  <p className="text-foreground text-sm">
+                                  <p dir="auto" className="text-foreground text-sm">
                                     {q.questionText}
                                   </p>
                                 </div>
@@ -1796,7 +1796,9 @@ export default function SurveyBuilderDetailPage({
                               <p className="text-muted-foreground text-xs font-medium">
                                 {t("questionLabel")}
                               </p>
-                              <p className="text-foreground text-sm">{q.questionText}</p>
+                              <p dir="auto" className="text-foreground text-sm">
+                                {q.questionText}
+                              </p>
                             </div>
 
                             <div>

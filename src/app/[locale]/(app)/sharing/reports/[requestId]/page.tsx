@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
@@ -8,17 +8,12 @@ import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { ReportContentView } from "@/components/features/reports/report-content-view";
+import type { AppLocale } from "@/i18n/routing";
+import { formatDateTime } from "@/lib/format-date";
 import { ApiError } from "@/services/api/types";
 import { reportSharingService } from "@/services/report-sharing/report-sharing.service";
 import type { SharedReportSnapshot } from "@/services/report-sharing/report-sharing.types";
 import type { Report, ReportTypeCode } from "@/services/reports/reports.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 // Same document (cover + numbered sections, charts, tables) the owner's own
 // Report Preview page renders — a shared report must look identical to the
@@ -60,6 +55,7 @@ function toReport(snapshot: SharedReportSnapshot): Report {
 
 function SharedReportScreen({ requestId }: { requestId: string }) {
   const t = useTranslations("app.reportSharing.sharedReport");
+  const locale = useLocale() as AppLocale;
   const [snapshot, setSnapshot] = useState<SharedReportSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +98,7 @@ function SharedReportScreen({ requestId }: { requestId: string }) {
             title={snapshot.title}
             description={t("sharedByLabel", {
               org: snapshot.ownerOrgName,
-              date: formatDate(snapshot.generatedAt),
+              date: formatDateTime(snapshot.generatedAt, locale),
             })}
             actions={<Badge variant="secondary">{t("viewOnlyBadge")}</Badge>}
           />

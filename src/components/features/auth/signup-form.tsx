@@ -85,7 +85,7 @@ function SignupConfirmation({
         onClick={onGoToSignIn}
       >
         {t("goToSignInButton")}
-        <ArrowRight className="size-4" />
+        <ArrowRight className="size-4 rtl:rotate-180" />
       </Button>
     </div>
   );
@@ -765,7 +765,7 @@ export function SignupForm() {
           // than allowed-to-fail at the server.
           disabled={!policies}
           text={isSubmitting ? t("submitting") : t("submit")}
-          endIcon={<ArrowRight className="size-4" />}
+          endIcon={<ArrowRight className="size-4 rtl:rotate-180" />}
         />
       </form>
 

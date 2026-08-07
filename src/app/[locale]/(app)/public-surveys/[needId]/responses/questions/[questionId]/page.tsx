@@ -4,6 +4,7 @@ import { MessageSquareText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -33,13 +34,6 @@ import {
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { QuestionResponseRow } from "@/services/public-surveys/public-surveys.types";
-
-function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 /**
  * Every respondent's answer to one specific question — a dedicated,
@@ -117,7 +111,7 @@ export default function QuestionResponsesPage({
           <CardContent className="p-0">
             <div className="border-border flex items-center border-b px-4 py-3">
               <div className="relative w-full sm:max-w-xs">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
                   aria-label={t("searchPlaceholder")}
@@ -126,7 +120,7 @@ export default function QuestionResponsesPage({
                     setQuery(event.target.value);
                     setPage(1);
                   }}
-                  className="h-8 pl-9"
+                  className="h-8 ps-9"
                 />
               </div>
             </div>
@@ -180,7 +174,7 @@ export default function QuestionResponsesPage({
                       <TableCell className="text-muted-foreground py-4 text-sm">
                         {item.contact}
                       </TableCell>
-                      <TableCell className="py-4 text-sm break-words">
+                      <TableCell dir="auto" className="py-4 text-sm break-words">
                         {item.answer && item.answer.trim() ? (
                           item.answer
                         ) : (
@@ -188,7 +182,7 @@ export default function QuestionResponsesPage({
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground py-4 text-sm">
-                        {formatDateTime(item.submittedAt)}
+                        <FormattedDate value={item.submittedAt} withTime />
                       </TableCell>
                     </TableRow>
                   ))

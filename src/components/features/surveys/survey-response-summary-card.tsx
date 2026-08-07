@@ -1,15 +1,10 @@
 import { ListChecks } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 /** Survey Responses' header card — the survey/study identity, its status,
  * the two headline numbers (total responses, most recent one), and a way
@@ -61,7 +56,7 @@ export function SurveyResponseSummaryCard({
           </div>
           <div className="space-y-1">
             <p className="text-foreground text-2xl font-semibold">
-              {lastResponseAt ? formatDate(lastResponseAt) : "—"}
+              {lastResponseAt ? <FormattedDate value={lastResponseAt} /> : "—"}
             </p>
             <p className="text-muted-foreground text-xs">{t("lastResponseLabel")}</p>
           </div>

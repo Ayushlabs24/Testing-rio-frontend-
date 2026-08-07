@@ -96,7 +96,7 @@ export function OtpForm() {
             className="h-11 w-full gap-2 px-6 text-base"
             isLoading={verifyForm.formState.isSubmitting}
             text={verifyForm.formState.isSubmitting ? t("verifying") : t("verify")}
-            endIcon={<ArrowRight className="size-4" />}
+            endIcon={<ArrowRight className="size-4 rtl:rotate-180" />}
           />
         </form>
 
@@ -145,7 +145,7 @@ export function OtpForm() {
           className="h-11 w-full gap-2 px-6 text-base"
           isLoading={requestForm.formState.isSubmitting}
           text={requestForm.formState.isSubmitting ? t("sending") : t("sendCode")}
-          endIcon={<ArrowRight className="size-4" />}
+          endIcon={<ArrowRight className="size-4 rtl:rotate-180" />}
         />
       </form>
 

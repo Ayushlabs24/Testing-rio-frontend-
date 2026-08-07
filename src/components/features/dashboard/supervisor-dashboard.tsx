@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Building2, CheckCircle2, Clock3, FileText } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
@@ -18,12 +19,6 @@ import {
 } from "@/components/ui/table";
 import { supervisorOverviewService } from "@/services/supervisor-overview/supervisor-overview.service";
 import type { SupervisorOverview } from "@/services/supervisor-overview/supervisor-overview.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 export function SupervisorDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.supervisor");
@@ -137,7 +132,7 @@ export function SupervisorDashboard({ userName }: { userName: string }) {
                         ) : null}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm font-medium">
-                        {formatDate(row.lastActivity)}
+                        <FormattedDate value={row.lastActivity} />
                       </TableCell>
                     </TableRow>
                   ))

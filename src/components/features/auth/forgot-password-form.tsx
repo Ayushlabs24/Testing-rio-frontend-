@@ -88,7 +88,7 @@ export function ForgotPasswordForm() {
           className="h-11 w-full gap-2 px-6 text-base"
           isLoading={isSubmitting}
           text={isSubmitting ? t("submitting") : t("submit")}
-          endIcon={<ArrowRight className="size-4" />}
+          endIcon={<ArrowRight className="size-4 rtl:rotate-180" />}
         />
       </form>
 

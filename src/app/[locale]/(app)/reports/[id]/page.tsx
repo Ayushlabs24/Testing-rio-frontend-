@@ -1,7 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
@@ -19,6 +19,8 @@ import { ReportContentView } from "@/components/features/reports/report-content-
 import { ReportStatusBadge } from "@/components/features/reports/report-status-badge";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Button } from "@/components/ui/button";
+import type { AppLocale } from "@/i18n/routing";
+import { formatDateTime } from "@/lib/format-date";
 import type { NcnpReport } from "@/services/ncnp-report/ncnp-report.types";
 import {
   ncnpReportReviewService,
@@ -27,17 +29,11 @@ import {
 import { reportsService } from "@/services/reports/reports.service";
 import type { Report } from "@/services/reports/reports.types";
 
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
-
 const CONSOLIDATED_EXPORTABLE_STATUSES = ["released"];
 
 function NgoReportDetail({ id }: { id: string }) {
   const tp = useTranslations("app.reports.preview");
+  const locale = useLocale() as AppLocale;
   const [report, setReport] = useState<Report | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -75,8 +71,8 @@ function NgoReportDetail({ id }: { id: string }) {
         title={report.title}
         description={
           report.reviewedAt
-            ? `${tp("generatedBy", { date: formatDate(report.generatedAt) })} · ${tp("reviewedOn", { date: formatDate(report.reviewedAt) })}`
-            : tp("generatedBy", { date: formatDate(report.generatedAt) })
+            ? `${tp("generatedBy", { date: formatDateTime(report.generatedAt, locale) })} · ${tp("reviewedOn", { date: formatDateTime(report.reviewedAt, locale) })}`
+            : tp("generatedBy", { date: formatDateTime(report.generatedAt, locale) })
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -102,6 +98,7 @@ function NgoReportDetail({ id }: { id: string }) {
 function ConsolidatedReportDetail({ id }: { id: string }) {
   const t = useTranslations("systemAdmin.ncnpReport");
   const tr = useTranslations("systemAdmin.ncnpReport.review");
+  const locale = useLocale() as AppLocale;
   const [review, setReview] = useState<NcnpReportReviewDetail | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -155,7 +152,7 @@ function ConsolidatedReportDetail({ id }: { id: string }) {
         title={`${t("title")} — ${consolidatedReportId(review.generatedAt)}`}
         description={tr("generatedByOn", {
           name: review.generatedByName ?? "—",
-          date: formatNcnpDate(review.generatedAt),
+          date: formatNcnpDate(review.generatedAt, locale),
         })}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -216,7 +213,7 @@ function ConsolidatedReportDetail({ id }: { id: string }) {
             <span>
               <span className="text-muted-foreground">{tr("reviewedOnLabel")}: </span>
               <span className="text-foreground font-semibold">
-                {formatNcnpDate(review.reviewedAt)}
+                {formatNcnpDate(review.reviewedAt, locale)}
               </span>
             </span>
           </div>

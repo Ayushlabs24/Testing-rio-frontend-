@@ -3,6 +3,7 @@
 import { AlarmClock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -54,13 +55,6 @@ const STATUS_DOT_CLASS: Record<SlaAlertStatus, string> = {
 function alertHref(alert: SlaAlert): string {
   if (alert.type.startsWith("report_")) return `/reports/${alert.reportId}`;
   return `/survey-builder/${alert.needId}`;
-}
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
 }
 
 export default function ReviewerSlaPage() {
@@ -268,11 +262,11 @@ export default function ReviewerSlaPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
-                          {formatDate(alert.createdAt)}
+                          <FormattedDate value={alert.createdAt} withTime />
                         </TableCell>
                         {canApprove ? (
                           <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
-                            {formatDate(alert.dueAt)}
+                            <FormattedDate value={alert.dueAt} withTime />
                           </TableCell>
                         ) : null}
                         {canApprove ? (

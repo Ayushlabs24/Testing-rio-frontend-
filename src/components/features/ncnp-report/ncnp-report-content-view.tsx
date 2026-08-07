@@ -1,5 +1,7 @@
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import type { AppLocale } from "@/i18n/routing";
+import { formatDateTime } from "@/lib/format-date";
 import {
   Table,
   TableBody,
@@ -107,11 +109,8 @@ const AGE_BRACKET_COLORS = [
   "#4a3aa7",
 ];
 
-export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
+export function formatDate(iso: string, locale: AppLocale): string {
+  return formatDateTime(iso, locale);
 }
 
 export function reportId(generatedAt: string): string {
@@ -175,6 +174,7 @@ export function NcnpReportContentView({
   generatedByName: string;
 }) {
   const t = useTranslations("systemAdmin.ncnpReport");
+  const locale = useLocale() as AppLocale;
 
   const {
     summary,
@@ -270,7 +270,7 @@ export function NcnpReportContentView({
               <div>
                 <span className="text-muted-foreground">{t("scopeGeneratedOn")}: </span>
                 <span className="text-foreground font-semibold">
-                  {formatDate(report.generatedAt)}
+                  {formatDate(report.generatedAt, locale)}
                 </span>
               </div>
               <div>
@@ -571,7 +571,7 @@ export function NcnpReportContentView({
                       <span className="text-foreground">{o.organizationName}</span>
                       <span className="text-muted-foreground text-xs">
                         {o.lastActivity
-                          ? formatDate(o.lastActivity)
+                          ? formatDate(o.lastActivity, locale)
                           : t("lastActivityUnknown")}
                       </span>
                     </li>

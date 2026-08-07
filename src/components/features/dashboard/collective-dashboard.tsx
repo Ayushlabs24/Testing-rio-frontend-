@@ -16,8 +16,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { localizeReportText } from "@/lib/report-narrative-i18n";
+import { formatDate } from "@/lib/format-date";
+import type { AppLocale } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -32,12 +35,6 @@ import { Link } from "@/i18n/navigation";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
 import { collectiveDashboardService } from "@/services/collective-dashboard/collective-dashboard.service";
 import type { CollectiveDashboard as Data } from "@/services/collective-dashboard/collective-dashboard.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 function Kpi({
   label,
@@ -140,7 +137,7 @@ function QuickNav({ t }: { t: ReturnType<typeof useTranslations> }) {
                   <div className="bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground flex size-9 items-center justify-center rounded-lg transition-colors">
                     <Icon className="size-4.5" />
                   </div>
-                  <ArrowRight className="text-muted-foreground size-4 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                  <ArrowRight className="text-muted-foreground size-4 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 rtl:translate-x-1 rtl:-scale-x-100" />
                 </div>
                 <div>
                   <p className="text-foreground text-sm font-medium">{t(l.titleKey)}</p>
@@ -342,6 +339,7 @@ const ANOMALY_STYLE: Record<
 
 export function CollectiveDashboard() {
   const t = useTranslations("app.dashboard.collective");
+  const locale = useLocale() as AppLocale;
   const [data, setData] = useState<Data | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -374,7 +372,7 @@ export function CollectiveDashboard() {
         <p className="text-muted-foreground text-sm">
           {t("subtitle", {
             studies: scope.studyCount,
-            date: formatDate(scope.generatedAt),
+            date: formatDate(scope.generatedAt, locale),
           })}
         </p>
       </div>
@@ -440,7 +438,12 @@ export function CollectiveDashboard() {
                     {exec.topPriorities.map((p) => (
                       <TableRow key={p.rank}>
                         <TableCell className="text-muted-foreground">{p.rank}</TableCell>
-                        <TableCell className="font-medium">{p.label}</TableCell>
+                        <TableCell
+                          dir="auto"
+                          className="max-w-md min-w-48 font-medium break-words whitespace-normal"
+                        >
+                          {p.label}
+                        </TableCell>
                         <TableCell>{p.domain}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {Math.round(p.severityScore)}
@@ -466,8 +469,13 @@ export function CollectiveDashboard() {
                   <li key={i} className="flex items-start gap-2 text-sm">
                     <TrendIcon direction={tr.direction} />
                     <span>
-                      <span className="text-foreground font-medium">{tr.label}</span>
-                      <span className="text-muted-foreground"> — {tr.note}</span>
+                      <span className="text-foreground font-medium">
+                        {localizeReportText(tr.label, locale)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        — {localizeReportText(tr.note, locale)}
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -510,7 +518,7 @@ export function CollectiveDashboard() {
                   <li key={i} className="border-border rounded-md border p-3 text-sm">
                     <p className="text-foreground">{n.note}</p>
                     <p className="text-muted-foreground mt-1 text-xs">
-                      {n.author} · {formatDate(n.at)}
+                      {n.author} · {formatDate(n.at, locale)}
                     </p>
                   </li>
                 ))}

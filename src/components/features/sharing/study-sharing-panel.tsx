@@ -4,6 +4,7 @@ import { Plus, Share2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,13 +48,6 @@ const STATUS_VARIANT: Record<
   rejected: "destructive",
   expired: "outline",
 };
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 function CreateRequestDialog({
   open,
@@ -426,7 +420,7 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(request.requestedAt)}
+                        <FormattedDate value={request.requestedAt} withTime />
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex justify-end gap-2">

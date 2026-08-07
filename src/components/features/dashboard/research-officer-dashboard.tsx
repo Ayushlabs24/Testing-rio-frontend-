@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ClipboardList, Sparkles, UploadCloud, CheckCircle2 } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
@@ -12,12 +13,6 @@ import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    new Date(iso),
-  );
-}
 
 export function ResearchOfficerDashboard({ userName }: { userName: string }) {
   const t = useTranslations("app.dashboard.researchOfficer");
@@ -119,7 +114,7 @@ export function ResearchOfficerDashboard({ userName }: { userName: string }) {
                       {study.title}
                     </span>
                     <span className="text-muted-foreground shrink-0 text-xs font-medium">
-                      {formatDate(study.updatedAt)}
+                      <FormattedDate value={study.updatedAt} />
                     </span>
                   </Link>
                 ))}

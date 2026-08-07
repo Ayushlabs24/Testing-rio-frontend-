@@ -15,7 +15,9 @@ export function ResponseDistribution({ options }: { options: QuestionOptionStat[
       {options.map((option) => (
         <div key={option.label} className="space-y-1">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-foreground text-sm font-medium">{option.label}</span>
+            <span dir="auto" className="text-foreground text-sm font-medium">
+              {option.label}
+            </span>
             <span className="text-foreground text-sm font-semibold whitespace-nowrap tabular-nums">
               {option.count}{" "}
               <span className="text-muted-foreground font-normal">
