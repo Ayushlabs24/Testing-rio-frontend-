@@ -122,7 +122,11 @@ export function ConsentGuard({ children }: { children: ReactNode }) {
               checkbox. */}
           <div className="border-border mt-6 space-y-5 border-t pt-6">
             <div className="space-y-2">
-              <p className="text-muted-foreground max-h-32 overflow-y-auto text-xs leading-relaxed">
+              {/* `whitespace-pre-line`: the policy text is stored as
+                  multi-paragraph copy, and without this it collapses into a
+                  single run-on block. Matches how the signup dialog renders
+                  the same text. */}
+              <p className="text-muted-foreground max-h-32 overflow-y-auto text-xs leading-relaxed whitespace-pre-line">
                 {policies?.usePolicy.text ?? t("body")}
               </p>
               <div className="flex items-start gap-3">
@@ -147,7 +151,7 @@ export function ConsentGuard({ children }: { children: ReactNode }) {
 
             {/* RIO-DATA-001's second, separately-versioned consent. */}
             <div className="space-y-2">
-              <p className="text-muted-foreground max-h-32 overflow-y-auto text-xs leading-relaxed">
+              <p className="text-muted-foreground max-h-32 overflow-y-auto text-xs leading-relaxed whitespace-pre-line">
                 {policies?.dataSharing.text ?? t("sharingBody")}
               </p>
               <div className="flex items-start gap-3">
