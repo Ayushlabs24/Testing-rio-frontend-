@@ -309,12 +309,14 @@ function ConsentCheckbox({
         </Label>
       </div>
 
-      {/* Screen-reader only: visually the disabled checkbox and the
-          underlined policy link are enough of a cue, but a disabled control
-          with no stated reason is opaque to assistive tech — this is what
-          `aria-describedby` above points at. */}
-      {!canTick ? (
-        <p id={`${id}-hint`} className="sr-only">
+      {/* Visible, not sr-only: a disabled checkbox with no stated reason is
+          opaque to everyone, not just assistive tech — a sighted user sees a
+          box that will not tick and no explanation of why. Shown until the
+          policy has been read, and doubles as the `aria-describedby` target.
+          Suppressed once a validation error is showing, so the two messages
+          never stack. */}
+      {!canTick && !error ? (
+        <p id={`${id}-hint`} className="text-muted-foreground ms-7 text-xs">
           {readHint}
         </p>
       ) : null}
@@ -727,7 +729,7 @@ export function SignupForm() {
             versionLabel={t("policyVersion")}
             scrollHint={t("scrollHint")}
             confirmLabel={t("policyReadConfirm")}
-            readHint={t("mustReadHint")}
+            readHint={t("mustReadHint", { policy: t("usePolicyLinkLabel") })}
             error={errors.acceptedUsePolicy?.message}
           />
 
@@ -745,7 +747,7 @@ export function SignupForm() {
             versionLabel={t("policyVersion")}
             scrollHint={t("scrollHint")}
             confirmLabel={t("policyReadConfirm")}
-            readHint={t("mustReadHint")}
+            readHint={t("mustReadHint", { policy: t("dataSharingLinkLabel") })}
             error={errors.acceptedDataSharing?.message}
           />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Eye } from "lucide-react";
+import { ArrowRight, Eye, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { AuditFieldChange } from "@/services/audit/audit.types";
+import type { AuditActor, AuditFieldChange } from "@/services/audit/audit.types";
 
 /** Rendered for any value that wasn't set — e.g. the "before" of a creation. */
 const EMPTY_VALUE = "—";
@@ -24,9 +24,14 @@ const EMPTY_VALUE = "—";
 export function ChangeDetailsDialog({
   changes,
   entityLabel,
+  actor,
+  createdAt,
 }: {
   changes: AuditFieldChange[];
   entityLabel: string;
+  /** Null when the action had no signed-in actor (system/citizen events). */
+  actor?: AuditActor | null;
+  createdAt?: string;
 }) {
   const t = useTranslations("app.settings.audit");
 
@@ -45,6 +50,30 @@ export function ChangeDetailsDialog({
             {t("changesDescription", { item: entityLabel })}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Who and when, alongside what changed — an auditor reading a
+            before/after pair needs to attribute it without closing the dialog
+            and hunting for the row again. */}
+        {actor !== undefined || createdAt ? (
+          <div className="border-border bg-muted/30 flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs">
+            <div className="flex min-w-0 items-center gap-2">
+              <User className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-foreground truncate font-medium">
+                  {actor?.name ?? t("systemActor")}
+                </p>
+                {actor?.email ? (
+                  <p className="text-muted-foreground truncate">{actor.email}</p>
+                ) : null}
+              </div>
+            </div>
+            {createdAt ? (
+              <span className="text-muted-foreground shrink-0 tabular-nums">
+                {new Date(createdAt).toLocaleString()}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="border-border overflow-hidden rounded-lg border">
           <div className="text-muted-foreground bg-muted/50 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 py-2 text-xs font-medium">

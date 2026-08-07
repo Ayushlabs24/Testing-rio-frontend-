@@ -63,8 +63,13 @@ export function LeafletMapContainer({
       attributionControl: false,
     });
 
-    // Fit map view tightly around Saudi Arabia
-    map.fitBounds(ksaBounds, { padding: [10, 10] });
+    // Fit map view tightly around Saudi Arabia. `animate: false` is required,
+    // not cosmetic: an animated fitBounds right after L.map() schedules
+    // Leaflet's 250ms `_onZoomTransitionEnd` timer, which React Strict Mode's
+    // double-invoked effect outlives — the cleanup below calls map.remove(),
+    // the pane is detached, and the timer then throws
+    // "Cannot read properties of undefined (reading '_leaflet_pos')".
+    map.fitBounds(ksaBounds, { padding: [10, 10], animate: false });
 
     // CartoDB Positron / Light basemap tile layer
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -197,6 +202,11 @@ export function LeafletMapContainer({
     mapRef.current = map;
 
     return () => {
+      // stop() aborts any in-flight pan/zoom animation and off() drops the
+      // pane's transitionend listener, so nothing can call back into a map
+      // whose panes remove() is about to detach.
+      map.stop();
+      map.off();
       map.remove();
       mapRef.current = null;
     };

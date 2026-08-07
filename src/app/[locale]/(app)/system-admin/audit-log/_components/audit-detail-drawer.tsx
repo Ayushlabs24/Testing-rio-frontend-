@@ -16,11 +16,30 @@ interface AuditEventDetail {
   entityType: string;
   entityId: string | null;
   entityLabel: string;
-  changes?: { field: string; from: unknown; to: unknown }[];
+  changes?: { field: string; before: unknown; after: unknown }[];
   metadata?: Record<string, unknown>;
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
+}
+
+/** Rendered for a value that was not set — e.g. the "before" of a creation. */
+const EMPTY_VALUE = "—";
+
+/**
+ * Audit values arrive as whatever the recording service passed: strings,
+ * numbers, booleans, null, or the occasional object. `JSON.stringify` was
+ * being used for all of them, which rendered a plain string as `"draft"`
+ * (with quotes) and an absent value as the literal text `null` — both read as
+ * noise in a screen an auditor is scanning. Primitives are printed as-is,
+ * absent values become an em dash, and only genuinely structured values fall
+ * back to JSON.
+ */
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return EMPTY_VALUE;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
 }
 
 interface AuditDetailDrawerProps {
@@ -175,23 +194,17 @@ export function AuditDetailDrawer({ eventId, open, onClose }: AuditDetailDrawerP
                           {c.field}
                         </span>
                         <div className="grid grid-cols-2 gap-2 text-[11px]">
-                          <div className="bg-destructive/10 text-destructive rounded p-1.5 font-mono">
+                          <div className="bg-destructive/10 text-destructive rounded p-1.5 font-mono break-words">
                             <span className="text-muted-foreground mb-0.5 block text-[9px] uppercase">
                               {t("changeFrom")}
                             </span>
-                            {JSON.stringify(
-                              (c as Record<string, unknown>).before ??
-                                (c as Record<string, unknown>).from,
-                            )}
+                            {formatValue(c.before)}
                           </div>
-                          <div className="rounded bg-emerald-500/10 p-1.5 font-mono text-emerald-600 dark:text-emerald-400">
+                          <div className="rounded bg-emerald-500/10 p-1.5 font-mono break-words text-emerald-600 dark:text-emerald-400">
                             <span className="text-muted-foreground mb-0.5 block text-[9px] uppercase">
                               {t("changeTo")}
                             </span>
-                            {JSON.stringify(
-                              (c as Record<string, unknown>).after ??
-                                (c as Record<string, unknown>).to,
-                            )}
+                            {formatValue(c.after)}
                           </div>
                         </div>
                       </div>
