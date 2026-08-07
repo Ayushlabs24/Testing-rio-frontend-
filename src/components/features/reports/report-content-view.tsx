@@ -230,6 +230,26 @@ function ResponseQualityBlock({ rq }: { rq: Dict }) {
     { label: "Don't-know rate", value: pct(rq.dontKnowRate) },
     { label: "Don't-know band", value: scalar(rq.dontKnowBand) },
   ];
+  // RIO-FR-024: the study's own signed-off sample-size target — absent
+  // entirely (not just null) for studies created before this field existed,
+  // so these three rows only appear when the backend actually sent them.
+  if (
+    rq.population != null ||
+    rq.requiredSampleSize != null ||
+    rq.minimumDetectableEffect != null
+  ) {
+    rows.push(
+      { label: "Population (area)", value: scalar(rq.population) },
+      { label: "Required sample size", value: scalar(rq.requiredSampleSize) },
+      {
+        label: "Minimum detectable effect",
+        value:
+          typeof rq.minimumDetectableEffect === "number"
+            ? `±${rq.minimumDetectableEffect.toFixed(1)} pts`
+            : scalar(rq.minimumDetectableEffect),
+      },
+    );
+  }
   return (
     <div className="space-y-3">
       <StatTiles items={rows} />

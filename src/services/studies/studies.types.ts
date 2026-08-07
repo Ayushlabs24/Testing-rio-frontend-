@@ -21,6 +21,15 @@ export interface Study {
   // Optional link to the real, status-gated MethodologyVersion master data
   // — must be PUBLISHED when set, settable at creation or later.
   methodologyVersionId: string | null;
+  // RIO-FR-024: entered once at creation ("What is the population of your
+  // area?"); requiredSampleSize/minimumDetectableEffect are computed and
+  // stored at that same moment — never recomputed, so these three never
+  // change after creation. Null for studies created before this feature
+  // shipped.
+  population: number | null;
+  marginOfError: number | null;
+  requiredSampleSize: number | null;
+  minimumDetectableEffect: number | null;
   // Sequential per-org counter (1, 2, 3... across every Study the org has
   // ever created) — server-assigned at creation, never client-writable.
   cycleNumber: number;
@@ -49,6 +58,8 @@ export interface CreateStudyPayload {
   governorateIds: string[];
   centerIds: string[];
   methodologyVersionId?: string | null;
+  population: number;
+  marginOfError?: number;
 }
 
 export interface UpdateStudyPayload {

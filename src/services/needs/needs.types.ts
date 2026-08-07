@@ -67,6 +67,10 @@ export interface Need {
   /** The submitter's own external tracking id (a field form number, a
    * partner org's case id, etc.) — free text, optional. */
   referenceId: string | null;
+  /** System-generated internal reference, e.g. "NEED-000123" — assigned to
+   * every Need on creation regardless of entry method, never editable.
+   * Distinct from `referenceId` above (the submitter's own external id). */
+  internalReferenceId: string;
   status: NeedStatus;
   /** The Approver's final ("Approved") Domain/Sub-Domain — written only by
    * AiDecisionsService.review when a classification is approved/overridden.
