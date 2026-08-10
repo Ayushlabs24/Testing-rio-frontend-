@@ -10,7 +10,7 @@ import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuestionResponseCard } from "@/components/features/surveys/question-response-card";
 import { SurveyResponseSummaryCard } from "@/components/features/surveys/survey-response-summary-card";
-import { computeQuestionStats } from "@/lib/survey-response-stats";
+import { computeQuestionStats, type StatsQuestion } from "@/lib/survey-response-stats";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
@@ -60,9 +60,35 @@ export default function SurveyResponseSummaryPage({
     };
   }, [needId]);
 
+  // RIO-FR-011: a response may answer a question from a superseded survey
+  // version — that question id no longer appears in `survey.questions`
+  // (the current version's own list), even though the backend still
+  // resolves and labels the answer correctly. Build the full question
+  // universe from both sources so a historical answer gets its own stats
+  // card instead of silently vanishing the moment a newer version publishes.
+  const questionUniverse = useMemo(() => {
+    const byId = new Map<string, StatsQuestion>();
+    for (const q of survey?.questions ?? []) {
+      byId.set(q.id, q);
+    }
+    for (const response of responses ?? []) {
+      for (const a of response.answers) {
+        if (!byId.has(a.questionId)) {
+          byId.set(a.questionId, {
+            id: a.questionId,
+            questionText: a.questionText,
+            answerType: a.answerType,
+            answerOptions: a.answerOptions,
+          });
+        }
+      }
+    }
+    return Array.from(byId.values());
+  }, [survey, responses]);
+
   const stats = useMemo(
-    () => computeQuestionStats(survey?.questions ?? [], responses ?? []),
-    [survey, responses],
+    () => computeQuestionStats(questionUniverse, responses ?? []),
+    [questionUniverse, responses],
   );
 
   const loaded = responses !== null;

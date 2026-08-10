@@ -101,17 +101,17 @@ export interface SignupPayload {
 }
 
 /**
- * `authService.signup()`'s return value. `temporaryPasswordEmailed: true`
- * means the backend actually emailed the new admin their temporary
- * password (see the backend's `MailerService`) — nothing further to show.
- * When `false`, the mailer isn't configured yet (or the send failed), so
- * `temporaryPassword` carries a one-time in-app reveal instead — only
- * present outside production (see the backend's `AuthService.signup()`).
+ * `authService.signup()`'s return value. RIO-FR-010 (client-confirmed):
+ * self-registration requires Center (System Admin) approval before
+ * activation — no session is issued at signup anymore, and no temporary
+ * password is shown or emailed yet. Both happen once a System Admin
+ * approves the entity (see OrganizationsService.approve on the backend);
+ * the entity logs in normally via POST /auth/login once that's done.
  */
 export interface SignupResult {
-  session: SessionContext;
-  temporaryPasswordEmailed: boolean;
-  temporaryPassword?: string;
+  status: "pending_approval";
+  organizationName: string;
+  email: string;
 }
 
 export interface ForgotPasswordPayload {

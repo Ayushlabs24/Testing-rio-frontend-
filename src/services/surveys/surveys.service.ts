@@ -67,8 +67,15 @@ export interface ReusableCustomQuestion {
 
 /** DRAFT -> SUBMITTED -> PUBLISHED, or SUBMITTED -> REJECTED -> (edit) ->
  * SUBMITTED again. See the backend SurveysService for the full state
- * machine and who's allowed to make each transition. */
-export type SurveyStatus = "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED";
+ * machine and who's allowed to make each transition.
+ *
+ * SUPERSEDED (RIO-FR-011): a PUBLISHED survey moves here, permanently, the
+ * moment a newer version created from it (see `createNewVersion` below)
+ * itself gets published. Its questions and every response already attached
+ * to it are never touched — only this status flag changes, so exactly one
+ * PUBLISHED survey ever exists per Need at a time. */
+export type SurveyStatus =
+  "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED" | "SUPERSEDED";
 
 /** Matches the Prisma RejectionReasonCode enum's identifiers exactly (see
  * schema.prisma). REJ_99 is "Other". `approverComments` (reviewer notes) is
@@ -99,6 +106,10 @@ export interface SurveyListItem {
   responseCount: number;
   publishedAt: string | null;
   createdAt: string | null;
+  /** RIO-FR-011: 1 for a survey that's never been versioned. Lets a list
+   * distinguish a Need's several Survey rows (e.g. v1 SUPERSEDED, v2
+   * PUBLISHED) from one another instead of looking like duplicates. */
+  version: number;
 }
 
 export interface Survey {
@@ -142,6 +153,12 @@ export interface Survey {
   publishedBy: string | null;
   publishedByName: string | null;
   questions: SurveyQuestionItem[];
+  /** RIO-FR-011: 1 for a survey that has never been versioned. Increments
+   * each time createNewVersion runs. */
+  version: number;
+  /** RIO-FR-011: the id of the (now SUPERSEDED-or-still-PUBLISHED) survey
+   * this one was copied from via createNewVersion — null for a v1 survey. */
+  previousVersionId: string | null;
 }
 
 /** The approve/reject/submit endpoints' response — the raw Survey record
@@ -345,6 +362,16 @@ export const surveysService = {
       reasonCode,
       comments,
     });
+  },
+
+  /** Researcher: the only way to change a PUBLISHED survey — creates a new
+   * DRAFT version copying its questions/methodology/sample-description,
+   * leaving the published original (and every response already attached to
+   * it) untouched. Idempotent — calling it again on the same published
+   * survey returns the already-created draft rather than making a second
+   * one. */
+  async createNewVersion(surveyId: string): Promise<Survey> {
+    return apiClient.post<Survey>(endpoints.surveys.newVersion(surveyId));
   },
 
   async getPublicSurvey(id: string): Promise<Survey> {

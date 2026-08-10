@@ -135,23 +135,17 @@ export const authService = {
 
   /**
    * Public signup: creates a new organization and its first NGO Admin
-   * together — the email itself *is* the NGO Admin account, and the
-   * backend issues a temporary password rather than taking one from the
-   * form. The backend emails it when its mailer is configured
-   * (`temporaryPasswordEmailed: true`); otherwise `temporaryPassword` is
-   * returned here as a one-time in-app fallback. The registration-number
-   * check runs first and is the uniqueness key — the org name is *not*
-   * checked, per the team lead's spec, so two orgs could in principle share
-   * a name but never a registration number.
+   * together — the email itself *is* the NGO Admin account. RIO-FR-010
+   * (client-confirmed): no session is issued here — self-registration
+   * requires Center (System Admin) approval before activation, so this just
+   * confirms the registration was received. The registration-number check
+   * runs first and is the uniqueness key — the org name is *not* checked,
+   * per the team lead's spec, so two orgs could in principle share a name
+   * but never a registration number.
    */
   async signup(payload: SignupPayload): Promise<SignupResult> {
     const raw = await apiClient.post<unknown>(endpoints.auth.signup, payload);
-    const view = parseSignupView(raw);
-    return {
-      session: toSessionContextFromApi(view),
-      temporaryPasswordEmailed: view.temporaryPasswordEmailed,
-      temporaryPassword: view.temporaryPassword,
-    };
+    return parseSignupView(raw);
   },
 
   async me(): Promise<SessionContext> {

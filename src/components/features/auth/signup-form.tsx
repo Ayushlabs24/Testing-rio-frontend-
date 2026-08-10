@@ -27,23 +27,22 @@ import { geographyService } from "@/services/geography/geography.service";
 import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 
 interface PendingConfirmation {
-  temporaryPasswordEmailed: boolean;
+  organizationName: string;
 }
 
 /**
- * Shown once, right after a successful signup. Deliberately never renders
- * the temporary password itself — only whether it was emailed. See the
- * backend's `AuthService.signup()` for why: while the email provider's
- * trial-plan restriction is in place, every signup's temporary password is
- * a fixed, known value rather than a per-account secret, so displaying it
- * on screen would be both pointless and a bad habit to leave in place once
- * that restriction is lifted and passwords go back to being random again.
+ * Shown once, right after a successful signup. RIO-FR-010 (client-confirmed):
+ * self-registration requires Center (System Admin) approval before
+ * activation — there's no temporary password to reveal yet, since one isn't
+ * issued until a System Admin approves the entity (see
+ * `OrganizationsService.approve` on the backend). This screen just confirms
+ * the registration was received and explains what happens next.
  */
 function SignupConfirmation({
-  temporaryPasswordEmailed,
+  organizationName,
   onGoToSignIn,
 }: {
-  temporaryPasswordEmailed: boolean;
+  organizationName: string;
   onGoToSignIn: () => void;
 }) {
   const t = useTranslations("auth.signup");
@@ -52,20 +51,16 @@ function SignupConfirmation({
     <div className="w-full max-w-lg">
       <div className="mb-8 space-y-1.5">
         <h1 className="text-foreground text-2xl font-semibold">
-          {t("temporaryPasswordTitle")}
+          {t("pendingApprovalTitle")}
         </h1>
         <p className="text-muted-foreground text-sm">
-          {t("temporaryPasswordEmailedDescription")}
+          {t("pendingApprovalDescription", { organizationName })}
         </p>
       </div>
 
       <div className="border-border bg-muted/30 flex items-center gap-3 rounded-lg border p-4">
         <MailCheck className="text-muted-foreground size-5 shrink-0" />
-        <p className="text-foreground text-sm">
-          {temporaryPasswordEmailed
-            ? t("temporaryPasswordEmailedNotice")
-            : t("temporaryPasswordNotEmailedNotice")}
-        </p>
+        <p className="text-foreground text-sm">{t("pendingApprovalNotice")}</p>
       </div>
 
       <Button
@@ -202,7 +197,7 @@ export function SignupForm() {
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
     try {
-      const { temporaryPasswordEmailed } = await authService.signup({
+      const result = await authService.signup({
         organizationName: values.organizationName,
         sector: values.sector,
         purpose: values.sector === "other" ? values.otherSector : undefined,
@@ -212,12 +207,9 @@ export function SignupForm() {
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
       });
-      // Signup doesn't sign the admin in automatically — they confirm how
-      // they got their password (emailed, or the not-emailed fallback
-      // notice — never the password value itself, see
-      // SignupConfirmation's own comment), then sign in explicitly with
-      // it, same as any returning user would.
-      setPendingConfirmation({ temporaryPasswordEmailed });
+      // No session is issued — registration now requires Center (System
+      // Admin) approval before activation. See SignupConfirmation's comment.
+      setPendingConfirmation({ organizationName: result.organizationName });
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : t("genericError"));
     }
@@ -226,7 +218,7 @@ export function SignupForm() {
   if (pendingConfirmation) {
     return (
       <SignupConfirmation
-        temporaryPasswordEmailed={pendingConfirmation.temporaryPasswordEmailed}
+        organizationName={pendingConfirmation.organizationName}
         onGoToSignIn={() => router.push("/")}
       />
     );

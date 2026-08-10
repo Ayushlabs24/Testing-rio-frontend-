@@ -62,10 +62,9 @@
       "genericError": "Something went wrong. Please try again.",
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",
-      "temporaryPasswordTitle": "Your account is ready",
-      "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
-      "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
-      "temporaryPasswordNotEmailedNotice": "Use the temporary password provided to you to sign in. You'll be asked to set your own password the first time you sign in.",
+      "pendingApprovalTitle": "Registration received",
+      "pendingApprovalDescription": "\"{organizationName}\" has been submitted and is awaiting approval before it can be activated.",
+      "pendingApprovalNotice": "Our team will review your registration. Once approved, a temporary password will be sent to your registered email so you can sign in.",
       "goToSignInButton": "Go to sign in"
     },
     "forgotPassword": {
@@ -1598,6 +1597,7 @@
         "genericError": "Couldn't save the need. Please try again.",
         "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",
         "editNeed": "Edit",
+        "systemReferenceIdLabel": "System Reference ID",
         "sourceLabel": "Data Source",
         "enteredByLabel": "Entered By",
         "enteredByUnknown": "Unknown",
@@ -1866,6 +1866,7 @@
       "statusColumn": "Survey status",
       "noDomain": "No domain approved yet",
       "noSurvey": "No survey yet",
+      "versionLabel": "(v{version})",
       "open": "Open",
       "noResults": "No studies yet — create a study first, then approve a domain to start building its survey.",
       "loadError": "Couldn't load studies. Please try again.",
@@ -1995,7 +1996,11 @@
         "selectionApproachLabel": "Selection Approach",
         "selectionApproachPlaceholder": "e.g. Random sampling stratified by governorate",
         "geographicCoverageLabel": "Geographic Coverage",
-        "geographicCoveragePlaceholder": "e.g. Riyadh and Eastern Province — urban centers only"
+        "geographicCoveragePlaceholder": "e.g. Riyadh and Eastern Province — urban centers only",
+        "publishedEditNotice": "This survey is published. To make changes, create a new version — the published survey and its responses stay exactly as they are.",
+        "createNewVersion": "Create New Version",
+        "creatingNewVersion": "Creating…",
+        "supersededNotice": "This is a superseded version. A newer version has since been published. Editing here is disabled — view the current version from the survey list."
       },
       "needColumn": "Need",
       "review": {
@@ -2054,7 +2059,8 @@
         "draft": "Draft",
         "submitted": "Submitted for Approval",
         "rejected": "Rejected",
-        "published": "Published"
+        "published": "Published",
+        "SUPERSEDED": "Superseded"
       }
     }
   },
@@ -2507,6 +2513,7 @@
       "searchPlaceholder": "Search by name or code...",
       "allStatuses": "All Statuses",
       "active": "Active",
+      "pendingApproval": "Pending Approval",
       "inactive": "Inactive",
       "allRegions": "All Regions",
       "clearFilters": "Clear filters",
@@ -2597,6 +2604,15 @@
       "cancel": "Cancel",
       "reactivating": "Reactivating...",
       "successToast": "Organization reactivated successfully",
+      "errorToast": "Unable to complete request"
+    },
+    "approveDialog": {
+      "title": "Approve Registration?",
+      "explanation": "This activates the organization and emails its admin a temporary password so they can sign in for the first time.",
+      "confirm": "Approve Organization",
+      "cancel": "Cancel",
+      "approving": "Approving...",
+      "successToast": "Organization approved successfully",
       "errorToast": "Unable to complete request"
     },
     "ngoAdmin": {

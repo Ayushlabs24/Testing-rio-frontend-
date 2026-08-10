@@ -36,14 +36,22 @@ import type { Domain } from "@/services/domains/domains.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { studiesService } from "@/services/studies/studies.service";
-import { surveysService, type Survey } from "@/services/surveys/surveys.service";
+import {
+  surveysService,
+  type Survey,
+  type SurveyListItem,
+} from "@/services/surveys/surveys.service";
 
 const ALL = "all";
 
+/** RIO-FR-011: one row per Survey, not per Need — a Need can now have more
+ * than one Survey row (versioning), and every version needs its own visible
+ * row so an old SUPERSEDED one and its PUBLISHED replacement are both on
+ * screen at once, distinguishable by status badge and version number. */
 interface Row {
   need: Need;
   studyTitle: string;
-  survey: Survey;
+  survey: SurveyListItem;
 }
 
 const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
@@ -51,6 +59,7 @@ const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
   SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
   REJECTED: "bg-destructive/10 text-destructive border-transparent",
   PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
+  SUPERSEDED: "bg-muted text-muted-foreground border-transparent",
 };
 
 /** One row per Need, not per Study — a Study can hold many Needs now, each
@@ -77,32 +86,42 @@ export default function SurveyBuilderPage() {
     studiesService
       .list()
       .then(async (studies) => {
-        const needsByStudy = await Promise.all(
-          studies.map((study) => needsService.listByStudy(study.id).catch(() => [])),
-        );
-        const needs = studies.flatMap((study, index) =>
-          needsByStudy[index].map((need) => ({ need, studyTitle: study.title })),
-        );
-        const surveys = await Promise.all(
-          needs.map(({ need }) =>
-            surveysService.getSurveyByNeedId(need.id).catch(() => null),
+        const [needsByStudy, surveysByStudy] = await Promise.all([
+          Promise.all(
+            studies.map((study) => needsService.listByStudy(study.id).catch(() => [])),
           ),
+          Promise.all(
+            studies.map((study) => surveysService.listByStudy(study.id).catch(() => [])),
+          ),
+        ]);
+        const needById = new Map(
+          studies
+            .flatMap((_, index) => needsByStudy[index])
+            .map((need) => [need.id, need]),
         );
         // Survey Builder is for reviewing/curating surveys, DRAFT or
         // PUBLISHED — a Need with no survey yet has nothing to curate here
         // (that starts from the Need's own Survey section instead), but a
         // DRAFT survey belongs on this list just as much as a PUBLISHED one;
         // this is exactly where someone would come to open and finish it.
+        // RIO-FR-011: every version of a Need's survey gets its own row —
+        // do NOT collapse to one-per-need, or an old SUPERSEDED version and
+        // its PUBLISHED replacement become indistinguishable (only one of
+        // them would ever be visible at all).
         setRows(
-          needs
-            .map(({ need, studyTitle }, index) => ({
-              need,
+          studies
+            .flatMap((study, index) =>
+              surveysByStudy[index].map((survey) => ({
+                survey,
+                studyTitle: study.title,
+              })),
+            )
+            .map(({ survey, studyTitle }) => ({
+              need: needById.get(survey.needId),
               studyTitle,
-              survey: surveys[index],
+              survey,
             }))
-            // Loose check — a 204/empty response for "no survey yet" can
-            // come back as `undefined`, not `null`; either means "skip".
-            .filter((row): row is Row => row.survey != null),
+            .filter((row): row is Row => row.need != null),
         );
         setLoadFailed(false);
       })
@@ -180,6 +199,7 @@ export default function SurveyBuilderPage() {
                   <SelectItem value="SUBMITTED">{t("status.SUBMITTED")}</SelectItem>
                   <SelectItem value="PUBLISHED">{t("status.PUBLISHED")}</SelectItem>
                   <SelectItem value="REJECTED">{t("status.REJECTED")}</SelectItem>
+                  <SelectItem value="SUPERSEDED">{t("status.SUPERSEDED")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -221,12 +241,15 @@ export default function SurveyBuilderPage() {
                   </TableRow>
                 ) : (
                   paged.map(({ need, studyTitle, survey }) => (
-                    <TableRow key={need.id}>
+                    <TableRow key={survey.id}>
                       <TableCell className="py-4 align-middle text-sm font-medium break-words whitespace-normal">
                         {studyTitle}
                       </TableCell>
                       <TableCell className="align-middle text-sm break-words whitespace-normal">
                         {need.title}
+                        <span className="text-muted-foreground ml-1.5 text-xs">
+                          {t("versionLabel", { version: survey.version })}
+                        </span>
                       </TableCell>
                       <TableCell className="align-middle text-sm whitespace-normal">
                         {need.allDomainsSelected ? (

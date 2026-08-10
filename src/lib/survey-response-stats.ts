@@ -82,7 +82,7 @@ function classifyAnswerType(answerType: string): QuestionStatKind {
 // default the citizen flow rendered (see mapAnswerTypeForCitizen), so a
 // Yes/No or 1-5 rating question still gets real slices even without an
 // explicit options list stored on it.
-function optionLabelsFor(question: SurveyQuestionItem): string[] {
+function optionLabelsFor(question: StatsQuestion): string[] {
   if (question.answerOptions && question.answerOptions.length > 0) {
     return question.answerOptions;
   }
@@ -101,11 +101,21 @@ function answerFor(response: SurveyResponseDetail, questionId: string): string |
   return answer && answer.trim() ? answer : null;
 }
 
+/** The subset of a question's shape this module actually needs — lets a
+ * caller pass either a real SurveyQuestionItem (from the current survey) or
+ * a lighter stand-in synthesized from a response's own answer entry (a
+ * question from a superseded version, no longer in the current survey's
+ * own list — see buildQuestionUniverse in the responses page). */
+export type StatsQuestion = Pick<
+  SurveyQuestionItem,
+  "id" | "questionText" | "answerType" | "answerOptions"
+>;
+
 /** Pure tallying — counts, percentages, min/max/average. No weighting, no
  * scoring, no severity/priority/KPI logic; this is raw-response validation,
  * not analytics. */
 export function computeQuestionStats(
-  questions: SurveyQuestionItem[],
+  questions: StatsQuestion[],
   responses: SurveyResponseDetail[],
 ): QuestionResponseStat[] {
   return questions.map((question): QuestionResponseStat => {

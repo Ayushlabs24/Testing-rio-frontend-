@@ -8,7 +8,6 @@ import {
   Clock,
   Loader2,
   Pencil,
-  Plus,
   Trash2,
   XCircle,
 } from "lucide-react";
@@ -56,7 +55,6 @@ import {
   surveysService,
   type Question,
   type RejectionReasonCode,
-  type ReusableCustomQuestion,
   type SaveSurveyQuestionInput,
   type Survey,
   type SurveyQuestionItem,
@@ -71,6 +69,7 @@ const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
   SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
   REJECTED: "bg-destructive/10 text-destructive border-transparent",
   PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
+  SUPERSEDED: "bg-muted text-muted-foreground border-transparent",
 };
 
 const LIST_PREVIEW_COUNT = 5;
@@ -94,9 +93,6 @@ export default function SurveyBuilderDetailPage({
   const [need, setNeed] = useState<Need | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [eligibleQuestions, setEligibleQuestions] = useState<Question[]>([]);
-  const [reusableQuestions, setReusableQuestions] = useState<ReusableCustomQuestion[]>(
-    [],
-  );
   const [loaded, setLoaded] = useState(false);
 
   // Both the Recommended and Question Bank lists can run into the hundreds
@@ -115,6 +111,7 @@ export default function SurveyBuilderDetailPage({
 
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingNewVersion, setCreatingNewVersion] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -303,33 +300,6 @@ export default function SurveyBuilderDetailPage({
             })
             .catch(() => setEligibleQuestions([]));
         }
-        if (pairs && pairs.length > 0) {
-          Promise.all(
-            pairs.map((p) =>
-              surveysService
-                .getReusableCustomQuestions(p.domain, p.subDomain)
-                .catch(() => []),
-            ),
-          ).then((lists) => {
-            const seen = new Set<string>();
-            const merged = lists.flat().filter((q) => {
-              if (seen.has(q.id)) return false;
-              seen.add(q.id);
-              return true;
-            });
-            setReusableQuestions(merged);
-          });
-        } else if (pairs && pairs.length === 0) {
-          // allDomainsSelected (AI couldn't classify) — every reusable
-          // custom question is in scope, same "match all" convention the
-          // Question Bank tab above already uses via getQuestions([]).
-          surveysService
-            .getReusableCustomQuestions()
-            .then(setReusableQuestions)
-            .catch(() => setReusableQuestions([]));
-        } else {
-          setReusableQuestions([]);
-        }
       })
       .catch(() => undefined)
       .finally(() => setLoaded(true));
@@ -499,39 +469,6 @@ export default function SurveyBuilderDetailPage({
     setDirty(true);
   }
 
-  // Copies a reusable custom question's text/type/options into a brand-new
-  // SurveyQuestion on THIS survey — not linked by reference the way a
-  // Question Bank item is (there's no shared row to link to), so editing it
-  // afterward here never affects the original it was copied from.
-  function addFromReusable(item: ReusableCustomQuestion) {
-    setAdditional((prev) => [
-      ...prev,
-      {
-        id: nextTempId("reused"),
-        bankQuestionId: null,
-        questionCode: null,
-        questionText: item.questionText,
-        answerType: item.answerType,
-        answerOptions: item.answerOptions,
-        domain: item.domain,
-        subDomain: item.subDomain,
-        indicator: null,
-        kpi: item.kpi,
-        isCustom: true,
-        order: recommended.length + prev.length + 1,
-        isRequired: true,
-      },
-    ]);
-    setDirty(true);
-  }
-
-  function openAddModal() {
-    setEditingId(null);
-    setEditingInitialValue(null);
-    setModalKey((k) => k + 1);
-    setModalOpen(true);
-  }
-
   function openEditModal(item: SurveyQuestionItem) {
     setEditingId(item.id);
     setModalKey((k) => k + 1);
@@ -651,6 +588,25 @@ export default function SurveyBuilderDetailPage({
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // RIO-FR-011: the only way to change a PUBLISHED survey — creates a new
+  // DRAFT version (a copy of this one's questions/methodology/sample
+  // description) and switches the page over to editing that instead. The
+  // published original stays PUBLISHED (or moves to SUPERSEDED once this
+  // new version itself gets published) and is never edited in place.
+  async function createNewVersion() {
+    if (!survey) return;
+    setCreatingNewVersion(true);
+    setError(null);
+    try {
+      const updated = await surveysService.createNewVersion(survey.id);
+      setSurvey(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setCreatingNewVersion(false);
     }
   }
 
@@ -1033,6 +989,36 @@ export default function SurveyBuilderDetailPage({
               </div>
             ) : null}
 
+            {survey?.status === "PUBLISHED" && canWrite ? (
+              <div
+                role="status"
+                className="border-border bg-muted/40 mb-4 flex items-start justify-between gap-2.5 rounded-md border p-3.5"
+              >
+                <div className="flex items-start gap-2.5">
+                  <Check className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                  <p className="text-foreground text-sm">{t("publishedEditNotice")}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={createNewVersion}
+                  disabled={creatingNewVersion}
+                >
+                  {creatingNewVersion ? t("creatingNewVersion") : t("createNewVersion")}
+                </Button>
+              </div>
+            ) : null}
+
+            {survey?.status === "SUPERSEDED" ? (
+              <div
+                role="status"
+                className="border-border bg-muted/40 mb-4 flex items-start gap-2.5 rounded-md border p-3.5"
+              >
+                <Clock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                <p className="text-muted-foreground text-sm">{t("supersededNotice")}</p>
+              </div>
+            ) : null}
+
             {dirty ? (
               <p className="text-muted-foreground mb-4 text-xs">
                 {t("unsavedChangesNote")}
@@ -1304,117 +1290,8 @@ export default function SurveyBuilderDetailPage({
                           <TabsTrigger value="questionBank" size="lg">
                             {t("questionBankTab")}
                           </TabsTrigger>
-                          <TabsTrigger value="customQuestions" size="lg">
-                            {t("customQuestionsTab")}
-                          </TabsTrigger>
                         </TabsList>
                       </div>
-
-                      <TabsContent value="customQuestions" className="mt-6 space-y-4">
-                        {/* Custom questions previously typed in from scratch
-                            on some OTHER survey, for this exact Domain/
-                            Sub-domain — reuse instead of retype. Deliberately
-                            NOT every custom question ever created (see
-                            SurveysService.listReusableCustomQuestions). */}
-                        <p className="text-muted-foreground text-xs">
-                          {t("customQuestionsDescription")}
-                        </p>
-                        {reusableQuestions.length === 0 ? (
-                          <p className="text-muted-foreground text-sm">
-                            {t("customQuestionsEmpty")}
-                          </p>
-                        ) : (
-                          <div className="space-y-3">
-                            {reusableQuestions.map((q) => {
-                              const added = additional.some(
-                                (item) =>
-                                  item.questionText.trim().toLowerCase() ===
-                                  q.questionText.trim().toLowerCase(),
-                              );
-                              return (
-                                <div
-                                  key={q.id}
-                                  className={cn(
-                                    "space-y-2.5 rounded-lg border p-4",
-                                    added
-                                      ? "border-badge-success/40 bg-badge-success/5"
-                                      : "border-border",
-                                  )}
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <p dir="auto" className="text-foreground text-sm">
-                                      {q.questionText}
-                                    </p>
-                                    {canEditQuestions ? (
-                                      <Button
-                                        type="button"
-                                        size="icon"
-                                        variant={added ? "secondary" : "outline"}
-                                        className={cn(
-                                          "size-8 shrink-0",
-                                          added &&
-                                            "bg-badge-success text-badge-success-foreground hover:bg-badge-success",
-                                        )}
-                                        disabled={added}
-                                        onClick={() => addFromReusable(q)}
-                                        aria-label={
-                                          added ? t("alreadyAdded") : t("addToSurvey")
-                                        }
-                                        title={
-                                          added ? t("alreadyAdded") : t("addToSurvey")
-                                        }
-                                      >
-                                        <Check className="size-4" />
-                                      </Button>
-                                    ) : null}
-                                  </div>
-
-                                  <p className="text-muted-foreground text-xs">
-                                    {t("customQuestionsSourceLabel", {
-                                      survey: q.sourceSurveyTitle,
-                                    })}
-                                  </p>
-
-                                  <div>
-                                    <p className="text-muted-foreground text-xs font-medium">
-                                      {t("answerTypeLabel")}
-                                    </p>
-                                    <Badge variant="outline" className="mt-0.5">
-                                      {titleCase(q.answerType)}
-                                    </Badge>
-                                  </div>
-
-                                  {q.answerOptions && q.answerOptions.length > 0 ? (
-                                    <div>
-                                      <p className="text-muted-foreground text-xs font-medium">
-                                        {t("optionsLabel")}
-                                      </p>
-                                      <div className="mt-1 flex flex-wrap gap-1.5">
-                                        {q.answerOptions.map((option) => (
-                                          <Badge
-                                            key={option}
-                                            variant="secondary"
-                                            className="font-normal"
-                                          >
-                                            {option}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ) : null}
-
-                                  {added ? (
-                                    <Badge className="bg-badge-success text-badge-success-foreground gap-1 border-transparent font-normal">
-                                      <Check className="size-3" />
-                                      {t("alreadyAdded")}
-                                    </Badge>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </TabsContent>
 
                       <TabsContent value="questionBank" className="mt-6 space-y-4">
                         {/* Every Question Bank row matching this Need's
@@ -1731,33 +1608,23 @@ export default function SurveyBuilderDetailPage({
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="space-y-4 p-6">
-                    <div className="flex items-center justify-between gap-3">
+                {/* RIO-FR-012 (client-confirmed): custom questions are
+                    follow-on scope pending a proper review/approval
+                    workflow — Researchers now work from the Question Bank
+                    only, so there's no "add" entry point here any more.
+                    This card stays purely for viewing/managing whatever a
+                    survey already had before this change; it's simply
+                    absent for anything that never had any. */}
+                {additional.length > 0 ? (
+                  <Card>
+                    <CardContent className="space-y-4 p-6">
                       <h2 className="text-foreground text-sm font-semibold">
                         {t("additionalHeading")}
                       </h2>
-                      {canEditQuestions ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={openAddModal}
-                          className="gap-1.5"
-                        >
-                          <Plus className="size-3.5" />
-                          {t("addOpenEndedQuestion")}
-                        </Button>
-                      ) : null}
-                    </div>
-                    <p className="text-muted-foreground text-xs">
-                      {t("additionalDescription")}
-                    </p>
-
-                    {additional.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">
-                        {t("noAdditionalQuestions")}
+                      <p className="text-muted-foreground text-xs">
+                        {t("additionalDescription")}
                       </p>
-                    ) : (
+
                       <div className="space-y-3">
                         {additional.map((q, index) => (
                           <div
@@ -1836,9 +1703,9 @@ export default function SurveyBuilderDetailPage({
                           </div>
                         ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : null}
               </div>
             )}
           </>

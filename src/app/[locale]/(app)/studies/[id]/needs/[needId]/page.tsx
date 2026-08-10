@@ -403,6 +403,9 @@ function NeedDetailsCard({
               <FilledField label={t("villageLabel")}>
                 <VillageChips villages={need.village} />
               </FilledField>
+              <FilledField label={t("systemReferenceIdLabel")}>
+                <span className="font-mono">{need.internalReferenceId}</span>
+              </FilledField>
               <FilledField label={t("sourceLabel")}>{tSource(need.source)}</FilledField>
               <FilledField label={t("enteredByLabel")}>
                 {need.createdByName ?? t("enteredByUnknown")}

@@ -45,6 +45,11 @@ export interface SurveyResponseAnswer {
   questionId: string;
   questionText: string;
   answerType: string;
+  /** RIO-FR-011: carried on the answer itself (not just looked up from the
+   * current survey) so a question from a superseded version — no longer
+   * part of the current survey's own question list — still renders proper
+   * option stats instead of falling back to "no known options". */
+  answerOptions: string[] | null;
   answer: string | null;
 }
 

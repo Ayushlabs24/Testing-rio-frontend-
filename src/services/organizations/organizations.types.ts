@@ -27,6 +27,10 @@ export interface Organization {
   governorateIds: string[];
   centerIds: string[];
   isActive: boolean;
+  /** RIO-FR-010 (client-confirmed): null = self-registered, awaiting Center
+   * (System Admin) approval — see organizationsService.approve(). Always
+   * set for an org created directly via the System Admin's own create form. */
+  approvedAt: string | null;
   createdAt: string;
 }
 

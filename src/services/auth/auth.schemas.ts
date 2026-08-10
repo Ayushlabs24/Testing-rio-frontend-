@@ -62,9 +62,12 @@ export const apiSessionViewSchema = z.object({
 
 export type ApiSessionView = z.infer<typeof apiSessionViewSchema>;
 
-export const apiSignupViewSchema = apiSessionViewSchema.extend({
-  temporaryPasswordEmailed: z.boolean(),
-  temporaryPassword: z.string().optional(),
+// RIO-FR-010 (client-confirmed): signup no longer returns a session — see
+// SignupResult's own comment in auth.types.ts.
+export const apiSignupViewSchema = z.object({
+  status: z.literal("pending_approval"),
+  organizationName: z.string(),
+  email: z.string(),
 });
 
 export type ApiSignupView = z.infer<typeof apiSignupViewSchema>;

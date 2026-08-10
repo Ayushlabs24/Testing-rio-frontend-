@@ -26,7 +26,6 @@ export interface Role {
     | "read_only_viewer"
     | "center_supervisor"
     | "citizen_guest"
-    | "ncnp_user"
     | "system_reviewer";
   name: string;
   description: string;
@@ -109,23 +108,17 @@ const READ_ONLY: AccessGrant = { read: true };
  * role set is fixed, with no in-app role-authoring capability this phase.
  *
  * PIVOT (per team lead, superseding the System-Admin-onboards-NGOs model
- * below): nobody has finalized how most of the 9 roles actually behave yet,
- * so only 4 are `enabled` for the current demo — NGO Admin, Research
- * Officer, Reviewer / Approver, and Program Supervisor. The other 5 (System
- * Admin, Field Researcher, Data Analyst, Read-only Viewer, Citizen Guest) stay fully
- * defined below with `enabled: false` — permissions exist, workflow
- * doesn't, so there's nothing to build for them yet, but nothing is
- * deleted either. There is now a public NGO signup (see
+ * below): all 10 roles are now `enabled` — NGO Admin, NGO Research Officer,
+ * Human Reviewer, Field Researcher, Data Analyst, Read-only Viewer, System
+ * Admin, Center Supervisor (NCNP Supervisor), System Reviewer, and Citizen /
+ * Beneficiary Guest (the last has no login path regardless — see its own
+ * note below — so `enabled` on it only affects whether it's listed, not
+ * whether anyone can act as it). There is now a public NGO signup (see
  * `authService.signup()`) that creates an organization and its first NGO
  * Admin together — this replaces the System-Admin-only
- * org-creation path described below. Since System Admin is disabled
- * (`enabled: false`) and has no other reachable entry point, the write-only
- * code that path used (`organizationsService.createWithAdmin`/`updateById`,
- * `usersService.createForOrganization`/`updateAny`/`removeAny`, and the
- * System Admin-only UI in the Organizations/Users settings pages) has been
- * removed outright rather than just gated off. Center Supervisor's
- * cross-entity *read* access (Organizations list/detail, Users platform-wide
- * list) is unrelated to this and stays fully real and working.
+ * org-creation path described below. Center Supervisor's cross-entity
+ * *read* access (Organizations list/detail, Users platform-wide list) is
+ * unrelated to this and stays fully real and working.
  *
  * The rest of this comment describes the original (pre-pivot) design,
  * which the `enabled` flag above supersedes for now:
@@ -152,7 +145,7 @@ export const roles: Role[] = [
   {
     id: "role_ngo_research_officer",
     key: "ngo_research_officer",
-    name: "Research Officer",
+    name: "NGO Research Officer",
     description: "Creates studies and surveys from the question bank and enters data.",
     crossEntity: false,
     enabled: true,
@@ -182,7 +175,7 @@ export const roles: Role[] = [
     name: "Field Researcher",
     description: "Enters needs and documents the source and field notes.",
     crossEntity: false,
-    enabled: false,
+    enabled: true,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -203,7 +196,7 @@ export const roles: Role[] = [
   {
     id: "role_human_reviewer",
     key: "human_reviewer",
-    name: "Reviewer / Approver",
+    name: "Human Reviewer",
     description:
       "Approves or modifies AI classification, priority, and duplicates before publishing.",
     crossEntity: false,
@@ -236,14 +229,17 @@ export const roles: Role[] = [
     name: "Data Analyst",
     description: "Processes data, reviews quality, and prepares reports and dashboards.",
     crossEntity: false,
-    enabled: false,
+    enabled: true,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
       perm("onboardingConsent"),
       perm("methodologyQuestionBank", READ_ONLY),
       perm("studySurvey", READ_ONLY),
-      perm("dataCollection", READ_ONLY),
+      // RIO-DATA-003 (client-requested widening): Data Analyst can create
+      // Needs directly, alongside NGO Research Officer/Field Researcher —
+      // a temporary widening, not a permanent role-scope decision.
+      perm("dataCollection", { read: true, write: true, create: true }),
       perm("dataImport", { read: true, write: true, create: true }),
       perm("citizenChannel"),
       perm("aiReview", READ_ONLY),
@@ -304,7 +300,7 @@ export const roles: Role[] = [
     name: "Read-only Viewer",
     description: "Views authorized outputs without editing.",
     crossEntity: false,
-    enabled: false,
+    enabled: true,
     permissions: [
       perm("entityTeam"),
       perm("rolesPermissions"),
@@ -323,12 +319,19 @@ export const roles: Role[] = [
       perm("ncnpReport"),
     ],
   },
+  // RIO-RBAC-001 (client-confirmed): "Center supervisor / NCNP supervisor"
+  // is one combined role, not two — the old separate "NCNP User" role
+  // (role_ncnp_user) is retired here too, matching the backend consolidation.
+  // Client's answer: cross-entity view/follow authority only, no edit rights
+  // on entity data — the old studySurvey write grant below is removed to
+  // match ("Edit — Per approved permission only" from an earlier scope.md
+  // note no longer applies now that the client has confirmed read-only).
   {
     id: "role_center_supervisor",
     key: "center_supervisor",
-    name: "Program Supervisor",
+    name: "Center Supervisor (NCNP Supervisor)",
     description:
-      "Cross-entity supervisory authority to follow studies, data, and reports for quality.",
+      "Cross-entity view/follow authority to monitor studies, data, reports and the NCNP Compiled Report — no edit rights on entity data.",
     crossEntity: true,
     enabled: true,
     permissions: [
@@ -336,10 +339,7 @@ export const roles: Role[] = [
       perm("rolesPermissions"),
       perm("onboardingConsent"),
       perm("methodologyQuestionBank", READ_ONLY),
-      // "Edit — Per approved permission only" per new scope.md §3: not full
-      // CRUD (no create), but a real, limited edit capability — modeled as
-      // write without create, same as the Reviewer's aiReview permission.
-      perm("studySurvey", { read: true, write: true, export: true }),
+      perm("studySurvey", READ_ONLY),
       perm("dataCollection", READ_ONLY),
       perm("dataImport", READ_ONLY),
       perm("citizenChannel"),
@@ -350,28 +350,6 @@ export const roles: Role[] = [
       perm("surveyBuilder"),
       perm("ncnpReport"),
     ],
-  },
-  {
-    id: "role_citizen_guest",
-    key: "citizen_guest",
-    name: "Citizen / Beneficiary Guest",
-    description:
-      "Submits a need as a data source via OTP; not added before human review.",
-    crossEntity: false,
-    enabled: false,
-    permissions: PERMISSION_MODULES.map((module) =>
-      module === "citizenChannel" ? perm(module, { create: true }) : perm(module),
-    ),
-  },
-  {
-    id: "role_ncnp_user",
-    key: "ncnp_user",
-    name: "NCNP User",
-    description:
-      "Views the national, kingdom-wide NCNP Compiled Report. No access to any other module.",
-    crossEntity: true,
-    enabled: true,
-    permissions: PERMISSION_MODULES.map((module) => perm(module)),
   },
   {
     id: "role_system_reviewer",
@@ -399,5 +377,24 @@ export const roles: Role[] = [
       perm("surveyBuilder", READ_ONLY),
       perm("ncnpReport", { read: true, approve: true }),
     ],
+  },
+  {
+    // Last by design, not just array order — it's not an internal
+    // application role (no login path, see LOGIN_ROLE_KEYS on the backend),
+    // so it's kept after every real staff role rather than interleaved
+    // among them. The Roles page also hides its "View Details" button for
+    // the same reason — with only citizenChannel granted below and every
+    // other module empty, the detail sheet would be almost entirely "None"
+    // rows for a role that never actually logs in to see them.
+    id: "role_citizen_guest",
+    key: "citizen_guest",
+    name: "Citizen / Beneficiary Guest",
+    description:
+      "Responds to surveys through OTP verification; no internal application access.",
+    crossEntity: false,
+    enabled: true,
+    permissions: PERMISSION_MODULES.map((module) =>
+      module === "citizenChannel" ? perm(module, { create: true }) : perm(module),
+    ),
   },
 ];

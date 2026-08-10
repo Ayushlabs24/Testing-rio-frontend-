@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useOrgCentersForGovernorates } from "@/hooks/use-org-centers-for-governorates";
+import { previewSampleSize } from "@/lib/sample-size";
 import { ApiError } from "@/services/api/types";
 import type { Governorate } from "@/services/geography/geography.types";
 import type { MethodologyVersion } from "@/services/priority/severity-scoring.service";
@@ -113,6 +114,8 @@ export function StudyForm({
   const centerIds = useWatch({ control, name: "centerIds" });
   const methodologyVersionId = useWatch({ control, name: "methodologyVersionId" });
   const marginOfError = useWatch({ control, name: "marginOfError" });
+  const population = useWatch({ control, name: "population" });
+  const samplePreview = isCreate ? previewSampleSize(population, marginOfError) : null;
 
   const { centers: orgCenters, loaded: orgCentersLoaded } =
     useOrgCentersForGovernorates(governorateIds);
@@ -286,6 +289,20 @@ export function StudyForm({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-sm">{t("marginOfErrorHint")}</p>
+        </div>
+      ) : null}
+
+      {isCreate && samplePreview ? (
+        <div className="border-border bg-muted/30 space-y-1 rounded-md border p-3 text-sm">
+          <p className="font-medium">{t("sampleSizeSummaryTitle")}</p>
+          <p className="text-muted-foreground">
+            {t("sampleSizeSummaryBody", {
+              population,
+              marginPct: Math.round(marginOfError * 100),
+              requiredSampleSize: samplePreview.requiredSampleSize,
+              mde: samplePreview.minimumDetectableEffect.toFixed(1),
+            })}
+          </p>
         </div>
       ) : null}
 

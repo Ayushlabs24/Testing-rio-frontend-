@@ -210,7 +210,13 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "methodologyConfig",
   ],
   read_only_viewer: ["dashboard", "studies", "priorityDashboard", "reports", "archive"],
-  // Program Supervisor.
+  // Center Supervisor (NCNP Supervisor) — RIO-RBAC-001 (client-confirmed):
+  // this is now the single combined role for what was previously two
+  // separate roles (Program Supervisor / NCNP User). "reports" already
+  // covers the NCNP Compiled Report (folded into the unified /reports page,
+  // Category: Consolidated) since this role holds real reportsDashboards
+  // read+export access — unlike the old ncnp_user role, which had no grant
+  // on reportsDashboards at all and so had no way to actually reach it.
   center_supervisor: [
     "dashboard",
     "organizations",
@@ -219,16 +225,6 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "sharing",
     "audit",
   ],
-  // National Council for NGO Partnerships — sees the NCNP Compiled Report,
-  // now folded into the unified /reports page (Category: Consolidated).
-  // NOTE: this role otherwise holds no module permissions at all (see
-  // role-matrix.ts) — it currently has no grant on `reportsDashboards`
-  // either, so it has no way to actually reach /reports post-consolidation.
-  // Flagged for the team to confirm: either grant read-only
-  // `reportsDashboards` (which would also expose RPT01-14 NGO reports to
-  // this role, not just the Consolidated ones), or add a role-specific
-  // filter on the reports page. Left as-is until that's decided.
-  ncnp_user: ["dashboard"],
   // System Reviewer — reviews the NCNP Compiled Report (approve/reject with
   // mandatory notes) via the unified /reports page (Category: Consolidated),
   // plus read-only access to Needs, Surveys, and Documents per the client's
