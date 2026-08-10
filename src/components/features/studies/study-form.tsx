@@ -32,6 +32,16 @@ export interface StudyFormValues {
   centerIds: string[];
   /** Optional link to a PUBLISHED MethodologyVersion. */
   methodologyVersionId: string | null;
+  /** RIO-FR-024: the area's population — required at creation only, used
+   * once to compute the required sample size and MDE server-side. Ignored
+   * on edit (the form shows the stored result instead, read-only). */
+  population: number;
+  /** RIO-FR-024: the only sample-size parameter the Methodology workbook
+   * calls out as "configurable per study" (confidence/p/power stay fixed
+   * defaults server-side). ±10% (0.10) is the standard default; ±5% (0.05)
+   * is the tighter option the workbook itself names for trend-cycle studies
+   * that need finer detection, at the cost of a much larger required sample. */
+  marginOfError: number;
 }
 
 interface StudyFormProps {
@@ -71,6 +81,14 @@ export function StudyForm({
     governorateIds: z.array(z.string()).min(1, tValidation("governorateIdsRequired")),
     centerIds: z.array(z.string()).min(1, tValidation("centerIdsRequired")),
     methodologyVersionId: z.string().nullable(),
+    population: z
+      .number()
+      .refine(
+        (value) => !isCreate || Number.isInteger(value),
+        tValidation("populationInvalid"),
+      )
+      .refine((value) => !isCreate || value > 0, tValidation("populationInvalid")),
+    marginOfError: z.number(),
   });
 
   const {
@@ -86,12 +104,15 @@ export function StudyForm({
       governorateIds: study?.governorateIds ?? [],
       centerIds: study?.centerIds ?? [],
       methodologyVersionId: study?.methodologyVersionId ?? null,
+      population: study?.population ?? 0,
+      marginOfError: study?.marginOfError ?? 0.1,
     },
   });
 
   const governorateIds = useWatch({ control, name: "governorateIds" });
   const centerIds = useWatch({ control, name: "centerIds" });
   const methodologyVersionId = useWatch({ control, name: "methodologyVersionId" });
+  const marginOfError = useWatch({ control, name: "marginOfError" });
 
   const { centers: orgCenters, loaded: orgCentersLoaded } =
     useOrgCentersForGovernorates(governorateIds);
@@ -229,10 +250,64 @@ export function StudyForm({
         </Select>
       </div>
 
+      {isCreate ? (
+        <div className="space-y-2">
+          <Label htmlFor="population">
+            {t("populationLabel")} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="population"
+            type="number"
+            min={1}
+            step={1}
+            placeholder={t("populationPlaceholder")}
+            {...register("population", { valueAsNumber: true })}
+          />
+          <p className="text-muted-foreground text-sm">{t("populationHint")}</p>
+          {errors.population ? (
+            <p className="text-destructive text-sm">{errors.population.message}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isCreate ? (
+        <div className="space-y-2">
+          <Label>{t("marginOfErrorLabel")}</Label>
+          <Select
+            value={String(marginOfError)}
+            onValueChange={(value) => setValue("marginOfError", Number(value))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.1">{t("marginOfError10")}</SelectItem>
+              <SelectItem value="0.05">{t("marginOfError5")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-sm">{t("marginOfErrorHint")}</p>
+        </div>
+      ) : null}
+
       {!isCreate && study ? (
         <div className="space-y-2">
           <Label>{t("cycleNumberLabel")}</Label>
           <Input value={study.cycleNumber} readOnly disabled />
+        </div>
+      ) : null}
+
+      {!isCreate && study && study.requiredSampleSize != null ? (
+        <div className="border-border bg-muted/30 space-y-1 rounded-md border p-3 text-sm">
+          <p className="font-medium">{t("sampleSizeSummaryTitle")}</p>
+          <p className="text-muted-foreground">
+            {t("sampleSizeSummaryBody", {
+              population: study.population ?? 0,
+              marginPct:
+                study.marginOfError != null ? Math.round(study.marginOfError * 100) : "—",
+              requiredSampleSize: study.requiredSampleSize,
+              mde: study.minimumDetectableEffect?.toFixed(1) ?? "—",
+            })}
+          </p>
         </div>
       ) : null}
 

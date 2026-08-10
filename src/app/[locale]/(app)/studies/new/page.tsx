@@ -50,6 +50,8 @@ export default function NewStudyPage() {
       governorateIds: values.governorateIds,
       centerIds: values.centerIds,
       methodologyVersionId: values.methodologyVersionId,
+      population: values.population,
+      marginOfError: values.marginOfError,
     });
     // Capturing the first Need is the next step of the workflow, so go
     // straight there rather than via the Study detail page.
