@@ -80,6 +80,8 @@ function toSessionContextFromApi(view: ApiSessionView): SessionContext {
       email: view.user.email,
       consentedAt: view.user.consentedAt,
       consentedPolicyVersion: view.user.consentedPolicyVersion,
+      sharingConsentedAt: view.user.sharingConsentedAt,
+      sharingConsentedPolicyVersion: view.user.sharingConsentedPolicyVersion,
     },
     organization: {
       id: view.organization.id,

@@ -13,6 +13,7 @@ import {
   QrCode,
   ScrollText,
   Share2,
+  Terminal,
   ShieldCheck,
   Users2,
 } from "lucide-react";
@@ -138,6 +139,17 @@ export const appNav: NavItem[] = [
     icon: ScrollText,
     module: "archiveSharingAudit",
   },
+  // RIO-NFR-016 — operational log. A separate item from "audit" on purpose:
+  // different data (system errors vs business events), different permission
+  // (systemLogs, held by System Admin alone), different audience. crossEntity
+  // because it is a platform-wide screen, not an org one.
+  {
+    labelKey: "systemLogs",
+    href: "/system-admin/system-logs",
+    icon: Terminal,
+    module: "systemLogs",
+    scope: "crossEntity",
+  },
 ];
 
 /**
@@ -207,6 +219,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "archive",
     "reviewerSla",
     "audit",
+    "systemLogs",
     "methodologyConfig",
   ],
   read_only_viewer: ["dashboard", "studies", "priorityDashboard", "reports", "archive"],

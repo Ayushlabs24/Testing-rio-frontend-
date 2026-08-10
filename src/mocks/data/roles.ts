@@ -285,7 +285,11 @@ export const roles: Role[] = [
       perm("aiReview", READ_ONLY),
       perm("priorityScoring", READ_ONLY),
       perm("reportsDashboards", READ_ONLY),
-      perm("archiveSharingAudit", READ_ONLY),
+      // RIO-FR-007 — read + export, mirroring the backend role matrix: the
+      // role the BRD names as managing the audit log must be able to download
+      // it, not just view it. Export is the only action added; Archive stays
+      // view-only and Sharing's create/approve are still withheld.
+      perm("archiveSharingAudit", { read: true, export: true }),
       perm("surveyBuilder"),
       // Generate a new NCNP Compiled Report snapshot for review, and publish
       // one a System Reviewer has already approved — `write` covers both;

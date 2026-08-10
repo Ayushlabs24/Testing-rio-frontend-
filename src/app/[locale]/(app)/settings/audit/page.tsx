@@ -473,6 +473,8 @@ export default function AuditSettingsPage() {
                             <ChangeDetailsDialog
                               changes={event.changes}
                               entityLabel={event.entityLabel}
+                              actor={event.actor}
+                              createdAt={event.createdAt}
                             />
                           ) : null}
                         </div>

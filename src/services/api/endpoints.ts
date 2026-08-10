@@ -90,6 +90,17 @@ export const endpoints = {
     list: "/audit",
     export: "/audit/export",
   },
+  // RIO-NFR-016 — operational log. Separate from `audit` above: that is the
+  // business-event governance trail (RIO-FR-007); these are system
+  // diagnostics (errors, failed integrations, slow requests, job outcomes),
+  // gated on the System-Admin-only `systemLogs` permission.
+  systemLogs: {
+    list: "/system-logs",
+    summary: "/system-logs/summary",
+    export: "/system-logs/export",
+    byRequest: (requestId: string) => `/system-logs/request/${requestId}`,
+    byId: (id: string) => `/system-logs/${id}`,
+  },
   consentPolicy: {
     active: "/consent-policy/active",
     organizationStatus: "/consent-policy/organization-status",

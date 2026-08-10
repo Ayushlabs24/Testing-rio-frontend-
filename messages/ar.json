@@ -237,7 +237,8 @@
       "sharing": "المشاركة",
       "reportSharing": "مشاركة التقارير",
       "reviewerSla": "تنبيهات المراجع",
-      "surveyBuilder": "منشئ الاستبيانات"
+      "surveyBuilder": "منشئ الاستبيانات",
+      "systemLogs": "سجلات النظام"
     },
     "topbar": {
       "menu": "القائمة",
@@ -2994,6 +2995,103 @@
         "changeFrom": "من",
         "changeTo": "إلى"
       }
+    },
+    "systemLogs": {
+      "title": "سجلات النظام",
+      "subtitle": "الأحداث التشغيلية والأخطاء عبر المنصة — تشخيصات، وليست سجل تدقيق الحوكمة.",
+      "auditLogLink": "تبحث عن أحداث العمل؟ افتح سجل التدقيق.",
+      "retentionNotice": "يتم حذف الإدخالات الأقدم من {days} يومًا تلقائيًا.",
+      "searchPlaceholder": "البحث حسب الرسالة أو المصدر...",
+      "filterLevel": "المستوى",
+      "filterCategory": "الفئة",
+      "filterOrganization": "تصفية حسب المنظمة",
+      "filterWindow": "الفترة الزمنية",
+      "allLevels": "كل المستويات",
+      "warnAndAbove": "التحذيرات فأعلى",
+      "allCategories": "كل الفئات",
+      "allOrganizations": "كل المنظمات",
+      "globalScope": "عام",
+      "systemActor": "النظام",
+      "previous": "السابق",
+      "next": "التالي",
+      "paginationShowing": "عرض {start} - {end} من {total} إدخال",
+      "paginationPage": "صفحة {current} من {total}",
+      "windows": {
+        "1h": "آخر ساعة",
+        "24h": "آخر ٢٤ ساعة",
+        "7d": "آخر ٧ أيام",
+        "30d": "آخر ٣٠ يومًا"
+      },
+      "levels": {
+        "fatal": "حرج",
+        "error": "خطأ",
+        "warn": "تحذير",
+        "info": "معلومة"
+      },
+      "categories": {
+        "http": "HTTP",
+        "database": "قاعدة البيانات",
+        "auth": "المصادقة",
+        "integration": "التكامل",
+        "job": "مهمة خلفية",
+        "startup": "بدء التشغيل",
+        "security": "الأمان",
+        "application": "التطبيق"
+      },
+      "stats": {
+        "total": "إجمالي الإدخالات",
+        "fatal": "حرجة",
+        "error": "الأخطاء",
+        "warn": "التحذيرات",
+        "failedRequests": "الطلبات الفاشلة",
+        "slowRequests": "الطلبات البطيئة"
+      },
+      "topFailures": {
+        "title": "أبرز الأعطال",
+        "empty": "لا توجد أعطال مسجلة في هذه الفترة.",
+        "occurrences": "{count} تكرار",
+        "lastSeen": "آخر ظهور {time}"
+      },
+      "columns": {
+        "timestamp": "الوقت",
+        "level": "المستوى",
+        "category": "الفئة",
+        "source": "المصدر",
+        "message": "الرسالة",
+        "status": "الحالة",
+        "duration": "المدة",
+        "organization": "المنظمة",
+        "actions": "إجراءات"
+      },
+      "detail": {
+        "title": "إدخال السجل",
+        "correlation": "الربط",
+        "stack": "تتبع المكدس",
+        "context": "السياق",
+        "copyJson": "نسخ JSON",
+        "requestId": "معرّف الطلب",
+        "organization": "المنظمة",
+        "actor": "الفاعل",
+        "ipAddress": "عنوان IP",
+        "userAgent": "وكيل المستخدم",
+        "instance": "النسخة",
+        "endpoint": "نقطة النهاية",
+        "eventCode": "رمز الحدث",
+        "viewTrace": "عرض تتبع الطلب كاملًا",
+        "hideTrace": "إخفاء تتبع الطلب",
+        "traceTitle": "تتبع الطلب",
+        "traceEmpty": "لم تُسجل إدخالات أخرى لهذا الطلب.",
+        "noStack": "لا يوجد تتبع مكدس مسجل.",
+        "noContext": "لا يوجد سياق إضافي مسجل.",
+        "close": "إغلاق",
+        "loadFailed": "تعذر تحميل هذا الإدخال."
+      },
+      "actions": {
+        "viewDetails": "فحص الإدخال",
+        "exportCsv": "تصدير السجلات CSV"
+      },
+      "noResults": "لا توجد إدخالات مطابقة للمرشحات الحالية.",
+      "loadFailed": "تعذر تحميل سجلات النظام."
     },
     "governance": {
       "title": "حوكمة المنصة وتنبيهات الأمان",
