@@ -28,6 +28,12 @@ export const PERMISSION_MODULES = [
   // System Reviewer's approve/reject decision; `write` = System Admin's
   // generate/publish actions.
   "ncnpReport",
+  // RIO-NFR-016 — the persisted operational log (errors, failed
+  // integrations, slow requests, job outcomes). Deliberately not folded into
+  // archiveSharingAudit: that module is held read-only by ngo_admin,
+  // center_supervisor and data_analyst, and these rows carry stack traces,
+  // internal paths and cross-tenant detail. System Admin only.
+  "systemLogs",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

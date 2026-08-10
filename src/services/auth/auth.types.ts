@@ -1,4 +1,5 @@
 import type { ModulePermission } from "@/types/permissions";
+import type { ConsentAcceptanceInput } from "@/services/consent/consent.types";
 
 export interface AuthUser {
   id: string;
@@ -12,6 +13,15 @@ export interface AuthUser {
    * version bump), rather than trusting the merely-truthy `consentedAt`.
    */
   consentedPolicyVersion: string | null;
+  /**
+   * RIO-DATA-001's second, separately-versioned consent. Its own pair rather
+   * than folded into the two above because the policies version
+   * independently — an account can be current on the use policy and stale
+   * (or never asked) on data sharing, which is the state every account
+   * created before that consent existed is in.
+   */
+  sharingConsentedAt: string | null;
+  sharingConsentedPolicyVersion: string | null;
 }
 
 export interface AuthOrganization {
@@ -98,6 +108,12 @@ export interface SignupPayload {
   regionId: string;
   governorateIds: string[];
   centerIds: string[];
+  /**
+   * RIO-DATA-001 — both consents, accepted as part of registration itself.
+   * Required: the backend rejects a signup without them, so an organisation
+   * can never exist without both acceptances on record.
+   */
+  consent: ConsentAcceptanceInput;
 }
 
 /**

@@ -66,7 +66,19 @@
       "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
       "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
       "temporaryPasswordNotEmailedNotice": "Use the temporary password provided to you to sign in. You'll be asked to set your own password the first time you sign in.",
-      "goToSignInButton": "Go to sign in"
+      "goToSignInButton": "Go to sign in",
+      "consentLegend": "Consent",
+      "usePolicyLabel": "I have read and accept the",
+      "dataSharingLabel": "I have read and consent to the",
+      "policyVersion": "version",
+      "consentUnavailableError": "The consent policies could not be loaded, so registration cannot be completed right now. Please refresh the page and try again.",
+      "usePolicyLinkLabel": "Terms of Use",
+      "usePolicyDialogTitle": "Terms of Use",
+      "dataSharingLinkLabel": "Data-Sharing Policy",
+      "dataSharingDialogTitle": "Data-Sharing Policy",
+      "scrollHint": "Scroll to the end to continue.",
+      "policyReadConfirm": "I have read this",
+      "mustReadHint": "Open and read the {policy} to enable this checkbox."
     },
     "forgotPassword": {
       "heroTitle": "We'll get you back in",
@@ -158,7 +170,9 @@
       "regionRequired": "Please enter your governorate or region.",
       "governorateIdsRequired": "Select at least one governorate.",
       "centerIdsRequired": "Select at least one center.",
-      "purposeMin": "Please give us a little more detail (at least 10 characters)."
+      "purposeMin": "Please give us a little more detail (at least 10 characters).",
+      "usePolicyRequired": "Please open and read the Terms of Use, then tick the box to accept it.",
+      "dataSharingRequired": "Please open and read the Data-Sharing Policy, then tick the box to consent to it."
     }
   },
   "app": {
@@ -198,7 +212,9 @@
       "mustAgree": "You must agree to the consent notice before continuing.",
       "accept": "Accept and Continue",
       "accepting": "Saving...",
-      "genericError": "Something went wrong. Please try again."
+      "genericError": "Something went wrong. Please try again.",
+      "sharingBody": "By continuing, your organization consents to its data being shared as described in the data-sharing policy.",
+      "sharingAgreeLabel": "I consent to the sharing of my organization’s data."
     },
     "passwordChange": {
       "heroTitle": "Choose a new password",
@@ -238,7 +254,8 @@
       "sharing": "Sharing",
       "reportSharing": "Report Sharing",
       "reviewerSla": "Reviewer Alerts",
-      "surveyBuilder": "Survey Builder"
+      "surveyBuilder": "Survey Builder",
+      "systemLogs": "System Logs"
     },
     "topbar": {
       "menu": "Menu",
@@ -567,7 +584,10 @@
           "noneYet": "No one in this organisation has accepted the current data-sharing policy yet.",
           "versionLabel": "Policy version",
           "acceptedAtLabel": "Accepted on",
-          "acceptedByLabel": "Accepted by"
+          "acceptedByLabel": "Accepted by",
+          "usePolicyLabel": "Terms of Use",
+          "dataSharingLabel": "Data-Sharing Consent",
+          "outstanding": "Not yet accepted"
         },
         "nameLabel": "Organisation name",
         "createdLabel": "Created",
@@ -774,19 +794,33 @@
           "consent": "Accepted consent",
           "SYSTEM_ADMIN_VIEWED_ORGANIZATION_USERS": "Viewed Organization Users",
           "SYSTEM_ADMIN_VIEWED_ORGANIZATION": "Viewed Organization",
-          "SYSTEM_ADMIN_VIEWED_AUDIT_LOGS": "Viewed Audit Logs",
-          "SYSTEM_ADMIN_ASSIGNED_NGO_ADMIN": "Assigned NGO Admin",
-          "SYSTEM_ADMIN_UPDATED_USER_ROLE": "Updated User Role",
-          "SYSTEM_ADMIN_UPDATED_USER_STATUS": "Updated User Status",
-          "SYSTEM_ADMIN_VIEWED_REPORTS": "Viewed Reports",
           "SYSTEM_ADMIN_VIEWED_ARCHIVE": "Viewed Archive",
-          "SYSTEM_ADMIN_ARCHIVED_STUDY": "Archived Study",
-          "SYSTEM_ADMIN_RESTORED_STUDY": "Restored Study",
-          "SYSTEM_ADMIN_CREATED_ORGANIZATION": "Created Organization",
-          "SYSTEM_ADMIN_DEACTIVATED_ORGANIZATION": "Deactivated Organization",
-          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "Reactivated Organization",
           "ORGANIZATION_DEACTIVATED": "Organization Deactivated",
-          "ORGANIZATION_REACTIVATED": "Organization Reactivated"
+          "ORGANIZATION_REACTIVATED": "Organization Reactivated",
+          "ORGANIZATION_CREATED": "Organization Created",
+          "NGO_ADMIN_ASSIGNED": "Assigned NGO Admin",
+          "NGO_ADMIN_CHANGED": "Changed NGO Admin",
+          "NGO_ADMIN_ROLE_REMOVED": "Removed NGO Admin Role",
+          "USER_INVITED_BY_SYSTEM_ADMIN": "Invited User",
+          "USER_ROLE_CHANGED_BY_SYSTEM_ADMIN": "Changed User Role",
+          "USER_DISABLED_BY_SYSTEM_ADMIN": "Disabled User",
+          "USER_ENABLED_BY_SYSTEM_ADMIN": "Enabled User",
+          "USER_INVITATION_RESENT": "Resent Invitation",
+          "SYSTEM_ADMIN_VIEWED_STUDIES": "Viewed Studies",
+          "SYSTEM_ADMIN_VIEWED_SURVEY": "Viewed Survey",
+          "SYSTEM_ADMIN_VIEWED_REPORT": "Viewed Report",
+          "SYSTEM_ADMIN_DOWNLOADED_REPORT": "Downloaded Report",
+          "SYSTEM_ADMIN_VIEWED_ARCHIVED_REPORT": "Viewed Archived Report",
+          "STUDY_ARCHIVED": "Archived Study",
+          "STUDY_RESTORED": "Restored Study",
+          "upload_evidence_document": "Uploaded Document",
+          "download_evidence_document": "Downloaded Document",
+          "delete_evidence_document": "Deleted Document",
+          "generate_document_summary": "Generated Document Summary",
+          "confirm_document_summary": "Confirmed Document Summary",
+          "generate_combined_summary": "Generated Combined Summary",
+          "confirm_combined_summary": "Confirmed Combined Summary",
+          "export": "Exported"
         },
         "entities": {
           "organization": "Organisation",
@@ -2978,6 +3012,103 @@
         "changeFrom": "From",
         "changeTo": "To"
       }
+    },
+    "systemLogs": {
+      "title": "System Logs",
+      "subtitle": "Operational events and errors across the platform — diagnostics, not the governance audit trail.",
+      "auditLogLink": "Looking for business events? Open the Audit Log.",
+      "retentionNotice": "Entries older than {days} days are purged automatically.",
+      "searchPlaceholder": "Search by message or source...",
+      "filterLevel": "Level",
+      "filterCategory": "Category",
+      "filterOrganization": "Filter by Organization",
+      "filterWindow": "Time window",
+      "allLevels": "All Levels",
+      "warnAndAbove": "Warnings and above",
+      "allCategories": "All Categories",
+      "allOrganizations": "All Organizations",
+      "globalScope": "Global",
+      "systemActor": "System",
+      "previous": "Previous",
+      "next": "Next",
+      "paginationShowing": "Showing {start} - {end} of {total} entries",
+      "paginationPage": "Page {current} of {total}",
+      "windows": {
+        "1h": "Last hour",
+        "24h": "Last 24 hours",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days"
+      },
+      "levels": {
+        "fatal": "Fatal",
+        "error": "Error",
+        "warn": "Warning",
+        "info": "Info"
+      },
+      "categories": {
+        "http": "HTTP",
+        "database": "Database",
+        "auth": "Authentication",
+        "integration": "Integration",
+        "job": "Background Job",
+        "startup": "Startup",
+        "security": "Security",
+        "application": "Application"
+      },
+      "stats": {
+        "total": "Total Entries",
+        "fatal": "Fatal",
+        "error": "Errors",
+        "warn": "Warnings",
+        "failedRequests": "Failed Requests",
+        "slowRequests": "Slow Requests"
+      },
+      "topFailures": {
+        "title": "Top Failures",
+        "empty": "No failures recorded in this window.",
+        "occurrences": "{count} occurrences",
+        "lastSeen": "Last seen {time}"
+      },
+      "columns": {
+        "timestamp": "Timestamp",
+        "level": "Level",
+        "category": "Category",
+        "source": "Source",
+        "message": "Message",
+        "status": "Status",
+        "duration": "Duration",
+        "organization": "Organization",
+        "actions": "Actions"
+      },
+      "detail": {
+        "title": "Log Entry",
+        "correlation": "Correlation",
+        "stack": "Stack Trace",
+        "context": "Context",
+        "copyJson": "Copy JSON",
+        "requestId": "Request ID",
+        "organization": "Organization",
+        "actor": "Actor",
+        "ipAddress": "IP Address",
+        "userAgent": "User Agent",
+        "instance": "Instance",
+        "endpoint": "Endpoint",
+        "eventCode": "Event Code",
+        "viewTrace": "View full request trace",
+        "hideTrace": "Hide request trace",
+        "traceTitle": "Request trace",
+        "traceEmpty": "No other entries were recorded for this request.",
+        "noStack": "No stack trace recorded.",
+        "noContext": "No additional context recorded.",
+        "close": "Close",
+        "loadFailed": "This log entry could not be loaded."
+      },
+      "actions": {
+        "viewDetails": "Inspect Entry",
+        "exportCsv": "Export Logs CSV"
+      },
+      "noResults": "No system log entries match the current filters.",
+      "loadFailed": "System logs could not be loaded."
     },
     "governance": {
       "title": "Platform Governance & Security Alerts",

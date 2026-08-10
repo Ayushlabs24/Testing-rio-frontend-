@@ -102,6 +102,8 @@ describe("authService", () => {
       regionId: "r1",
       governorateIds: ["g1"],
       centerIds: ["c1"],
+      // RIO-DATA-001 — both consents are part of the registration payload.
+      consent: { usePolicyVersion: "v1", dataSharingVersion: "v1" },
     };
     const result = await authService.signup(payload);
 
@@ -126,6 +128,8 @@ describe("authService", () => {
       regionId: "r1",
       governorateIds: ["g1"],
       centerIds: ["c1"],
+      // RIO-DATA-001 — both consents are part of the registration payload.
+      consent: { usePolicyVersion: "v1", dataSharingVersion: "v1" },
     });
 
     expect(result.temporaryPasswordEmailed).toBe(true);
@@ -146,6 +150,8 @@ describe("authService", () => {
       regionId: "r1",
       governorateIds: ["g1"],
       centerIds: ["c1"],
+      // RIO-DATA-001 — both consents are part of the registration payload.
+      consent: { usePolicyVersion: "v1", dataSharingVersion: "v1" },
     });
 
     expect(result.temporaryPasswordEmailed).toBe(false);
