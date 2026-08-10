@@ -112,6 +112,17 @@ export interface SurveyListItem {
   version: number;
 }
 
+/** One row per survey version ever created for a Need — RIO-FR-011's
+ * version-distinction requirement: which versions exist, their status, and
+ * how many of the Need's responses actually belong to each one. */
+export interface SurveyVersionSummary {
+  id: string;
+  version: number;
+  status: SurveyStatus;
+  title: string;
+  responseCount: number;
+}
+
 export interface Survey {
   id: string;
   needId: string;
@@ -284,6 +295,22 @@ export const surveysService = {
 
   async getSurveyByNeedId(needId: string): Promise<Survey | null> {
     return apiClient.get<Survey | null>(endpoints.surveys.forNeed(needId));
+  },
+
+  /** RIO-FR-011: the currently PUBLISHED version — not "latest" (which
+   * `getSurveyByNeedId` resolves to, for the Builder's own editing needs).
+   * Any read-only screen that shows "the live survey" must call this
+   * instead, or it silently flips to an unpublished draft the moment one is
+   * created, even though the old version is still the one collecting
+   * responses. */
+  async getPublishedSurveyByNeedId(needId: string): Promise<Survey | null> {
+    return apiClient.get<Survey | null>(endpoints.surveys.publishedForNeed(needId));
+  },
+
+  async listSurveyVersionsByNeedId(needId: string): Promise<SurveyVersionSummary[]> {
+    return apiClient.get<SurveyVersionSummary[]>(
+      endpoints.surveys.versionsForNeed(needId),
+    );
   },
 
   async recommendQuestions(needId: string): Promise<Survey> {

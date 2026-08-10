@@ -563,15 +563,17 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                     })}
                   </span>
                 </div>
-                <div className="space-y-1.5">
-                  <dt className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                    <MapPin className="size-3.5" />
-                    {t("villagesLabel")}
-                  </dt>
-                  <dd>
-                    <VillageChips villages={study.villages} />
-                  </dd>
-                </div>
+                {study.villages.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <dt className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                      <MapPin className="size-3.5" />
+                      {t("villagesLabel")}
+                    </dt>
+                    <dd>
+                      <VillageChips villages={study.villages} />
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
             </CardContent>
           </Card>

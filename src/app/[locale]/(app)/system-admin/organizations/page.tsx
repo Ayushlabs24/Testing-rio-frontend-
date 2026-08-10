@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { ApproveOrganizationDialog } from "./_components/approve-organization-dialog";
@@ -58,6 +59,12 @@ export default function SystemAdminOrganizationsPage() {
   const [reactivateOrg, setReactivateOrg] = useState<OrganizationSummary | null>(null);
   const [approveOrg, setApproveOrg] = useState<OrganizationSummary | null>(null);
 
+  // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
+  // Reference), never the legacy free-text `region` array — so an org
+  // created that way needs its region resolved by id, not just read off
+  // `org.region`, or it silently shows blank.
+  const [regionNameById, setRegionNameById] = useState<Map<string, string>>(new Map());
+
   const fetchOrganizations = () => {
     organizationsService
       .listAll()
@@ -67,7 +74,20 @@ export default function SystemAdminOrganizationsPage() {
 
   useEffect(() => {
     fetchOrganizations();
+    geographyService
+      .listRegions()
+      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
+      .catch(() => setRegionNameById(new Map()));
   }, []);
+
+  const displayRegion = useCallback(
+    (org: OrganizationSummary): string => {
+      if (org.region.length > 0) return org.region.join(", ");
+      if (org.regionId) return regionNameById.get(org.regionId) ?? "—";
+      return "—";
+    },
+    [regionNameById],
+  );
 
   const regions = useMemo(() => {
     if (!organizations) return [];
@@ -76,9 +96,13 @@ export default function SystemAdminOrganizationsPage() {
       for (const r of org.region) {
         if (r.trim()) set.add(r.trim());
       }
+      if (org.region.length === 0 && org.regionId) {
+        const name = regionNameById.get(org.regionId);
+        if (name) set.add(name);
+      }
     }
     return Array.from(set).sort();
-  }, [organizations]);
+  }, [organizations, regionNameById]);
 
   const filteredOrganizations = useMemo(() => {
     if (!organizations) return [];
@@ -101,12 +125,14 @@ export default function SystemAdminOrganizationsPage() {
 
       // Region
       if (regionFilter !== "all") {
-        if (!org.region.includes(regionFilter)) return false;
+        if (displayRegion(org) !== regionFilter && !org.region.includes(regionFilter)) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [organizations, searchQuery, statusFilter, regionFilter]);
+  }, [organizations, searchQuery, statusFilter, regionFilter, displayRegion]);
 
   const hasActiveFilters =
     searchQuery !== "" || statusFilter !== "all" || regionFilter !== "all";
@@ -244,7 +270,7 @@ export default function SystemAdminOrganizationsPage() {
                         {org.registrationNumber ?? "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {org.region.length > 0 ? org.region.join(", ") : "—"}
+                        {displayRegion(org)}
                       </TableCell>
                       <TableCell>
                         {org.ngoAdminName ? (

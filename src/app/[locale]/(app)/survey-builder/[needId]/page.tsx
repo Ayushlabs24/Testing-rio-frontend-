@@ -50,6 +50,7 @@ import { methodologyConfigService } from "@/services/methodology-config/methodol
 import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { studiesService } from "@/services/studies/studies.service";
 import {
   REJECTION_REASON_LABELS,
   surveysService,
@@ -171,6 +172,14 @@ export default function SurveyBuilderDetailPage({
   // `survey` whenever it (re)loads, see the effect below.
   const [targetGroup, setTargetGroup] = useState("");
   const [expectedSampleSize, setExpectedSampleSize] = useState("");
+  // RIO-FR-024: the Study's own auto-calculated Required Sample Size — used
+  // as this field's starting value so the Researcher isn't re-typing a
+  // number the platform already computed. Only ever a *default*: once the
+  // survey has its own saved expectedSampleSize, that always wins (see
+  // loadDraftFromSurvey below).
+  const [studyRequiredSampleSize, setStudyRequiredSampleSize] = useState<number | null>(
+    null,
+  );
   const [selectionApproach, setSelectionApproach] = useState("");
   const [geographicCoverage, setGeographicCoverage] = useState("");
   const [savingSampleDescription, setSavingSampleDescription] = useState(false);
@@ -220,12 +229,24 @@ export default function SurveyBuilderDetailPage({
   const subDomainOptionsFor = (domain: string | null): string[] =>
     domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
 
-  function loadDraftFromSurvey(s: Survey | null) {
+  function loadDraftFromSurvey(
+    s: Survey | null,
+    requiredSampleSize: number | null = studyRequiredSampleSize,
+  ) {
     setRecommended((s?.questions ?? []).filter((q) => !q.isCustom));
     setAdditional((s?.questions ?? []).filter((q) => q.isCustom));
     setDirty(false);
     setTargetGroup(s?.targetGroup ?? "");
-    setExpectedSampleSize(s?.expectedSampleSize ? String(s.expectedSampleSize) : "");
+    // RIO-FR-024: fall back to the Study's own auto-calculated Required
+    // Sample Size when this survey has never had its own value saved —
+    // never overrides one that's already there.
+    setExpectedSampleSize(
+      s?.expectedSampleSize
+        ? String(s.expectedSampleSize)
+        : requiredSampleSize
+          ? String(requiredSampleSize)
+          : "",
+    );
     setSelectionApproach(s?.selectionApproach ?? "");
     setGeographicCoverage(s?.geographicCoverage ?? "");
     setSampleDescriptionError(null);
@@ -290,7 +311,13 @@ export default function SurveyBuilderDetailPage({
       .then(([needResult, surveyResult]) => {
         setNeed(needResult);
         setSurvey(surveyResult);
-        loadDraftFromSurvey(surveyResult);
+        studiesService
+          .getById(needResult.studyId)
+          .then((study) => {
+            setStudyRequiredSampleSize(study.requiredSampleSize);
+            loadDraftFromSurvey(surveyResult, study.requiredSampleSize);
+          })
+          .catch(() => loadDraftFromSurvey(surveyResult, null));
         const pairs = questionBankPairsFor(needResult);
         if (pairs !== null) {
           surveysService

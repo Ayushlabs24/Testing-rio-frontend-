@@ -1492,7 +1492,18 @@
         "noResponses": "No responses received yet.",
         "viewResponses": "View Responses",
         "noAnswer": "No answer",
-        "viewAllResponses": "View All Responses"
+        "viewAllResponses": "View All Responses",
+        "versionsHeading": "Survey Versions",
+        "versionsHint": "Each version's questions and responses stay tied to that version — creating a new draft never affects an already-published version's collected responses.",
+        "versionLabel": "v{version}",
+        "versionResponsesLabel": "{count, plural, =0 {No responses} one {# response} other {# responses}}",
+        "versionStatus": {
+          "DRAFT": "Draft",
+          "SUBMITTED": "Submitted for Approval",
+          "REJECTED": "Rejected",
+          "PUBLISHED": "Published",
+          "SUPERSEDED": "Superseded"
+        }
       },
       "questionResponses": {
         "title": "Question Responses",
@@ -2614,7 +2625,8 @@
         "currentStatus": "Current Status",
         "deactivationReasonLabel": "Deactivation Reason",
         "deactivateButton": "Deactivate Organization",
-        "reactivateButton": "Reactivate Organization"
+        "reactivateButton": "Reactivate Organization",
+        "approveButton": "Approve Organization"
       },
       "unavailableTabTitle": "Tab Content Unavailable",
       "unavailableTabDescription": "This section is coming soon or managed in another workspace."

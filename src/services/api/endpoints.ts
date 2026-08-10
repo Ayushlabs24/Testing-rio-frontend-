@@ -56,6 +56,11 @@ export const endpoints = {
     // Each Need runs its own independent survey now — routes are
     // needId-scoped, not studyId-scoped.
     forNeed: (needId: string) => `/needs/${needId}/survey`,
+    // RIO-FR-011: the currently PUBLISHED version, not "latest" — use this
+    // (not `forNeed`) anywhere that must keep showing v1 correctly while a
+    // newer draft is being edited.
+    publishedForNeed: (needId: string) => `/needs/${needId}/survey/published`,
+    versionsForNeed: (needId: string) => `/needs/${needId}/survey/versions`,
     recommendQuestions: (needId: string) => `/needs/${needId}/recommend-questions`,
     updateQuestions: (id: string) => `/surveys/${id}/questions`,
     setMethodologyVersion: (id: string) => `/surveys/${id}/methodology-version`,
