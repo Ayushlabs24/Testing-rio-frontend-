@@ -43,7 +43,11 @@ export function ChangeDetailsDialog({
       >
         <Eye className="size-4" />
       </DialogTrigger>
-      <DialogContent>
+      {/* Wider than the default sm:max-w-sm: three value columns of arbitrary
+          strings (emails, ids, long field names) at 384px wrap every cell to
+          three lines, which is exactly what makes a before/after pair hard to
+          read side by side. */}
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("changesTitle")}</DialogTitle>
           <DialogDescription>
@@ -82,7 +86,9 @@ export function ChangeDetailsDialog({
             <span className="w-3.5" aria-hidden />
             <span>{t("afterColumn")}</span>
           </div>
-          <ul className="divide-border divide-y">
+          {/* Events with many changed fields scroll inside the box rather
+              than pushing the dialog past the viewport. */}
+          <ul className="divide-border max-h-[55vh] divide-y overflow-y-auto">
             {changes.map((change) => (
               <li
                 key={change.field}

@@ -833,7 +833,11 @@
           "evidence": "Evidence",
           "report": "Report",
           "sharing_request": "Sharing request",
-          "report_sharing_request": "Report sharing request"
+          "report_sharing_request": "Report sharing request",
+          "evidence_document": "Evidence document",
+          "evidence_document_summary": "Evidence document summary",
+          "combined_report_summary": "Combined report summary",
+          "ncnp_report": "NCNP Compiled Report"
         }
       }
     },
@@ -3142,6 +3146,21 @@
       "actions": {
         "viewDetails": "Inspect Entry",
         "exportCsv": "Export Logs CSV"
+      },
+      "export": {
+        "title": "Export Logs to CSV",
+        "description": "The file will contain only the entries matching the criteria below. Adjust them here if needed.",
+        "summaryTitle": "This export will contain",
+        "searchCriterion": "Search",
+        "inheritedNotice": "The event code and search terms from the table are applied to this export as well.",
+        "counting": "Counting matching entries...",
+        "countFailed": "The number of matching entries could not be determined.",
+        "matchedCount": "{count} entries match and will be exported.",
+        "noMatches": "No entries match these criteria — change them to export.",
+        "confirm": "Export CSV",
+        "exporting": "Exporting...",
+        "cancel": "Cancel",
+        "failed": "The export could not be completed. Please try again."
       },
       "noResults": "No system log entries match the current filters.",
       "loadFailed": "System logs could not be loaded."
