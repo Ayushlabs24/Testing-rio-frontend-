@@ -914,6 +914,13 @@
         "exportExcel": "Download as Excel spreadsheet"
       },
       "actionError": "Something went wrong. Please try again.",
+      "approveDialogTitle": "Approve & Release Report",
+      "rejectDialogTitle": "Reject Report",
+      "reviewerNotesLabel": "Reviewer notes",
+      "reviewerNotesRequired": "Reviewer notes are required.",
+      "cancel": "Cancel",
+      "confirmApprove": "Approve & Release",
+      "confirmReject": "Reject",
       "create": {
         "title": "Generate Report",
         "reportTypeLabel": "Report type",

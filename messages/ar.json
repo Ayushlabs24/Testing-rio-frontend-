@@ -880,6 +880,13 @@
         "exportExcel": "تنزيل كجدول بيانات Excel"
       },
       "actionError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+      "approveDialogTitle": "اعتماد التقرير وإصداره",
+      "rejectDialogTitle": "رفض التقرير",
+      "reviewerNotesLabel": "ملاحظات المراجع",
+      "reviewerNotesRequired": "ملاحظات المراجع مطلوبة.",
+      "cancel": "إلغاء",
+      "confirmApprove": "اعتماد وإصدار",
+      "confirmReject": "رفض",
       "create": {
         "title": "إنشاء تقرير",
         "reportTypeLabel": "نوع التقرير",
