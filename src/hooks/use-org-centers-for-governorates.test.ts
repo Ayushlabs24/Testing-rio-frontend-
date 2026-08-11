@@ -49,6 +49,7 @@ function organization(centerIds?: string[]): Organization {
     regionId: null,
     governorateIds: ["gov-1"],
     isActive: true,
+    approvedAt: "2026-08-04T00:00:00.000Z",
     createdAt: "2026-08-04T00:00:00.000Z",
   };
 

@@ -26,6 +26,7 @@ export const endpoints = {
     create: "/organizations",
     byId: (id: string) => `/organizations/${id}`,
     status: (id: string) => `/organizations/${id}/status`,
+    approve: (id: string) => `/organizations/${id}/approve`,
     usersForOrg: (id: string) => `/organizations/${id}/users`,
     ngoAdminsForOrg: (id: string) => `/organizations/${id}/ngoadmins`,
     assignNgoAdmin: (id: string) => `/organizations/${id}/ngoadmins/assign`,
@@ -55,6 +56,11 @@ export const endpoints = {
     // Each Need runs its own independent survey now — routes are
     // needId-scoped, not studyId-scoped.
     forNeed: (needId: string) => `/needs/${needId}/survey`,
+    // RIO-FR-011: the currently PUBLISHED version, not "latest" — use this
+    // (not `forNeed`) anywhere that must keep showing v1 correctly while a
+    // newer draft is being edited.
+    publishedForNeed: (needId: string) => `/needs/${needId}/survey/published`,
+    versionsForNeed: (needId: string) => `/needs/${needId}/survey/versions`,
     recommendQuestions: (needId: string) => `/needs/${needId}/recommend-questions`,
     updateQuestions: (id: string) => `/surveys/${id}/questions`,
     setMethodologyVersion: (id: string) => `/surveys/${id}/methodology-version`,
@@ -62,6 +68,9 @@ export const endpoints = {
     // Approval workflow — Researcher submits, Approver approves/rejects.
     // See SurveysService's state machine on the backend.
     submit: (id: string) => `/surveys/${id}/submit`,
+    // RIO-FR-011: the only way to change a PUBLISHED survey — creates a new
+    // DRAFT version instead of editing in place.
+    newVersion: (id: string) => `/surveys/${id}/new-version`,
     approve: (id: string) => `/surveys/${id}/approve`,
     reject: (id: string) => `/surveys/${id}/reject`,
     public: (id: string) => `/surveys/public/${id}`,

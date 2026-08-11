@@ -23,6 +23,7 @@ interface ApiOrganization {
   governorateIds: string[];
   centerIds: string[];
   isActive: boolean;
+  approvedAt: string | null;
   createdAt: string;
 }
 
@@ -86,6 +87,19 @@ export const organizationsService = {
     const api = await apiClient.patch<ApiOrganizationSummary>(
       endpoints.organizations.status(id),
       payload,
+    );
+    return toOrganizationSummary(api);
+  },
+
+  /** RIO-FR-010 (client-confirmed): approves a self-registered entity that's
+   * awaiting Center approval — activates it and issues its real temporary
+   * password (emailed to the entity's admin). Separate from updateStatus
+   * above, which only toggles an already-approved org's active/suspended
+   * state and never issues credentials. */
+  async approve(id: string): Promise<OrganizationSummary> {
+    const api = await apiClient.patch<ApiOrganizationSummary>(
+      endpoints.organizations.approve(id),
+      {},
     );
     return toOrganizationSummary(api);
   },

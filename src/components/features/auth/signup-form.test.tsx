@@ -229,8 +229,9 @@ describe("SignupForm sector field", () => {
 
   it("submits the selected sector with no purpose for a non-Other sector", async () => {
     vi.mocked(authService.signup).mockResolvedValue({
-      session: {} as never,
-      temporaryPasswordEmailed: true,
+      status: "pending_approval",
+      organizationName: "Sunrise Village Fund",
+      email: "a@b.org",
     });
     render(<SignupForm />);
     const user = await selectSector("Health");
@@ -263,8 +264,9 @@ describe("SignupForm sector field", () => {
 
   it("submits the typed description as purpose when Other is selected", async () => {
     vi.mocked(authService.signup).mockResolvedValue({
-      session: {} as never,
-      temporaryPasswordEmailed: true,
+      status: "pending_approval",
+      organizationName: "Sunrise Village Fund",
+      email: "a@b.org",
     });
     render(<SignupForm />);
     const user = await selectSector(en.app.settings.organization.sectors.other);
@@ -431,8 +433,9 @@ describe("SignupForm consent (RIO-DATA-001)", () => {
 
   it("submits each policy's own version once both are accepted", async () => {
     vi.mocked(authService.signup).mockResolvedValue({
-      session: {} as never,
-      temporaryPasswordEmailed: true,
+      status: "pending_approval",
+      organizationName: "Demo NGO",
+      email: "priya@demo.org",
     });
     render(<SignupForm />);
     const user = await fillEverythingElse();

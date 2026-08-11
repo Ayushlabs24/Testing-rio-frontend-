@@ -44,10 +44,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { usersService } from "@/services/users/users.service";
 import type { OrgUser } from "@/services/users/users.types";
+import { ApproveOrganizationDialog } from "../_components/approve-organization-dialog";
 import { DeactivateOrganizationDialog } from "../_components/deactivate-organization-dialog";
 import { ReactivateOrganizationDialog } from "../_components/reactivate-organization-dialog";
 import { AssignNgoAdminDialog } from "../_components/assign-ngo-admin-dialog";
@@ -79,9 +81,21 @@ export default function SystemAdminOrganizationDetailPage({
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
+  // Reference), never the legacy free-text `region` array — resolve it by
+  // id or a pending org's region silently shows blank.
+  const [regionNameById, setRegionNameById] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    geographyService
+      .listRegions()
+      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
+      .catch(() => setRegionNameById(new Map()));
+  }, []);
+
   // Dialog states
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [assignAdminDialogOpen, setAssignAdminDialogOpen] = useState(false);
   const [inviteUserDialogOpen, setInviteUserDialogOpen] = useState(false);
 
@@ -225,7 +239,11 @@ export default function SystemAdminOrganizationDetailPage({
               <span>•</span>
               <span>
                 {tOrgs("table.region")}:{" "}
-                {organization.region.length > 0 ? organization.region.join(", ") : "—"}
+                {organization.region.length > 0
+                  ? organization.region.join(", ")
+                  : (organization.regionId &&
+                      regionNameById.get(organization.regionId)) ||
+                    "—"}
               </span>
               <span>•</span>
               <span>
@@ -244,6 +262,20 @@ export default function SystemAdminOrganizationDetailPage({
               >
                 <XCircle className="size-4" />
                 {t("overview.deactivateButton")}
+              </Button>
+            ) : !organization.approvedAt ? (
+              // RIO-FR-010 (client-confirmed): a never-approved
+              // self-registration needs Approve, not Reactivate — the two
+              // are different actions (approve also issues the entity's
+              // first real credentials). Same distinction the org list page
+              // already makes.
+              <Button
+                variant="outline"
+                onClick={() => setApproveDialogOpen(true)}
+                className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+              >
+                <ShieldCheck className="size-4" />
+                {t("overview.approveButton")}
               </Button>
             ) : (
               <Button
@@ -753,6 +785,12 @@ export default function SystemAdminOrganizationDetailPage({
           organization={organization}
           open={reactivateDialogOpen}
           onOpenChange={setReactivateDialogOpen}
+          onUpdated={loadOrganizationData}
+        />
+        <ApproveOrganizationDialog
+          organization={organization}
+          open={approveDialogOpen}
+          onOpenChange={setApproveDialogOpen}
           onUpdated={loadOrganizationData}
         />
       </PageContainer>

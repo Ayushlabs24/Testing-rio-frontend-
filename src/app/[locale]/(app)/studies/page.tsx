@@ -43,10 +43,6 @@ export default function StudiesPage() {
   const canWrite = usePermission("studySurvey", "write");
 
   const [studies, setStudies] = useState<StudySummary[] | null>(null);
-  // Villages live on a study's Needs (a Study can hold many now), not the
-  // Study itself — resolved per row, keyed by study id, as the union of
-  // every Need's own village list.
-  const [villagesByStudy, setVillagesByStudy] = useState<Record<string, string[]>>({});
   const [needCountByStudy, setNeedCountByStudy] = useState<Record<string, number>>({});
   const [loadFailed, setLoadFailed] = useState(false);
   const [query, setQuery] = useState("");
@@ -69,14 +65,6 @@ export default function StudiesPage() {
               .catch(() => [study.id, []] as const),
           ),
         ).then((entries) => {
-          setVillagesByStudy(
-            Object.fromEntries(
-              entries.map(([id, needs]) => [
-                id,
-                [...new Set(needs.flatMap((n) => n.village))],
-              ]),
-            ),
-          );
           setNeedCountByStudy(
             Object.fromEntries(entries.map(([id, needs]) => [id, needs.length])),
           );
@@ -107,7 +95,7 @@ export default function StudiesPage() {
   const currentPage = Math.min(page, pageCount);
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const columnCount = 5;
+  const columnCount = 4;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -147,7 +135,6 @@ export default function StudiesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-3">{t("titleColumn")}</TableHead>
-                  <TableHead className="py-3">{t("villageColumn")}</TableHead>
                   <TableHead className="py-3">{t("needsColumn")}</TableHead>
                   <TableHead className="py-3">{t("updatedColumn")}</TableHead>
                   <TableHead className="w-16 py-3" />
@@ -191,11 +178,6 @@ export default function StudiesPage() {
                         >
                           {study.title}
                         </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground py-4 align-middle text-sm break-words whitespace-normal">
-                        {villagesByStudy[study.id]?.length
-                          ? villagesByStudy[study.id].join(", ")
-                          : t("villageNotDefined")}
                       </TableCell>
                       <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
                         {needCountByStudy[study.id] ?? 0}

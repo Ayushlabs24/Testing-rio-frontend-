@@ -62,10 +62,9 @@
       "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
       "haveAccount": "لديك حساب بالفعل؟",
       "signIn": "تسجيل الدخول",
-      "temporaryPasswordTitle": "حسابك جاهز",
-      "temporaryPasswordEmailedDescription": "تم تسجيل منظمتك بنجاح.",
-      "temporaryPasswordEmailedNotice": "تم إرسال كلمة مرور مؤقتة إلى بريدك الإلكتروني المسجَّل. يرجى استخدامها لتسجيل الدخول.",
-      "temporaryPasswordNotEmailedNotice": "استخدم كلمة المرور المؤقتة المزوَّدة لك لتسجيل الدخول. سيُطلب منك تعيين كلمة مرور خاصة بك عند أول تسجيل دخول.",
+      "pendingApprovalTitle": "تم استلام طلب التسجيل",
+      "pendingApprovalDescription": "تم إرسال \"{organizationName}\" وهو الآن في انتظار الموافقة قبل تفعيله.",
+      "pendingApprovalNotice": "سيقوم فريقنا بمراجعة طلب التسجيل. بعد الموافقة، سيتم إرسال كلمة مرور مؤقتة إلى بريدك الإلكتروني المسجَّل لتتمكن من تسجيل الدخول.",
       "goToSignInButton": "الانتقال إلى تسجيل الدخول"
     },
     "forgotPassword": {
@@ -1459,7 +1458,18 @@
         "noResponses": "لم يتم استلام أي استجابات بعد.",
         "viewResponses": "عرض الاستجابات",
         "noAnswer": "لا توجد إجابة",
-        "viewAllResponses": "عرض جميع الاستجابات"
+        "viewAllResponses": "عرض جميع الاستجابات",
+        "versionsHeading": "إصدارات الاستبيان",
+        "versionsHint": "تبقى أسئلة واستجابات كل إصدار مرتبطة بذلك الإصدار — إنشاء مسودة جديدة لا يؤثر أبدًا على الاستجابات التي تم جمعها لإصدار منشور بالفعل.",
+        "versionLabel": "الإصدار {version}",
+        "versionResponsesLabel": "{count, plural, =0 {لا توجد استجابات} one {# استجابة} other {# استجابة}}",
+        "versionStatus": {
+          "DRAFT": "مسودة",
+          "SUBMITTED": "مُقدَّم للموافقة",
+          "REJECTED": "مرفوض",
+          "PUBLISHED": "منشور",
+          "SUPERSEDED": "مُستبدَل"
+        }
       },
       "questionResponses": {
         "title": "استجابات السؤال",
@@ -1599,6 +1609,7 @@
         "genericError": "تعذّر حفظ الاحتياج. يرجى المحاولة مرة أخرى.",
         "studyNotFound": "لم تعد هذه الدراسة موجودة. ربما تمت إزالتها. عد إلى قائمة الدراسات للمتابعة.",
         "editNeed": "تعديل",
+        "systemReferenceIdLabel": "الرقم المرجعي للنظام",
         "sourceLabel": "مصدر البيانات",
         "enteredByLabel": "أدخله",
         "enteredByUnknown": "غير معروف",
@@ -1867,6 +1878,7 @@
       "statusColumn": "حالة الاستبيان",
       "noDomain": "لم يُعتمد مجال بعد",
       "noSurvey": "لا يوجد استبيان بعد",
+      "versionLabel": "(الإصدار {version})",
       "open": "فتح",
       "noResults": "لا توجد دراسات بعد — أنشئ دراسة أولاً، ثم اعتمد مجالًا لبدء إنشاء استبيانها.",
       "loadError": "تعذّر تحميل الدراسات. يرجى المحاولة مرة أخرى.",
@@ -1996,7 +2008,11 @@
         "selectionApproachLabel": "أسلوب الاختيار",
         "selectionApproachPlaceholder": "مثال: عينة عشوائية طبقية حسب المحافظة",
         "geographicCoverageLabel": "النطاق الجغرافي",
-        "geographicCoveragePlaceholder": "مثال: الرياض والمنطقة الشرقية — المراكز الحضرية فقط"
+        "geographicCoveragePlaceholder": "مثال: الرياض والمنطقة الشرقية — المراكز الحضرية فقط",
+        "publishedEditNotice": "تم نشر هذا الاستبيان. لإجراء تغييرات، أنشئ نسخة جديدة — يبقى الاستبيان المنشور وردوده كما هي تمامًا.",
+        "createNewVersion": "إنشاء نسخة جديدة",
+        "creatingNewVersion": "جارٍ الإنشاء…",
+        "supersededNotice": "هذه نسخة تم استبدالها. تم نشر نسخة أحدث منذ ذلك الحين. التعديل هنا معطل — يمكنك عرض النسخة الحالية من قائمة الاستبيانات."
       },
       "needColumn": "الاحتياج",
       "review": {
@@ -2055,7 +2071,8 @@
         "draft": "مسودة",
         "submitted": "أُرسل للاعتماد",
         "rejected": "مرفوض",
-        "published": "منشور"
+        "published": "منشور",
+        "SUPERSEDED": "تم استبدالها"
       }
     }
   },
@@ -2508,6 +2525,7 @@
       "searchPlaceholder": "البحث بالاسم أو الرمز...",
       "allStatuses": "جميع الحالات",
       "active": "نشط",
+      "pendingApproval": "بانتظار الموافقة",
       "inactive": "غير نشط",
       "allRegions": "جميع المناطق",
       "clearFilters": "مسح المرشحات",
@@ -2573,7 +2591,8 @@
         "currentStatus": "الحالة الحالية",
         "deactivationReasonLabel": "سبب إلغاء التفعيل",
         "deactivateButton": "إلغاء تفعيل المنظمة",
-        "reactivateButton": "إعادة تفعيل المنظمة"
+        "reactivateButton": "إعادة تفعيل المنظمة",
+        "approveButton": "الموافقة على المنظمة"
       },
       "unavailableTabTitle": "محتوى التبويب غير متاح",
       "unavailableTabDescription": "هذا القسم قادم قريبًا أو يُدار من مساحة عمل أخرى."
@@ -2598,6 +2617,15 @@
       "cancel": "إلغاء",
       "reactivating": "جارٍ إعادة التفعيل...",
       "successToast": "تمت إعادة تفعيل المنظمة بنجاح",
+      "errorToast": "تعذّر إتمام الطلب"
+    },
+    "approveDialog": {
+      "title": "الموافقة على التسجيل؟",
+      "explanation": "سيؤدي هذا إلى تفعيل المنظمة وإرسال كلمة مرور مؤقتة إلى بريد المسؤول الإلكتروني لتسجيل الدخول لأول مرة.",
+      "confirm": "الموافقة على المنظمة",
+      "cancel": "إلغاء",
+      "approving": "جارٍ الموافقة...",
+      "successToast": "تمت الموافقة على المنظمة بنجاح",
       "errorToast": "تعذّر إتمام الطلب"
     },
     "ngoAdmin": {
