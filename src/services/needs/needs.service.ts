@@ -45,4 +45,48 @@ export const needsService = {
       formData,
     );
   },
+
+  async previewPdfFromFile(studyId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.uploadForm<{
+      totalExtracted: number;
+      needs: Array<{
+        id: string;
+        title: string;
+        statement: string;
+        village?: string;
+        referenceId?: string;
+      }>;
+    }>(endpoints.needs.previewPdf(studyId), formData);
+  },
+
+  async previewSurveyResultsFromFile(studyId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.uploadForm<{
+      totalExtracted: number;
+      needs: Array<{
+        id: string;
+        title: string;
+        statement: string;
+        village?: string;
+        referenceId?: string;
+      }>;
+    }>(endpoints.needs.previewSurveyResults(studyId), formData);
+  },
+
+  async importBulkNeeds(
+    studyId: string,
+    items: Array<{
+      title: string;
+      statement: string;
+      village?: string;
+      referenceId?: string;
+    }>,
+  ): Promise<ImportNeedsResult> {
+    return apiClient.post<ImportNeedsResult>(endpoints.needs.importBulk(studyId), {
+      needs: items,
+    });
+  },
 };

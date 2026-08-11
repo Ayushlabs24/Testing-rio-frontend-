@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, FileText, Loader2, Trash2, Upload } from "lucide-react";
+import { FileCheck, Loader2, Trash2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,7 @@ import type {
   ParsedPdfNeedItem,
 } from "@/services/needs/needs.types";
 
-const ALLOWED_EXTENSIONS = [".csv", ".xls", ".xlsx", ".pdf"];
+const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt"];
 
 function extensionOf(fileName: string): string {
   const idx = fileName.lastIndexOf(".");
@@ -72,7 +72,7 @@ function ErrorTable({
   );
 }
 
-export function ImportNeedsDialog({
+export function ImportSurveyResultsDialog({
   studyId,
   open,
   onOpenChange,
@@ -83,14 +83,15 @@ export function ImportNeedsDialog({
   onOpenChange: (open: boolean) => void;
   onImported: () => void;
 }) {
-  const t = useTranslations("app.studies.import");
+  const t = useTranslations("app.studies.importSurveyResults");
+  const tCommon = useTranslations("app.studies.import");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInFlightRef = useRef(false);
 
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [parsingPdf, setParsingPdf] = useState(false);
-  const [pdfNeeds, setPdfNeeds] = useState<ParsedPdfNeedItem[] | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [extractedNeeds, setExtractedNeeds] = useState<ParsedPdfNeedItem[] | null>(null);
 
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportNeedsResult | null>(null);
@@ -99,8 +100,8 @@ export function ImportNeedsDialog({
   function reset() {
     setFile(null);
     setFileError(null);
-    setParsingPdf(false);
-    setPdfNeeds(null);
+    setParsing(false);
+    setExtractedNeeds(null);
     setResult(null);
     setSubmitError(null);
   }
@@ -113,7 +114,7 @@ export function ImportNeedsDialog({
   async function selectFile(selected: File) {
     setFileError(null);
     setResult(null);
-    setPdfNeeds(null);
+    setExtractedNeeds(null);
     const ext = extensionOf(selected.name);
 
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
@@ -123,56 +124,47 @@ export function ImportNeedsDialog({
     }
 
     setFile(selected);
+    setParsing(true);
+    setSubmitError(null);
 
-    if (ext === ".pdf") {
-      setParsingPdf(true);
-      setSubmitError(null);
-      try {
-        const preview = await needsService.previewPdfFromFile(studyId, selected);
-        setPdfNeeds(preview.needs);
-      } catch (error) {
-        setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
-        setPdfNeeds(null);
-      } finally {
-        setParsingPdf(false);
-      }
+    try {
+      const preview = await needsService.previewSurveyResultsFromFile(studyId, selected);
+      setExtractedNeeds(preview.needs);
+    } catch (error) {
+      setSubmitError(error instanceof ApiError ? error.message : tCommon("genericError"));
+      setExtractedNeeds(null);
+    } finally {
+      setParsing(false);
     }
   }
 
-  function updatePdfNeedField(id: string, field: keyof ParsedPdfNeedItem, value: string) {
-    setPdfNeeds((prev) =>
+  function updateNeedField(id: string, field: keyof ParsedPdfNeedItem, value: string) {
+    setExtractedNeeds((prev) =>
       prev
         ? prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
         : null,
     );
   }
 
-  function removePdfNeed(id: string) {
-    setPdfNeeds((prev) => (prev ? prev.filter((item) => item.id !== id) : null));
+  function removeNeed(id: string) {
+    setExtractedNeeds((prev) => (prev ? prev.filter((item) => item.id !== id) : null));
   }
 
   async function handleImport() {
-    if (!file || importInFlightRef.current) return;
+    if (!extractedNeeds || extractedNeeds.length === 0 || importInFlightRef.current)
+      return;
     importInFlightRef.current = true;
     setImporting(true);
     setSubmitError(null);
 
     try {
-      let outcome: ImportNeedsResult;
-      const ext = extensionOf(file.name);
-
-      if (ext === ".pdf") {
-        if (!pdfNeeds || pdfNeeds.length === 0) return;
-        const items = pdfNeeds.map((n) => ({
-          title: n.title,
-          statement: n.statement,
-          village: n.village,
-          referenceId: n.referenceId,
-        }));
-        outcome = await needsService.importBulkNeeds(studyId, items);
-      } else {
-        outcome = await needsService.importFromFile(studyId, file);
-      }
+      const items = extractedNeeds.map((n) => ({
+        title: n.title,
+        statement: n.statement,
+        village: n.village,
+        referenceId: n.referenceId,
+      }));
+      const outcome = await needsService.importBulkNeeds(studyId, items);
 
       setResult(outcome);
       if (outcome.imported > 0) onImported();
@@ -181,14 +173,13 @@ export function ImportNeedsDialog({
         setTimeout(() => handleOpenChange(false), 1200);
       }
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+      setSubmitError(error instanceof ApiError ? error.message : tCommon("genericError"));
     } finally {
       importInFlightRef.current = false;
       setImporting(false);
     }
   }
 
-  const isPdf = file ? extensionOf(file.name) === ".pdf" : false;
   const duplicateErrors = result?.errors.filter((e) => e.type === "duplicate") ?? [];
   const otherErrors = result?.errors.filter((e) => e.type !== "duplicate") ?? [];
 
@@ -196,35 +187,31 @@ export function ImportNeedsDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={`flex max-h-[85vh] flex-col ${
-          pdfNeeds ? "sm:max-w-3xl" : "sm:max-w-xl"
+          extractedNeeds ? "sm:max-w-3xl" : "sm:max-w-xl"
         }`}
-        showCloseButton={!importing && !parsingPdf}
+        showCloseButton={!importing && !parsing}
         onEscapeKeyDown={(event) => {
-          if (importing || parsingPdf) event.preventDefault();
+          if (importing || parsing) event.preventDefault();
         }}
         onInteractOutside={(event) => {
-          if (importing || parsingPdf) event.preventDefault();
+          if (importing || parsing) event.preventDefault();
         }}
       >
         <DialogHeader>
-          <DialogTitle>{pdfNeeds ? t("pdfPreviewTitle") : t("title")}</DialogTitle>
+          <DialogTitle>{extractedNeeds ? t("previewTitle") : t("title")}</DialogTitle>
           <DialogDescription>
-            {pdfNeeds ? t("pdfPreviewDescription") : t("description")}
+            {extractedNeeds ? t("previewDescription") : t("description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-          {!pdfNeeds && !result ? (
+          {!extractedNeeds && !result ? (
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="border-input hover:bg-muted/30 flex w-full cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors"
             >
-              {isPdf ? (
-                <FileText className="text-muted-foreground size-7" />
-              ) : (
-                <FileSpreadsheet className="text-muted-foreground size-7" />
-              )}
+              <FileCheck className="text-muted-foreground size-7" />
               <span className="text-foreground text-sm font-medium">
                 {file ? file.name : t("chooseFile")}
               </span>
@@ -246,11 +233,11 @@ export function ImportNeedsDialog({
             }}
           />
 
-          {parsingPdf ? (
+          {parsing ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Loader2 className="text-primary size-8 animate-spin" />
               <p className="text-foreground mt-3 text-sm font-medium">
-                {t("parsingPdf")}
+                {t("parsingDocument")}
               </p>
             </div>
           ) : null}
@@ -258,11 +245,11 @@ export function ImportNeedsDialog({
           {fileError ? <p className="text-destructive text-sm">{fileError}</p> : null}
           {submitError ? <p className="text-destructive text-sm">{submitError}</p> : null}
 
-          {pdfNeeds && !result ? (
+          {extractedNeeds && !result ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium">
-                  {t("pdfPreviewTitle")} ({pdfNeeds.length})
+                  {t("previewTitle")} ({extractedNeeds.length})
                 </span>
                 <Button
                   type="button"
@@ -271,36 +258,38 @@ export function ImportNeedsDialog({
                   onClick={() => reset()}
                   className="text-muted-foreground hover:text-foreground text-xs"
                 >
-                  {t("backToSelect")}
+                  {tCommon("backToSelect")}
                 </Button>
               </div>
 
-              {pdfNeeds.length === 0 ? (
+              {extractedNeeds.length === 0 ? (
                 <p className="text-muted-foreground py-6 text-center text-sm">
-                  {t("noNeedsFoundInPdf")}
+                  {t("noNeedsFound")}
                 </p>
               ) : (
                 <div className="max-h-72 overflow-y-auto rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-1/4">{t("needTitleColumn")}</TableHead>
-                        <TableHead className="w-1/3">
-                          {t("needStatementColumn")}
+                        <TableHead className="w-1/4">
+                          {tCommon("needTitleColumn")}
                         </TableHead>
-                        <TableHead>{t("governorateColumn")}</TableHead>
-                        <TableHead>{t("referenceIdColumn")}</TableHead>
-                        <TableHead className="w-12">{t("actionsColumn")}</TableHead>
+                        <TableHead className="w-1/3">
+                          {tCommon("needStatementColumn")}
+                        </TableHead>
+                        <TableHead>{tCommon("governorateColumn")}</TableHead>
+                        <TableHead>{tCommon("referenceIdColumn")}</TableHead>
+                        <TableHead className="w-12">{tCommon("actionsColumn")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pdfNeeds.map((item) => (
+                      {extractedNeeds.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="align-top">
                             <Input
                               value={item.title}
                               onChange={(e) =>
-                                updatePdfNeedField(item.id, "title", e.target.value)
+                                updateNeedField(item.id, "title", e.target.value)
                               }
                               className="text-xs"
                             />
@@ -309,7 +298,7 @@ export function ImportNeedsDialog({
                             <Textarea
                               value={item.statement}
                               onChange={(e) =>
-                                updatePdfNeedField(item.id, "statement", e.target.value)
+                                updateNeedField(item.id, "statement", e.target.value)
                               }
                               rows={2}
                               className="resize-none text-xs"
@@ -319,7 +308,7 @@ export function ImportNeedsDialog({
                             <Input
                               value={item.village ?? ""}
                               onChange={(e) =>
-                                updatePdfNeedField(item.id, "village", e.target.value)
+                                updateNeedField(item.id, "village", e.target.value)
                               }
                               placeholder="Governorate/Village"
                               className="text-xs"
@@ -329,7 +318,7 @@ export function ImportNeedsDialog({
                             <Input
                               value={item.referenceId ?? ""}
                               onChange={(e) =>
-                                updatePdfNeedField(item.id, "referenceId", e.target.value)
+                                updateNeedField(item.id, "referenceId", e.target.value)
                               }
                               placeholder="Ref ID"
                               className="text-xs"
@@ -340,7 +329,7 @@ export function ImportNeedsDialog({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => removePdfNeed(item.id)}
+                              onClick={() => removeNeed(item.id)}
                               className="text-destructive hover:bg-destructive/10 size-8"
                             >
                               <Trash2 className="size-4" />
@@ -362,37 +351,39 @@ export function ImportNeedsDialog({
                   <p className="text-foreground text-lg font-semibold tabular-nums">
                     {result.totalRows}
                   </p>
-                  <p className="text-muted-foreground text-xs">{t("totalRows")}</p>
+                  <p className="text-muted-foreground text-xs">{tCommon("totalRows")}</p>
                 </div>
                 <div className="border-border rounded-md border p-3">
                   <p className="text-success text-lg font-semibold tabular-nums">
                     {result.imported}
                   </p>
-                  <p className="text-muted-foreground text-xs">{t("imported")}</p>
+                  <p className="text-muted-foreground text-xs">{tCommon("imported")}</p>
                 </div>
                 <div className="border-border rounded-md border p-3">
                   <p className="text-foreground text-lg font-semibold tabular-nums">
                     {duplicateErrors.length}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {t("duplicatesSkipped")}
+                    {tCommon("duplicatesSkipped")}
                   </p>
                 </div>
                 <div className="border-border rounded-md border p-3">
                   <p className="text-destructive text-lg font-semibold tabular-nums">
                     {otherErrors.length}
                   </p>
-                  <p className="text-muted-foreground text-xs">{t("otherFailures")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {tCommon("otherFailures")}
+                  </p>
                 </div>
               </div>
 
               {duplicateErrors.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-foreground text-sm font-medium">
-                    {t("duplicatesSkipped")}
+                    {tCommon("duplicatesSkipped")}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {t("duplicatesSkippedNote")}
+                    {tCommon("duplicatesSkippedNote")}
                   </p>
                   <ErrorTable rows={duplicateErrors} destructive={false} />
                 </div>
@@ -401,7 +392,7 @@ export function ImportNeedsDialog({
               {otherErrors.length > 0 ? (
                 <div className="space-y-1.5">
                   <p className="text-foreground text-sm font-medium">
-                    {t("otherFailures")}
+                    {tCommon("otherFailures")}
                   </p>
                   <ErrorTable rows={otherErrors} destructive />
                 </div>
@@ -415,9 +406,9 @@ export function ImportNeedsDialog({
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={importing || parsingPdf}
+            disabled={importing || parsing}
           >
-            {result ? t("close") : t("cancel")}
+            {result ? tCommon("close") : tCommon("cancel")}
           </Button>
 
           {!result ? (
@@ -427,8 +418,9 @@ export function ImportNeedsDialog({
               disabled={
                 !file ||
                 importing ||
-                parsingPdf ||
-                (isPdf && (!pdfNeeds || pdfNeeds.length === 0))
+                parsing ||
+                !extractedNeeds ||
+                extractedNeeds.length === 0
               }
               className="gap-1.5"
             >
@@ -438,10 +430,10 @@ export function ImportNeedsDialog({
                 <Upload className="size-4" />
               )}
               {importing
-                ? t("importing")
-                : isPdf && pdfNeeds
-                  ? t("confirmImport", { count: pdfNeeds.length })
-                  : t("import")}
+                ? tCommon("importing")
+                : extractedNeeds
+                  ? tCommon("confirmImport", { count: extractedNeeds.length })
+                  : tCommon("import")}
             </Button>
           ) : null}
         </DialogFooter>

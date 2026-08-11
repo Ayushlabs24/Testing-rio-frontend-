@@ -7,6 +7,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
+import { ImportSurveyResultsDialog } from "@/components/features/studies/import-survey-results-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -183,6 +185,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [surveyImportOpen, setSurveyImportOpen] = useState(false);
   const [needQuery, setNeedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<NeedStatus | "all">("all");
 
@@ -338,7 +341,17 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                   {t("needsHeading")}
                 </h2>
                 {canCaptureNeed ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setSurveyImportOpen(true)}
+                    >
+                      <Sparkles className="text-primary size-3.5" />
+                      {t("importFromSurveyResults")}
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
@@ -581,6 +594,13 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           studyId={study.id}
           open={importOpen}
           onOpenChange={setImportOpen}
+          onImported={loadNeeds}
+        />
+
+        <ImportSurveyResultsDialog
+          studyId={study.id}
+          open={surveyImportOpen}
+          onOpenChange={setSurveyImportOpen}
           onImported={loadNeeds}
         />
       </PageContainer>

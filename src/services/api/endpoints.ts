@@ -119,6 +119,10 @@ export const endpoints = {
     // collection, get/update hit the Need directly by its own id.
     forStudy: (studyId: string) => `/studies/${studyId}/needs`,
     import: (studyId: string) => `/studies/${studyId}/needs/import`,
+    previewPdf: (studyId: string) => `/studies/${studyId}/needs/preview-pdf`,
+    previewSurveyResults: (studyId: string) =>
+      `/studies/${studyId}/needs/preview-survey-results`,
+    importBulk: (studyId: string) => `/studies/${studyId}/needs/import-bulk`,
     byId: (needId: string) => `/needs/${needId}`,
   },
   aiDecisions: {
