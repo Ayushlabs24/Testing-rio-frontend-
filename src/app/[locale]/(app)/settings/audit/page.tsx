@@ -455,13 +455,12 @@ export default function AuditSettingsPage() {
                                 : event.entityLabel || event.entityType}
                             </span>
                             <span className="text-muted-foreground text-xs">
-                              {(() => {
-                                try {
-                                  return tEntities(event.entityType);
-                                } catch {
-                                  return event.entityType;
-                                }
-                              })()}
+                              {/* `has` rather than try/catch: a missing key is
+                                  reported by next-intl before it throws, so
+                                  catching it still surfaced as an error. */}
+                              {tEntities.has(event.entityType)
+                                ? tEntities(event.entityType)
+                                : event.entityType}
                             </span>
                             {event.sourceRef ? (
                               <span className="text-muted-foreground text-xs">
