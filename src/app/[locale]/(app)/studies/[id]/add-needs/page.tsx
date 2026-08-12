@@ -77,7 +77,6 @@ export default function AddNeedsOptionsPage({
               <Button
                 type="button"
                 onClick={() => setImportDialogOpen(true)}
-                variant="outline"
                 className="w-full gap-2"
               >
                 <span>{t("importButton")}</span>
@@ -101,7 +100,6 @@ export default function AddNeedsOptionsPage({
               <Button
                 type="button"
                 onClick={() => setSurveyDialogOpen(true)}
-                variant="secondary"
                 className="w-full gap-2"
               >
                 <span>{t("surveyResultsButton")}</span>
