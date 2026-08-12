@@ -226,19 +226,23 @@ export const roles: Role[] = [
     crossEntity: false,
     enabled: true,
     permissions: [
-      perm("entityTeam"),
+      // Confirmed matrix (Jagannathan, Aug 12): Organization/Users = View.
+      perm("entityTeam", READ_ONLY),
       perm("rolesPermissions"),
       perm("onboardingConsent"),
+      // Studies = View/Create/Edit — widened from View-only.
       perm("methodologyQuestionBank", READ_ONLY),
-      perm("studySurvey", READ_ONLY),
+      perm("studySurvey", { read: true, create: true, write: true }),
       perm("dataCollection", { read: true, write: true, create: true }),
       perm("dataImport"),
       perm("citizenChannel"),
       perm("aiReview"),
       perm("priorityScoring"),
-      perm("reportsDashboards"),
+      // Reports = View — was no access.
+      perm("reportsDashboards", READ_ONLY),
       perm("archiveSharingAudit"),
-      perm("surveyBuilder"),
+      // Surveys/Survey Builder = View/Create/Edit — was no access.
+      perm("surveyBuilder", { read: true, create: true, write: true }),
       perm("ncnpReport"),
     ],
   },
@@ -288,18 +292,31 @@ export const roles: Role[] = [
     crossEntity: false,
     enabled: true,
     permissions: [
-      perm("entityTeam"),
+      // Confirmed matrix (Jagannathan, Aug 12): Organization/Users = View.
+      perm("entityTeam", READ_ONLY),
       perm("rolesPermissions"),
       perm("onboardingConsent"),
       perm("methodologyQuestionBank", READ_ONLY),
       perm("studySurvey", READ_ONLY),
-      // RIO-DATA-003 (client-requested widening): Data Analyst can create
-      // Needs directly, alongside NGO Research Officer/Field Researcher —
-      // a temporary widening, not a permanent role-scope decision.
-      perm("dataCollection", { read: true, write: true, create: true }),
+      // Confirmed (Jagannathan, Aug 12): Needs = View, Evidence/Documents =
+      // View/Export — resolves to plain View, since Evidence has no export
+      // feature at all in the backend (verified). Ends the RIO-DATA-003
+      // temporary widening (Data Analyst could previously create Needs
+      // directly) per this confirmation.
+      perm("dataCollection", READ_ONLY),
       perm("dataImport", { read: true, write: true, create: true }),
       perm("citizenChannel"),
-      perm("aiReview", READ_ONLY),
+      // Confirmed (Jagannathan, Aug 12): Data Analyst owns "Generating the
+      // AI Evidence Summary" and "Generating the Combined Summary Report" —
+      // both gated on aiReview:write in the backend. Note: this same flag
+      // also covers the unrelated Need-classification-trigger action
+      // (already held by ngo_admin/ngo_research_officer) — accepted as
+      // harmless overlap, not separately requested.
+      perm("aiReview", { read: true, write: true }),
+      // Confirmed (Jagannathan, Aug 12): Data Analyst "reviews and
+      // validates" the Priority Score and generates the AI Summary — both
+      // require create/write/approve on this module, superseding the
+      // module table's narrower View/Export-only row.
       perm("priorityScoring", {
         read: true,
         write: true,
@@ -307,9 +324,19 @@ export const roles: Role[] = [
         approve: true,
         export: true,
       }),
-      perm("reportsDashboards", { read: true, write: true, create: true, export: true }),
-      perm("archiveSharingAudit", READ_ONLY),
-      perm("surveyBuilder"),
+      // Confirmed matrix: Reports = View/Create/Edit/Export/Share — `share`
+      // added (was missing).
+      perm("reportsDashboards", {
+        read: true,
+        write: true,
+        create: true,
+        export: true,
+        share: true,
+      }),
+      // Confirmed matrix: Audit/System Logs = none — was read-only, removed.
+      perm("archiveSharingAudit"),
+      // Confirmed matrix: Surveys/Survey Builder = View.
+      perm("surveyBuilder", READ_ONLY),
       perm("ncnpReport"),
     ],
   },
@@ -387,7 +414,8 @@ export const roles: Role[] = [
     crossEntity: false,
     enabled: true,
     permissions: [
-      perm("entityTeam"),
+      // Confirmed matrix (Jagannathan, Aug 12): Organization/Users = View.
+      perm("entityTeam", READ_ONLY),
       perm("rolesPermissions"),
       perm("onboardingConsent"),
       perm("methodologyQuestionBank", READ_ONLY),
@@ -397,10 +425,14 @@ export const roles: Role[] = [
       perm("citizenChannel"),
       perm("aiReview", READ_ONLY),
       perm("priorityScoring", READ_ONLY),
-      // "Export — per availability" in the doc: modeled as granted by default.
-      perm("reportsDashboards", { read: true, export: true }),
-      perm("archiveSharingAudit", READ_ONLY),
-      perm("surveyBuilder"),
+      // Confirmed (Jagannathan, Aug 12): Reports = View only for this
+      // role — no Export. Export was in an earlier build; removed per
+      // this confirmation.
+      perm("reportsDashboards", READ_ONLY),
+      // Confirmed matrix: Audit/System Logs = none — was read-only, removed.
+      perm("archiveSharingAudit"),
+      // Confirmed matrix: Surveys/Survey Builder = View — was no access.
+      perm("surveyBuilder", READ_ONLY),
       perm("ncnpReport"),
     ],
   },
