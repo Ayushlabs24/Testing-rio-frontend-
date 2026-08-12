@@ -1504,9 +1504,10 @@
         "title": "رفع نتائج الاستبيان",
         "description": "رفع ملف نتائج الاستبيان (PDF، DOCX، XLSX، CSV) لتحليل الدرجات واستخراج احتياجات المجتمع.",
         "previewTitle": "الاحتياجات المستخرجة من نتائج الاستبيان",
+        "previewCount": "الاحتياجات المستخرجة ({count})",
         "previewDescription": "مراجعة وتعديل الاحتياجات المحددة بواسطة الذكاء الاصطناعي أدناه قبل إضافتها لهذه الدراسة.",
         "chooseFile": "اختر مستند نتائج الاستبيان",
-        "allowedTypesHint": "يدعم PDF، DOCX، XLSX، XLS، CSV، TXT (حتى 10 ميجابايت)",
+        "allowedTypesHint": "يدعم PDF، DOC، DOCX، XLSX، XLS، CSV، TXT (حتى 10 ميجابايت)",
         "invalidType": "يرجى اختيار مستند استبيان مدعوم (.pdf، .docx، .xlsx، .csv).",
         "parsingDocument": "جارٍ تحليل نتائج الاستبيان والدرجات بواسطة الذكاء الاصطناعي...",
         "noNeedsFound": "لم يتم العثور على احتياجات مجتمعية واضحة في مستند الاستبيان هذا."
@@ -1858,7 +1859,9 @@
         "needTitleColumn": "العنوان",
         "needStatementColumn": "البيان",
         "governorateColumn": "المحافظة / القرية",
+        "governorateVillagePlaceholder": "المحافظة / القرية",
         "referenceIdColumn": "معرّف المرجع",
+        "refIdPlaceholder": "معرّف المرجع",
         "actionsColumn": "الإجراءات",
         "removeNeed": "حذف",
         "backToSelect": "اختيار ملف آخر"

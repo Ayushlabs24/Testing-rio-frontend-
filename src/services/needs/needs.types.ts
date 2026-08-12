@@ -166,6 +166,3 @@ export interface BulkImportNeedItem {
   referenceId?: string;
 }
 
-export interface BulkImportNeedsPayload {
-  needs: BulkImportNeedItem[];
-}

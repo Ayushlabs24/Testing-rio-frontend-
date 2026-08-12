@@ -1537,9 +1537,10 @@
         "title": "Upload Survey Results",
         "description": "Upload a survey results file (PDF, DOCX, XLSX, CSV) to analyze scores and extract community needs.",
         "previewTitle": "Extracted Needs from Survey Results",
+        "previewCount": "Extracted Needs ({count})",
         "previewDescription": "Review and edit the AI-identified needs below before adding them to this study.",
         "chooseFile": "Choose a survey results document",
-        "allowedTypesHint": "Supports PDF, DOCX, XLSX, XLS, CSV, TXT (up to 10MB)",
+        "allowedTypesHint": "Supports PDF, DOC, DOCX, XLSX, XLS, CSV, TXT (up to 10MB)",
         "invalidType": "Please select a supported survey document (.pdf, .docx, .xlsx, .csv).",
         "parsingDocument": "Analyzing survey results and scores with AI...",
         "noNeedsFound": "No distinct community needs could be extracted from this survey document."
@@ -1891,7 +1892,9 @@
         "needTitleColumn": "Title",
         "needStatementColumn": "Statement",
         "governorateColumn": "Governorate / Village",
+        "governorateVillagePlaceholder": "Governorate / Village",
         "referenceIdColumn": "Reference ID",
+        "refIdPlaceholder": "Ref ID",
         "actionsColumn": "Actions",
         "removeNeed": "Remove",
         "backToSelect": "Choose another file"

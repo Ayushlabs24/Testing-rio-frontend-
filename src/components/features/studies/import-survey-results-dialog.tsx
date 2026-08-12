@@ -1,9 +1,8 @@
 "use client";
 
-import { FileCheck, Loader2, Trash2, Upload } from "lucide-react";
+import { FileCheck, Loader2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,64 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { extensionOf } from "@/lib/file-utils";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type {
-  ImportNeedRowError,
   ImportNeedsResult,
   ParsedPdfNeedItem,
 } from "@/services/needs/needs.types";
+import { EditableNeedsPreviewTable, ErrorTable } from "./needs-import-shared";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt"];
-
-function extensionOf(fileName: string): string {
-  const idx = fileName.lastIndexOf(".");
-  return idx === -1 ? "" : fileName.slice(idx).toLowerCase();
-}
-
-function ErrorTable({
-  rows,
-  destructive,
-}: {
-  rows: ImportNeedRowError[];
-  destructive: boolean;
-}) {
-  const t = useTranslations("app.studies.import");
-  return (
-    <div className="max-h-56 overflow-y-auto rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-20">{t("rowColumn")}</TableHead>
-            <TableHead>{t("errorColumn")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((err) => (
-            <TableRow key={err.row}>
-              <TableCell>
-                <Badge variant="outline">{err.row}</Badge>
-              </TableCell>
-              <TableCell className={destructive ? "text-destructive text-sm" : "text-sm"}>
-                {err.message}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
 
 export function ImportSurveyResultsDialog({
   studyId,
@@ -86,6 +37,11 @@ export function ImportSurveyResultsDialog({
   const t = useTranslations("app.studies.importSurveyResults");
   const tCommon = useTranslations("app.studies.import");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // A ref, not just the `importing` state — a state update only takes
+  // effect on the next render, so a second click landing before that render
+  // commits (a fast double-click, or a stuck focus event re-firing) could
+  // otherwise slip past the `disabled` check and fire the import twice. The
+  // ref is set synchronously, so it can't race.
   const importInFlightRef = useRef(false);
 
   const [file, setFile] = useState<File | null>(null);
@@ -158,17 +114,16 @@ export function ImportSurveyResultsDialog({
     setSubmitError(null);
 
     try {
-      const items = extractedNeeds.map((n) => ({
-        title: n.title,
-        statement: n.statement,
-        village: n.village,
-        referenceId: n.referenceId,
-      }));
-      const outcome = await needsService.importBulkNeeds(studyId, items);
+      // ParsedPdfNeedItem is structurally compatible with BulkImportNeedItem
+      // (extra `id` field is ignored by the backend) — no mapping needed.
+      const outcome = await needsService.importBulkNeeds(studyId, extractedNeeds);
 
       setResult(outcome);
       if (outcome.imported > 0) onImported();
-
+      // Fully successful (nothing to review) — close on its own after a
+      // moment instead of leaving the user to find and click Close. Any
+      // failed row (duplicate or otherwise) keeps the dialog open so the
+      // results stay visible.
       if (outcome.failed === 0 && outcome.imported > 0) {
         setTimeout(() => handleOpenChange(false), 1200);
       }
@@ -190,6 +145,11 @@ export function ImportSurveyResultsDialog({
           extractedNeeds ? "sm:max-w-3xl" : "sm:max-w-xl"
         }`}
         showCloseButton={!importing && !parsing}
+        // While a request is in flight, closing (Escape, clicking the
+        // backdrop, or the X button) is blocked — see showCloseButton above
+        // for the X button; these two cover the other two ways Radix can
+        // close a Dialog. Reopening mid-request with stale local state was
+        // the likely source of the "tries again" symptom reported here.
         onEscapeKeyDown={(event) => {
           if (importing || parsing) event.preventDefault();
         }}
@@ -204,6 +164,9 @@ export function ImportSurveyResultsDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* The header and footer (Close/Import) stay pinned — only this
+         * middle section scrolls, so the results table appearing after
+         * import can never push the Close button out of view. */}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
           {!extractedNeeds && !result ? (
             <button
@@ -215,9 +178,7 @@ export function ImportSurveyResultsDialog({
               <span className="text-foreground text-sm font-medium">
                 {file ? file.name : t("chooseFile")}
               </span>
-              <span className="text-muted-foreground text-xs">
-                {t("allowedTypesHint")}
-              </span>
+              <span className="text-muted-foreground text-xs">{t("allowedTypesHint")}</span>
             </button>
           ) : null}
 
@@ -249,7 +210,7 @@ export function ImportSurveyResultsDialog({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium">
-                  {t("previewTitle")} ({extractedNeeds.length})
+                  {t("previewCount", { count: extractedNeeds.length })}
                 </span>
                 <Button
                   type="button"
@@ -262,85 +223,12 @@ export function ImportSurveyResultsDialog({
                 </Button>
               </div>
 
-              {extractedNeeds.length === 0 ? (
-                <p className="text-muted-foreground py-6 text-center text-sm">
-                  {t("noNeedsFound")}
-                </p>
-              ) : (
-                <div className="max-h-72 overflow-y-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-1/4">
-                          {tCommon("needTitleColumn")}
-                        </TableHead>
-                        <TableHead className="w-1/3">
-                          {tCommon("needStatementColumn")}
-                        </TableHead>
-                        <TableHead>{tCommon("governorateColumn")}</TableHead>
-                        <TableHead>{tCommon("referenceIdColumn")}</TableHead>
-                        <TableHead className="w-12">{tCommon("actionsColumn")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {extractedNeeds.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="align-top">
-                            <Input
-                              value={item.title}
-                              onChange={(e) =>
-                                updateNeedField(item.id, "title", e.target.value)
-                              }
-                              className="text-xs"
-                            />
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <Textarea
-                              value={item.statement}
-                              onChange={(e) =>
-                                updateNeedField(item.id, "statement", e.target.value)
-                              }
-                              rows={2}
-                              className="resize-none text-xs"
-                            />
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <Input
-                              value={item.village ?? ""}
-                              onChange={(e) =>
-                                updateNeedField(item.id, "village", e.target.value)
-                              }
-                              placeholder="Governorate/Village"
-                              className="text-xs"
-                            />
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <Input
-                              value={item.referenceId ?? ""}
-                              onChange={(e) =>
-                                updateNeedField(item.id, "referenceId", e.target.value)
-                              }
-                              placeholder="Ref ID"
-                              className="text-xs"
-                            />
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeNeed(item.id)}
-                              className="text-destructive hover:bg-destructive/10 size-8"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+              <EditableNeedsPreviewTable
+                needs={extractedNeeds}
+                emptyMessage={t("noNeedsFound")}
+                onUpdateField={updateNeedField}
+                onRemove={removeNeed}
+              />
             </div>
           ) : null}
 
@@ -371,9 +259,7 @@ export function ImportSurveyResultsDialog({
                   <p className="text-destructive text-lg font-semibold tabular-nums">
                     {otherErrors.length}
                   </p>
-                  <p className="text-muted-foreground text-xs">
-                    {tCommon("otherFailures")}
-                  </p>
+                  <p className="text-muted-foreground text-xs">{tCommon("otherFailures")}</p>
                 </div>
               </div>
 
