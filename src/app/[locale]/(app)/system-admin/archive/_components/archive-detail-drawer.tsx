@@ -173,7 +173,7 @@ export function ArchiveDetailDrawer({
                     {t("drawer.methodologyVersion")}
                   </span>
                   <p className="text-primary mt-1 font-mono text-sm font-semibold">
-                    {data.methodologyVersion?.version ?? "v1.0"}
+                    {data.methodologyVersion?.version ?? "v5.0"}
                   </p>
                 </Card>
               </div>

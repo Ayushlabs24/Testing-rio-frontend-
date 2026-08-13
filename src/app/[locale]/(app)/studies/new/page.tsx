@@ -53,9 +53,8 @@ export default function NewStudyPage() {
       population: values.population,
       marginOfError: values.marginOfError,
     });
-    // Capturing the first Need is the next step of the workflow, so go
-    // straight there rather than via the Study detail page.
-    router.push(`/studies/${study.id}/needs/new`);
+    // Proceed to the Add Needs options choice screen for the new study
+    router.push(`/studies/${study.id}/add-needs`);
     // router.push() enqueues the navigation but doesn't wait for it to
     // finish — returning here would let StudyForm's isSubmitting flip back
     // to false and the button flash re-enabled while this page is still

@@ -1,9 +1,11 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
+  BulkImportNeedItem,
   CreateNeedPayload,
   ImportNeedsResult,
   Need,
+  PdfPreviewResult,
   UpdateNeedPayload,
 } from "@/services/needs/needs.types";
 
@@ -44,5 +46,38 @@ export const needsService = {
       endpoints.needs.import(studyId),
       formData,
     );
+  },
+
+  async previewPdfFromFile(studyId: string, file: File): Promise<PdfPreviewResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.uploadForm<PdfPreviewResult>(
+      endpoints.needs.previewPdf(studyId),
+      formData,
+    );
+  },
+
+  async previewSurveyResultsFromFile(
+    studyId: string,
+    file: File,
+  ): Promise<PdfPreviewResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.uploadForm<PdfPreviewResult>(
+      endpoints.needs.previewSurveyResults(studyId),
+      formData,
+    );
+  },
+
+  /** Bulk-create Needs from a pre-parsed list of items (AI-extracted from a
+   * PDF or survey results file).  Duplicate detection and validation errors
+   * are handled by the backend — see `ImportNeedsResult.errors`. */
+  async importBulkNeeds(
+    studyId: string,
+    items: BulkImportNeedItem[],
+  ): Promise<ImportNeedsResult> {
+    return apiClient.post<ImportNeedsResult>(endpoints.needs.importBulk(studyId), {
+      needs: items,
+    });
   },
 };

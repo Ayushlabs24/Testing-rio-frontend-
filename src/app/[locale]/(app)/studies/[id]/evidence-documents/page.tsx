@@ -367,7 +367,7 @@ export default function EvidenceDocumentsPage({
                 {t("methodologyVersion")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                {study?.methodologyVersionId || "v1.0 Baseline"}
+                {study?.methodologyVersionId || "v5.0 Baseline"}
               </p>
             </div>
             <div>
