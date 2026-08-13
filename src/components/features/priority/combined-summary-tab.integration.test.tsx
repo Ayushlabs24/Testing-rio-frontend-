@@ -2,6 +2,15 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next-intl", () => ({
+  useLocale: () => "en",
+  useTranslations: () => (key: string) =>
+    ({
+      "summary.editDraft": "Edit Draft",
+      "summary.generateReport": "Generate Combined Report",
+    })[key] ?? key,
+}));
+
 const serviceMocks = vi.hoisted(() => ({
   getContext: vi.fn(),
   update: vi.fn(),
@@ -27,10 +36,7 @@ vi.mock("@/services/reports/reports.service", () => ({
   },
 }));
 
-import {
-  CombinedSummaryTab,
-  saveAndConfirmCombinedSummary,
-} from "./combined-summary-tab";
+import { CombinedSummaryTab } from "./combined-summary-tab";
 
 afterEach(() => vi.resetAllMocks());
 
@@ -79,20 +85,5 @@ describe("CombinedSummaryTab report generation", () => {
       reportType: "RPT16",
       studyId: "study-1",
     });
-  });
-
-  it("does not create a report when updating the edited draft fails", async () => {
-    const createReport = vi.fn();
-    await expect(
-      saveAndConfirmCombinedSummary({
-        studyId: "study-1",
-        summary: { id: "summary-1" } as never,
-        dirty: true,
-        editedJson: { executiveSummary: "Officer edit" },
-        update: vi.fn().mockRejectedValue(new Error("update failed")),
-        confirm: vi.fn(),
-      }),
-    ).rejects.toThrow("update failed");
-    expect(createReport).not.toHaveBeenCalled();
   });
 });

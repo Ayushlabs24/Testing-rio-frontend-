@@ -11,17 +11,22 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   permissions: {
     "dataCollection.write": true,
-    "aiReview.write": true,
+    "priorityScoring.write": true,
     "reportsDashboards.create": true,
   } as Record<string, boolean>,
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string) =>
     ({
       loadErrorTitle: "Couldn't load evidence documents.",
       actionErrorTitle: "Couldn't update the evidence document.",
       retry: "Retry",
+      generateReportButton: "Generate Document-Based Report",
+      noDocuments: "No supporting evidence documents uploaded yet for this study.",
+      saveSummaryButton: "Save Summary",
+      "sections.summary": "Summary",
     })[key] ?? key,
 }));
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
@@ -47,7 +52,7 @@ describe("DocumentBasedSummaryTab mutation permissions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.permissions["dataCollection.write"] = true;
-    mocks.permissions["aiReview.write"] = true;
+    mocks.permissions["priorityScoring.write"] = true;
     mocks.permissions["reportsDashboards.create"] = true;
     mocks.listDocuments.mockResolvedValue([
       {
@@ -110,7 +115,7 @@ describe("DocumentBasedSummaryTab mutation permissions", () => {
     await user.click(await screen.findByRole("button", { name: "Summary" }));
     expect(await screen.findByRole("button", { name: "Save Summary" })).toBeEnabled();
 
-    mocks.permissions["aiReview.write"] = false;
+    mocks.permissions["priorityScoring.write"] = false;
     view.rerender(<DocumentBasedSummaryTab studyId="study-1" needId="need-1" />);
 
     const confirmSummary = screen.getByRole("button", { name: "Save Summary" });

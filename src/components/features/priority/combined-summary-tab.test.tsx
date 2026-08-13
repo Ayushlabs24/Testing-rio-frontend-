@@ -1,5 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("next-intl", () => ({
+  useLocale: () => "en",
+  useTranslations: () => (key: string) =>
+    ({
+      "summary.editDraft": "Edit Draft",
+      "summary.previewView": "Preview View",
+      "summary.saveSummary": "Save Summary",
+      "summary.generateReport": "Generate Combined Report",
+      "summary.confirmedBadge": "CONFIRMED & SAVED",
+    })[key] ?? key,
+}));
+
 vi.mock("@/i18n/navigation", () => ({ useRouter: vi.fn() }));
 
 import { saveAndConfirmCombinedSummary } from "./combined-summary-tab";
@@ -111,7 +123,7 @@ const componentMocks = vi.hoisted(() => ({
   push: vi.fn(),
   generateCombinedSummary: vi.fn(),
   permissions: {
-    "aiReview.write": true,
+    "priorityScoring.write": true,
     "reportsDashboards.create": true,
   } as Record<string, boolean>,
 }));
@@ -144,7 +156,7 @@ describe("CombinedSummaryTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("alert", vi.fn());
-    componentMocks.permissions["aiReview.write"] = true;
+    componentMocks.permissions["priorityScoring.write"] = true;
     componentMocks.permissions["reportsDashboards.create"] = true;
     componentMocks.getContext.mockResolvedValue({
       confirmedDocumentSummaries: [],
@@ -179,7 +191,7 @@ describe("CombinedSummaryTab", () => {
   });
   it("disables and defensively blocks draft reports without AI write", async () => {
     const user = userEvent.setup();
-    componentMocks.permissions["aiReview.write"] = false;
+    componentMocks.permissions["priorityScoring.write"] = false;
 
     render(<CombinedSummaryTab studyId="study-1" />);
 
@@ -196,7 +208,7 @@ describe("CombinedSummaryTab", () => {
   });
   it("allows report creation from a confirmed summary without AI write permission", async () => {
     const user = userEvent.setup();
-    componentMocks.permissions["aiReview.write"] = false;
+    componentMocks.permissions["priorityScoring.write"] = false;
     componentMocks.getContext.mockResolvedValue({
       confirmedDocumentSummaries: [],
       availableScoreSummaries: [],

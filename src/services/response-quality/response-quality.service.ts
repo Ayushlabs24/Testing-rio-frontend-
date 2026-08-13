@@ -33,11 +33,8 @@ export const responseQualityService = {
     );
   },
   async getSummary(needId: string, surveyLinkId?: string): Promise<AiSummary | null> {
-    return apiClient.get<AiSummary | null>(
-      endpoints.responseQuality.getSummary(needId),
-      {
-        params: { surveyLinkId },
-      },
-    );
+    return apiClient.get<AiSummary | null>(endpoints.responseQuality.getSummary(needId), {
+      params: { surveyLinkId },
+    });
   },
 };

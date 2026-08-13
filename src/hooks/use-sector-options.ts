@@ -19,9 +19,9 @@ export function useSectorOptions(authenticated: boolean = true): string[] {
   useEffect(() => {
     let cancelled = false;
     const load = authenticated
-      ? domainsService.list().then((domains) =>
-          domains.filter((d) => d.isActive).map((d) => d.name),
-        )
+      ? domainsService
+          .list()
+          .then((domains) => domains.filter((d) => d.isActive).map((d) => d.name))
       : domainsService.listPublic().then((domains) => domains.map((d) => d.name));
     load
       .then((result) => {

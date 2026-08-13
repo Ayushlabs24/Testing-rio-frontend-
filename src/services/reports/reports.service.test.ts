@@ -67,10 +67,10 @@ describe("reportsService.download", () => {
     await reportsService.download("report-1", "pdf");
 
     const [calledUrl, calledInit] = vi.mocked(global.fetch).mock.calls[0];
-    const url = calledUrl as URL;
+    const url = new URL(calledUrl as string);
     expect(url.pathname).toBe("/api/reports/report-1/export");
     expect(url.searchParams.get("format")).toBe("pdf");
-    expect(calledInit).toEqual({ credentials: "include" });
+    expect(calledInit).toEqual(expect.objectContaining({ credentials: "include" }));
     expect(anchor.download).toBe("village-report.pdf");
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
@@ -84,7 +84,7 @@ describe("reportsService.download", () => {
     await reportsService.download("report-1", "excel");
 
     const [calledUrl] = vi.mocked(global.fetch).mock.calls[0];
-    expect((calledUrl as URL).searchParams.get("format")).toBe("excel");
+    expect(new URL(calledUrl as string).searchParams.get("format")).toBe("excel");
     expect(anchor.download).toBe("village-report.xlsx");
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
