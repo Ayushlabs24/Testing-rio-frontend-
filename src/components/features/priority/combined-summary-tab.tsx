@@ -93,7 +93,12 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   const tReportStatus = useTranslations("app.reports.status");
   const locale = useLocale() as AppLocale;
   const router = useRouter();
-  const canAi = usePermission("aiReview", "write");
+  // Client-confirmed (Aug 14): Combined Summary Report generation is
+  // Data Analyst's action — was aiReview:write (shared with Research
+  // Officer's unrelated Need-classification-trigger use of that flag).
+  // priorityScoring:write is the precise gate (Data Analyst holds both
+  // create and write together; no other role holds either).
+  const canAi = usePermission("priorityScoring", "write");
   const canCreateReport = usePermission("reportsDashboards", "create");
 
   const [context, setContext] = useState<CombinedReportContext | null>(null);

@@ -263,8 +263,6 @@
       "reviewerSlaAlerts": "Reviewer SLA alerts",
       "reviewerSlaPendingCount": "{count} review item(s) awaiting action",
       "surveyStatusUpdateCount": "{count} status update(s)",
-      "ncnpReportPendingReviewCount": "{count} NCNP Compiled Report(s) awaiting your review",
-      "ncnpReportReadyToPublishCount": "{count} NCNP Compiled Report(s) ready to publish",
       "sharingAlerts": "Sharing notifications",
       "sharingSectionTitle": "Sharing requests",
       "sharingAlertsEmpty": "No sharing notifications",
@@ -275,7 +273,9 @@
       "sharingAlertApprovedReport": "Your request for \"{title}\" has been approved",
       "sharingAlertRejectedStudy": "Your request for \"{title}\" was rejected",
       "sharingAlertRejectedReport": "Your request for \"{title}\" was rejected",
-      "sharingAlertReasonPrefix": "Reason: {reason}"
+      "sharingAlertReasonPrefix": "Reason: {reason}",
+      "ncnpReportAlertPendingReview": "NCNP Compiled Report awaiting your review",
+      "ncnpReportAlertReadyToPublish": "NCNP Compiled Report ready to publish"
     },
     "footer": {
       "rightsReserved": "All rights reserved.",
@@ -680,6 +680,8 @@
         "title": "Users",
         "description": "Everyone with access to this organisation.",
         "searchPlaceholder": "Search by name or email...",
+        "filterOrganizationLabel": "Organization",
+        "filterOrganizationAll": "All organizations",
         "noResults": "No users found.",
         "newUser": "New user",
         "newUserTitle": "Add a user",
@@ -739,7 +741,16 @@
         "membersRoleColumn": "Role",
         "noMembers": "No members yet.",
         "manageInUsers": "Manage in Users",
-        "usersDescriptionGlobal": "Every user across every organization."
+        "usersDescriptionGlobal": "Every user across every organization.",
+        "filterRegionLabel": "Region",
+        "filterRegionAll": "All regions",
+        "filterSectorLabel": "Sector",
+        "filterSectorAll": "All sectors",
+        "pagination": {
+          "previous": "Previous",
+          "next": "Next",
+          "label": "Page {page} of {count}"
+        }
       },
       "audit": {
         "title": "Audit Log",
@@ -847,6 +858,11 @@
       "placeholderNote": "Priority score is a weighted rollup of domain performance scores, per the org's configured methodology weights and critical-domain thresholds. See a Need's Insights page for the full domain breakdown.",
       "filterLevelLabel": "Priority level",
       "filterLevelAll": "All levels",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
       "studyColumn": "Study",
       "scoreColumn": "Score",
       "levelColumn": "Level",
@@ -897,6 +913,7 @@
       },
       "status": {
         "draft": "Draft",
+        "submitted": "Submitted for Review",
         "rejected": "Rejected",
         "released": "Released",
         "archived": "Archived"
@@ -1151,7 +1168,12 @@
       "filterVillageLabel": "Governorate",
       "filterVillageAll": "All governorates",
       "noResultsFilteredHint": "Try adjusting or clearing your filters.",
-      "noResultsEmptyHint": "Completed studies and approved reports will show up here once they exist."
+      "noResultsEmptyHint": "Completed studies and approved reports will show up here once they exist.",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      }
     },
     "sharing": {
       "title": "Sharing",
@@ -1339,16 +1361,22 @@
       "type": {
         "ai_classification": "AI Classification",
         "survey_approval": "Survey Approval",
-        "survey_approved": "Approved & Published",
+        "survey_ready_to_publish": "Approved — Ready to Publish",
         "survey_rejected": "Changes Requested",
         "report_approval": "Report Approval",
         "report_released": "Released",
-        "report_rejected": "Rejected"
+        "report_rejected": "Rejected",
+        "evidence_document_uploaded": "Evidence Summary Pending"
       },
       "titleOwn": "My Submissions",
       "descriptionOwn": "Surveys and reports you've submitted, and whether they were approved or sent back for changes.",
       "noAlertsOwn": "No status updates yet.",
-      "viewNow": "View"
+      "viewNow": "View",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      }
     },
     "publicSurveys": {
       "title": "Public Surveys",
@@ -1537,6 +1565,11 @@
           "next": "Next",
           "label": "Page {page} of {count}"
         }
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
       }
     },
     "studies": {
@@ -1939,6 +1972,7 @@
       },
       "detail": {
         "backToList": "Back",
+        "viewNeedClassification": "View Need / Override Classification",
         "recommendedHeading": "AI Recommended Questions",
         "noRecommendedQuestions": "No Question Bank questions selected yet.",
         "showMore": "{count, plural, one {Show # more} other {Show # more}}",
@@ -1998,12 +2032,17 @@
         "methodologyVersionPendingNote": "(will be recorded when this survey is published)",
         "submitForApproval": "Submit for Review",
         "submitting": "Submitting...",
-        "saveAndPublish": "Approve & Publish",
+        "approveAction": "Approve",
+        "approving": "Approving...",
+        "publishAction": "Publish",
         "publishing": "Publishing...",
-        "publishedMessage": "Survey saved and published.",
+        "approvedMessage": "Survey approved. Publish it to make it live.",
+        "publishedMessage": "Survey published.",
         "saveBeforeSubmit": "Save your changes before submitting for approval.",
         "submittedNotice": "This survey has been submitted and is awaiting approval. Editing is disabled until it is reviewed.",
-        "submittedNoticeApprover": "This survey has been submitted for your review. You can add, remove, or reorder questions before you Approve & Publish or Reject.",
+        "submittedNoticeApprover": "This survey has been submitted for your review. You can add, remove, or reorder questions before you Approve or Reject — removing a question requires a reason.",
+        "approvedNotice": "This survey has been approved and sent to the Research Officer to publish.",
+        "approvedNoticeResearcher": "This survey has been approved. Click Publish above to make it live.",
         "rejectedNoticeTitle": "Changes requested",
         "goToReview": "Go to Review",
         "reject": "Reject",
@@ -2021,18 +2060,26 @@
         "confirmReject": "Reject",
         "rejecting": "Rejecting...",
         "reviewerNotesTitle": "Reviewer Notes",
-        "approveDialogTitle": "Approve & Publish this survey",
-        "approveDialogDescription": "Reviewer notes are required and will be recorded in the audit trail.",
-        "approveCommentsPlaceholder": "Explain your decision to approve and publish this survey...",
+        "approveDialogTitle": "Approve this survey",
+        "approveDialogDescription": "Reviewer notes are required and will be recorded in the audit trail. The Researcher publishes it once approved.",
+        "approveCommentsPlaceholder": "Explain your decision to approve this survey...",
         "approveCommentsRequired": "Enter reviewer notes before approving.",
-        "confirmApprove": "Approve & Publish",
+        "confirmApprove": "Approve",
+        "removalReasonDialogTitle": "Reason for removing this question",
+        "removalReasonDialogDescription": "\"{question}\" will be removed from this survey. This does not remove it from the Question Bank.",
+        "removalReasonLabel": "Reason",
+        "removalReasonPlaceholder": "Explain why this question is being removed...",
+        "removalReasonRequired": "Enter a reason for removing this question.",
+        "removeQuestion": "Remove Question",
         "status": {
           "DRAFT": "Draft",
           "SUBMITTED": "Submitted for Approval",
+          "APPROVED": "Approved — Ready to Publish",
           "REJECTED": "Rejected",
           "PUBLISHED": "Published",
           "draft": "Draft",
           "submitted": "Submitted for Approval",
+          "approved": "Approved — Ready to Publish",
           "rejected": "Rejected",
           "published": "Published"
         },
@@ -2111,10 +2158,12 @@
       "status": {
         "DRAFT": "Draft",
         "SUBMITTED": "Submitted for Approval",
+        "APPROVED": "Approved — Ready to Publish",
         "REJECTED": "Rejected",
         "PUBLISHED": "Published",
         "draft": "Draft",
         "submitted": "Submitted for Approval",
+        "approved": "Approved — Ready to Publish",
         "rejected": "Rejected",
         "published": "Published",
         "SUPERSEDED": "Superseded"
@@ -2586,7 +2635,12 @@
         "actions": "Actions"
       },
       "noResults": "No organizations found matching your criteria.",
-      "viewDetails": "View Details"
+      "viewDetails": "View Details",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      }
     },
     "createDialog": {
       "title": "Create Organization",

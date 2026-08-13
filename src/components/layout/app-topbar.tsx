@@ -169,12 +169,6 @@ function NotificationsBell({
   const reviewerSlaCount = canSeeReviewerSla ? reviewerSla.count : 0;
   const sharingCount = canSeeSharing ? sharingUnreadCount : 0;
   const ncnpReportCount = canSeeNcnpReport ? ncnpReport.unreadCount : 0;
-  // The backend already branches listAlerts() by role — a System Reviewer
-  // only ever gets "pending_review" alerts, a System Admin only ever gets
-  // "ready_to_publish" ones — so the first alert's type is enough to pick
-  // the right copy for the whole count.
-  const ncnpReportReadyToPublish =
-    ncnpReport.alerts[0]?.type === "ncnp_report_ready_to_publish";
   // Decides the summary row's wording below — a Reviewer/Approver's count
   // is surveys AND reports awaiting THEIR decision; anyone else seeing this
   // bell (a Research Officer) is looking at their OWN submitted surveys'
@@ -187,6 +181,11 @@ function NotificationsBell({
     (session?.role.permissions.find((p) => p.module === "surveyBuilder")?.approve ??
       false) ||
     (session?.role.permissions.find((p) => p.module === "reportsDashboards")?.approve ??
+      false) ||
+    // Data Analyst holds neither approve flag above but does get its own
+    // org-wide to-do queue (evidence_document_uploaded) — same reasoning as
+    // reviewer-sla/page.tsx's canApprove.
+    (session?.role.permissions.find((p) => p.module === "priorityScoring")?.create ??
       false);
   const totalCount = reviewerSlaCount + sharingCount + ncnpReportCount;
 
@@ -216,6 +215,15 @@ function NotificationsBell({
             ? "sharingAlertRejectedStudy"
             : "sharingAlertRejectedReport";
     return t(key, { orgName: n.orgName, title: n.title });
+  }
+
+  function handleNcnpClick(alertId: string) {
+    ncnpReport.markSeen(alertId);
+    setOpen(false);
+    // `type=consolidated` is required — the detail page uses it (not the id
+    // shape) to decide between the NCNP Compiled Report view and the plain
+    // NGO report view. See reports/[id]/page.tsx's `isConsolidated`.
+    router.push(`/reports/${alertId}?type=consolidated`);
   }
 
   function handleSharingClick(n: SharingNotification) {
@@ -305,18 +313,25 @@ function NotificationsBell({
           </DropdownMenuItem>
         ) : null}
 
-        {canSeeNcnpReport && ncnpReportCount > 0 ? (
-          <DropdownMenuItem asChild onClick={() => setOpen(false)}>
-            <Link href="/reports" className="flex items-center gap-2">
-              <span className="bg-primary size-2 shrink-0 rounded-full" />
-              <span className="text-sm">
-                {ncnpReportReadyToPublish
-                  ? t("ncnpReportReadyToPublishCount", { count: ncnpReportCount })
-                  : t("ncnpReportPendingReviewCount", { count: ncnpReportCount })}
-              </span>
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
+        {canSeeNcnpReport && ncnpReportCount > 0
+          ? ncnpReport.alerts.slice(0, 20).map((alert) => (
+              <DropdownMenuItem
+                key={alert.id}
+                onClick={() => handleNcnpClick(alert.id)}
+                className="flex items-center gap-2"
+              >
+                <span className="bg-primary size-2 shrink-0 rounded-full" />
+                <span className="flex-1 text-sm">
+                  {alert.type === "ncnp_report_ready_to_publish"
+                    ? t("ncnpReportAlertReadyToPublish")
+                    : t("ncnpReportAlertPendingReview")}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {timeAgo(alert.generatedAt)}
+                </span>
+              </DropdownMenuItem>
+            ))
+          : null}
 
         {(canSeeReviewerSla && reviewerSlaCount > 0) ||
         (canSeeNcnpReport && ncnpReportCount > 0) ? (

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { ARCHIVE_PAGE_SIZE } from "@/config/pagination";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
 import { ArchiveDetailDrawer } from "./_components/archive-detail-drawer";
@@ -52,6 +54,7 @@ export default function SystemAdminArchivePage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   // Drawer & Dialog states
   const [detailStudyId, setDetailStudyId] = useState<string | null>(null);
@@ -99,6 +102,13 @@ export default function SystemAdminArchivePage() {
     );
   }, [entries, searchQuery]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredEntries.length / ARCHIVE_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedEntries = filteredEntries.slice(
+    (currentPage - 1) * ARCHIVE_PAGE_SIZE,
+    currentPage * ARCHIVE_PAGE_SIZE,
+  );
+
   const handleRestore = async (id: string) => {
     try {
       setRestoringId(id);
@@ -128,7 +138,13 @@ export default function SystemAdminArchivePage() {
           <Card>
             <CardHeader className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-3">
-                <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                <Select
+                  value={selectedOrgId}
+                  onValueChange={(v) => {
+                    setSelectedOrgId(v);
+                    setPage(1);
+                  }}
+                >
                   <SelectTrigger className="w-56 text-xs">
                     <Building2 className="text-muted-foreground mr-2 size-3.5" />
                     <SelectValue placeholder={t("filterOrganization")} />
@@ -150,7 +166,10 @@ export default function SystemAdminArchivePage() {
                   placeholder={t("searchPlaceholder")}
                   aria-label={t("searchPlaceholder")}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
                   className="pl-9 text-xs"
                 />
               </div>
@@ -188,7 +207,7 @@ export default function SystemAdminArchivePage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredEntries.map((entry) => (
+                    pagedEntries.map((entry) => (
                       <TableRow key={`${entry.kind}-${entry.id}`}>
                         <TableCell className="text-foreground font-medium">
                           {entry.title}
@@ -247,6 +266,19 @@ export default function SystemAdminArchivePage() {
                   )}
                 </TableBody>
               </Table>
+
+              {filteredEntries.length > 0 ? (
+                <div className="border-border border-t px-4 py-3">
+                  <Pagination
+                    page={currentPage}
+                    pageCount={pageCount}
+                    onPageChange={setPage}
+                    previousLabel={t("pagination.previous")}
+                    nextLabel={t("pagination.next")}
+                    pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                  />
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>

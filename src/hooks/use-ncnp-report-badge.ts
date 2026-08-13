@@ -39,6 +39,10 @@ export interface NcnpReportBadgeState {
   alerts: NcnpReportReviewAlert[];
   unreadCount: number;
   markAllSeen: () => void;
+  /** Marks a single alert seen — used when the user clicks straight through
+   * to that specific report row, same as use-sharing-notifications.ts's
+   * per-item markSeen. */
+  markSeen: (id: string) => void;
   /** Re-fetches immediately instead of waiting for the poll interval — call
    * this after an action that could change the alert list (approve/reject/
    * publish/generate happen in a completely different component tree, e.g.
@@ -89,11 +93,19 @@ export function useNcnpReportBadge(): NcnpReportBadgeState {
     setSeenVersion((v) => v + 1);
   }
 
+  function markSeen(id: string) {
+    if (!userId) return;
+    const next = readSeenIds(userId);
+    next.add(id);
+    writeSeenIds(userId, next);
+    setSeenVersion((v) => v + 1);
+  }
+
   function refresh() {
     loadRef.current();
   }
 
   const unreadCount = alerts.filter((a) => !seenIds.has(a.id)).length;
 
-  return { alerts, unreadCount, markAllSeen, refresh };
+  return { alerts, unreadCount, markAllSeen, markSeen, refresh };
 }

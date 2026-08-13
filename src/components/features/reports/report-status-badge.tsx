@@ -9,6 +9,9 @@ export const REPORT_STATUS_VARIANT: Record<
   "default" | "secondary" | "outline" | "destructive"
 > = {
   draft: "outline",
+  // Client-confirmed (Aug 13): confirmed, awaiting the Reviewer — distinct
+  // from "draft" (not yet confirmed).
+  submitted: "secondary",
   rejected: "destructive",
   released: "default",
   archived: "secondary",

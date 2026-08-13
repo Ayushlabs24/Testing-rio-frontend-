@@ -37,7 +37,11 @@ export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT17", // Evidence Document-Based Report
 ];
 
-export type ReportStatus = "draft" | "rejected" | "released" | "archived";
+// Client-confirmed (Aug 13): "submitted" is its own status — a report
+// reaches it only via reportsService.confirm(), distinct from "draft" (not
+// yet confirmed) so the Officer sees their sign-off actually registered
+// instead of the status appearing unchanged.
+export type ReportStatus = "draft" | "submitted" | "rejected" | "released" | "archived";
 export type ExportFormat = "pdf" | "excel";
 
 // Statuses from which a report may be exported/shared (mirrors the backend's

@@ -11,6 +11,7 @@ import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ARCHIVE_PAGE_SIZE } from "@/config/pagination";
 import { useRouter } from "@/i18n/navigation";
 import { useSectorOptions } from "@/hooks/use-sector-options";
 import { archiveService } from "@/services/archive/archive.service";
@@ -49,6 +51,7 @@ export default function ArchivePage() {
   const [region, setRegion] = useState<string | typeof ALL>(ALL);
   const [sector, setSector] = useState<string | typeof ALL>(ALL);
   const [village, setVillage] = useState<string | typeof ALL>(ALL);
+  const [page, setPage] = useState(1);
 
   // Filter option lists (Entity/Region/Village) are derived from a single
   // unfiltered baseline fetch, same idea as the existing Entity-options
@@ -82,14 +85,22 @@ export default function ArchivePage() {
       .then((rows) => {
         setEntries(rows);
         setLoadFailed(false);
+        setPage(1);
       })
       .catch(() => {
         setEntries([]);
         setLoadFailed(true);
+        setPage(1);
       });
   }, [kind, search, organizationId, region, sector, village]);
 
   const columnCount = isCrossEntity ? 6 : 5;
+  const pageCount = Math.max(1, Math.ceil((entries?.length ?? 0) / ARCHIVE_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedEntries = (entries ?? []).slice(
+    (currentPage - 1) * ARCHIVE_PAGE_SIZE,
+    currentPage * ARCHIVE_PAGE_SIZE,
+  );
   const hasActiveFilters =
     search !== "" ||
     kind !== ALL ||
@@ -258,7 +269,7 @@ export default function ArchivePage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  entries.map((entry) => (
+                  pagedEntries.map((entry) => (
                     <TableRow
                       key={`${entry.kind}-${entry.id}`}
                       onClick={() => openEntry(entry)}
@@ -287,6 +298,19 @@ export default function ArchivePage() {
                 )}
               </TableBody>
             </Table>
+
+            {entries && entries.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </PageContainer>

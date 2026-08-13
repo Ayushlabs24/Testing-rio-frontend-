@@ -164,10 +164,14 @@ export const appNav: NavItem[] = [
  * Deliberately omits items the role has no real reason to land on first.
  */
 export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
+  // Client-confirmed order (Aug 13): Dashboard, then Organization, then
+  // Users. "roles" is deliberately never listed here — NGO Admin holds no
+  // rolesPermissions grant at all per the confirmed matrix, so it would
+  // only ever be filtered back out by isPermitted's fail-closed check;
+  // listing it anyway was dead weight that muddied the intended order.
   ngo_admin: [
     "dashboard",
     "organization",
-    "roles",
     "users",
     "studies",
     "surveyBuilder",
@@ -180,32 +184,61 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "audit",
     "methodologyConfig",
   ],
+  // Audit fix (Aug 13): every role's list below was cross-checked against
+  // its actual role-matrix.ts grants — several roles (most whose grants
+  // were widened earlier this session — Field Researcher, Data Analyst,
+  // Read-only Viewer, System Reviewer, Center Supervisor, plus System
+  // Admin) held real read access to a module with no matching nav entry at
+  // all, meaning the permission was real but there was no sidebar path to
+  // reach it. isPermitted's fail-closed check only ever protects against
+  // *over*-listing (a listed item the role can't actually use gets hidden);
+  // it does nothing for *under*-listing, which is exactly this bug class.
+  // Rule applied uniformly below: if a role holds real `read` on a
+  // module, its nav item is listed — no silent gaps.
   ngo_research_officer: [
     "dashboard",
+    "organization",
+    "users",
     "studies",
     "surveyBuilder",
     "publicSurveys",
     "priorityDashboard",
     "reports",
-    "archive",
-    "sharing",
-  ],
-  field_researcher: ["dashboard", "studies", "publicSurveys"],
-  human_reviewer: [
-    "dashboard",
-    "studies",
     "reviewerSla",
+    "methodologyConfig",
+  ],
+  field_researcher: [
+    "dashboard",
+    "organization",
+    "users",
+    "studies",
+    "surveyBuilder",
     "publicSurveys",
     "reports",
-    "archive",
+    "reviewerSla",
+    "methodologyConfig",
+  ],
+  human_reviewer: [
+    "dashboard",
+    "organization",
+    "users",
+    "studies",
+    "surveyBuilder",
+    "publicSurveys",
+    "priorityDashboard",
+    "reports",
+    "reviewerSla",
+    "methodologyConfig",
   ],
   data_analyst: [
     "dashboard",
+    "organization",
+    "users",
     "studies",
+    "publicSurveys",
+    "surveyBuilder",
     "priorityDashboard",
     "reports",
-    "archive",
-    "sharing",
     "methodologyConfig",
   ],
   system_admin: [
@@ -215,14 +248,27 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "roles",
     "studies",
     "publicSurveys",
+    "surveyBuilder",
+    "priorityDashboard",
     "reports",
     "archive",
+    "sharing",
     "reviewerSla",
     "audit",
     "systemLogs",
     "methodologyConfig",
   ],
-  read_only_viewer: ["dashboard", "studies", "priorityDashboard", "reports", "archive"],
+  read_only_viewer: [
+    "dashboard",
+    "organization",
+    "users",
+    "studies",
+    "publicSurveys",
+    "surveyBuilder",
+    "priorityDashboard",
+    "reports",
+    "methodologyConfig",
+  ],
   // Center Supervisor (NCNP Supervisor) — RIO-RBAC-001 (client-confirmed):
   // this is now the single combined role for what was previously two
   // separate roles (Program Supervisor / NCNP User). "reports" already
@@ -233,15 +279,31 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
   center_supervisor: [
     "dashboard",
     "organizations",
+    "users",
+    "studies",
+    "publicSurveys",
+    "surveyBuilder",
     "priorityDashboard",
     "reports",
+    "archive",
     "sharing",
     "audit",
+    "methodologyConfig",
   ],
   // System Reviewer — reviews the NCNP Compiled Report (approve/reject with
   // mandatory notes) via the unified /reports page (Category: Consolidated),
-  // plus read-only access to Needs, Surveys, and Documents per the client's
-  // scope. No dedicated NCNP nav item — reduces sidebar clutter per the
-  // client's explicit ask.
-  system_reviewer: ["dashboard", "studies", "surveyBuilder", "reports"],
+  // plus read-only access to Organization/Users, Needs, Surveys, and
+  // Documents per the client's scope. No dedicated NCNP nav item — reduces
+  // sidebar clutter per the client's explicit ask.
+  system_reviewer: [
+    "dashboard",
+    "organizations",
+    "users",
+    "studies",
+    "surveyBuilder",
+    "publicSurveys",
+    "priorityDashboard",
+    "reports",
+    "methodologyConfig",
+  ],
 };

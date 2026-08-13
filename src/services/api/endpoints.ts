@@ -73,6 +73,9 @@ export const endpoints = {
     newVersion: (id: string) => `/surveys/${id}/new-version`,
     approve: (id: string) => `/surveys/${id}/approve`,
     reject: (id: string) => `/surveys/${id}/reject`,
+    // Client-confirmed (Aug 13 call): the Researcher's own separate
+    // go-live step, once the Approver has already approved.
+    publish: (id: string) => `/surveys/${id}/publish`,
     public: (id: string) => `/surveys/public/${id}`,
     submitAnswers: (id: string) => `/surveys/public/${id}/submit`,
     responses: (id: string) => `/surveys/${id}/responses`,

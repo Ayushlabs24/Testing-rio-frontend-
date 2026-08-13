@@ -74,6 +74,11 @@ export default function EvidenceDocumentsPage({
   const router = useRouter();
 
   const canWrite = usePermission("dataCollection", "write");
+  // Bug fix (Aug 13 audit): uploading is a create action — the upload
+  // button/submit handler below were gated on `write` (correctly used for
+  // toggle-inclusion/delete of an already-uploaded document further down),
+  // same mismatch class as the per-Need Evidence page's own upload gate.
+  const canCreate = usePermission("dataCollection", "create");
   const canAi = usePermission("aiReview", "write");
   const canCreateReport = usePermission("reportsDashboards", "create");
 
@@ -153,7 +158,7 @@ export default function EvidenceDocumentsPage({
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canWrite || !selectedFile) return;
+    if (!canCreate || !selectedFile) return;
 
     setUploading(true);
     setUnsupportedError(null);
@@ -387,7 +392,7 @@ export default function EvidenceDocumentsPage({
           <h2 className="text-foreground text-lg font-semibold">
             {t("uploadedEvidenceDocuments")}
           </h2>
-          {canWrite && (
+          {canCreate && (
             <Button
               onClick={() => setUploadDialogOpen(true)}
               className="flex items-center gap-2"

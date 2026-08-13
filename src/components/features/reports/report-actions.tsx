@@ -84,8 +84,11 @@ export function ReportActions({
   const [dialogMode, setDialogMode] = useState<"approve" | "reject" | null>(null);
 
   const isDraft = report.status === "draft";
+  // Client-confirmed (Aug 13): "submitted" is its own status now (see
+  // reports.types.ts) — replaces the old isConfirmed (officerConfirmedAt !==
+  // null) check, which only ever tracked in step with status anyway.
+  const isSubmitted = report.status === "submitted";
   const isReleased = report.status === "released";
-  const isConfirmed = report.officerConfirmedAt !== null;
   const exportable = EXPORTABLE_STATUSES.includes(report.status);
   const iconSize = size === "default" ? "icon" : "icon-sm";
 
@@ -116,7 +119,7 @@ export function ReportActions({
 
   return (
     <TooltipProvider delayDuration={200}>
-      {canWrite && isDraft && !isConfirmed ? (
+      {canWrite && isDraft ? (
         <IconAction
           icon={CheckCircle2}
           label={t("tooltip.confirm")}
@@ -125,7 +128,7 @@ export function ReportActions({
         />
       ) : null}
 
-      {canApprove && isDraft && isConfirmed ? (
+      {canApprove && isSubmitted ? (
         <IconAction
           icon={ShieldCheck}
           label={t("tooltip.approve")}
@@ -134,7 +137,7 @@ export function ReportActions({
         />
       ) : null}
 
-      {canApprove && isDraft ? (
+      {canApprove && isSubmitted ? (
         <IconAction
           icon={XCircle}
           label={t("tooltip.reject")}

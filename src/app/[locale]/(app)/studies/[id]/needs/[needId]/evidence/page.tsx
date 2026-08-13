@@ -391,6 +391,13 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
   // — they can see what's been uploaded but never add/replace/remove it,
   // regardless of the Need's own status-based lock below.
   const canWrite = usePermission("dataCollection", "write");
+  // Bug fix (Aug 13 audit): uploading is a create action, not an edit of
+  // something that already exists — the dropzone below was gated on
+  // `write` (used correctly for Delete further down this file), which
+  // happens to equal `create` for every role today but is the same class
+  // of mismatch as the Users page's Create button bug. Fixed for
+  // correctness before a future permission change silently breaks it.
+  const canCreate = usePermission("dataCollection", "create");
   const [evidence, setEvidence] = useState<Evidence[] | null>(null);
   // Evidence stays editable slightly longer than the Need itself (see
   // EVIDENCE_EDITABLE_STATUSES's doc comment) — through ai_classified, not
@@ -449,7 +456,7 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
 
       <Card>
         <CardContent className="space-y-6">
-          {!canWrite ? (
+          {!canCreate ? (
             <div
               role="status"
               className="bg-muted text-muted-foreground rounded-md border p-3 text-sm"

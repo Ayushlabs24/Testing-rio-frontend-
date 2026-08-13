@@ -536,6 +536,7 @@ export default function ReportsPage() {
                 <SelectContent>
                   <SelectItem value={ALL}>{t("filterStatusAll")}</SelectItem>
                   <SelectItem value="draft">{t("status.draft")}</SelectItem>
+                  <SelectItem value="submitted">{t("status.submitted")}</SelectItem>
                   <SelectItem value="released">{t("status.released")}</SelectItem>
                   <SelectItem value="archived">{t("status.archived")}</SelectItem>
                   <SelectItem value="rejected">{t("status.rejected")}</SelectItem>

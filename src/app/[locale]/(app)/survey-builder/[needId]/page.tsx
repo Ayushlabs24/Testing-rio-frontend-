@@ -6,6 +6,7 @@ import {
   ArrowUp,
   Check,
   Clock,
+  ExternalLink,
   Loader2,
   Pencil,
   Trash2,
@@ -42,6 +43,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermission } from "@/hooks/use-permission";
+import { Link } from "@/i18n/navigation";
 import { cn, formatDomainSummary, titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { aiReviewService } from "@/services/ai-decisions/ai-decisions.service";
@@ -67,6 +69,12 @@ import {
 const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
   DRAFT: undefined,
   SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
+  // Client-confirmed (Aug 13 call): a distinct "approved, not yet live"
+  // state — the Researcher still has to Publish it themselves. Reuses the
+  // `primary` badge token (no dedicated "info" token exists in this design
+  // system) to stay visually distinct from SUBMITTED (warning) and
+  // PUBLISHED (success).
+  APPROVED: "bg-badge-primary text-badge-primary-foreground border-transparent",
   REJECTED: "bg-destructive/10 text-destructive border-transparent",
   PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
   SUPERSEDED: "bg-muted text-muted-foreground border-transparent",
@@ -79,6 +87,12 @@ function nextTempId(prefix: string): string {
   tempIdCounter += 1;
   return `${prefix}-${tempIdCounter}`;
 }
+// Every newly-added (not-yet-saved) question gets one of these client-side
+// temp ids — never a real SurveyQuestion UUID, so never sent as `id` in the
+// save payload (see buildQuestionsPayload below).
+function isTempQuestionId(id: string): boolean {
+  return id.startsWith("bank-") || id.startsWith("custom-");
+}
 
 export default function SurveyBuilderDetailPage({
   params,
@@ -89,6 +103,14 @@ export default function SurveyBuilderDetailPage({
   const t = useTranslations("app.surveyBuilder.detail");
   const canWrite = usePermission("surveyBuilder", "write");
   const canApprove = usePermission("surveyBuilder", "approve");
+  // Bug fix (Aug 13): Publish and Create New Version were gated on `write`,
+  // which Human Reviewer also holds (restored the same day, for curating
+  // questions mid-review — unrelated to publishing). `create` is the
+  // precise gate for "actually owns the post-approval/post-publish
+  // lifecycle" — every role that should reach these (Researcher, Field
+  // Researcher, NGO Admin, System Admin) holds it, and Human Reviewer,
+  // uniquely, doesn't.
+  const canPublish = usePermission("surveyBuilder", "create");
 
   const [need, setNeed] = useState<Need | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
@@ -111,6 +133,9 @@ export default function SurveyBuilderDetailPage({
 
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Client-confirmed (Aug 13 call): Publish is now the Researcher's own,
+  // separate action from Approve — see publishSurveyNow.
+  const [publishing, setPublishing] = useState(false);
   const [creatingNewVersion, setCreatingNewVersion] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -124,12 +149,13 @@ export default function SurveyBuilderDetailPage({
     return () => clearTimeout(timer);
   }, [message]);
   // Approve/Reject a survey the Researcher already explicitly submitted
-  // (Survey.status === SUBMITTED) — a plain decision on exactly what was
-  // submitted, no editing (the backend's assertEditable blocks
-  // updateQuestions/setMethodologyVersion while SUBMITTED, same as it
-  // always has). Separate from saveAndPublish below, which curates + decides
-  // + publishes in one action but only applies while the Survey is still
-  // DRAFT (need.status === "ai_classified").
+  // (Survey.status === SUBMITTED) — the Approver can still curate questions
+  // right up to this decision (see canEditQuestions/approveSubmittedSurvey
+  // below), but setMethodologyVersion stays locked for everyone once
+  // SUBMITTED. Separate from saveAndApprove below, which curates + decides
+  // in one action but only applies while the Survey is still DRAFT
+  // (need.status === "ai_classified"). Neither one publishes anymore —
+  // that's the Researcher's own separate action (see publishSurveyNow).
   const [approvingSubmitted, setApprovingSubmitted] = useState(false);
 
   // Reject — either the classification decision itself
@@ -145,6 +171,22 @@ export default function SurveyBuilderDetailPage({
   // the aiReviewService.reject branch has no reason-code concept of its own.
   const [reasonCode, setReasonCode] = useState<RejectionReasonCode | "">("");
   const [reasonCodeError, setReasonCodeError] = useState<string | null>(null);
+
+  // Client-confirmed (Aug 13 call): while the Approver curates questions on
+  // a SUBMITTED survey, any removal must carry a reason — prompted right at
+  // the moment of removal, not batched at Save time. Free text for now (a
+  // fixed set of codes was explicitly deferred on that call). Keyed by the
+  // SurveyQuestionItem's own id, carried through to updateQuestions'
+  // removalReasons. The Researcher's own DRAFT/REJECTED editing never
+  // prompts — see removeRecommended/removeAdditional below.
+  const [removalReasons, setRemovalReasons] = useState<Record<string, string>>({});
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    id: string;
+    kind: "recommended" | "additional";
+    label: string;
+  } | null>(null);
+  const [removalReasonInput, setRemovalReasonInput] = useState("");
+  const [removalReasonError, setRemovalReasonError] = useState<string | null>(null);
 
   // Approve & Publish — reviewer notes are mandatory here too (client
   // requirement), so this now goes through its own confirmation dialog
@@ -439,6 +481,13 @@ export default function SurveyBuilderDetailPage({
   }
 
   function removeRecommended(id: string) {
+    if (survey?.status === "SUBMITTED") {
+      const q = recommended.find((r) => r.id === id);
+      setPendingRemoval({ id, kind: "recommended", label: q?.questionText ?? "" });
+      setRemovalReasonInput("");
+      setRemovalReasonError(null);
+      return;
+    }
     setRecommended((prev) => prev.filter((q) => q.id !== id));
     setDirty(true);
   }
@@ -537,8 +586,68 @@ export default function SurveyBuilderDetailPage({
   }
 
   function removeAdditional(id: string) {
+    if (survey?.status === "SUBMITTED") {
+      const q = additional.find((a) => a.id === id);
+      setPendingRemoval({ id, kind: "additional", label: q?.questionText ?? "" });
+      setRemovalReasonInput("");
+      setRemovalReasonError(null);
+      return;
+    }
     setAdditional((prev) => prev.filter((q) => q.id !== id));
     setDirty(true);
+  }
+
+  function cancelRemoval() {
+    setPendingRemoval(null);
+    setRemovalReasonInput("");
+    setRemovalReasonError(null);
+  }
+
+  function confirmRemoval() {
+    if (!pendingRemoval) return;
+    const trimmed = removalReasonInput.trim();
+    if (!trimmed) {
+      setRemovalReasonError(t("removalReasonRequired"));
+      return;
+    }
+    const { id, kind } = pendingRemoval;
+    if (kind === "recommended") {
+      setRecommended((prev) => prev.filter((q) => q.id !== id));
+    } else {
+      setAdditional((prev) => prev.filter((q) => q.id !== id));
+    }
+    setRemovalReasons((prev) => ({ ...prev, [id]: trimmed }));
+    setDirty(true);
+    setPendingRemoval(null);
+    setRemovalReasonInput("");
+    setRemovalReasonError(null);
+  }
+
+  // Shared by every save path (Researcher's own Save, saveAndPublish,
+  // approveSubmittedSurvey) — `id` is only carried through for a question
+  // that already exists on the backend (not one of this session's own
+  // not-yet-saved temp ids), so the backend can tell a genuine removal
+  // apart from a brand-new addition (see updateQuestions' removalReasons).
+  function buildQuestionsPayload(): SaveSurveyQuestionInput[] {
+    return [
+      ...recommended.map((q, index) => ({
+        ...(isTempQuestionId(q.id) ? {} : { id: q.id }),
+        questionId: q.bankQuestionId as string,
+        order: index + 1,
+        isRequired: q.isRequired,
+      })),
+      ...additional.map((q, index) => ({
+        ...(isTempQuestionId(q.id) ? {} : { id: q.id }),
+        customText: q.questionText.trim(),
+        customAnswerType: q.answerType,
+        customOptions: q.answerOptions ?? undefined,
+        domain: q.domain ?? undefined,
+        subDomain: q.subDomain ?? undefined,
+        kpi: q.kpi ?? undefined,
+        order: recommended.length + index + 1,
+        isRequired: q.isRequired,
+      })),
+    ];
   }
 
   async function save() {
@@ -547,24 +656,10 @@ export default function SurveyBuilderDetailPage({
     setError(null);
     setMessage(null);
     try {
-      const payload: SaveSurveyQuestionInput[] = [
-        ...recommended.map((q, index) => ({
-          questionId: q.bankQuestionId as string,
-          order: index + 1,
-          isRequired: q.isRequired,
-        })),
-        ...additional.map((q, index) => ({
-          customText: q.questionText.trim(),
-          customAnswerType: q.answerType,
-          customOptions: q.answerOptions ?? undefined,
-          domain: q.domain ?? undefined,
-          subDomain: q.subDomain ?? undefined,
-          kpi: q.kpi ?? undefined,
-          order: recommended.length + index + 1,
-          isRequired: q.isRequired,
-        })),
-      ];
-      const updated = await surveysService.updateQuestions(survey.id, payload);
+      const updated = await surveysService.updateQuestions(
+        survey.id,
+        buildQuestionsPayload(),
+      );
       setSurvey(updated);
       loadDraftFromSurvey(updated);
       setMessage(t("saved"));
@@ -623,7 +718,11 @@ export default function SurveyBuilderDetailPage({
   // the classification decision (as-is, or with whatever Domain Override
   // was staged on the Need workspace page — see pending-override-storage.ts),
   // save the current question list, then submit and publish the Survey.
-  async function saveAndPublish(comments: string) {
+  // Client-confirmed (Aug 13 call): Approve no longer publishes in the same
+  // step — it hands the survey to APPROVED, and the Researcher (or anyone
+  // else holding surveyBuilder:write) does a separate, deliberate Publish
+  // afterwards (see publishSurveyNow below). Renamed from saveAndPublish.
+  async function saveAndApprove(comments: string) {
     if (!survey || !need) return;
     if (!survey.methodologyVersion) {
       setError(t("methodologyVersionRequiredNote"));
@@ -656,34 +755,20 @@ export default function SurveyBuilderDetailPage({
         await aiReviewService.approve(needId, { domainOverride });
       }
 
-      const payload: SaveSurveyQuestionInput[] = [
-        ...recommended.map((q, index) => ({
-          questionId: q.bankQuestionId as string,
-          order: index + 1,
-          isRequired: q.isRequired,
-        })),
-        ...additional.map((q, index) => ({
-          customText: q.questionText.trim(),
-          customAnswerType: q.answerType,
-          customOptions: q.answerOptions ?? undefined,
-          domain: q.domain ?? undefined,
-          subDomain: q.subDomain ?? undefined,
-          kpi: q.kpi ?? undefined,
-          order: recommended.length + index + 1,
-          isRequired: q.isRequired,
-        })),
-      ];
-      const saved = await surveysService.updateQuestions(survey.id, payload);
+      const saved = await surveysService.updateQuestions(
+        survey.id,
+        buildQuestionsPayload(),
+      );
       const submitted = await surveysService.submitForApproval(saved.id);
-      await surveysService.approveAndPublish(submitted.id, comments);
-      const [published, updatedNeed] = await Promise.all([
+      await surveysService.approveSurvey(submitted.id, comments);
+      const [approved, updatedNeed] = await Promise.all([
         surveysService.getSurveyByNeedId(needId),
         needsService.getById(needId),
       ]);
-      setSurvey(published);
-      loadDraftFromSurvey(published);
+      setSurvey(approved);
+      loadDraftFromSurvey(approved);
       setNeed(updatedNeed);
-      setMessage(t("publishedMessage"));
+      setMessage(t("approvedMessage"));
       setApproveOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -692,17 +777,19 @@ export default function SurveyBuilderDetailPage({
     }
   }
 
-  // Saves whatever the Approver curated (add/remove/reorder/custom — see
-  // canEditQuestions above) then publishes. Distinct from saveAndPublish
-  // only in that it skips submitForApproval — the Survey is already
-  // SUBMITTED (submitForApproval requires DRAFT/REJECTED and would 409).
-  // Still has to commit the classification decision itself first, exactly
-  // like saveAndPublish does: a Survey can reach SUBMITTED while its Need
-  // is still ai_classified (submitForApproval never required the Need to
-  // be reviewer_approved first — see SurveysService), so without this the
-  // Survey publishes fine but the Need's domain/subDomain/needDomains are
-  // never actually written, leaving "Awaiting Approver review" showing
-  // forever even after the Survey is done.
+  // Saves whatever the Approver curated (add/remove/reorder/custom, with a
+  // reason on any removal — see removeRecommended/removeAdditional above)
+  // then approves. Distinct from saveAndApprove only in that it skips
+  // submitForApproval — the Survey is already SUBMITTED (submitForApproval
+  // requires DRAFT/REJECTED and would 409). Still has to commit the
+  // classification decision itself first, exactly like saveAndApprove does:
+  // a Survey can reach SUBMITTED while its Need is still ai_classified
+  // (submitForApproval never required the Need to be reviewer_approved
+  // first — see SurveysService), so without this the Survey gets approved
+  // fine but the Need's domain/subDomain/needDomains are never actually
+  // written, leaving "Awaiting Approver review" showing forever even after
+  // the Survey is done. Client-confirmed (Aug 13 call): no longer
+  // auto-publishes — see saveAndApprove's own comment above.
   async function approveSubmittedSurvey(comments: string) {
     if (!survey || !need) return;
     setApprovingSubmitted(true);
@@ -721,38 +808,48 @@ export default function SurveyBuilderDetailPage({
         await aiReviewService.approve(needId, { domainOverride });
       }
 
-      const payload: SaveSurveyQuestionInput[] = [
-        ...recommended.map((q, index) => ({
-          questionId: q.bankQuestionId as string,
-          order: index + 1,
-          isRequired: q.isRequired,
-        })),
-        ...additional.map((q, index) => ({
-          customText: q.questionText.trim(),
-          customAnswerType: q.answerType,
-          customOptions: q.answerOptions ?? undefined,
-          domain: q.domain ?? undefined,
-          subDomain: q.subDomain ?? undefined,
-          kpi: q.kpi ?? undefined,
-          order: recommended.length + index + 1,
-          isRequired: q.isRequired,
-        })),
-      ];
-      await surveysService.updateQuestions(survey.id, payload);
-      await surveysService.approveAndPublish(survey.id, comments);
-      const [published, updatedNeed] = await Promise.all([
+      await surveysService.updateQuestions(
+        survey.id,
+        buildQuestionsPayload(),
+        removalReasons,
+      );
+      await surveysService.approveSurvey(survey.id, comments);
+      const [approved, updatedNeed] = await Promise.all([
         surveysService.getSurveyByNeedId(needId),
         needsService.getById(needId),
       ]);
-      setSurvey(published);
-      loadDraftFromSurvey(published);
+      setSurvey(approved);
+      loadDraftFromSurvey(approved);
       setNeed(updatedNeed);
-      setMessage(t("publishedMessage"));
+      setRemovalReasons({});
+      setMessage(t("approvedMessage"));
       setApproveOpen(false);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setApprovingSubmitted(false);
+    }
+  }
+
+  // Researcher (or anyone else holding surveyBuilder:write): the actual
+  // go-live step, once the Approver has already approved. Client-confirmed
+  // (Aug 13 call) — a separate, deliberate action now, not chained
+  // automatically off Approve.
+  async function publishSurveyNow() {
+    if (!survey) return;
+    setPublishing(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await surveysService.publishSurvey(survey.id);
+      const published = await surveysService.getSurveyByNeedId(needId);
+      setSurvey(published);
+      loadDraftFromSurvey(published);
+      setMessage(t("publishedMessage"));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -771,7 +868,7 @@ export default function SurveyBuilderDetailPage({
     if (survey?.status === "SUBMITTED") {
       approveSubmittedSurvey(trimmed);
     } else {
-      saveAndPublish(trimmed);
+      saveAndApprove(trimmed);
     }
   }
 
@@ -866,6 +963,25 @@ export default function SurveyBuilderDetailPage({
               actions={
                 survey ? (
                   <div className="flex items-center gap-2">
+                    {/* UX fix (Aug 13): the Reviewer previously had to leave
+                        this page and manually re-find the Need under
+                        Studies just to reach Override Domain (it lives on
+                        the Need detail page's AiClassificationSection, not
+                        here) — a real navigation gap, not a permission
+                        issue. canApprove here doubles as "holds aiReview:
+                        approve too" for every role that currently has
+                        surveyBuilder:approve at all (Human Reviewer, NGO
+                        Admin), so it's a safe proxy without adding a
+                        second permission check purely for this link — the
+                        destination page still gates the button itself. */}
+                    {canApprove && need ? (
+                      <Button asChild size="sm" variant="outline" className="gap-1.5">
+                        <Link href={`/studies/${need.studyId}/needs/${needId}`}>
+                          <ExternalLink className="size-3.5" />
+                          {t("viewNeedClassification")}
+                        </Link>
+                      </Button>
+                    ) : null}
                     <Badge
                       variant="outline"
                       className={STATUS_BADGE_CLASS[survey.status]}
@@ -874,12 +990,15 @@ export default function SurveyBuilderDetailPage({
                     </Badge>
                     {/* isEditable (below) requires DRAFT/REJECTED, so once a
                         Researcher explicitly submits, these are the
-                        Approver's decision actions — Approve & Publish here
-                        also saves whatever they curated via canEditQuestions
-                        above first (see approveSubmittedSurvey). No role
-                        holds surveyBuilder:approve without :write (see
-                        role-matrix.ts), so canApprove alone already excludes
-                        the Research Officer correctly. */}
+                        Approver's decision actions — Approve here also
+                        saves whatever they curated via canEditQuestions
+                        above first (see approveSubmittedSurvey). Client-
+                        confirmed (Aug 13 call): Approve no longer publishes
+                        — it moves to APPROVED, and the Researcher publishes
+                        separately below. No role holds surveyBuilder:approve
+                        without :write (see role-matrix.ts), so canApprove
+                        alone already excludes the Research Officer
+                        correctly. */}
                     {canApprove && survey.status === "SUBMITTED" ? (
                       <>
                         <Button
@@ -897,7 +1016,7 @@ export default function SurveyBuilderDetailPage({
                           onClick={openApproveDialog}
                           disabled={approvingSubmitted}
                         >
-                          {approvingSubmitted ? t("publishing") : t("saveAndPublish")}
+                          {approvingSubmitted ? t("approving") : t("approveAction")}
                         </Button>
                       </>
                     ) : null}
@@ -930,7 +1049,7 @@ export default function SurveyBuilderDetailPage({
                           onClick={openApproveDialog}
                           disabled={submitting}
                         >
-                          {submitting ? t("publishing") : t("saveAndPublish")}
+                          {submitting ? t("approving") : t("approveAction")}
                         </Button>
                       </>
                     ) : isEditable && !canApprove ? (
@@ -941,6 +1060,30 @@ export default function SurveyBuilderDetailPage({
                         title={dirty ? t("saveBeforeSubmit") : undefined}
                       >
                         {submitting ? t("submitting") : t("submitForApproval")}
+                      </Button>
+                    ) : null}
+                    {/* Client-confirmed (Aug 13 call): Publish is the
+                        Researcher's own, separate action once a survey is
+                        APPROVED — never chained automatically off Approve.
+                        canPublish (not canWrite) — see its own comment. */}
+                    {canPublish && survey.status === "APPROVED" ? (
+                      <Button size="sm" onClick={publishSurveyNow} disabled={publishing}>
+                        {publishing ? t("publishing") : t("publishAction")}
+                      </Button>
+                    ) : null}
+                    {/* UX fix (Aug 13): moved out of a banner further down
+                        the page into the header actions row, alongside
+                        every other survey-lifecycle action. */}
+                    {canPublish && survey.status === "PUBLISHED" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={createNewVersion}
+                        disabled={creatingNewVersion}
+                      >
+                        {creatingNewVersion
+                          ? t("creatingNewVersion")
+                          : t("createNewVersion")}
                       </Button>
                     ) : null}
                   </div>
@@ -957,6 +1100,32 @@ export default function SurveyBuilderDetailPage({
                 <p className="text-badge-warning-foreground text-sm">
                   {canApprove ? t("submittedNoticeApprover") : t("submittedNotice")}
                 </p>
+              </div>
+            ) : null}
+
+            {/* Client-confirmed (Aug 13 call): a distinct APPROVED state —
+                the Approver has signed off, but nothing is live until the
+                Researcher (or anyone else holding surveyBuilder:create)
+                clicks Publish above. canPublish (not canWrite) — Human
+                Reviewer holds write (for question curation) but not
+                create, so they correctly see "sent to the Researcher"
+                rather than a call to action they can't actually take. */}
+            {survey?.status === "APPROVED" ? (
+              <div
+                role="status"
+                className="border-badge-primary/40 bg-badge-primary/10 mb-4 flex items-start gap-2.5 rounded-md border p-3.5"
+              >
+                <Check className="text-badge-primary-foreground mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-badge-primary-foreground text-sm">
+                    {canPublish ? t("approvedNoticeResearcher") : t("approvedNotice")}
+                  </p>
+                  {survey.approverComments ? (
+                    <p className="text-foreground text-sm whitespace-pre-wrap">
+                      {survey.approverComments}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             ) : null}
 
@@ -994,23 +1163,18 @@ export default function SurveyBuilderDetailPage({
               </div>
             ) : null}
 
-            {survey?.status === "PUBLISHED" && canWrite ? (
+            {/* UX fix (Aug 13): the Create New Version action now lives as
+                a button in the header actions row (top-right, alongside
+                Publish/Approve/Save) instead of buried in this banner —
+                this stays purely informational. canPublish (not canWrite)
+                — same Human-Reviewer-exclusion reasoning as Publish above. */}
+            {survey?.status === "PUBLISHED" && canPublish ? (
               <div
                 role="status"
-                className="border-border bg-muted/40 mb-4 flex items-start justify-between gap-2.5 rounded-md border p-3.5"
+                className="border-border bg-muted/40 mb-4 flex items-start gap-2.5 rounded-md border p-3.5"
               >
-                <div className="flex items-start gap-2.5">
-                  <Check className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                  <p className="text-foreground text-sm">{t("publishedEditNotice")}</p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={createNewVersion}
-                  disabled={creatingNewVersion}
-                >
-                  {creatingNewVersion ? t("creatingNewVersion") : t("createNewVersion")}
-                </Button>
+                <Check className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                <p className="text-foreground text-sm">{t("publishedEditNotice")}</p>
               </div>
             ) : null}
 
@@ -1858,9 +2022,62 @@ export default function SurveyBuilderDetailPage({
                 isLoading={submitting || approvingSubmitted}
                 onClick={confirmApprove}
                 text={
-                  submitting || approvingSubmitted ? t("publishing") : t("confirmApprove")
+                  submitting || approvingSubmitted ? t("approving") : t("confirmApprove")
                 }
               />
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Client-confirmed (Aug 13 call): a reason is required for every
+            question the Approver removes while reviewing a SUBMITTED
+            survey — prompted right at the moment of removal (see
+            removeRecommended/removeAdditional), not batched at Save time.
+            Free text for now — a fixed set of codes was explicitly
+            deferred until the client hands one over. */}
+        <Dialog
+          open={pendingRemoval !== null}
+          onOpenChange={(open) => {
+            if (!open) cancelRemoval();
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("removalReasonDialogTitle")}</DialogTitle>
+              <DialogDescription>
+                {pendingRemoval?.label
+                  ? t("removalReasonDialogDescription", {
+                      question: pendingRemoval.label,
+                    })
+                  : null}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="removal-reason">
+                {t("removalReasonLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="removal-reason"
+                rows={4}
+                value={removalReasonInput}
+                onChange={(e) => {
+                  setRemovalReasonInput(e.target.value);
+                  if (removalReasonError) setRemovalReasonError(null);
+                }}
+                placeholder={t("removalReasonPlaceholder")}
+                aria-invalid={removalReasonError ? true : undefined}
+              />
+              {removalReasonError ? (
+                <p className="text-destructive text-sm">{removalReasonError}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={cancelRemoval}>
+                {t("cancel")}
+              </Button>
+              <Button type="button" variant="destructive" onClick={confirmRemoval}>
+                {t("removeQuestion")}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
