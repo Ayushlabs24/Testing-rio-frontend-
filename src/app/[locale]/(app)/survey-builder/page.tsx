@@ -57,6 +57,10 @@ interface Row {
 const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
   DRAFT: undefined,
   SUBMITTED: "bg-badge-warning text-badge-warning-foreground border-transparent",
+  // Client-confirmed (Aug 13 call): approved but not yet published — the
+  // Researcher still has to Publish it. Same token choice as the detail
+  // page's own STATUS_BADGE_CLASS.
+  APPROVED: "bg-badge-primary text-badge-primary-foreground border-transparent",
   REJECTED: "bg-destructive/10 text-destructive border-transparent",
   PUBLISHED: "bg-badge-success text-badge-success-foreground border-transparent",
   SUPERSEDED: "bg-muted text-muted-foreground border-transparent",

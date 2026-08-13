@@ -74,8 +74,12 @@ export interface ReusableCustomQuestion {
  * itself gets published. Its questions and every response already attached
  * to it are never touched — only this status flag changes, so exactly one
  * PUBLISHED survey ever exists per Need at a time. */
+// Client-confirmed (Aug 13 call): Approve and Publish are two separate
+// steps now — the Approver's Approve moves a survey to APPROVED, not
+// straight to PUBLISHED; the Researcher (or anyone else holding
+// surveyBuilder:write) then Publishes it themselves.
 export type SurveyStatus =
-  "DRAFT" | "SUBMITTED" | "REJECTED" | "PUBLISHED" | "SUPERSEDED";
+  "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED" | "PUBLISHED" | "SUPERSEDED";
 
 /** Matches the Prisma RejectionReasonCode enum's identifiers exactly (see
  * schema.prisma). REJ_99 is "Other". `approverComments` (reviewer notes) is
@@ -216,9 +220,15 @@ export interface SurveyResponseStats {
  * additional question); never both. Mirrors the backend's
  * SurveysService.updateQuestions validation.
  */
+// `id` (the SurveyQuestionItem's own id) is present only for a question
+// carried over unchanged from what was loaded — omitted for a newly-added
+// one, since the backend hasn't generated its id yet. The backend uses it
+// purely to detect removals (see updateQuestions' removalReasons below);
+// this endpoint still deletes-and-recreates the whole set either way.
 export type SaveSurveyQuestionInput =
-  | { questionId: string; order: number; isRequired: boolean }
+  | { id?: string; questionId: string; order: number; isRequired: boolean }
   | {
+      id?: string;
       customText: string;
       customAnswerType?: string;
       customOptions?: string[];
@@ -324,12 +334,21 @@ export const surveysService = {
     return apiClient.post<Survey>(endpoints.surveys.forNeed(needId));
   },
 
+  /** `removalReasons` — client-confirmed (Aug 13 call): a question removed
+   * while the survey is SUBMITTED (i.e. the Reviewer curating during
+   * review) must carry a reason, keyed by that question's own `id`. The
+   * Researcher's own DRAFT-phase edits never need one, and the backend
+   * only enforces it during SUBMITTED regardless of what's passed here. */
   async updateQuestions(
     surveyId: string,
     questions: SaveSurveyQuestionInput[],
+    removalReasons?: Record<string, string>,
   ): Promise<Survey> {
     return apiClient.patch<Survey>(endpoints.surveys.updateQuestions(surveyId), {
       questions,
+      ...(removalReasons && Object.keys(removalReasons).length > 0
+        ? { removalReasons }
+        : {}),
     });
   },
 
@@ -367,14 +386,23 @@ export const surveysService = {
     return apiClient.post<SurveyRecord>(endpoints.surveys.submit(surveyId));
   },
 
-  /** Approver-only. Combines approve + publish — there's no intermediate
-   * "approved but not yet published" state. `comments` (reviewer notes) is
-   * mandatory — enforced both here (the approve dialog) and again on the
-   * backend. */
-  async approveAndPublish(surveyId: string, comments: string): Promise<SurveyRecord> {
+  /** Approver-only. Client-confirmed (Aug 13 call): approve no longer
+   * publishes in the same step — this moves the survey to APPROVED and
+   * hands it back to the Researcher, who calls publishSurvey below to
+   * actually go live. `comments` (reviewer notes) is mandatory — enforced
+   * both here (the approve dialog) and again on the backend. */
+  async approveSurvey(surveyId: string, comments: string): Promise<SurveyRecord> {
     return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId), {
       comments,
     });
+  },
+
+  /** Researcher (or anyone else holding surveyBuilder:write). The actual
+   * go-live step, once the Approver has already approved — no notes
+   * needed, that decision was already recorded by approveSurvey. Only
+   * valid from APPROVED. */
+  async publishSurvey(surveyId: string): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(endpoints.surveys.publish(surveyId));
   },
 
   /** Approver-only. `reasonCode` and `comments` (reviewer notes) are both

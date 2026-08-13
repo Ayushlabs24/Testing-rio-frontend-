@@ -275,12 +275,11 @@ export const roles: Role[] = [
       perm("reportsDashboards", { read: true, approve: true, export: true }),
       // Matrix: no Audit/System Logs access for this role (was read-only).
       perm("archiveSharingAudit"),
-      // RIO-RBAC-001 matrix (Aug 11, client-confirmed): Surveys = View +
-      // Approve only — `write` (question curation) is REMOVED here,
-      // reversing an earlier product decision that this role also curates
-      // questions alongside the Researcher. See the flagged comment on the
-      // matching line in the backend's role-matrix.ts.
-      perm("surveyBuilder", { read: true, approve: true }),
+      // `write` restored (Aug 13 call, client-confirmed): the Reviewer does
+      // curate questions during review — add, remove, or keep as-is, with a
+      // mandatory reason on any removal. See the matching backend
+      // role-matrix.ts comment.
+      perm("surveyBuilder", { read: true, write: true, approve: true }),
       perm("ncnpReport"),
     ],
   },

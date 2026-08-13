@@ -247,8 +247,6 @@
       "reviewerSlaAlerts": "تنبيهات اتفاقية مستوى الخدمة للمراجع",
       "reviewerSlaPendingCount": "{count} عنصر مراجعة بانتظار الإجراء",
       "surveyStatusUpdateCount": "{count} تحديث حالة",
-      "ncnpReportPendingReviewCount": "{count} تقرير مجمّع لـ NCNP بانتظار مراجعتك",
-      "ncnpReportReadyToPublishCount": "{count} تقرير مجمّع لـ NCNP جاهز للنشر",
       "sharingAlerts": "إشعارات المشاركة",
       "sharingSectionTitle": "طلبات المشاركة",
       "sharingAlertsEmpty": "لا توجد إشعارات مشاركة",
@@ -259,7 +257,9 @@
       "sharingAlertApprovedReport": "تمت الموافقة على طلبك لـ \"{title}\"",
       "sharingAlertRejectedStudy": "تم رفض طلبك لـ \"{title}\"",
       "sharingAlertRejectedReport": "تم رفض طلبك لـ \"{title}\"",
-      "sharingAlertReasonPrefix": "السبب: {reason}"
+      "sharingAlertReasonPrefix": "السبب: {reason}",
+      "ncnpReportAlertPendingReview": "تقرير NCNP المجمّع بانتظار مراجعتك",
+      "ncnpReportAlertReadyToPublish": "تقرير NCNP المجمّع جاهز للنشر"
     },
     "footer": {
       "rightsReserved": "جميع الحقوق محفوظة.",
@@ -661,6 +661,8 @@
         "title": "المستخدمون",
         "description": "كل من لديه صلاحية وصول إلى هذه المنظمة.",
         "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني...",
+        "filterOrganizationLabel": "المنظمة",
+        "filterOrganizationAll": "كل المنظمات",
         "noResults": "لم يتم العثور على مستخدمين.",
         "newUser": "مستخدم جديد",
         "newUserTitle": "إضافة مستخدم",
@@ -720,7 +722,16 @@
         "membersRoleColumn": "الدور",
         "noMembers": "لا يوجد أعضاء بعد.",
         "manageInUsers": "إدارة من صفحة المستخدمين",
-        "usersDescriptionGlobal": "كل مستخدم عبر كل منظمة."
+        "usersDescriptionGlobal": "كل مستخدم عبر كل منظمة.",
+        "filterRegionLabel": "المنطقة",
+        "filterRegionAll": "كل المناطق",
+        "filterSectorLabel": "القطاع",
+        "filterSectorAll": "كل القطاعات",
+        "pagination": {
+          "previous": "السابق",
+          "next": "التالي",
+          "label": "صفحة {page} من {count}"
+        }
       },
       "audit": {
         "title": "سجل التدقيق",
@@ -813,6 +824,11 @@
       "placeholderNote": "درجة الأولوية هي تجميع مرجّح لدرجات أداء المجالات، وفقًا لأوزان المنهجية المهيَّأة للمنظمة وعتبات المجال الحرج. راجع صفحة رؤى الاحتياج للاطلاع على التفصيل الكامل للمجالات.",
       "filterLevelLabel": "مستوى الأولوية",
       "filterLevelAll": "جميع المستويات",
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      },
       "studyColumn": "الدراسة",
       "scoreColumn": "الدرجة",
       "levelColumn": "المستوى",
@@ -863,6 +879,7 @@
       },
       "status": {
         "draft": "مسودة",
+        "submitted": "مُرسل للمراجعة",
         "rejected": "مرفوض",
         "released": "منشور",
         "archived": "مؤرشف"
@@ -1117,7 +1134,12 @@
       "filterVillageLabel": "المحافظة",
       "filterVillageAll": "جميع المحافظات",
       "noResultsFilteredHint": "جرّب تعديل عوامل التصفية أو مسحها.",
-      "noResultsEmptyHint": "ستظهر هنا الدراسات المكتملة والتقارير المعتمدة بمجرد وجودها."
+      "noResultsEmptyHint": "ستظهر هنا الدراسات المكتملة والتقارير المعتمدة بمجرد وجودها.",
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      }
     },
     "sharing": {
       "title": "المشاركة",
@@ -1305,16 +1327,22 @@
       "type": {
         "ai_classification": "تصنيف الذكاء الاصطناعي",
         "survey_approval": "اعتماد الاستبيان",
-        "survey_approved": "معتمد ومنشور",
+        "survey_ready_to_publish": "معتمد — بانتظار النشر",
         "survey_rejected": "طُلب إجراء تغييرات",
         "report_approval": "اعتماد التقرير",
         "report_released": "منشور",
-        "report_rejected": "مرفوض"
+        "report_rejected": "مرفوض",
+        "evidence_document_uploaded": "ملخص الأدلة معلّق"
       },
       "titleOwn": "مشاركاتي",
       "descriptionOwn": "الاستبيانات والتقارير التي قدّمتها، وما إذا تمت الموافقة عليها أو أُعيدت لإجراء تغييرات.",
       "noAlertsOwn": "لا توجد تحديثات حالة بعد.",
-      "viewNow": "عرض"
+      "viewNow": "عرض",
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      }
     },
     "publicSurveys": {
       "title": "الاستبيانات العامة",
@@ -1503,6 +1531,11 @@
           "next": "التالي",
           "label": "الصفحة {page} من {count}"
         }
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
       }
     },
     "studies": {
@@ -1905,6 +1938,7 @@
       },
       "detail": {
         "backToList": "رجوع",
+        "viewNeedClassification": "عرض الاحتياج / تجاوز التصنيف",
         "recommendedHeading": "الأسئلة الموصى بها من الذكاء الاصطناعي",
         "noRecommendedQuestions": "لم يتم اختيار أسئلة من بنك الأسئلة بعد.",
         "showMore": "{count, plural, one {عرض # أخرى} other {عرض # أخرى}}",
@@ -1964,12 +1998,17 @@
         "methodologyVersionPendingNote": "(سيُسجَّل عند نشر هذا الاستبيان)",
         "submitForApproval": "إرسال للمراجعة",
         "submitting": "جارٍ الإرسال...",
-        "saveAndPublish": "اعتماد ونشر",
+        "approveAction": "اعتماد",
+        "approving": "جارٍ الاعتماد...",
+        "publishAction": "نشر",
         "publishing": "جارٍ النشر...",
-        "publishedMessage": "تم حفظ الاستبيان ونشره.",
+        "approvedMessage": "تم اعتماد الاستبيان. انشره ليصبح مباشرًا.",
+        "publishedMessage": "تم نشر الاستبيان.",
         "saveBeforeSubmit": "احفظ تغييراتك قبل الإرسال للاعتماد.",
         "submittedNotice": "تم إرسال هذا الاستبيان وهو بانتظار الاعتماد. التعديل معطّل حتى تتم مراجعته.",
-        "submittedNoticeApprover": "تم إرسال هذا الاستبيان لمراجعتك. يمكنك إضافة الأسئلة أو إزالتها أو إعادة ترتيبها قبل الاعتماد والنشر أو الرفض.",
+        "submittedNoticeApprover": "تم إرسال هذا الاستبيان لمراجعتك. يمكنك إضافة الأسئلة أو إزالتها أو إعادة ترتيبها قبل الاعتماد أو الرفض — إزالة سؤال تتطلب سببًا.",
+        "approvedNotice": "تم اعتماد هذا الاستبيان وإرساله إلى الباحث لنشره.",
+        "approvedNoticeResearcher": "تم اعتماد هذا الاستبيان. اضغط نشر أعلاه ليصبح مباشرًا.",
         "rejectedNoticeTitle": "تم طلب إجراء تغييرات",
         "goToReview": "الانتقال إلى المراجعة",
         "reject": "رفض",
@@ -1987,18 +2026,26 @@
         "confirmReject": "رفض",
         "rejecting": "جارٍ الرفض...",
         "reviewerNotesTitle": "ملاحظات المراجع",
-        "approveDialogTitle": "اعتماد ونشر هذا الاستبيان",
-        "approveDialogDescription": "ملاحظات المراجع مطلوبة وستُسجَّل في سجل التدقيق.",
-        "approveCommentsPlaceholder": "اشرح قرارك باعتماد ونشر هذا الاستبيان...",
+        "approveDialogTitle": "اعتماد هذا الاستبيان",
+        "approveDialogDescription": "ملاحظات المراجع مطلوبة وستُسجَّل في سجل التدقيق. سيقوم الباحث بنشره بعد الاعتماد.",
+        "approveCommentsPlaceholder": "اشرح قرارك باعتماد هذا الاستبيان...",
         "approveCommentsRequired": "أدخل ملاحظات المراجع قبل الاعتماد.",
-        "confirmApprove": "اعتماد ونشر",
+        "confirmApprove": "اعتماد",
+        "removalReasonDialogTitle": "سبب إزالة هذا السؤال",
+        "removalReasonDialogDescription": "سيتم إزالة \"{question}\" من هذا الاستبيان. لن يُزال من بنك الأسئلة.",
+        "removalReasonLabel": "السبب",
+        "removalReasonPlaceholder": "اشرح سبب إزالة هذا السؤال...",
+        "removalReasonRequired": "أدخل سببًا لإزالة هذا السؤال.",
+        "removeQuestion": "إزالة السؤال",
         "status": {
           "DRAFT": "مسودة",
           "SUBMITTED": "أُرسل للاعتماد",
+          "APPROVED": "معتمد — بانتظار النشر",
           "REJECTED": "مرفوض",
           "PUBLISHED": "منشور",
           "draft": "مسودة",
           "submitted": "أُرسل للاعتماد",
+          "approved": "معتمد — بانتظار النشر",
           "rejected": "مرفوض",
           "published": "منشور"
         },
@@ -2077,10 +2124,12 @@
       "status": {
         "DRAFT": "مسودة",
         "SUBMITTED": "أُرسل للاعتماد",
+        "APPROVED": "معتمد — بانتظار النشر",
         "REJECTED": "مرفوض",
         "PUBLISHED": "منشور",
         "draft": "مسودة",
         "submitted": "أُرسل للاعتماد",
+        "approved": "معتمد — بانتظار النشر",
         "rejected": "مرفوض",
         "published": "منشور",
         "SUPERSEDED": "تم استبدالها"
@@ -2552,7 +2601,12 @@
         "actions": "الإجراءات"
       },
       "noResults": "لم يتم العثور على منظمات مطابقة لمعاييرك.",
-      "viewDetails": "عرض التفاصيل"
+      "viewDetails": "عرض التفاصيل",
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      }
     },
     "createDialog": {
       "title": "إنشاء منظمة",

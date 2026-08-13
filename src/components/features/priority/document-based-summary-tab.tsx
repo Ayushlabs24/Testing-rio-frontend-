@@ -125,7 +125,16 @@ export function DocumentBasedSummaryTab({
   const router = useRouter();
 
   const canWrite = usePermission("dataCollection", "write");
-  const canAi = usePermission("aiReview", "write");
+  // Bug fix (Aug 14 audit): uploading is a create action, not an edit of
+  // something that already exists — same mismatch class as the two other
+  // Evidence pages fixed earlier (canWrite stays correct for toggle-
+  // inclusion/delete of an already-uploaded document, both below).
+  const canCreate = usePermission("dataCollection", "create");
+  // Client-confirmed (Aug 14): AI Evidence Summary generation is Data
+  // Analyst's action — was aiReview:write (shared with Research Officer's
+  // unrelated Need-classification-trigger use of that flag).
+  // priorityScoring:write is the precise gate.
+  const canAi = usePermission("priorityScoring", "write");
   const canCreateReport = usePermission("reportsDashboards", "create");
 
   const [documents, setDocuments] = useState<EvidenceDocument[]>([]);
@@ -208,7 +217,7 @@ export function DocumentBasedSummaryTab({
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canWrite || !selectedFile) return;
+    if (!canCreate || !selectedFile) return;
 
     setUploading(true);
     setUnsupportedError(null);
@@ -427,7 +436,7 @@ export function DocumentBasedSummaryTab({
           <h2 className="text-foreground text-lg font-semibold">{t("title")}</h2>
           <p className="text-muted-foreground text-xs">{t("subtitle")}</p>
         </div>
-        {canWrite && (
+        {canCreate && (
           <Button
             onClick={() => setUploadDialogOpen(true)}
             className="flex items-center gap-2"

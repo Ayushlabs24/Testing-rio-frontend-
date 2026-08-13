@@ -5,12 +5,14 @@ export type SlaAlertStatus = "pending" | "at_risk" | "breached";
  * shows you a queue you don't hold permission for:
  *  - survey_approval: org-wide Surveys sitting SUBMITTED awaiting YOUR
  *    Approve/Reject — shown only to a Reviewer/Approver (surveyBuilder:approve).
- *  - survey_approved / survey_rejected: YOUR OWN Surveys (the ones you
- *    submitted) that just reached PUBLISHED/REJECTED — shown only to the
- *    Research Officer who created them. `comments` is set only for
- *    survey_rejected (the Approver's reason). Nothing here is racing an
- *    SLA clock (already resolved) — `status` is always "pending", meaning
- *    "unread," not "at risk."
+ *  - survey_ready_to_publish / survey_rejected: YOUR OWN Surveys (the ones
+ *    you submitted) that just reached APPROVED/REJECTED — shown only to the
+ *    Research Officer who created them. Client-confirmed (Aug 13 call):
+ *    approval no longer auto-publishes, so "approved" now means "go
+ *    publish it yourself," not "it's already live." `comments` is set only
+ *    for survey_rejected (the Approver's reason). Nothing here is racing an
+ *    SLA clock (already resolved/actionable-by-you) — `status` is always
+ *    "pending", meaning "unread," not "at risk."
  *  - report_approval: org-wide Reports the Research Officer has confirmed
  *    but that are still awaiting YOUR Approve/Reject — shown to whoever
  *    holds reportsDashboards:approve. Reports have no configured SLA clock,
@@ -21,20 +23,28 @@ export type SlaAlertStatus = "pending" | "at_risk" | "breached";
  *    to the Research Officer who generated them (reportsDashboards:write
  *    without :approve). No `comments` today — Report rejection has no
  *    reason field yet, unlike Survey rejection.
- * `id` is whichever underlying row (AiDecision.id, Survey.id, or Report.id)
- * — use it as the list key. `needId`/`studyId`/`surveyId` are only ever set
- * for the survey_* types (a Report can be org-wide, with no Study at all);
- * `reportId` is only set for the report_* types instead. `studyTitle`
- * doubles as "the link text" for either kind — a real Study title for
- * survey alerts, the Report's own title for report alerts. */
+ *  - evidence_document_uploaded: org-wide EvidenceDocuments linked to a Need
+ *    that don't have an AI Evidence Summary yet — shown only to whoever
+ *    holds priorityScoring:create (the Data Analyst; the Research Officer
+ *    who uploaded it doesn't see it echoed back). Links to the Priority
+ *    Dashboard for that Need. No SLA clock — `status` is always "pending",
+ *    and it auto-resolves once a summary is generated for the document.
+ * `id` is whichever underlying row (AiDecision.id, Survey.id, Report.id, or
+ * EvidenceDocument.id) — use it as the list key. `needId`/`studyId`/
+ * `surveyId` are only ever set for the survey_* and evidence_document_uploaded
+ * types (a Report can be org-wide, with no Study at all); `reportId` is only
+ * set for the report_* types instead. `studyTitle` doubles as "the link
+ * text" for every kind — a real Study title for survey/evidence alerts, the
+ * Report's own title for report alerts. */
 export type SlaAlertType =
   | "ai_classification"
   | "survey_approval"
-  | "survey_approved"
+  | "survey_ready_to_publish"
   | "survey_rejected"
   | "report_approval"
   | "report_released"
-  | "report_rejected";
+  | "report_rejected"
+  | "evidence_document_uploaded";
 
 export interface SlaAlert {
   id: string;

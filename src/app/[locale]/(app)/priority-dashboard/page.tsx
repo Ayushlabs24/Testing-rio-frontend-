@@ -10,6 +10,7 @@ import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PRIORITY_DASHBOARD_PAGE_SIZE } from "@/config/pagination";
 import { Link } from "@/i18n/navigation";
 import { priorityService } from "@/services/priority/priority.service";
 import type {
@@ -51,6 +53,9 @@ export default function PriorityDashboardPage() {
   const [levelFilter, setLevelFilter] = useState<PriorityScore["level"] | typeof ALL>(
     ALL,
   );
+  // Pagination (Aug 14) — this list has no upper bound (every scored Need
+  // across every Study), so it needs paging like every other list page.
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     priorityService
@@ -76,6 +81,16 @@ export default function PriorityDashboardPage() {
 
   const filtered = (entries ?? []).filter((entry) =>
     levelFilter === ALL ? true : entry.score?.level === levelFilter,
+  );
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filtered.length / PRIORITY_DASHBOARD_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, pageCount);
+  const pagedEntries = filtered.slice(
+    (currentPage - 1) * PRIORITY_DASHBOARD_PAGE_SIZE,
+    currentPage * PRIORITY_DASHBOARD_PAGE_SIZE,
   );
 
   return (
@@ -112,9 +127,10 @@ export default function PriorityDashboardPage() {
             <div className="border-border border-b px-4 py-3">
               <Select
                 value={levelFilter}
-                onValueChange={(v) =>
-                  setLevelFilter(v as PriorityScore["level"] | typeof ALL)
-                }
+                onValueChange={(v) => {
+                  setLevelFilter(v as PriorityScore["level"] | typeof ALL);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger
                   className="h-8 w-full sm:w-48"
@@ -168,7 +184,7 @@ export default function PriorityDashboardPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((entry) => (
+                  pagedEntries.map((entry) => (
                     <TableRow key={entry.needId}>
                       <TableCell className="py-4 text-sm font-medium">
                         <Link
@@ -210,6 +226,19 @@ export default function PriorityDashboardPage() {
                 )}
               </TableBody>
             </Table>
+
+            {filtered.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </PageContainer>

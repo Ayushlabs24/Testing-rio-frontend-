@@ -2,7 +2,7 @@
 
 import { Building2, Eye, Users2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -12,6 +12,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -27,10 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ORGANIZATIONS_PAGE_SIZE } from "@/config/pagination";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { usersService } from "@/services/users/users.service";
 import type { OrgUser } from "@/services/users/users.types";
+
+const ALL = "all";
 
 function initials(name: string): string {
   return name
@@ -176,6 +187,13 @@ export default function OrganizationsSettingsPage() {
   const [organizations, setOrganizations] = useState<OrganizationSummary[] | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  // Region/Sector filters + pagination (Aug 14): this list has no upper
+  // bound (every org on the platform), so a System Reviewer/Center
+  // Supervisor scanning it needs both a way to narrow it down and a way to
+  // page through it without one giant unbroken table.
+  const [regionFilter, setRegionFilter] = useState<string>(ALL);
+  const [sectorFilter, setSectorFilter] = useState<string>(ALL);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (session?.role.key === "system_admin") {
@@ -190,6 +208,44 @@ export default function OrganizationsSettingsPage() {
     setDetailOpen(true);
   };
 
+  // Derived from whatever's actually loaded — region and sector are both
+  // free-text (region an array per org, sector a live Methodology
+  // Configuration domain name), so there's no fixed enum to filter against;
+  // the option list is exactly what's really in use right now.
+  const availableRegions = useMemo(() => {
+    const set = new Set<string>();
+    for (const org of organizations ?? []) {
+      for (const r of org.region) set.add(r);
+    }
+    return Array.from(set).sort();
+  }, [organizations]);
+
+  const availableSectors = useMemo(() => {
+    const set = new Set<string>();
+    for (const org of organizations ?? []) {
+      if (org.sector) set.add(org.sector);
+    }
+    return Array.from(set).sort();
+  }, [organizations]);
+
+  const filteredOrganizations = useMemo(() => {
+    return (organizations ?? []).filter(
+      (org) =>
+        (regionFilter === ALL || org.region.includes(regionFilter)) &&
+        (sectorFilter === ALL || org.sector === sectorFilter),
+    );
+  }, [organizations, regionFilter, sectorFilter]);
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredOrganizations.length / ORGANIZATIONS_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, pageCount);
+  const pagedOrganizations = filteredOrganizations.slice(
+    (currentPage - 1) * ORGANIZATIONS_PAGE_SIZE,
+    currentPage * ORGANIZATIONS_PAGE_SIZE,
+  );
+
   return (
     <CrossEntityGuard>
       <PageContainer>
@@ -197,6 +253,52 @@ export default function OrganizationsSettingsPage() {
 
         <Card>
           <CardContent className="p-0">
+            <div className="border-border flex flex-wrap items-center gap-2 border-b px-4 py-3">
+              <Select
+                value={regionFilter}
+                onValueChange={(v) => {
+                  setRegionFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-48"
+                  aria-label={t("filterRegionLabel")}
+                >
+                  <SelectValue placeholder={t("filterRegionLabel")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("filterRegionAll")}</SelectItem>
+                  {availableRegions.map((region) => (
+                    <SelectItem key={region} value={region}>
+                      {region}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={sectorFilter}
+                onValueChange={(v) => {
+                  setSectorFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-48"
+                  aria-label={t("filterSectorLabel")}
+                >
+                  <SelectValue placeholder={t("filterSectorLabel")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("filterSectorAll")}</SelectItem>
+                  {availableSectors.map((sector) => (
+                    <SelectItem key={sector} value={sector}>
+                      {tSectors.has(sector as never) ? tSectors(sector as never) : sector}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -217,7 +319,7 @@ export default function OrganizationsSettingsPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : organizations.length === 0 ? (
+                ) : filteredOrganizations.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={6}
@@ -232,7 +334,7 @@ export default function OrganizationsSettingsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  organizations.map((organization) => (
+                  pagedOrganizations.map((organization) => (
                     <TableRow
                       key={organization.id}
                       className="hover:bg-muted/50 cursor-pointer"
@@ -245,7 +347,11 @@ export default function OrganizationsSettingsPage() {
                         {organization.region.join(", ")}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {organization.sector ? tSectors(organization.sector) : "—"}
+                        {organization.sector
+                          ? tSectors.has(organization.sector as never)
+                            ? tSectors(organization.sector as never)
+                            : organization.sector
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {organization.memberCount}
@@ -280,6 +386,19 @@ export default function OrganizationsSettingsPage() {
                 )}
               </TableBody>
             </Table>
+
+            {filteredOrganizations.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

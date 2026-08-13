@@ -68,6 +68,8 @@ import type { RoleSummary } from "@/services/roles/roles.types";
 import { usersService } from "@/services/users/users.service";
 import type { PlatformUser, UserStatus } from "@/services/users/users.types";
 
+const ALL = "all";
+
 function initials(name: string): string {
   return name
     .split(" ")
@@ -500,10 +502,20 @@ export default function UsersSettingsPage() {
   const { session } = useAuth();
   const isCrossEntity = session?.role.crossEntity ?? false;
   const canWrite = usePermission("entityTeam", "write");
+  // Bug fix (Aug 13): the Create User button was checking `write` (the
+  // Edit-user action) instead of `create` — coincidentally identical for
+  // every role that currently holds both, but semantically wrong, and the
+  // exact kind of mismatch that silently hides a button a role should
+  // actually see.
+  const canCreate = usePermission("entityTeam", "create");
   const [users, setUsers] = useState<PlatformUser[] | null>(null);
   const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  // Organization filter (Aug 14) — only meaningful for the crossEntity,
+  // every-org view (System Reviewer/Center Supervisor); a same-org role only
+  // ever sees its own team, so there's nothing to filter there.
+  const [orgFilter, setOrgFilter] = useState<string>(ALL);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<PlatformUser | null>(null);
@@ -542,16 +554,30 @@ export default function UsersSettingsPage() {
     rolesService.list().then(setRoles);
   }, [isCrossEntity, session]);
 
+  // Derived from whatever's actually loaded, id→name so the filter still
+  // reads correctly if two orgs happen to share a display name.
+  const availableOrganizations = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of users ?? []) {
+      if (!map.has(user.organizationId))
+        map.set(user.organizationId, user.organizationName);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [users]);
+
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return users ?? [];
     return (users ?? []).filter(
       (user) =>
-        user.name.toLowerCase().includes(normalized) ||
-        user.email.toLowerCase().includes(normalized) ||
-        user.organizationName.toLowerCase().includes(normalized),
+        (orgFilter === ALL || user.organizationId === orgFilter) &&
+        (!normalized ||
+          user.name.toLowerCase().includes(normalized) ||
+          user.email.toLowerCase().includes(normalized) ||
+          user.organizationName.toLowerCase().includes(normalized)),
     );
-  }, [users, query]);
+  }, [users, query, orgFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -595,7 +621,7 @@ export default function UsersSettingsPage() {
           title={t("title")}
           description={isCrossEntity ? tOrgs("usersDescriptionGlobal") : t("description")}
           actions={
-            canWrite && assignableRoles.length > 0 ? (
+            canCreate && assignableRoles.length > 0 ? (
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
                 {t("newUser")}
@@ -606,8 +632,8 @@ export default function UsersSettingsPage() {
 
         <Card>
           <CardContent className="p-0">
-            <div className="border-border flex items-center border-b px-4 py-3">
-              <div className="relative w-full">
+            <div className="border-border flex flex-wrap items-center gap-2 border-b px-4 py-3">
+              <div className="relative min-w-0 flex-1">
                 <Search className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2" />
                 <Input
                   placeholder={t("searchPlaceholder")}
@@ -619,6 +645,30 @@ export default function UsersSettingsPage() {
                   className="h-8 ps-9"
                 />
               </div>
+              {isCrossEntity ? (
+                <Select
+                  value={orgFilter}
+                  onValueChange={(v) => {
+                    setOrgFilter(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-56"
+                    aria-label={t("filterOrganizationLabel")}
+                  >
+                    <SelectValue placeholder={t("filterOrganizationLabel")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>{t("filterOrganizationAll")}</SelectItem>
+                    {availableOrganizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
             </div>
 
             <Table>

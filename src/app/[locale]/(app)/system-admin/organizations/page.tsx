@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SYSTEM_ADMIN_ORGANIZATIONS_PAGE_SIZE } from "@/config/pagination";
 import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
@@ -53,6 +55,7 @@ export default function SystemAdminOrganizationsPage() {
     "all" | "active" | "inactive" | "pending"
   >("all");
   const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deactivateOrg, setDeactivateOrg] = useState<OrganizationSummary | null>(null);
@@ -141,7 +144,18 @@ export default function SystemAdminOrganizationsPage() {
     setSearchQuery("");
     setStatusFilter("all");
     setRegionFilter("all");
+    setPage(1);
   };
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredOrganizations.length / SYSTEM_ADMIN_ORGANIZATIONS_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, pageCount);
+  const pagedOrganizations = filteredOrganizations.slice(
+    (currentPage - 1) * SYSTEM_ADMIN_ORGANIZATIONS_PAGE_SIZE,
+    currentPage * SYSTEM_ADMIN_ORGANIZATIONS_PAGE_SIZE,
+  );
 
   return (
     <CrossEntityGuard>
@@ -164,7 +178,10 @@ export default function SystemAdminOrganizationsPage() {
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
                 placeholder={t("searchPlaceholder")}
                 aria-label={t("searchPlaceholder")}
                 className="pl-9"
@@ -173,9 +190,10 @@ export default function SystemAdminOrganizationsPage() {
 
             <Select
               value={statusFilter}
-              onValueChange={(val: "all" | "active" | "inactive" | "pending") =>
-                setStatusFilter(val)
-              }
+              onValueChange={(val: "all" | "active" | "inactive" | "pending") => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
             >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder={t("allStatuses")} />
@@ -189,7 +207,13 @@ export default function SystemAdminOrganizationsPage() {
             </Select>
 
             {regions.length > 0 ? (
-              <Select value={regionFilter} onValueChange={setRegionFilter}>
+              <Select
+                value={regionFilter}
+                onValueChange={(v) => {
+                  setRegionFilter(v);
+                  setPage(1);
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder={t("allRegions")} />
                 </SelectTrigger>
@@ -257,7 +281,7 @@ export default function SystemAdminOrganizationsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredOrganizations.map((org) => (
+                  pagedOrganizations.map((org) => (
                     <TableRow
                       key={org.id}
                       className="hover:bg-muted/50 cursor-pointer"
@@ -365,6 +389,19 @@ export default function SystemAdminOrganizationsPage() {
                 )}
               </TableBody>
             </Table>
+
+            {filteredOrganizations.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

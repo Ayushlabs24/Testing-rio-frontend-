@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -24,6 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/providers/auth-provider";
+import { REVIEWER_SLA_PAGE_SIZE } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { markReviewerSlaAlertsSeen } from "@/hooks/use-reviewer-sla-badge";
@@ -54,6 +56,9 @@ const STATUS_DOT_CLASS: Record<SlaAlertStatus, string> = {
 // detail page instead.
 function alertHref(alert: SlaAlert): string {
   if (alert.type.startsWith("report_")) return `/reports/${alert.reportId}`;
+  if (alert.type === "evidence_document_uploaded") {
+    return `/priority-dashboard/${alert.needId}`;
+  }
   return `/survey-builder/${alert.needId}`;
 }
 
@@ -69,10 +74,17 @@ export default function ReviewerSlaPage() {
   // SLA due/breach concept below doesn't apply to their rows at all.
   const canApproveSurveys = usePermission("surveyBuilder", "approve");
   const canApproveReports = usePermission("reportsDashboards", "approve");
-  const canApprove = canApproveSurveys || canApproveReports;
+  // Data Analyst holds neither approve flag above but does get its own
+  // org-wide to-do queue (evidence_document_uploaded, gated on this same
+  // permission backend-side) — folded into `canApprove` so it gets the
+  // "queue" framing (Due/Status columns, "Review now") rather than the "My
+  // Submissions" framing meant for someone reviewing their own past work.
+  const canGenerateEvidenceSummary = usePermission("priorityScoring", "create");
+  const canApprove = canApproveSurveys || canApproveReports || canGenerateEvidenceSummary;
   const [config, setConfig] = useState<SlaConfig | null>(null);
   const [alerts, setAlerts] = useState<SlaAlert[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [page, setPage] = useState(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function loadAlerts() {
@@ -120,6 +132,16 @@ export default function ReviewerSlaPage() {
     for (const alert of alerts ?? []) counts[alert.status] += 1;
     return counts;
   }, [alerts]);
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil((alerts?.length ?? 0) / REVIEWER_SLA_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, pageCount);
+  const pagedAlerts = (alerts ?? []).slice(
+    (currentPage - 1) * REVIEWER_SLA_PAGE_SIZE,
+    currentPage * REVIEWER_SLA_PAGE_SIZE,
+  );
 
   return (
     <PermissionGuard module="surveyBuilder" action="read">
@@ -222,7 +244,7 @@ export default function ReviewerSlaPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    alerts.map((alert) => (
+                    pagedAlerts.map((alert) => (
                       <TableRow key={alert.id}>
                         {/* Type cell hidden for now — see the matching header comment above. */}
                         <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
@@ -295,6 +317,19 @@ export default function ReviewerSlaPage() {
                 </TableBody>
               </Table>
             </TooltipProvider>
+
+            {alerts && alerts.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </PageContainer>

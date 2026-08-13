@@ -54,7 +54,11 @@ export default function PriorityDetailInsightsPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("PriorityDashboard.detailPage");
-  const canWrite = usePermission("aiReview", "write");
+  // Client-confirmed (Aug 14): Quality Assessment is Data Analyst's action —
+  // was aiReview:write (shared with Research Officer's unrelated Need-
+  // classification-trigger use of that flag). Reuses canScore
+  // (priorityScoring:create), the same gate the Recalculate button below
+  // already uses — both are Data-Analyst-only "run a new analysis" actions.
   const canScore = usePermission("priorityScoring", "create");
 
   const [links, setLinks] = useState<PublicSurveyLink[]>([]);
@@ -219,7 +223,7 @@ export default function PriorityDetailInsightsPage({
                           {t("responseQualityDesc")}
                         </p>
                       </div>
-                      {canWrite ? (
+                      {canScore ? (
                         <Button
                           size="sm"
                           variant="outline"

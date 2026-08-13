@@ -2,13 +2,14 @@
 
 import { BarChart3, QrCode } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PUBLIC_SURVEYS_PAGE_SIZE } from "@/config/pagination";
 import { useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
@@ -46,6 +48,7 @@ export default function PublicSurveysPage() {
   // Insights" is only meaningful (and only shown) once one exists; opening
   // it before that would just be an empty page.
   const [needsWithActiveLink, setNeedsWithActiveLink] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     studiesService
@@ -78,6 +81,20 @@ export default function PublicSurveysPage() {
         setLoadFailed(true);
       });
   }, []);
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil((rows?.length ?? 0) / PUBLIC_SURVEYS_PAGE_SIZE),
+  );
+  const currentPage = Math.min(page, pageCount);
+  const pagedRows = useMemo(
+    () =>
+      (rows ?? []).slice(
+        (currentPage - 1) * PUBLIC_SURVEYS_PAGE_SIZE,
+        currentPage * PUBLIC_SURVEYS_PAGE_SIZE,
+      ),
+    [rows, currentPage],
+  );
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -120,7 +137,7 @@ export default function PublicSurveysPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map(({ need, studyTitle }) => (
+                  pagedRows.map(({ need, studyTitle }) => (
                     <TableRow key={need.id}>
                       <TableCell className="max-w-sm py-4 text-sm font-medium whitespace-normal">
                         {studyTitle} — {need.title}
@@ -163,6 +180,19 @@ export default function PublicSurveysPage() {
                 )}
               </TableBody>
             </Table>
+
+            {rows && rows.length > 0 ? (
+              <div className="border-border border-t px-4 py-3">
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("pagination.previous")}
+                  nextLabel={t("pagination.next")}
+                  pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </PageContainer>
