@@ -57,7 +57,9 @@ export interface CreateStudyPayload {
   villages?: string[];
   governorateIds: string[];
   centerIds: string[];
-  methodologyVersionId?: string | null;
+  // Mandatory: a Study must bind to a specific (published) methodology
+  // version at creation.
+  methodologyVersionId: string;
   population: number;
   marginOfError?: number;
 }
@@ -67,7 +69,10 @@ export interface UpdateStudyPayload {
   villages?: string[];
   governorateIds?: string[];
   centerIds?: string[];
-  methodologyVersionId?: string | null;
+  // Optional to omit on a PATCH (leaves the existing binding untouched),
+  // but never nullable — once set at creation, a Study can no longer be
+  // left without a methodology version.
+  methodologyVersionId?: string;
 }
 
 export interface ListStudiesParams {

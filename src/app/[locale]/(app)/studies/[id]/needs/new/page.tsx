@@ -170,6 +170,9 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   const centerOptions = studyCenters.filter((c) =>
     governorateIds.includes(c.governorateId),
   );
+  // The selected governorate(s) have no centers configured at all — hide
+  // the field rather than show a dead, always-empty dropdown.
+  const centerFieldHidden = governorateIds.length > 0 && centerOptions.length === 0;
 
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
@@ -264,8 +267,15 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                 {/* Governorates/Centers scoped to the Study's own selection
                     (a subset of the Study's), side by side — each chip list
                     still wraps to more rows within its own column once many
-                    are selected. */}
-                <div className="grid gap-5 sm:grid-cols-2">
+                    are selected. Center is hidden outright (not just
+                    disabled) once a governorate is chosen that has no
+                    centers configured under it — an empty, unusable
+                    dropdown would otherwise block the usual flow. */}
+                <div
+                  className={
+                    centerFieldHidden ? "grid gap-5" : "grid gap-5 sm:grid-cols-2"
+                  }
+                >
                   <div className="space-y-2">
                     <Label>{tGeo("governorateLabel")}</Label>
                     <MultiSelect
@@ -286,27 +296,32 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>{tGeo("centerLabel")}</Label>
-                    <MultiSelect
-                      options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
-                      values={centerIds}
-                      onChange={(next) =>
-                        setValue("centerIds", next, { shouldValidate: true })
-                      }
-                      placeholder={
-                        governorateIds.length > 0
-                          ? tGeo("centerPlaceholder")
-                          : tGeo("selectGovernorateFirst")
-                      }
-                      searchPlaceholder={tGeo("centerSearchPlaceholder")}
-                      emptyText={tGeo("centerEmpty")}
-                      removeAriaLabel={(center) =>
-                        tGeo("removeCenterSelection", { center })
-                      }
-                      disabled={governorateIds.length === 0}
-                    />
-                  </div>
+                  {centerFieldHidden ? null : (
+                    <div className="space-y-2">
+                      <Label>{tGeo("centerLabel")}</Label>
+                      <MultiSelect
+                        options={centerOptions.map((c) => ({
+                          value: c.id,
+                          label: c.name,
+                        }))}
+                        values={centerIds}
+                        onChange={(next) =>
+                          setValue("centerIds", next, { shouldValidate: true })
+                        }
+                        placeholder={
+                          governorateIds.length > 0
+                            ? tGeo("centerPlaceholder")
+                            : tGeo("selectGovernorateFirst")
+                        }
+                        searchPlaceholder={tGeo("centerSearchPlaceholder")}
+                        emptyText={tGeo("centerEmpty")}
+                        removeAriaLabel={(center) =>
+                          tGeo("removeCenterSelection", { center })
+                        }
+                        disabled={governorateIds.length === 0}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

@@ -62,10 +62,9 @@
       "genericError": "Something went wrong. Please try again.",
       "haveAccount": "Already have an account?",
       "signIn": "Sign in",
-      "temporaryPasswordTitle": "Your account is ready",
-      "temporaryPasswordEmailedDescription": "Your organization has been registered successfully.",
-      "temporaryPasswordEmailedNotice": "A temporary password has been sent to your registered email. Please use it to sign in.",
-      "temporaryPasswordNotEmailedNotice": "Use the temporary password provided to you to sign in. You'll be asked to set your own password the first time you sign in.",
+      "pendingApprovalTitle": "Registration received",
+      "pendingApprovalDescription": "\"{organizationName}\" has been submitted and is awaiting approval before it can be activated.",
+      "pendingApprovalNotice": "Our team will review your registration. Once approved, a temporary password will be sent to your registered email so you can sign in.",
       "goToSignInButton": "Go to sign in",
       "consentLegend": "Consent",
       "usePolicyLabel": "I have read and accept the",
@@ -798,6 +797,7 @@
           "ORGANIZATION_DEACTIVATED": "Organization Deactivated",
           "ORGANIZATION_REACTIVATED": "Organization Reactivated",
           "ORGANIZATION_CREATED": "Organization Created",
+          "ORGANIZATION_APPROVED": "Organization Approved",
           "NGO_ADMIN_ASSIGNED": "Assigned NGO Admin",
           "NGO_ADMIN_CHANGED": "Changed NGO Admin",
           "NGO_ADMIN_ROLE_REMOVED": "Removed NGO Admin Role",
@@ -833,7 +833,11 @@
           "evidence": "Evidence",
           "report": "Report",
           "sharing_request": "Sharing request",
-          "report_sharing_request": "Report sharing request"
+          "report_sharing_request": "Report sharing request",
+          "evidence_document": "Evidence document",
+          "evidence_document_summary": "Evidence document summary",
+          "combined_report_summary": "Combined report summary",
+          "ncnp_report": "NCNP Compiled Report"
         }
       }
     },
@@ -914,6 +918,13 @@
         "exportExcel": "Download as Excel spreadsheet"
       },
       "actionError": "Something went wrong. Please try again.",
+      "approveDialogTitle": "Approve & Release Report",
+      "rejectDialogTitle": "Reject Report",
+      "reviewerNotesLabel": "Reviewer notes",
+      "reviewerNotesRequired": "Reviewer notes are required.",
+      "cancel": "Cancel",
+      "confirmApprove": "Approve & Release",
+      "confirmReject": "Reject",
       "create": {
         "title": "Generate Report",
         "reportTypeLabel": "Report type",
@@ -1492,7 +1503,18 @@
         "noResponses": "No responses received yet.",
         "viewResponses": "View Responses",
         "noAnswer": "No answer",
-        "viewAllResponses": "View All Responses"
+        "viewAllResponses": "View All Responses",
+        "versionsHeading": "Survey Versions",
+        "versionsHint": "Each version's questions and responses stay tied to that version — creating a new draft never affects an already-published version's collected responses.",
+        "versionLabel": "v{version}",
+        "versionResponsesLabel": "{count, plural, =0 {No responses} one {# response} other {# responses}}",
+        "versionStatus": {
+          "DRAFT": "Draft",
+          "SUBMITTED": "Submitted for Approval",
+          "REJECTED": "Rejected",
+          "PUBLISHED": "Published",
+          "SUPERSEDED": "Superseded"
+        }
       },
       "questionResponses": {
         "title": "Question Responses",
@@ -1593,7 +1615,6 @@
         "removeCenterSelection": "Remove {center}",
         "methodologyVersionLabel": "Methodology Version",
         "methodologyVersionPlaceholder": "Select a methodology version",
-        "methodologyVersionNone": "None",
         "cycleNumberLabel": "Cycle Number",
         "populationLabel": "Population of your area",
         "populationPlaceholder": "e.g. 5000",
@@ -1615,6 +1636,7 @@
         "titleTooLong": "Keep the title to 300 characters or fewer.",
         "governorateIdsRequired": "Select at least one governorate.",
         "centerIdsRequired": "Select at least one center.",
+        "methodologyVersionRequired": "Select a Methodology Version.",
         "populationInvalid": "Enter the area's population as a whole number greater than 0.",
         "needStatementRequired": "Describe the need.",
         "needVillageRequired": "Enter a governorate.",
@@ -1657,6 +1679,7 @@
         "genericError": "Couldn't save the need. Please try again.",
         "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",
         "editNeed": "Edit",
+        "systemReferenceIdLabel": "System Reference ID",
         "sourceLabel": "Data Source",
         "enteredByLabel": "Entered By",
         "enteredByUnknown": "Unknown",
@@ -1939,6 +1962,7 @@
       "statusColumn": "Survey status",
       "noDomain": "No domain approved yet",
       "noSurvey": "No survey yet",
+      "versionLabel": "(v{version})",
       "open": "Open",
       "noResults": "No studies yet — create a study first, then approve a domain to start building its survey.",
       "loadError": "Couldn't load studies. Please try again.",
@@ -2068,7 +2092,11 @@
         "selectionApproachLabel": "Selection Approach",
         "selectionApproachPlaceholder": "e.g. Random sampling stratified by governorate",
         "geographicCoverageLabel": "Geographic Coverage",
-        "geographicCoveragePlaceholder": "e.g. Riyadh and Eastern Province — urban centers only"
+        "geographicCoveragePlaceholder": "e.g. Riyadh and Eastern Province — urban centers only",
+        "publishedEditNotice": "This survey is published. To make changes, create a new version — the published survey and its responses stay exactly as they are.",
+        "createNewVersion": "Create New Version",
+        "creatingNewVersion": "Creating…",
+        "supersededNotice": "This is a superseded version. A newer version has since been published. Editing here is disabled — view the current version from the survey list."
       },
       "needColumn": "Need",
       "review": {
@@ -2127,7 +2155,8 @@
         "draft": "Draft",
         "submitted": "Submitted for Approval",
         "rejected": "Rejected",
-        "published": "Published"
+        "published": "Published",
+        "SUPERSEDED": "Superseded"
       }
     }
   },
@@ -2580,6 +2609,7 @@
       "searchPlaceholder": "Search by name or code...",
       "allStatuses": "All Statuses",
       "active": "Active",
+      "pendingApproval": "Pending Approval",
       "inactive": "Inactive",
       "allRegions": "All Regions",
       "clearFilters": "Clear filters",
@@ -2645,7 +2675,8 @@
         "currentStatus": "Current Status",
         "deactivationReasonLabel": "Deactivation Reason",
         "deactivateButton": "Deactivate Organization",
-        "reactivateButton": "Reactivate Organization"
+        "reactivateButton": "Reactivate Organization",
+        "approveButton": "Approve Organization"
       },
       "unavailableTabTitle": "Tab Content Unavailable",
       "unavailableTabDescription": "This section is coming soon or managed in another workspace."
@@ -2670,6 +2701,15 @@
       "cancel": "Cancel",
       "reactivating": "Reactivating...",
       "successToast": "Organization reactivated successfully",
+      "errorToast": "Unable to complete request"
+    },
+    "approveDialog": {
+      "title": "Approve Registration?",
+      "explanation": "This activates the organization and emails its admin a temporary password so they can sign in for the first time.",
+      "confirm": "Approve Organization",
+      "cancel": "Cancel",
+      "approving": "Approving...",
+      "successToast": "Organization approved successfully",
       "errorToast": "Unable to complete request"
     },
     "ngoAdmin": {
@@ -3145,6 +3185,21 @@
       "actions": {
         "viewDetails": "Inspect Entry",
         "exportCsv": "Export Logs CSV"
+      },
+      "export": {
+        "title": "Export Logs to CSV",
+        "description": "The file will contain only the entries matching the criteria below. Adjust them here if needed.",
+        "summaryTitle": "This export will contain",
+        "searchCriterion": "Search",
+        "inheritedNotice": "The event code and search terms from the table are applied to this export as well.",
+        "counting": "Counting matching entries...",
+        "countFailed": "The number of matching entries could not be determined.",
+        "matchedCount": "{count} entries match and will be exported.",
+        "noMatches": "No entries match these criteria — change them to export.",
+        "confirm": "Export CSV",
+        "exporting": "Exporting...",
+        "cancel": "Cancel",
+        "failed": "The export could not be completed. Please try again."
       },
       "noResults": "No system log entries match the current filters.",
       "loadFailed": "System logs could not be loaded."

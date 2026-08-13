@@ -4,7 +4,6 @@ import { ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormattedDate } from "@/components/common/formatted-date";
 import { consentService } from "@/services/consent/consent.service";
 import type { OrganizationConsentStatus } from "@/services/consent/consent.types";
 

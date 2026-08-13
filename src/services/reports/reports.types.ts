@@ -182,6 +182,7 @@ export interface Report {
   reviewedByName: string | null;
   reviewedByRole: string | null;
   reviewedAt: string | null;
+  reviewerNotes: string | null;
   archivedAt: string | null;
   exportFormats: ExportFormat[];
 }

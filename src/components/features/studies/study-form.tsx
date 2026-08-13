@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useOrgCentersForGovernorates } from "@/hooks/use-org-centers-for-governorates";
+import { previewSampleSize } from "@/lib/sample-size";
 import { ApiError } from "@/services/api/types";
 import type { Governorate } from "@/services/geography/geography.types";
 import type { MethodologyVersion } from "@/services/priority/severity-scoring.service";
@@ -30,8 +31,9 @@ export interface StudyFormValues {
   /** Mandatory subset of the org's own selected Centers, filtered by
    * `governorateIds`. */
   centerIds: string[];
-  /** Optional link to a PUBLISHED MethodologyVersion. */
-  methodologyVersionId: string | null;
+  /** Mandatory link to a PUBLISHED MethodologyVersion — a Study must bind
+   * to one at creation. */
+  methodologyVersionId: string;
   /** RIO-FR-024: the area's population — required at creation only, used
    * once to compute the required sample size and MDE server-side. Ignored
    * on edit (the form shows the stored result instead, read-only). */
@@ -80,7 +82,7 @@ export function StudyForm({
       .max(300, tValidation("titleTooLong")),
     governorateIds: z.array(z.string()).min(1, tValidation("governorateIdsRequired")),
     centerIds: z.array(z.string()).min(1, tValidation("centerIdsRequired")),
-    methodologyVersionId: z.string().nullable(),
+    methodologyVersionId: z.string().min(1, tValidation("methodologyVersionRequired")),
     population: z
       .number()
       .refine(
@@ -103,7 +105,7 @@ export function StudyForm({
       title: study?.title ?? "",
       governorateIds: study?.governorateIds ?? [],
       centerIds: study?.centerIds ?? [],
-      methodologyVersionId: study?.methodologyVersionId ?? null,
+      methodologyVersionId: study?.methodologyVersionId ?? "",
       population: study?.population ?? 0,
       marginOfError: study?.marginOfError ?? 0.1,
     },
@@ -113,6 +115,8 @@ export function StudyForm({
   const centerIds = useWatch({ control, name: "centerIds" });
   const methodologyVersionId = useWatch({ control, name: "methodologyVersionId" });
   const marginOfError = useWatch({ control, name: "marginOfError" });
+  const population = useWatch({ control, name: "population" });
+  const samplePreview = isCreate ? previewSampleSize(population, marginOfError) : null;
 
   const { centers: orgCenters, loaded: orgCentersLoaded } =
     useOrgCentersForGovernorates(governorateIds);
@@ -143,12 +147,14 @@ export function StudyForm({
   }, [orgCenters, orgCentersLoaded]);
 
   // Default to the (most recently) published Methodology Version instead of
-  // leaving this at "None" — `methodologyVersions` arrives asynchronously
-  // (the caller renders this form before its own fetch resolves), so this
-  // can't just be part of `defaultValues` above. Only fires while nothing's
-  // selected yet, so it never overrides a Study that already has its own
-  // explicit choice (including an existing Study deliberately linked to
-  // none). Already ordered most-recent-first by the backend.
+  // leaving the required field empty — `methodologyVersions` arrives
+  // asynchronously (the caller renders this form before its own fetch
+  // resolves), so this can't just be part of `defaultValues` above. Only
+  // fires while nothing's selected yet, so it never overrides a Study that
+  // already has its own explicit choice. A pre-existing Study created
+  // before this field became mandatory may still load with none selected —
+  // this same effect fills it in, and the user must save to persist it.
+  // Already ordered most-recent-first by the backend.
   useEffect(() => {
     if (methodologyVersionId) return;
     const mostRecentlyPublished = methodologyVersions[0];
@@ -229,18 +235,19 @@ export function StudyForm({
       </div>
 
       <div className="space-y-2">
-        <Label>{t("methodologyVersionLabel")}</Label>
+        <Label>
+          {t("methodologyVersionLabel")} <span className="text-destructive">*</span>
+        </Label>
         <Select
-          value={methodologyVersionId ?? "none"}
+          value={methodologyVersionId}
           onValueChange={(value) =>
-            setValue("methodologyVersionId", value === "none" ? null : value)
+            setValue("methodologyVersionId", value, { shouldValidate: true })
           }
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">{t("methodologyVersionNone")}</SelectItem>
             {methodologyVersions.map((mv) => (
               <SelectItem key={mv.id} value={mv.id}>
                 {mv.name}
@@ -248,6 +255,11 @@ export function StudyForm({
             ))}
           </SelectContent>
         </Select>
+        {errors.methodologyVersionId ? (
+          <p className="text-destructive text-sm">
+            {errors.methodologyVersionId.message}
+          </p>
+        ) : null}
       </div>
 
       {isCreate ? (
@@ -286,6 +298,20 @@ export function StudyForm({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-sm">{t("marginOfErrorHint")}</p>
+        </div>
+      ) : null}
+
+      {isCreate && samplePreview ? (
+        <div className="border-border bg-muted/30 space-y-1 rounded-md border p-3 text-sm">
+          <p className="font-medium">{t("sampleSizeSummaryTitle")}</p>
+          <p className="text-muted-foreground">
+            {t("sampleSizeSummaryBody", {
+              population,
+              marginPct: Math.round(marginOfError * 100),
+              requiredSampleSize: samplePreview.requiredSampleSize,
+              mde: samplePreview.minimumDetectableEffect.toFixed(1),
+            })}
+          </p>
         </div>
       ) : null}
 

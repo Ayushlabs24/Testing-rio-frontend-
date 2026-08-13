@@ -48,6 +48,7 @@ function toReport(snapshot: SharedReportSnapshot): Report {
     reviewedByName: null,
     reviewedByRole: null,
     reviewedAt: snapshot.reviewedAt,
+    reviewerNotes: null,
     archivedAt: null,
     exportFormats: [],
   };

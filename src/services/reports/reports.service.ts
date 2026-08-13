@@ -27,11 +27,13 @@ export const reportsService = {
   async confirm(id: string): Promise<Report> {
     return apiClient.patch<Report>(endpoints.reports.confirm(id));
   },
-  async approve(id: string): Promise<Report> {
-    return apiClient.patch<Report>(endpoints.reports.approve(id));
+  // Notes mandatory (RIO-FR-007 clarification: extends to all four report
+  // categories, not just the NCNP Compiled Report).
+  async approve(id: string, notes: string): Promise<Report> {
+    return apiClient.patch<Report>(endpoints.reports.approve(id), { notes });
   },
-  async reject(id: string): Promise<Report> {
-    return apiClient.patch<Report>(endpoints.reports.reject(id));
+  async reject(id: string, notes: string): Promise<Report> {
+    return apiClient.patch<Report>(endpoints.reports.reject(id), { notes });
   },
   async archive(id: string): Promise<Report> {
     return apiClient.patch<Report>(endpoints.reports.archive(id));

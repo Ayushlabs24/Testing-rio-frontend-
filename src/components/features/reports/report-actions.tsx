@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { reportsService } from "@/services/reports/reports.service";
@@ -80,6 +81,7 @@ export function ReportActions({
   const canWrite = usePermission("reportsDashboards", "write");
   const canApprove = usePermission("reportsDashboards", "approve");
   const canExport = usePermission("reportsDashboards", "export");
+  const [dialogMode, setDialogMode] = useState<"approve" | "reject" | null>(null);
 
   const isDraft = report.status === "draft";
   const isReleased = report.status === "released";
@@ -87,14 +89,29 @@ export function ReportActions({
   const exportable = EXPORTABLE_STATUSES.includes(report.status);
   const iconSize = size === "default" ? "icon" : "icon-sm";
 
-  async function run(action: () => Promise<unknown>, fallback: string) {
+  async function run(action: () => Promise<unknown>, fallback: string): Promise<boolean> {
     onError("");
     try {
       await action();
       onChanged();
+      return true;
     } catch (err) {
       onError(err instanceof ApiError ? err.message : t(fallback));
+      return false;
     }
+  }
+
+  // Notes mandatory on both approve and reject (RIO-FR-007 clarification:
+  // extends to all four report categories, not just the NCNP Compiled
+  // Report) — same shared dialog the NCNP Report Review flow uses.
+  async function handleDialogConfirm(notes: string) {
+    const succeeded =
+      dialogMode === "approve"
+        ? await run(() => reportsService.approve(report.id, notes), "actionError")
+        : dialogMode === "reject"
+          ? await run(() => reportsService.reject(report.id, notes), "actionError")
+          : false;
+    if (succeeded) setDialogMode(null);
   }
 
   return (
@@ -113,7 +130,7 @@ export function ReportActions({
           icon={ShieldCheck}
           label={t("tooltip.approve")}
           iconSize={iconSize}
-          onClick={() => run(() => reportsService.approve(report.id), "actionError")}
+          onClick={() => setDialogMode("approve")}
         />
       ) : null}
 
@@ -124,9 +141,23 @@ export function ReportActions({
           variant="ghost"
           className="text-destructive hover:text-destructive"
           iconSize={iconSize}
-          onClick={() => run(() => reportsService.reject(report.id), "actionError")}
+          onClick={() => setDialogMode("reject")}
         />
       ) : null}
+
+      <RejectReasonDialog
+        open={dialogMode !== null}
+        onOpenChange={(open) => !open && setDialogMode(null)}
+        onConfirm={handleDialogConfirm}
+        title={
+          dialogMode === "approve" ? t("approveDialogTitle") : t("rejectDialogTitle")
+        }
+        reasonLabel={t("reviewerNotesLabel")}
+        reasonRequiredError={t("reviewerNotesRequired")}
+        cancelLabel={t("cancel")}
+        confirmLabel={dialogMode === "approve" ? t("confirmApprove") : t("confirmReject")}
+        confirmVariant={dialogMode === "approve" ? "default" : "destructive"}
+      />
 
       {canApprove && isReleased ? (
         <IconAction

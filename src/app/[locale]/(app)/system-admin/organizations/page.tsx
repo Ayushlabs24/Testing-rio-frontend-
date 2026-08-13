@@ -6,11 +6,12 @@ import {
   Eye,
   PlusCircle,
   Search,
+  ShieldCheck,
   XCircle,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -34,8 +35,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
+import { ApproveOrganizationDialog } from "./_components/approve-organization-dialog";
 import { CreateOrganizationDialog } from "./_components/create-organization-dialog";
 import { DeactivateOrganizationDialog } from "./_components/deactivate-organization-dialog";
 import { ReactivateOrganizationDialog } from "./_components/reactivate-organization-dialog";
@@ -46,12 +49,21 @@ export default function SystemAdminOrganizationsPage() {
 
   const [organizations, setOrganizations] = useState<OrganizationSummary[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive" | "pending"
+  >("all");
   const [regionFilter, setRegionFilter] = useState<string>("all");
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deactivateOrg, setDeactivateOrg] = useState<OrganizationSummary | null>(null);
   const [reactivateOrg, setReactivateOrg] = useState<OrganizationSummary | null>(null);
+  const [approveOrg, setApproveOrg] = useState<OrganizationSummary | null>(null);
+
+  // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
+  // Reference), never the legacy free-text `region` array — so an org
+  // created that way needs its region resolved by id, not just read off
+  // `org.region`, or it silently shows blank.
+  const [regionNameById, setRegionNameById] = useState<Map<string, string>>(new Map());
 
   const fetchOrganizations = () => {
     organizationsService
@@ -62,7 +74,20 @@ export default function SystemAdminOrganizationsPage() {
 
   useEffect(() => {
     fetchOrganizations();
+    geographyService
+      .listRegions()
+      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
+      .catch(() => setRegionNameById(new Map()));
   }, []);
+
+  const displayRegion = useCallback(
+    (org: OrganizationSummary): string => {
+      if (org.region.length > 0) return org.region.join(", ");
+      if (org.regionId) return regionNameById.get(org.regionId) ?? "—";
+      return "—";
+    },
+    [regionNameById],
+  );
 
   const regions = useMemo(() => {
     if (!organizations) return [];
@@ -71,9 +96,13 @@ export default function SystemAdminOrganizationsPage() {
       for (const r of org.region) {
         if (r.trim()) set.add(r.trim());
       }
+      if (org.region.length === 0 && org.regionId) {
+        const name = regionNameById.get(org.regionId);
+        if (name) set.add(name);
+      }
     }
     return Array.from(set).sort();
-  }, [organizations]);
+  }, [organizations, regionNameById]);
 
   const filteredOrganizations = useMemo(() => {
     if (!organizations) return [];
@@ -88,18 +117,22 @@ export default function SystemAdminOrganizationsPage() {
           (org.ngoAdminEmail ?? "").toLowerCase().includes(query);
         if (!matchesName && !matchesCode && !matchesAdmin) return false;
       }
-      // Status
+      // Status — "pending" (never approved) is distinct from "inactive"
+      // (was approved, later suspended) — RIO-FR-010.
       if (statusFilter === "active" && !org.isActive) return false;
-      if (statusFilter === "inactive" && org.isActive) return false;
+      if (statusFilter === "inactive" && (org.isActive || !org.approvedAt)) return false;
+      if (statusFilter === "pending" && org.approvedAt) return false;
 
       // Region
       if (regionFilter !== "all") {
-        if (!org.region.includes(regionFilter)) return false;
+        if (displayRegion(org) !== regionFilter && !org.region.includes(regionFilter)) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [organizations, searchQuery, statusFilter, regionFilter]);
+  }, [organizations, searchQuery, statusFilter, regionFilter, displayRegion]);
 
   const hasActiveFilters =
     searchQuery !== "" || statusFilter !== "all" || regionFilter !== "all";
@@ -140,7 +173,9 @@ export default function SystemAdminOrganizationsPage() {
 
             <Select
               value={statusFilter}
-              onValueChange={(val: "all" | "active" | "inactive") => setStatusFilter(val)}
+              onValueChange={(val: "all" | "active" | "inactive" | "pending") =>
+                setStatusFilter(val)
+              }
             >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder={t("allStatuses")} />
@@ -148,6 +183,7 @@ export default function SystemAdminOrganizationsPage() {
               <SelectContent>
                 <SelectItem value="all">{t("allStatuses")}</SelectItem>
                 <SelectItem value="active">{t("active")}</SelectItem>
+                <SelectItem value="pending">{t("pendingApproval")}</SelectItem>
                 <SelectItem value="inactive">{t("inactive")}</SelectItem>
               </SelectContent>
             </Select>
@@ -234,7 +270,7 @@ export default function SystemAdminOrganizationsPage() {
                         {org.registrationNumber ?? "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {org.region.length > 0 ? org.region.join(", ") : "—"}
+                        {displayRegion(org)}
                       </TableCell>
                       <TableCell>
                         {org.ngoAdminName ? (
@@ -257,16 +293,17 @@ export default function SystemAdminOrganizationsPage() {
                         {org.studyCount ?? 0}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={org.isActive ? "default" : "outline"}
-                          className={
-                            org.isActive
-                              ? "bg-badge-success text-badge-success-foreground border-transparent"
-                              : undefined
-                          }
-                        >
-                          {t(org.isActive ? "active" : "inactive")}
-                        </Badge>
+                        {org.isActive ? (
+                          <Badge className="bg-badge-success text-badge-success-foreground border-transparent">
+                            {t("active")}
+                          </Badge>
+                        ) : !org.approvedAt ? (
+                          <Badge className="border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                            {t("pendingApproval")}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">{t("inactive")}</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {new Date(org.createdAt).toLocaleDateString()}
@@ -295,6 +332,20 @@ export default function SystemAdminOrganizationsPage() {
                               className="text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
                             >
                               <XCircle className="size-4" />
+                            </Button>
+                          ) : !org.approvedAt ? (
+                            // RIO-FR-010 (client-confirmed): a never-approved
+                            // self-registration needs Approve, not Reactivate
+                            // — the two are different actions (approve also
+                            // issues the entity's first real credentials).
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setApproveOrg(org)}
+                              title={t("pendingApproval")}
+                              className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                            >
+                              <ShieldCheck className="size-4" />
                             </Button>
                           ) : (
                             <Button
@@ -333,6 +384,12 @@ export default function SystemAdminOrganizationsPage() {
           organization={reactivateOrg}
           open={!!reactivateOrg}
           onOpenChange={(open) => !open && setReactivateOrg(null)}
+          onUpdated={fetchOrganizations}
+        />
+        <ApproveOrganizationDialog
+          organization={approveOrg}
+          open={!!approveOrg}
+          onOpenChange={(open) => !open && setApproveOrg(null)}
           onUpdated={fetchOrganizations}
         />
       </PageContainer>

@@ -87,11 +87,13 @@ describe("authService", () => {
     expect(session.role.permissions.length).toBeGreaterThan(0);
   });
 
-  it("signup() posts the full payload to /auth/signup and surfaces a fallback temporary password when not emailed", async () => {
+  // RIO-FR-010 (client-confirmed): signup no longer returns a session — it
+  // requires Center (System Admin) approval before activation.
+  it("signup() posts the full payload to /auth/signup and returns a pending_approval status, no session", async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
-      ...apiSession,
-      temporaryPasswordEmailed: false,
-      temporaryPassword: "temp-pw-123",
+      status: "pending_approval",
+      organizationName: "Demo NGO",
+      email: "priya@demo.org",
     });
 
     const payload = {
@@ -108,54 +110,11 @@ describe("authService", () => {
     const result = await authService.signup(payload);
 
     expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.signup, payload);
-    expect(result.session.organization.name).toBe("Demo NGO");
-    expect(result.session.role.key).toBe("ngo_admin");
-    expect(result.temporaryPasswordEmailed).toBe(false);
-    expect(result.temporaryPassword).toBe("temp-pw-123");
-  });
-
-  it("signup() omits temporaryPassword when the backend emailed it instead", async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({
-      ...apiSession,
-      temporaryPasswordEmailed: true,
-    });
-
-    const result = await authService.signup({
+    expect(result).toEqual({
+      status: "pending_approval",
       organizationName: "Demo NGO",
-      sector: "healthcare",
-      registrationNumber: "REG-1",
       email: "priya@demo.org",
-      regionId: "r1",
-      governorateIds: ["g1"],
-      centerIds: ["c1"],
-      // RIO-DATA-001 — both consents are part of the registration payload.
-      consent: { usePolicyVersion: "v1", dataSharingVersion: "v1" },
     });
-
-    expect(result.temporaryPasswordEmailed).toBe(true);
-    expect(result.temporaryPassword).toBeUndefined();
-  });
-
-  it("signup() omits temporaryPassword when the backend doesn't return one (production, mailer not configured)", async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({
-      ...apiSession,
-      temporaryPasswordEmailed: false,
-    });
-
-    const result = await authService.signup({
-      organizationName: "Demo NGO",
-      sector: "healthcare",
-      registrationNumber: "REG-1",
-      email: "priya@demo.org",
-      regionId: "r1",
-      governorateIds: ["g1"],
-      centerIds: ["c1"],
-      // RIO-DATA-001 — both consents are part of the registration payload.
-      consent: { usePolicyVersion: "v1", dataSharingVersion: "v1" },
-    });
-
-    expect(result.temporaryPasswordEmailed).toBe(false);
-    expect(result.temporaryPassword).toBeUndefined();
   });
 
   it("me() reads the session via GET /auth/me", async () => {

@@ -39,23 +39,22 @@ import {
   SYSTEM_LOG_CATEGORIES,
   SYSTEM_LOG_LEVELS,
   SYSTEM_LOG_WINDOWS,
-  type SystemLogCategory,
   type SystemLogEntry,
-  type SystemLogFilters,
-  type SystemLogLevel,
   type SystemLogSummary,
   type SystemLogWindow,
 } from "@/services/system-logs/system-logs.types";
 import { SystemLogDetailDrawer } from "./_components/system-log-detail-drawer";
+import { SystemLogExportDialog } from "./_components/system-log-export-dialog";
+import {
+  ALL,
+  WARN_AND_ABOVE,
+  buildSystemLogFilters,
+} from "./_components/system-log-filter-utils";
 import { SystemLogLevelBadge } from "./_components/system-log-level-badge";
 
 const PAGE_SIZE = 25;
 /** Matches SYSTEM_LOG_RETENTION_DAYS' default on the API. */
 const RETENTION_DAYS = 90;
-/** Sentinel for "no filter" — Radix Select has no empty-string value. */
-const ALL = "all";
-/** The triage shortcut: warn + error + fatal in one click. */
-const WARN_AND_ABOVE = "warn+";
 
 /**
  * RIO-NFR-016 — System Logs.
@@ -85,21 +84,18 @@ export default function SystemLogsPage() {
   const [summary, setSummary] = useState<SystemLogSummary | null>(null);
   const [windowRange, setWindowRange] = useState<SystemLogWindow>("24h");
   const [inspectId, setInspectId] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   // Guards against a slow earlier response overwriting a newer one when
   // filters change quickly — same pattern the Audit Log page uses.
   const requestRef = useRef(0);
 
-  const filters = useMemo<SystemLogFilters>(() => {
-    const f: SystemLogFilters = {};
-    if (levelFilter === WARN_AND_ABOVE) f.minLevel = "warn";
-    else if (levelFilter !== ALL) f.level = levelFilter as SystemLogLevel;
-    if (category !== ALL) f.category = category as SystemLogCategory;
-    if (organizationId !== ALL) f.organizationId = organizationId;
-    if (eventCode) f.eventCode = eventCode;
-    if (search.trim()) f.search = search.trim();
-    return f;
-  }, [levelFilter, category, organizationId, eventCode, search]);
+  const selection = useMemo(
+    () => ({ levelFilter, category, organizationId, eventCode, search }),
+    [levelFilter, category, organizationId, eventCode, search],
+  );
+
+  const filters = useMemo(() => buildSystemLogFilters(selection), [selection]);
 
   // No synchronous setState here (and none in the effect that calls it):
   // state is only written from the promise callbacks, which is what keeps
@@ -163,14 +159,6 @@ export default function SystemLogsPage() {
       setOffset(0);
     };
 
-  const handleExport = async () => {
-    try {
-      await systemLogsService.downloadCsv(filters);
-    } catch (err) {
-      console.error("System log export failed:", err);
-    }
-  };
-
   return (
     <CrossEntityGuard>
       <PageContainer>
@@ -196,15 +184,6 @@ export default function SystemLogsPage() {
                 </span>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              className="gap-1 text-xs"
-            >
-              <Download className="size-3.5" />
-              {t("actions.exportCsv")}
-            </Button>
           </div>
 
           {/* Summary */}
@@ -334,6 +313,18 @@ export default function SystemLogsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {/* Sits with the filters, not in the header: the export is a
+                    function of the filter bar, so it belongs next to it. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExportOpen(true)}
+                  className="gap-1 text-xs"
+                >
+                  <Download className="size-3.5" />
+                  {t("actions.exportCsv")}
+                </Button>
 
                 {eventCode && (
                   <Button
@@ -486,6 +477,17 @@ export default function SystemLogsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Mounted only while open so the dialog seeds its draft from the
+            filters in force at that moment. */}
+        {exportOpen && (
+          <SystemLogExportDialog
+            open
+            onOpenChange={setExportOpen}
+            selection={selection}
+            organizations={organizations}
+          />
+        )}
 
         <SystemLogDetailDrawer
           entryId={inspectId}

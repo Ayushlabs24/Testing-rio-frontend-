@@ -18,10 +18,10 @@ interface ApiRole {
  * Roles are fixed and non-editable in this phase — read-only listing.
  * The backend's role matrix supplies the authorization data displayed on the
  * Roles page (`id`, `crossEntity`, `permissions`). `name`/`description` are
- * product-owned display copy — the frontend's local matrix has this session's
- * renames (e.g. "Reviewer / Approver" instead of the backend's "Human
- * Reviewer") that the backend doesn't track, so those two fields come from
- * there instead. `enabled` (is this role live for the current demo phase) is a
+ * product-owned display copy that the backend doesn't track, so those two
+ * fields come from the frontend's local matrix instead — kept in sync with
+ * the backend's own `name` by hand (see role-matrix.ts). `enabled` (is this
+ * role live for the current demo phase) is a
  * UI-only gate that doesn't exist server-side at all — same local-matrix
  * lookup by key.
  *

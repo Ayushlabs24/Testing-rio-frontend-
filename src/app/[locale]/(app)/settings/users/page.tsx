@@ -560,15 +560,22 @@ export default function UsersSettingsPage() {
     currentPage * USERS_PAGE_SIZE,
   );
 
-  // Roles a person can actually be assigned: must be `enabled` (see roles.ts
-  // — the team lead's current demo scope is NGO Admin/Researcher/Approver/
-  // Supervisor only) and never Citizen Guest, which isn't an account at all.
-  // Center Supervisor ("Supervisor") is cross-entity in *scope* (it sees
-  // every organization's data read-only once granted) but is still an
-  // assignable role — an NGO Admin can invite someone into it, per the team
-  // lead. Used only for the create/edit dropdowns.
+  // Roles a person can actually be self-service assigned by their own
+  // entity's admin: must be `enabled`, never Citizen Guest (not an account
+  // at all), and never one of the crossEntity roles (System Admin, System
+  // Reviewer, Center Supervisor) — the backend's own privilege guard
+  // (UsersService: only a crossEntity caller may grant a crossEntity role)
+  // already rejects a tenant-scoped admin trying to hand those out, so
+  // offering them here would just be a dropdown option that always fails.
+  // Center Supervisor is still a real, entity-account-bound role — it's
+  // just System Admin who has to be the one granting it (see
+  // system-admin/organizations/_components/role-options.ts). Used only for
+  // the create/edit dropdowns.
   const assignableRoles = useMemo(
-    () => roles.filter((role) => role.enabled && role.key !== "citizen_guest"),
+    () =>
+      roles.filter(
+        (role) => role.enabled && !role.crossEntity && role.key !== "citizen_guest",
+      ),
     [roles],
   );
 

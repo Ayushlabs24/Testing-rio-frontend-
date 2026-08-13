@@ -143,10 +143,9 @@ export default function RolesSettingsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
-    // Only enabled roles are shown — the team lead's current demo scope is
-    // NGO Admin/Researcher/Approver/Supervisor; the rest stay fully defined
-    // in roles.ts but aren't live yet. Nothing here changes when they return
-    // beyond flipping `enabled` back on.
+    // Only enabled roles are shown (see roles.ts — currently all 10). A
+    // role staged for later with `enabled: false` there stays fully defined
+    // but hidden here until it's flipped back on.
     rolesService
       .list()
       .then((allRoles) => setRoles(allRoles.filter((role) => role.enabled)));
@@ -185,16 +184,18 @@ export default function RolesSettingsPage() {
                       {role.description}
                     </p>
                     <AccessSummary role={role} />
-                    <Button
-                      className="w-full gap-2 px-4"
-                      onClick={() => {
-                        setSelectedRole(role);
-                        setSheetOpen(true);
-                      }}
-                    >
-                      <Eye className="size-4" />
-                      {t("viewDetails")}
-                    </Button>
+                    {role.key === "citizen_guest" ? null : (
+                      <Button
+                        className="w-full gap-2 px-4"
+                        onClick={() => {
+                          setSelectedRole(role);
+                          setSheetOpen(true);
+                        }}
+                      >
+                        <Eye className="size-4" />
+                        {t("viewDetails")}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}

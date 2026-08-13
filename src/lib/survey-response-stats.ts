@@ -82,7 +82,7 @@ function classifyAnswerType(answerType: string): QuestionStatKind {
 // default the citizen flow rendered (see mapAnswerTypeForCitizen), so a
 // Yes/No or 1-5 rating question still gets real slices even without an
 // explicit options list stored on it.
-function optionLabelsFor(question: SurveyQuestionItem): string[] {
+function optionLabelsFor(question: StatsQuestion): string[] {
   if (question.answerOptions && question.answerOptions.length > 0) {
     return question.answerOptions;
   }
@@ -95,23 +95,49 @@ function optionLabelsFor(question: SurveyQuestionItem): string[] {
   return [];
 }
 
-function answerFor(response: SurveyResponseDetail, questionId: string): string | null {
-  const answer =
-    response.answers.find((a) => a.questionId === questionId)?.answer ?? null;
-  return answer && answer.trim() ? answer : null;
+// RIO-FR-011: `ids` is the question's own id plus every other version's copy
+// of "the same" question (see StatsQuestion.aliasIds) — createNewVersion
+// copies questions into fresh SurveyQuestion rows with new ids, so the exact
+// same question asked across two versions has two different ids, each only
+// ever answered under whichever version was live at the time. Checking every
+// alias is what lets one merged card show the true total instead of two
+// near-empty ones.
+function answerFor(response: SurveyResponseDetail, ids: string[]): string | null {
+  for (const id of ids) {
+    const answer = response.answers.find((a) => a.questionId === id)?.answer;
+    if (answer && answer.trim()) return answer;
+  }
+  return null;
 }
+
+/** The subset of a question's shape this module actually needs — lets a
+ * caller pass either a real SurveyQuestionItem (from the current survey) or
+ * a lighter stand-in synthesized from a response's own answer entry (a
+ * question from a superseded version, no longer in the current survey's
+ * own list — see buildQuestionUniverse in the responses page). */
+export type StatsQuestion = Pick<
+  SurveyQuestionItem,
+  "id" | "questionText" | "answerType" | "answerOptions"
+> & {
+  /** RIO-FR-011: every other SurveyQuestion id (across every version of
+   * this Need's survey) that's the same question by text as this one —
+   * so a response answered under an older/newer version still counts
+   * toward this one merged card instead of showing as a separate,
+   * near-empty duplicate. Empty when there's only one version. */
+  aliasIds?: string[];
+};
 
 /** Pure tallying — counts, percentages, min/max/average. No weighting, no
  * scoring, no severity/priority/KPI logic; this is raw-response validation,
  * not analytics. */
 export function computeQuestionStats(
-  questions: SurveyQuestionItem[],
+  questions: StatsQuestion[],
   responses: SurveyResponseDetail[],
 ): QuestionResponseStat[] {
   return questions.map((question): QuestionResponseStat => {
     const kind = classifyAnswerType(question.answerType);
     const rawAnswers = responses
-      .map((r) => answerFor(r, question.id))
+      .map((r) => answerFor(r, [question.id, ...(question.aliasIds ?? [])]))
       .filter((a): a is string => a !== null);
 
     if (kind === "numeric") {
