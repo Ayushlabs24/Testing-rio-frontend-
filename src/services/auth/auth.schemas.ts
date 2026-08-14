@@ -76,3 +76,12 @@ export const apiSignupViewSchema = z.object({
 });
 
 export type ApiSignupView = z.infer<typeof apiSignupViewSchema>;
+
+export const apiRegistrationNumberVerificationSchema = z.object({
+  verified: z.boolean(),
+  reason: z.enum(["INVALID_FORMAT", "NOT_FOUND"]).optional(),
+});
+
+export type ApiRegistrationNumberVerification = z.infer<
+  typeof apiRegistrationNumberVerificationSchema
+>;

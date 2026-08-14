@@ -130,6 +130,17 @@ export interface SignupResult {
   email: string;
 }
 
+/**
+ * `authService.verifyRegistrationNumber()`'s return value — the verdict
+ * behind the Verify button next to the registration-number field. A bare
+ * yes/no plus a reason code the UI localizes; the backend deliberately
+ * returns nothing about the matched entity.
+ */
+export interface RegistrationNumberVerification {
+  verified: boolean;
+  reason?: "INVALID_FORMAT" | "NOT_FOUND";
+}
+
 export interface ForgotPasswordPayload {
   email: string;
 }

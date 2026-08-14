@@ -3,6 +3,7 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
 import {
+  apiRegistrationNumberVerificationSchema,
   apiSessionViewSchema,
   apiSignupViewSchema,
   type ApiSessionView,
@@ -12,6 +13,7 @@ import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
   LoginPayload,
+  RegistrationNumberVerification,
   RequestOtpPayload,
   ResetPasswordPayload,
   SessionContext,
@@ -148,6 +150,29 @@ export const authService = {
   async signup(payload: SignupPayload): Promise<SignupResult> {
     const raw = await apiClient.post<unknown>(endpoints.auth.signup, payload);
     return parseSignupView(raw);
+  },
+
+  /**
+   * Checks one registration number against the NIC entity registry without
+   * registering anything — what the Verify button next to the field calls.
+   * Convenience only: signup re-checks server-side regardless, so a verified
+   * verdict here is never what lets a registration through.
+   */
+  async verifyRegistrationNumber(
+    registrationNumber: string,
+  ): Promise<RegistrationNumberVerification> {
+    const raw = await apiClient.post<unknown>(endpoints.auth.verifyRegistrationNumber, {
+      registrationNumber,
+    });
+    const result = apiRegistrationNumberVerificationSchema.safeParse(raw);
+    if (!result.success) {
+      throw new ApiError({
+        message: "The server returned an unexpected verification response shape.",
+        status: 502,
+        details: result.error.issues,
+      });
+    }
+    return result.data;
   },
 
   async me(): Promise<SessionContext> {

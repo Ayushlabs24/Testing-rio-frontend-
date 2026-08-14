@@ -11,6 +11,7 @@ export const endpoints = {
   auth: {
     login: "/auth/login",
     signup: "/auth/signup",
+    verifyRegistrationNumber: "/auth/verify-registration-number",
     changePassword: "/auth/change-password",
     consent: "/auth/consent",
     forgotPassword: "/auth/forgot-password",

@@ -331,7 +331,23 @@ test("public signup creates an organization and its first NGO Admin, who must ch
   await page.getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL(/\/signup$/);
 
+  // Organization name and registration number are the only fields enabled up
+  // front: everything below stays locked until the number is verified against
+  // the NIC entity registry, so the order here is the order a registrant is
+  // forced through.
   await page.getByLabel("Organization name").fill(orgName);
+  // A registration number has to be a NIC number the backend's `nic_registry`
+  // table already holds, so this can't be stamped unique per run the way the
+  // org name and email are — and every successful signup permanently claims
+  // one (organisations.registration_number is unique). Point E2E_SIGNUP_NIC at
+  // an unclaimed number in the target environment's registry before
+  // re-running; the default is only good for a fresh database.
+  await page
+    .getByLabel("Registration number")
+    .fill(process.env.E2E_SIGNUP_NIC ?? "8000005834");
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByLabel("Sector")).toBeEnabled();
+
   // Sector is a live list of Methodology Configuration domains, seeded
   // per-environment — "Other" is the one option the form itself always
   // adds, so picking it keeps this test independent of the seed data.
@@ -339,7 +355,6 @@ test("public signup creates an organization and its first NGO Admin, who must ch
   await page.getByRole("option", { name: "Other" }).click();
   await page.getByLabel("Please specify").fill("Community Health");
   await fillRequiredGeography(page);
-  await page.getByLabel("Registration number").fill(`REG-E2E-${unique}`);
   // Single email field — no separate admin name/email/password anymore;
   // the signup email itself becomes the NGO Admin account, and the backend
   // issues a temporary password instead of taking one from the form.
@@ -415,11 +430,27 @@ test("signup requires a sector and only shows the free-text field for Other", as
   await page.goto("/signup");
 
   await page.getByLabel("Organization name").fill("Sector Validation Org");
-  await page.getByLabel("Registration number").fill(`REG-E2E-${Date.now()}`);
+
+  // Before verification the sector picker isn't merely un-chosen, it's locked,
+  // and so is everything else below the registration number.
+  await expect(page.getByRole("combobox", { name: "Sector" })).toBeDisabled();
+  await expect(page.getByLabel("Email")).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Create organization" })).toBeDisabled();
+
+  // E2E_SECTOR_NIC must be a NIC number present in the environment's registry
+  // but not yet claimed by a signup — point it at an unclaimed seed row when
+  // re-running against a shared environment. The default is only safe on a
+  // fresh database.
+  await page
+    .getByLabel("Registration number")
+    .fill(process.env.E2E_SECTOR_NIC ?? "8000005855");
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByRole("combobox", { name: "Sector" })).toBeEnabled();
+
   await page.getByLabel("Email").fill(`sector-check-${Date.now()}@demo.org`);
-  // No sector chosen yet — submitting must be blocked client-side.
-  await page.getByRole("button", { name: "Create organization" }).click();
-  await expect(page.getByText("Please select a sector.")).toBeVisible();
+  // Still no sector chosen — submit stays disabled until every required field
+  // is answered, so there is nothing to click.
+  await expect(page.getByRole("button", { name: "Create organization" })).toBeDisabled();
 
   // The free-text field is Other-only, not shown for a regular sector.
   const sector = page.getByRole("combobox", { name: "Sector" });
@@ -446,12 +477,21 @@ test("signing up with an already-registered registration number is blocked", asy
   await page.goto("/signup");
 
   await page.getByLabel("Organization name").fill("Demo Nonprofit Alliance (duplicate)");
+  // Matches Demo NGO's seeded registration number — a real NIC number, so it
+  // clears the registry gate (Verify succeeds, and unlocks the rest of the
+  // form) and is only caught as a duplicate at signup, which is what this test
+  // is about. E2E_DUPLICATE_NIC must stay pointed at Demo NGO's claimed number
+  // (i.e. already registered) — it is the one number this test must NOT change.
+  await page
+    .getByLabel("Registration number")
+    .fill(process.env.E2E_DUPLICATE_NIC ?? "8000005890");
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByRole("combobox", { name: "Sector" })).toBeEnabled();
+
   await page.getByRole("combobox", { name: "Sector" }).click();
   await page.getByRole("option", { name: "Other" }).click();
   await page.getByLabel("Please specify").fill("Livelihoods");
   await fillRequiredGeography(page);
-  // Matches Demo NGO's seeded registration number.
-  await page.getByLabel("Registration number").fill("REG-DEMO-0001");
   await page.getByLabel("Email").fill(`second-admin-${Date.now()}@demo.org`);
   await page.getByRole("button", { name: "Create organization" }).click();
 

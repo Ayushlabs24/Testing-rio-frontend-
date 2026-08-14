@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, MailCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -29,6 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSectorOptions } from "@/hooks/use-sector-options";
+import {
+  isValidRegistrationNumberShape,
+  normalizeRegistrationNumber,
+} from "@/lib/registration-number";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
@@ -40,6 +44,19 @@ import type { Center, Governorate, Region } from "@/services/geography/geography
 interface PendingConfirmation {
   organizationName: string;
 }
+
+/**
+ * Backend error codes that are really "the registration number is wrong",
+ * mapped to their key under `auth.validation`. Both come from the NIC-registry
+ * gate in AuthService.signup: NOT_RECOGNISED is a well-formed number that
+ * isn't in the published entity register, INVALID is one that isn't a
+ * 10-digit unified national number at all (the client's own shape check
+ * normally catches that one first).
+ */
+const REGISTRATION_NUMBER_ERRORS: Record<string, string> = {
+  REGISTRATION_NUMBER_NOT_RECOGNISED: "registrationNumberUnknown",
+  REGISTRATION_NUMBER_INVALID: "registrationNumberFormat",
+};
 
 /**
  * Shown once, right after a successful signup. RIO-FR-010 (client-confirmed):
@@ -369,9 +386,16 @@ export function SignupForm() {
       .min(1, { message: tValidation("organizationNameRequired") }),
     sector: z.string().min(1, { message: tValidation("sectorRequired") }),
     otherSector: z.string(),
+    // The registration number is the entity's 10-digit unified national
+    // number, checked server-side against the NIC entity registry. The shape
+    // check here is UX only — it catches a typo without a round trip; the
+    // server re-normalizes and re-checks, and is the actual gate.
     registrationNumber: z
       .string()
-      .min(1, { message: tValidation("registrationNumberRequired") }),
+      .min(1, { message: tValidation("registrationNumberRequired") })
+      .refine(isValidRegistrationNumberShape, {
+        message: tValidation("registrationNumberFormat"),
+      }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
     regionId: z.string().min(1, { message: tValidation("regionRequired") }),
     governorateIds: z
@@ -396,8 +420,10 @@ export function SignupForm() {
     register,
     handleSubmit,
     setValue,
+    setError,
+    clearErrors,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -414,12 +440,104 @@ export function SignupForm() {
   });
 
   const selectedSector = useWatch({ control, name: "sector" });
+  const registrationNumber = useWatch({ control, name: "registrationNumber" });
   const regionId = useWatch({ control, name: "regionId" });
   const governorateIds = useWatch({ control, name: "governorateIds" });
   const centerIds = useWatch({ control, name: "centerIds" });
 
+  // The number the Verify button last confirmed, normalized. Held as the
+  // value rather than a boolean so editing the field silently drops the tick
+  // — a green check next to a number nobody checked would be a lie.
+  const [verifiedNumber, setVerifiedNumber] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const normalizedRegistrationNumber = normalizeRegistrationNumber(
+    registrationNumber ?? "",
+  );
+  const isRegistrationNumberVerified =
+    verifiedNumber !== null && verifiedNumber === normalizedRegistrationNumber;
+  const isRegistrationNumberVerifiable =
+    !isVerifying &&
+    normalizedRegistrationNumber.length > 0 &&
+    !isRegistrationNumberVerified;
+
+  const onVerifyRegistrationNumber = async () => {
+    const value = registrationNumber ?? "";
+    clearErrors("registrationNumber");
+
+    // Checked here too, not just on submit: the server would answer
+    // INVALID_FORMAT anyway, and spending a rate-limited request to be told
+    // what the client already knows is wasteful.
+    if (!isValidRegistrationNumberShape(value)) {
+      setError("registrationNumber", {
+        type: "validate",
+        message: tValidation("registrationNumberFormat"),
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const { verified, reason } = await authService.verifyRegistrationNumber(value);
+      if (verified) {
+        setVerifiedNumber(normalizeRegistrationNumber(value));
+        return;
+      }
+      setVerifiedNumber(null);
+      setError("registrationNumber", {
+        type: "validate",
+        message: tValidation(
+          reason === "INVALID_FORMAT"
+            ? "registrationNumberFormat"
+            : "registrationNumberUnknown",
+        ),
+      });
+    } catch {
+      // A transport failure or the endpoint's own rate limit — neither is a
+      // verdict on the number, so don't clear or set a verified state.
+      setVerifiedNumber(null);
+      setError("registrationNumber", {
+        type: "server",
+        message: tValidation("registrationNumberVerifyFailed"),
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const organizationName = useWatch({ control, name: "organizationName" });
+  const email = useWatch({ control, name: "email" });
   const acceptedUsePolicy = useWatch({ control, name: "acceptedUsePolicy" });
   const acceptedDataSharing = useWatch({ control, name: "acceptedDataSharing" });
+
+  const otherSector = useWatch({ control, name: "otherSector" });
+
+  /**
+   * Every required field answered, both consents accepted, and the
+   * registration number confirmed against the registry — the submit button
+   * stays disabled until all of it holds.
+   *
+   * Presence only, not validity: an email that's filled but malformed still
+   * enables the button, so submitting surfaces zod's own "enter a valid email"
+   * on the field. A button that silently refuses to enable, with nothing
+   * saying why, is worse than one that enables and explains.
+   *
+   * `otherSector` is included only when "Other" is selected — the backend
+   * accepts an empty `purpose` for non-Other sectors, but if the user picks
+   * Other and leaves the free-text blank the signup will fail server-side.
+   */
+  const isFormComplete =
+    Boolean(organizationName?.trim()) &&
+    Boolean(selectedSector) &&
+    (selectedSector !== "other" || Boolean(otherSector?.trim())) &&
+    Boolean(email?.trim()) &&
+    Boolean(regionId) &&
+    governorateIds.length > 0 &&
+    centerIds.length > 0 &&
+    acceptedUsePolicy === true &&
+    acceptedDataSharing === true &&
+    // Implies the field is filled, and that what's in it was actually checked.
+    isRegistrationNumberVerified;
 
   useEffect(() => {
     geographyService
@@ -526,6 +644,26 @@ export function SignupForm() {
       // Admin) approval before activation. See SignupConfirmation's comment.
       setPendingConfirmation({ organizationName: result.organizationName });
     } catch (error) {
+      // The NIC-registry gate rejects the registration number itself, so it
+      // belongs on that field rather than in the form-wide banner at the
+      // bottom of a long form. Mapped off the server's error code — the
+      // backend has no i18n, and its English sentence must not reach an
+      // Arabic registrant.
+      if (
+        error instanceof ApiError &&
+        error.code &&
+        error.code in REGISTRATION_NUMBER_ERRORS
+      ) {
+        setError(
+          "registrationNumber",
+          {
+            type: "server",
+            message: tValidation(REGISTRATION_NUMBER_ERRORS[error.code]),
+          },
+          { shouldFocus: true },
+        );
+        return;
+      }
       setFormError(error instanceof ApiError ? error.message : t("genericError"));
     }
   };
@@ -561,22 +699,73 @@ export function SignupForm() {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="registrationNumber">
-              {t("registrationNumberLabel")} <span className="text-destructive">*</span>
-            </Label>
+        {/* Full-width rather than sharing a row with Sector: the field now
+            carries a Verify button and its own status line, and a half-width
+            column wrapped that message across four lines. */}
+        <div className="space-y-2">
+          <Label htmlFor="registrationNumber">
+            {t("registrationNumberLabel")} <span className="text-destructive">*</span>
+          </Label>
+          <div className="flex items-center gap-2">
             <Input
               id="registrationNumber"
+              className="flex-1"
               placeholder={t("registrationNumberPlaceholder")}
+              aria-describedby="registrationNumberStatus"
+              aria-invalid={errors.registrationNumber ? true : undefined}
               {...register("registrationNumber")}
             />
-            {errors.registrationNumber ? (
-              <p className="text-destructive text-sm">
-                {errors.registrationNumber.message}
-              </p>
+            <LoadingButton
+              type="button"
+              variant="outline"
+              text={t("verifyRegistrationNumber")}
+              // Verifying an empty field can only ever say "wrong shape",
+              // which the field itself already says on submit.
+              disabled={!isRegistrationNumberVerifiable}
+              isLoading={isVerifying}
+              onClick={onVerifyRegistrationNumber}
+            />
+            {isRegistrationNumberVerified ? (
+              <CheckCircle2
+                className="size-6 shrink-0 text-emerald-600"
+                aria-hidden="true"
+              />
             ) : null}
           </div>
+          {/* One line at a time, and one element: the field error and the
+              "verified" confirmation are mutually exclusive states, so they
+              share a slot instead of stacking. aria-live announces the
+              outcome of a Verify click, which is otherwise only visual. */}
+          <p
+            id="registrationNumberStatus"
+            aria-live="polite"
+            className={
+              errors.registrationNumber
+                ? "text-destructive text-sm"
+                : "text-sm text-emerald-600"
+            }
+          >
+            {errors.registrationNumber?.message ??
+              (isRegistrationNumberVerified ? t("registrationNumberVerified") : null)}
+          </p>
+        </div>
+
+        {/* Everything past the registration number is locked until that
+            number is confirmed against the registry. A native disabled
+            fieldset does it in one place — every descendant control, custom
+            components included, reports :disabled and drops out of the tab
+            order — rather than threading a `disabled` prop through six
+            different widgets. The point is to stop anyone filling in a long
+            form on behalf of an entity that can't register at all. */}
+        <fieldset disabled={!isRegistrationNumberVerified} className="space-y-4">
+          <legend className="sr-only">{t("entityDetailsLegend")}</legend>
+
+          {!isRegistrationNumberVerified ? (
+            <p className="text-muted-foreground text-sm" aria-live="polite">
+              {t("verifyToUnlockHint")}
+            </p>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="sector">
               {t("sectorLabel")} <span className="text-destructive">*</span>
@@ -603,161 +792,173 @@ export function SignupForm() {
               <p className="text-destructive text-sm">{errors.sector.message}</p>
             ) : null}
           </div>
-        </div>
 
-        {selectedSector === "other" ? (
-          <div className="space-y-2">
-            <Label htmlFor="otherSector">{t("otherSectorLabel")}</Label>
-            <Input
-              id="otherSector"
-              placeholder={t("otherSectorPlaceholder")}
-              {...register("otherSector")}
-            />
-          </div>
-        ) : null}
+          {selectedSector === "other" ? (
+            <div className="space-y-2">
+              <Label htmlFor="otherSector">{t("otherSectorLabel")}</Label>
+              <Input
+                id="otherSector"
+                placeholder={t("otherSectorPlaceholder")}
+                {...register("otherSector")}
+              />
+            </div>
+          ) : null}
 
-        {/* Stacked full-width, not a side-by-side grid — Governorate/Center
+          {/* Stacked full-width, not a side-by-side grid — Governorate/Center
             chip lists can wrap to several rows once many are selected. */}
-        <div className="space-y-2">
-          <Label htmlFor="region">
-            {tGeo("administrativeRegionLabel")}{" "}
-            <span className="text-destructive">*</span>
-          </Label>
-          <Combobox
-            aria-label={tGeo("administrativeRegionLabel")}
-            items={regions.map((r) => ({ value: r.id, label: r.name }))}
-            value={regionId || null}
-            onSelect={(value) => setValue("regionId", value, { shouldValidate: true })}
-            placeholder={tGeo("administrativeRegionPlaceholder")}
-            searchPlaceholder={tGeo("administrativeRegionSearchPlaceholder")}
-            emptyText={tGeo("administrativeRegionEmpty")}
-          />
-          {errors.regionId ? (
-            <p className="text-destructive text-sm">{errors.regionId.message}</p>
-          ) : null}
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="region">
+              {tGeo("administrativeRegionLabel")}{" "}
+              <span className="text-destructive">*</span>
+            </Label>
+            <Combobox
+              aria-label={tGeo("administrativeRegionLabel")}
+              items={regions.map((r) => ({ value: r.id, label: r.name }))}
+              value={regionId || null}
+              onSelect={(value) => setValue("regionId", value, { shouldValidate: true })}
+              placeholder={tGeo("administrativeRegionPlaceholder")}
+              searchPlaceholder={tGeo("administrativeRegionSearchPlaceholder")}
+              emptyText={tGeo("administrativeRegionEmpty")}
+            />
+            {errors.regionId ? (
+              <p className="text-destructive text-sm">{errors.regionId.message}</p>
+            ) : null}
+          </div>
 
-        <div className="space-y-2">
-          <Label>
-            {tGeo("governorateLabel")} <span className="text-destructive">*</span>
-          </Label>
-          <MultiSelect
-            options={governorates.map((g) => ({ value: g.id, label: g.name }))}
-            values={governorateIds}
-            onChange={(next) =>
-              setValue("governorateIds", next, { shouldValidate: true })
-            }
-            placeholder={
-              regionId ? tGeo("governoratePlaceholder") : tGeo("selectRegionFirst")
-            }
-            searchPlaceholder={tGeo("governorateSearchPlaceholder")}
-            emptyText={tGeo("governorateEmpty")}
-            removeAriaLabel={(governorate) =>
-              tGeo("removeGovernorateSelection", { governorate })
-            }
-            disabled={!regionId}
-          />
-          {errors.governorateIds ? (
-            <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
-          ) : null}
-        </div>
+          <div className="space-y-2">
+            <Label>
+              {tGeo("governorateLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <MultiSelect
+              options={governorates.map((g) => ({ value: g.id, label: g.name }))}
+              values={governorateIds}
+              onChange={(next) =>
+                setValue("governorateIds", next, { shouldValidate: true })
+              }
+              placeholder={
+                regionId ? tGeo("governoratePlaceholder") : tGeo("selectRegionFirst")
+              }
+              searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+              emptyText={tGeo("governorateEmpty")}
+              removeAriaLabel={(governorate) =>
+                tGeo("removeGovernorateSelection", { governorate })
+              }
+              disabled={!regionId}
+            />
+            {errors.governorateIds ? (
+              <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
+            ) : null}
+          </div>
 
-        <div className="space-y-2">
-          <Label>
-            {tGeo("centerLabel")} <span className="text-destructive">*</span>
-          </Label>
-          <MultiSelect
-            options={centers.map((c) => ({ value: c.id, label: c.name }))}
-            values={centerIds}
-            onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
-            placeholder={
-              governorateIds.length > 0
-                ? tGeo("centerPlaceholder")
-                : tGeo("selectGovernorateFirst")
-            }
-            searchPlaceholder={tGeo("centerSearchPlaceholder")}
-            emptyText={tGeo("centerEmpty")}
-            removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
-            disabled={governorateIds.length === 0}
-          />
-          {errors.centerIds ? (
-            <p className="text-destructive text-sm">{errors.centerIds.message}</p>
-          ) : null}
-        </div>
+          <div className="space-y-2">
+            <Label>
+              {tGeo("centerLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <MultiSelect
+              options={centers.map((c) => ({ value: c.id, label: c.name }))}
+              values={centerIds}
+              onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
+              placeholder={
+                governorateIds.length > 0
+                  ? tGeo("centerPlaceholder")
+                  : tGeo("selectGovernorateFirst")
+              }
+              searchPlaceholder={tGeo("centerSearchPlaceholder")}
+              emptyText={tGeo("centerEmpty")}
+              removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
+              disabled={governorateIds.length === 0}
+            />
+            {errors.centerIds ? (
+              <p className="text-destructive text-sm">{errors.centerIds.message}</p>
+            ) : null}
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email">
-            {t("emailLabel")} <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder={t("emailPlaceholder")}
-            {...register("email")}
-          />
-          {errors.email ? (
-            <p className="text-destructive text-sm">{errors.email.message}</p>
-          ) : null}
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">
+              {t("emailLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder={t("emailPlaceholder")}
+              {...register("email")}
+            />
+            {errors.email ? (
+              <p className="text-destructive text-sm">{errors.email.message}</p>
+            ) : null}
+          </div>
 
-        {/* RIO-DATA-001 — the two consents, accepted as part of registration
+          {/* RIO-DATA-001 — the two consents, accepted as part of registration
             itself. Each opens its live policy in a dialog that must be read
             to the end before its checkbox unlocks, so the acceptance is never
             a tick against unseen wording. */}
-        <fieldset className="border-border space-y-4 border-t pt-5">
-          <legend className="sr-only">{t("consentLegend")}</legend>
+          <fieldset className="border-border space-y-4 border-t pt-5">
+            <legend className="sr-only">{t("consentLegend")}</legend>
 
-          <ConsentCheckbox
-            id="acceptedUsePolicy"
-            checked={acceptedUsePolicy === true}
-            onCheckedChange={(checked) =>
-              setValue("acceptedUsePolicy", checked as true, { shouldValidate: true })
-            }
-            label={t("usePolicyLabel")}
-            linkLabel={t("usePolicyLinkLabel")}
-            dialogTitle={t("usePolicyDialogTitle")}
-            policyText={policies?.usePolicy.text}
-            version={policies?.usePolicy.version}
-            versionLabel={t("policyVersion")}
-            scrollHint={t("scrollHint")}
-            confirmLabel={t("policyReadConfirm")}
-            readHint={t("mustReadHint", { policy: t("usePolicyLinkLabel") })}
-            error={errors.acceptedUsePolicy?.message}
-          />
+            <ConsentCheckbox
+              id="acceptedUsePolicy"
+              checked={acceptedUsePolicy === true}
+              onCheckedChange={(checked) =>
+                setValue("acceptedUsePolicy", checked as true, { shouldValidate: true })
+              }
+              label={t("usePolicyLabel")}
+              linkLabel={t("usePolicyLinkLabel")}
+              dialogTitle={t("usePolicyDialogTitle")}
+              policyText={policies?.usePolicy.text}
+              version={policies?.usePolicy.version}
+              versionLabel={t("policyVersion")}
+              scrollHint={t("scrollHint")}
+              confirmLabel={t("policyReadConfirm")}
+              readHint={t("mustReadHint", { policy: t("usePolicyLinkLabel") })}
+              error={errors.acceptedUsePolicy?.message}
+            />
 
-          <ConsentCheckbox
-            id="acceptedDataSharing"
-            checked={acceptedDataSharing === true}
-            onCheckedChange={(checked) =>
-              setValue("acceptedDataSharing", checked as true, { shouldValidate: true })
-            }
-            label={t("dataSharingLabel")}
-            linkLabel={t("dataSharingLinkLabel")}
-            dialogTitle={t("dataSharingDialogTitle")}
-            policyText={policies?.dataSharing.text}
-            version={policies?.dataSharing.version}
-            versionLabel={t("policyVersion")}
-            scrollHint={t("scrollHint")}
-            confirmLabel={t("policyReadConfirm")}
-            readHint={t("mustReadHint", { policy: t("dataSharingLinkLabel") })}
-            error={errors.acceptedDataSharing?.message}
-          />
+            <ConsentCheckbox
+              id="acceptedDataSharing"
+              checked={acceptedDataSharing === true}
+              onCheckedChange={(checked) =>
+                setValue("acceptedDataSharing", checked as true, { shouldValidate: true })
+              }
+              label={t("dataSharingLabel")}
+              linkLabel={t("dataSharingLinkLabel")}
+              dialogTitle={t("dataSharingDialogTitle")}
+              policyText={policies?.dataSharing.text}
+              version={policies?.dataSharing.version}
+              versionLabel={t("policyVersion")}
+              scrollHint={t("scrollHint")}
+              confirmLabel={t("policyReadConfirm")}
+              readHint={t("mustReadHint", { policy: t("dataSharingLinkLabel") })}
+              error={errors.acceptedDataSharing?.message}
+            />
 
-          {policiesError ? (
-            <p className="text-destructive text-sm">{t("consentUnavailableError")}</p>
-          ) : null}
+            {policiesError ? (
+              <p className="text-destructive text-sm">{t("consentUnavailableError")}</p>
+            ) : null}
+          </fieldset>
         </fieldset>
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
+
+        {/* Says why the button is dead. A disabled control with no stated
+            reason strands anyone who can't spot the one thing they missed —
+            most often the Verify step, which no other form here has.
+            Only shown once the user has started filling the form so it
+            doesn't read as a pre-emptive error on first load. */}
+        {policies && isDirty && !isFormComplete ? (
+          <p className="text-muted-foreground text-sm" aria-live="polite">
+            {t("completeAllFieldsHint")}
+          </p>
+        ) : null}
 
         <LoadingButton
           type="submit"
           className="h-11 w-full gap-2 px-6"
           isLoading={isSubmitting}
-          // Without the policies there is no version to pin the acceptance
-          // to, so registration genuinely cannot proceed — disabled rather
-          // than allowed-to-fail at the server.
-          disabled={!policies}
+          // Two reasons to be disabled: without the policies there is no
+          // version to pin the acceptance to, and an incomplete form (or an
+          // unverified registration number) can only fail — neither is worth
+          // a round trip to the server to find out.
+          disabled={!policies || !isFormComplete}
           text={isSubmitting ? t("submitting") : t("submit")}
           endIcon={<ArrowRight className="size-4 rtl:rotate-180" />}
         />

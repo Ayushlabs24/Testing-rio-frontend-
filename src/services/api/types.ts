@@ -2,6 +2,11 @@ export interface ApiErrorPayload {
   message: string;
   status: number;
   details?: unknown;
+  /** The backend's machine-readable error code from its `{ error: { code } }`
+   * envelope (see AllExceptionsFilter). Present so callers can react to a
+   * specific failure — localizing it, or mapping it onto the form field that
+   * caused it — instead of displaying the server's English `message`. */
+  code?: string;
   /** True only when the caller's own `signal` aborted the request — distinct
    * from a timeout (status 408) or a genuine network failure (status 0,
    * `cancelled` unset/false), so callers that need to ignore an expected
@@ -14,13 +19,15 @@ export class ApiError extends Error {
   readonly status: number;
   readonly details?: unknown;
   readonly cancelled: boolean;
+  readonly code?: string;
 
-  constructor({ message, status, details, cancelled }: ApiErrorPayload) {
+  constructor({ message, status, details, cancelled, code }: ApiErrorPayload) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.details = details;
     this.cancelled = cancelled ?? false;
+    this.code = code;
   }
 }
 

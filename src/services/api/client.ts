@@ -163,6 +163,7 @@ async function request<TResponse>(
         message: payload?.error?.message ?? payload?.message ?? response.statusText,
         status: response.status,
         details: payload?.error?.details ?? payload,
+        code: payload?.error?.code ?? payload?.code,
       });
     }
 
