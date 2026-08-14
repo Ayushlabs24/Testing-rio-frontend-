@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, CheckCircle2, MailCheck } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -37,7 +37,11 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
 import { consentService } from "@/services/consent/consent.service";
-import type { ActiveConsentPolicies } from "@/services/consent/consent.types";
+import {
+  consentPolicyTextFor,
+  type ActiveConsentPolicies,
+  type ConsentLocale,
+} from "@/services/consent/consent.types";
 import { geographyService } from "@/services/geography/geography.service";
 import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 
@@ -172,6 +176,12 @@ function PolicyReader({
         tabIndex={0}
         role="region"
         aria-label={title}
+        // `dir="auto"` rather than inheriting the page direction: this block
+        // is policy copy from the database, and the two can disagree — an
+        // untranslated policy still renders its English text on an Arabic
+        // (RTL) page, where inherited direction would mangle its punctuation.
+        // Same convention the app uses everywhere it renders stored text.
+        dir="auto"
         className="border-border text-muted-foreground max-h-[45vh] min-h-24 overflow-y-auto rounded-md border p-4 text-sm leading-relaxed whitespace-pre-line"
       >
         {policyText}
@@ -365,6 +375,11 @@ export function SignupForm() {
   // Reused rather than duplicated — Settings > Organization already has the
   // exact Region/Governorate/Center picker copy this form needs.
   const tGeo = useTranslations("app.settings.organization");
+  // Which language the consents get rendered in — and, submitted alongside
+  // the versions, which wording the acceptance is recorded against. Narrowed
+  // exhaustively rather than cast: `useLocale()` widens to string, and only
+  // these two have policy copy behind them.
+  const consentLocale: ConsentLocale = useLocale() === "ar" ? "ar" : "en";
   const sectorOptions = useSectorOptions(false);
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -615,6 +630,17 @@ export function SignupForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [governorateIds]);
 
+  // The wording each consent dialog shows, in the reader's own language —
+  // falling back to English per policy when a translation is outstanding, so
+  // one untranslated consent never blanks the other. `undefined` while the
+  // policies are still loading, which is what keeps the checkboxes locked.
+  const usePolicyText = policies
+    ? consentPolicyTextFor(policies.usePolicy, consentLocale)
+    : undefined;
+  const dataSharingText = policies
+    ? consentPolicyTextFor(policies.dataSharing, consentLocale)
+    : undefined;
+
   const onSubmit = async (values: SignupValues) => {
     setFormError(null);
     // Guarded by the disabled submit below, but re-checked here because the
@@ -634,10 +660,14 @@ export function SignupForm() {
         regionId: values.regionId,
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
-        // The exact versions the two checkboxes above were rendered for.
+        // The exact versions the two checkboxes above were rendered for,
+        // plus the language they were rendered in — together they identify
+        // the wording that was actually read, which is what the server
+        // snapshots onto the immutable acceptance records.
         consent: {
           usePolicyVersion: policies.usePolicy.version,
           dataSharingVersion: policies.dataSharing.version,
+          locale: consentLocale,
         },
       });
       // No session is issued — registration now requires Center (System
@@ -904,7 +934,7 @@ export function SignupForm() {
               label={t("usePolicyLabel")}
               linkLabel={t("usePolicyLinkLabel")}
               dialogTitle={t("usePolicyDialogTitle")}
-              policyText={policies?.usePolicy.text}
+              policyText={usePolicyText}
               version={policies?.usePolicy.version}
               versionLabel={t("policyVersion")}
               scrollHint={t("scrollHint")}
@@ -922,7 +952,7 @@ export function SignupForm() {
               label={t("dataSharingLabel")}
               linkLabel={t("dataSharingLinkLabel")}
               dialogTitle={t("dataSharingDialogTitle")}
-              policyText={policies?.dataSharing.text}
+              policyText={dataSharingText}
               version={policies?.dataSharing.version}
               versionLabel={t("policyVersion")}
               scrollHint={t("scrollHint")}

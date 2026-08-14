@@ -6,10 +6,41 @@
  */
 export type ConsentKind = "use_policy" | "data_sharing";
 
+/**
+ * The languages a consent can be read in — the subset of `routing.locales`
+ * the backend holds policy copy for. Kept as its own type rather than reusing
+ * `AppLocale` so adding a UI language does not silently imply the policies
+ * were translated too.
+ */
+export type ConsentLocale = "en" | "ar";
+
 export interface ActiveConsentPolicy {
   kind: ConsentKind;
   version: string;
   text: string;
+  /**
+   * The same version's Arabic wording, or null when the translation is still
+   * outstanding. Both languages arrive in one payload so switching language
+   * re-renders an open policy dialog instantly — no refetch, and no blank
+   * body mid-read.
+   */
+  textAr: string | null;
+}
+
+/**
+ * The wording to show a reader of `locale`, falling back to English when the
+ * Arabic copy is missing: an untranslated policy is a content gap, but a
+ * blank consent is a broken registration.
+ *
+ * Presentation only — the server independently re-derives the same text from
+ * the submitted locale before snapshotting it (see the backend's
+ * `consentPolicyTextFor`), so this never decides what gets recorded.
+ */
+export function consentPolicyTextFor(
+  policy: Pick<ActiveConsentPolicy, "text" | "textAr">,
+  locale: ConsentLocale,
+): string {
+  return locale === "ar" && policy.textAr ? policy.textAr : policy.text;
 }
 
 /** Both active policies, as returned by GET /consent-policy/active. */
@@ -42,4 +73,11 @@ export interface OrganizationConsentStatus {
 export interface ConsentAcceptanceInput {
   usePolicyVersion: string;
   dataSharingVersion: string;
+  /**
+   * Which language the two policies were displayed in, sent for the same
+   * reason the versions are: it pins *what* was agreed to. The server uses it
+   * to snapshot the wording actually read — it never accepts the text itself
+   * from the client.
+   */
+  locale: ConsentLocale;
 }

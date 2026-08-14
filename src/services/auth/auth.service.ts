@@ -2,6 +2,7 @@ import { roles } from "@/mocks/data/roles";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import { ApiError } from "@/services/api/types";
+import type { ConsentLocale } from "@/services/consent/consent.types";
 import {
   apiRegistrationNumberVerificationSchema,
   apiSessionViewSchema,
@@ -227,8 +228,11 @@ export const authService = {
    * this re-fetches `me()` afterward rather than trying to hand-merge a
    * partial response into the existing session.
    */
-  async giveConsent(): Promise<SessionContext> {
-    await apiClient.post(endpoints.auth.consent);
+  async giveConsent(locale: ConsentLocale = "en"): Promise<SessionContext> {
+    // The locale the policies were displayed in, so the acceptance snapshots
+    // the wording the user read rather than the English source. Defaults to
+    // "en" for callers that predate the Arabic copy.
+    await apiClient.post(endpoints.auth.consent, { locale });
     return authService.me();
   },
 };

@@ -195,12 +195,12 @@ export default function ReviewerSlaPage() {
                     {/* Type column hidden for now — t("typeColumn")/t(`type.${alert.type}`) still exist, just not rendered. */}
                     <TableHead className="w-[22%]">{t("studyColumn")}</TableHead>
                     <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
-                    <TableHead className="w-36">{t("createdColumn")}</TableHead>
+                    <TableHead className="w-40">{t("createdColumn")}</TableHead>
                     {/* Due/breach only applies to the still-open Approver
                         queue — a Research Officer's alerts are already
                         resolved, there's nothing left to be "at risk" of. */}
                     {canApprove ? (
-                      <TableHead className="w-36">{t("dueColumn")}</TableHead>
+                      <TableHead className="w-40">{t("dueColumn")}</TableHead>
                     ) : null}
                     {canApprove ? (
                       // Wide enough for the longest label ("Pending Review")
@@ -283,11 +283,11 @@ export default function ReviewerSlaPage() {
                             t("noNeedStatement")
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-normal">
                           <FormattedDate value={alert.createdAt} withTime />
                         </TableCell>
                         {canApprove ? (
-                          <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-nowrap">
+                          <TableCell className="text-muted-foreground py-4 align-top text-sm whitespace-normal">
                             <FormattedDate value={alert.dueAt} withTime />
                           </TableCell>
                         ) : null}

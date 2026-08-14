@@ -22,8 +22,14 @@ function lookup(namespace: string, key: string): string {
   return typeof value === "string" ? value : key;
 }
 
+// Hoisted so `vi.mock`'s factory can close over it — the locale has to be
+// settable per test, since which language the form renders the consents in is
+// now part of what these tests cover.
+const intl = vi.hoisted(() => ({ locale: "en" }));
+
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string) => lookup(namespace, key),
+  useLocale: () => intl.locale,
 }));
 
 vi.mock("@/i18n/navigation", () => ({
@@ -73,15 +79,20 @@ vi.mock("@/services/geography/geography.service", () => ({
 // RIO-DATA-001 — the registration form fetches both active consent policies
 // and submits the version of each. Distinct versions here so a bug that sent
 // one version for both consents would be caught.
+// The use policy is translated and the data-sharing one is not, so the same
+// pair covers both the Arabic rendering and the per-policy fall-back to
+// English that a partially-translated set produces.
 const USE_POLICY = {
   kind: "use_policy" as const,
   version: "v1",
   text: "Use policy text.",
+  textAr: "نص سياسة الاستخدام.",
 };
 const SHARING_POLICY = {
   kind: "data_sharing" as const,
   version: "v2",
   text: "Data-sharing consent text.",
+  textAr: null,
 };
 vi.mock("@/services/consent/consent.service", () => ({
   consentService: { getActive: vi.fn() },
@@ -89,6 +100,8 @@ vi.mock("@/services/consent/consent.service", () => ({
 
 /** Radix Select/Popover need these in jsdom — it isn't a real pointer/layout environment. */
 beforeEach(() => {
+  // Reset per test — an Arabic case must not leak into the next one.
+  intl.locale = "en";
   window.HTMLElement.prototype.hasPointerCapture = vi.fn();
   window.HTMLElement.prototype.releasePointerCapture = vi.fn();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -117,6 +130,20 @@ beforeEach(() => {
 function byLabel(text: string): RegExp {
   return new RegExp(text);
 }
+
+/**
+ * `delay: null` disables user-event's inter-keystroke pause.
+ *
+ * Not a micro-optimisation: the NIC gate means every test here first types a
+ * 10-digit registration number and waits for Verify, on top of an org name
+ * and an email — hundreds of keystrokes per file, each otherwise yielding to
+ * the event loop. That pushed the slowest cases past vitest's 5s limit
+ * whenever the suite ran alongside other files competing for CPU, so the file
+ * failed intermittently on nothing but timing. The pause buys no realism in
+ * jsdom, where there is no debounce or async validation keyed off typing
+ * speed for it to exercise.
+ */
+const setupUser = () => userEvent.setup({ delay: null });
 
 /**
  * Takes the `user` rather than creating one: every field below the
@@ -226,7 +253,7 @@ async function acceptBothConsents(user: ReturnType<typeof userEvent.setup>) {
 describe("SignupForm sector field", () => {
   it("lists every live domain plus a fixed Other option", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
     await user.click(
       screen.getByRole("combobox", { name: byLabel(en.auth.signup.sectorLabel) }),
     );
@@ -241,7 +268,7 @@ describe("SignupForm sector field", () => {
 
   it("reveals the free-text field only when Other is selected", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     await selectSector(user, en.app.settings.organization.sectors.other);
     expect(screen.getByLabelText(en.auth.signup.otherSectorLabel)).toBeInTheDocument();
@@ -254,7 +281,7 @@ describe("SignupForm sector field", () => {
 
   it("keeps registration blocked until a sector is chosen", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
     await selectGeography(user);
@@ -282,7 +309,7 @@ describe("SignupForm sector field", () => {
       email: "a@b.org",
     });
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
     await selectSector(user, "Health");
     await selectGeography(user);
     await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
@@ -309,7 +336,7 @@ describe("SignupForm sector field", () => {
       email: "a@b.org",
     });
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
     await selectSector(user, en.app.settings.organization.sectors.other);
     await selectGeography(user);
     await user.type(
@@ -343,7 +370,7 @@ describe("SignupForm sector field", () => {
 describe("SignupForm registration number (NIC registry)", () => {
   /** Every required field answered, ending with a verified number. */
   async function fillEverything(registrationNumber: string) {
-    const user = await unlockForm(userEvent.setup(), { registrationNumber });
+    const user = await unlockForm(setupUser(), { registrationNumber });
     await selectSector(user, "Health");
     await selectGeography(user);
     await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
@@ -353,7 +380,7 @@ describe("SignupForm registration number (NIC registry)", () => {
 
   it("locks every field below the registration number until it is verified", async () => {
     render(<SignupForm />);
-    const user = userEvent.setup();
+    const user = setupUser();
 
     // Only the two fields a registrant can meaningfully answer up front.
     expect(
@@ -388,7 +415,7 @@ describe("SignupForm registration number (NIC registry)", () => {
 
   it("re-locks the rest of the form when a verified number is edited", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
     expect(screen.getByLabelText(byLabel(en.auth.signup.emailLabel))).toBeEnabled();
 
     await user.type(
@@ -403,7 +430,7 @@ describe("SignupForm registration number (NIC registry)", () => {
 
   it("keeps registration blocked until the number has been verified", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
     await selectSector(user, "Health");
     await selectGeography(user);
     await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
@@ -462,7 +489,7 @@ describe("SignupForm registration number (NIC registry)", () => {
 
   it("confirms a registered number in place when Verify is clicked", async () => {
     render(<SignupForm />);
-    const user = userEvent.setup();
+    const user = setupUser();
     await user.type(
       screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       NIC_NUMBER,
@@ -485,7 +512,7 @@ describe("SignupForm registration number (NIC registry)", () => {
       reason: "NOT_FOUND",
     });
     render(<SignupForm />);
-    const user = userEvent.setup();
+    const user = setupUser();
     await user.type(
       screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       "9999999999",
@@ -505,7 +532,7 @@ describe("SignupForm registration number (NIC registry)", () => {
   it("drops the confirmation once the number is edited", async () => {
     // A tick left standing next to a number nobody checked would be a lie.
     render(<SignupForm />);
-    const user = userEvent.setup();
+    const user = setupUser();
     const field = screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel));
     await user.type(field, NIC_NUMBER);
     await user.click(
@@ -535,7 +562,7 @@ describe("SignupForm registration number (NIC registry)", () => {
     expect(verifyButton).toBeDisabled();
 
     // Typing anything enables it.
-    const user = userEvent.setup();
+    const user = setupUser();
     await user.type(
       screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       NIC_NUMBER,
@@ -552,7 +579,7 @@ describe("SignupForm registration number (NIC registry)", () => {
 
   it("does not spend a verification request on a number of the wrong shape", async () => {
     render(<SignupForm />);
-    const user = userEvent.setup();
+    const user = setupUser();
     await user.type(
       screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       "NGO123",
@@ -572,7 +599,7 @@ describe("SignupForm registration number (NIC registry)", () => {
       new ApiError({ message: "Too many requests", status: 429 }),
     );
     render(<SignupForm />);
-    const user = userEvent.setup();
+    const user = setupUser();
     await user.type(
       screen.getByLabelText(byLabel(en.auth.signup.registrationNumberLabel)),
       NIC_NUMBER,
@@ -610,7 +637,7 @@ describe("SignupForm registration number (NIC registry)", () => {
 describe("SignupForm consent (RIO-DATA-001)", () => {
   /** Everything except the consent checkboxes. */
   async function fillEverythingElse() {
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
     await selectSector(user, "Health");
     await selectGeography(user);
     await user.type(screen.getByLabelText(byLabel(en.auth.signup.emailLabel)), "a@b.org");
@@ -623,7 +650,7 @@ describe("SignupForm consent (RIO-DATA-001)", () => {
     render(<SignupForm />);
     // The consents sit inside the block that stays locked until the
     // registration number is verified, so every test here unlocks first.
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     await waitFor(() =>
       expect(
@@ -638,10 +665,78 @@ describe("SignupForm consent (RIO-DATA-001)", () => {
     expect(await screen.findByText(USE_POLICY.text)).toBeInTheDocument();
   });
 
+  // RIO-NFR-007 — the consent an Arabic registrant is asked to accept has to
+  // BE in Arabic. The dialog title was already translated in the UI bundle;
+  // the body comes from the policy table, so it needs the locale to reach the
+  // server payload and the text-picking helper alike.
+  it("renders the Arabic policy body when the page locale is Arabic", async () => {
+    intl.locale = "ar";
+    render(<SignupForm />);
+    const user = await unlockForm(setupUser());
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en.auth.signup.usePolicyLinkLabel }),
+      ).toBeEnabled(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en.auth.signup.usePolicyLinkLabel }),
+    );
+
+    expect(await screen.findByText(USE_POLICY.textAr)).toBeInTheDocument();
+    // Not merely "Arabic is also present" — the English source must be gone,
+    // which is the bug a naive `text ?? textAr` fallback would leave behind.
+    expect(screen.queryByText(USE_POLICY.text)).not.toBeInTheDocument();
+  });
+
+  // A policy whose translation is still outstanding must not render blank:
+  // an untranslated consent is a content gap, an empty one is a broken
+  // registration. SHARING_POLICY has textAr: null for exactly this case.
+  it("falls back to the English body for a policy with no Arabic copy", async () => {
+    intl.locale = "ar";
+    render(<SignupForm />);
+    const user = await unlockForm(setupUser());
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en.auth.signup.dataSharingLinkLabel }),
+      ).toBeEnabled(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en.auth.signup.dataSharingLinkLabel }),
+    );
+
+    expect(await screen.findByText(SHARING_POLICY.text)).toBeInTheDocument();
+  });
+
+  // The locale is submitted alongside the versions — without it the server
+  // would snapshot the English wording onto an Arabic reader's acceptance.
+  it("submits the locale the consents were displayed in", async () => {
+    intl.locale = "ar";
+    vi.mocked(authService.signup).mockResolvedValue({
+      status: "pending_approval",
+      organizationName: "Demo NGO",
+      email: "a@b.org",
+    });
+    render(<SignupForm />);
+    const user = await fillEverythingElse();
+    await acceptBothConsents(user);
+
+    await user.click(screen.getByRole("button", { name: en.auth.signup.submit }));
+
+    await waitFor(() =>
+      expect(authService.signup).toHaveBeenCalledWith(
+        expect.objectContaining({
+          consent: expect.objectContaining({ locale: "ar" }),
+        }),
+      ),
+    );
+  });
+
   // The core of this change: reading is a precondition for ticking.
   it("disables each checkbox until its own policy has been read", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     const usePolicyBox = await screen.findByRole("checkbox", {
       name: byLabel(en.auth.signup.usePolicyLabel),
@@ -665,7 +760,7 @@ describe("SignupForm consent (RIO-DATA-001)", () => {
   // Reading unlocks the box; it must never tick it on the reader's behalf.
   it("leaves the checkbox unticked after reading, so accepting stays deliberate", async () => {
     render(<SignupForm />);
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     await readPolicy(user, en.auth.signup.usePolicyLinkLabel);
 
@@ -751,7 +846,9 @@ describe("SignupForm consent (RIO-DATA-001)", () => {
       expect(authService.signup).toHaveBeenCalledWith(
         expect.objectContaining({
           // Distinct versions — one value reused for both would fail here.
-          consent: { usePolicyVersion: "v1", dataSharingVersion: "v2" },
+          // The locale rides along so the server can snapshot the wording
+          // that was actually displayed.
+          consent: { usePolicyVersion: "v1", dataSharingVersion: "v2", locale: "en" },
         }),
       ),
     );
@@ -797,7 +894,7 @@ describe("SignupForm policy dialog scroll gate", () => {
     makeContentOverflow({ scrollTop: 0 });
     render(<SignupForm />);
     // The consent block is locked until the registration number is verified.
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     const link = await screen.findByRole("button", {
       name: en.auth.signup.usePolicyLinkLabel,
@@ -826,7 +923,7 @@ describe("SignupForm policy dialog scroll gate", () => {
     makeContentOverflow({ scrollTop: 0 });
     render(<SignupForm />);
     // The consent block is locked until the registration number is verified.
-    const user = await unlockForm(userEvent.setup());
+    const user = await unlockForm(setupUser());
 
     const link = await screen.findByRole("button", {
       name: en.auth.signup.usePolicyLinkLabel,

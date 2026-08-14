@@ -70,7 +70,19 @@
       "pendingApprovalTitle": "تم استلام طلب التسجيل",
       "pendingApprovalDescription": "تم إرسال \"{organizationName}\" وهو الآن في انتظار الموافقة قبل تفعيله.",
       "pendingApprovalNotice": "سيقوم فريقنا بمراجعة طلب التسجيل. بعد الموافقة، سيتم إرسال كلمة مرور مؤقتة إلى بريدك الإلكتروني المسجَّل لتتمكن من تسجيل الدخول.",
-      "goToSignInButton": "الانتقال إلى تسجيل الدخول"
+      "goToSignInButton": "الانتقال إلى تسجيل الدخول",
+      "consentLegend": "الموافقات",
+      "usePolicyLabel": "لقد قرأت وأوافق على",
+      "dataSharingLabel": "لقد قرأت وأوافق على",
+      "policyVersion": "الإصدار",
+      "consentUnavailableError": "تعذّر تحميل سياسات الموافقة، لذا لا يمكن إكمال التسجيل الآن. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
+      "usePolicyLinkLabel": "شروط الاستخدام",
+      "usePolicyDialogTitle": "شروط الاستخدام",
+      "dataSharingLinkLabel": "سياسة مشاركة البيانات",
+      "dataSharingDialogTitle": "سياسة مشاركة البيانات",
+      "scrollHint": "مرّر إلى نهاية النص للمتابعة.",
+      "policyReadConfirm": "لقد قرأت هذا",
+      "mustReadHint": "افتح {policy} واقرأها لتفعيل مربع الاختيار."
     },
     "forgotPassword": {
       "heroTitle": "سنعيدك إلى حسابك",
@@ -165,7 +177,9 @@
       "regionRequired": "يرجى إدخال المحافظة أو المنطقة.",
       "governorateIdsRequired": "اختر محافظة واحدة على الأقل.",
       "centerIdsRequired": "اختر مركزًا واحدًا على الأقل.",
-      "purposeMin": "يرجى تقديم مزيد من التفاصيل (10 أحرف على الأقل)."
+      "purposeMin": "يرجى تقديم مزيد من التفاصيل (10 أحرف على الأقل).",
+      "usePolicyRequired": "يرجى فتح شروط الاستخدام وقراءتها، ثم تحديد المربع للموافقة عليها.",
+      "dataSharingRequired": "يرجى فتح سياسة مشاركة البيانات وقراءتها، ثم تحديد المربع للموافقة عليها."
     }
   },
   "app": {
@@ -205,7 +219,9 @@
       "mustAgree": "يجب أن توافق على إشعار الموافقة قبل المتابعة.",
       "accept": "موافقة ومتابعة",
       "accepting": "جارٍ الحفظ...",
-      "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+      "sharingBody": "بالمتابعة، توافق منظمتك على مشاركة بياناتها على النحو الموضح في سياسة مشاركة البيانات.",
+      "sharingAgreeLabel": "أوافق على مشاركة بيانات منظمتي."
     },
     "passwordChange": {
       "heroTitle": "اختر كلمة مرور جديدة",
@@ -575,7 +591,10 @@
           "noneYet": "لم يوافق أحد في هذه المنظمة على سياسة مشاركة البيانات الحالية بعد.",
           "versionLabel": "إصدار السياسة",
           "acceptedAtLabel": "تاريخ الموافقة",
-          "acceptedByLabel": "وافق عليها"
+          "acceptedByLabel": "وافق عليها",
+          "usePolicyLabel": "شروط الاستخدام",
+          "dataSharingLabel": "موافقة مشاركة البيانات",
+          "outstanding": "لم يتم القبول بعد"
         },
         "nameLabel": "اسم المنظمة",
         "createdLabel": "تاريخ الإنشاء",
@@ -793,19 +812,44 @@
           "consent": "تم قبول الموافقة",
           "SYSTEM_ADMIN_VIEWED_ORGANIZATION_USERS": "عرض مستخدمي المنظمة",
           "SYSTEM_ADMIN_VIEWED_ORGANIZATION": "عرض المنظمة",
+          "SYSTEM_ADMIN_VIEWED_ARCHIVE": "عرض الأرشيف",
+          "ORGANIZATION_DEACTIVATED": "تم إلغاء تفعيل المنظمة",
+          "ORGANIZATION_REACTIVATED": "تم إعادة تفعيل المنظمة",
+          "ORGANIZATION_CREATED": "إنشاء المنظمة",
+          "ORGANIZATION_APPROVED": "الموافقة على المنظمة",
+          "NGO_ADMIN_ASSIGNED": "تعيين مسؤول منظمة",
+          "NGO_ADMIN_CHANGED": "تغيير مسؤول المنظمة",
+          "NGO_ADMIN_ROLE_REMOVED": "إزالة دور مسؤول المنظمة",
+          "USER_INVITED_BY_SYSTEM_ADMIN": "دعوة مستخدم",
+          "USER_ROLE_CHANGED_BY_SYSTEM_ADMIN": "تحديث دور المستخدم",
+          "USER_DISABLED_BY_SYSTEM_ADMIN": "تعطيل المستخدم",
+          "USER_ENABLED_BY_SYSTEM_ADMIN": "تفعيل المستخدم",
+          "USER_INVITATION_RESENT": "إعادة إرسال الدعوة",
+          "SYSTEM_ADMIN_VIEWED_STUDIES": "عرض الدراسات",
+          "SYSTEM_ADMIN_VIEWED_SURVEY": "عرض الاستبيان",
+          "SYSTEM_ADMIN_VIEWED_REPORT": "عرض التقرير",
+          "SYSTEM_ADMIN_DOWNLOADED_REPORT": "تنزيل التقرير",
+          "SYSTEM_ADMIN_VIEWED_ARCHIVED_REPORT": "عرض التقرير المؤرشف",
+          "STUDY_ARCHIVED": "أرشفة الدراسة",
+          "STUDY_RESTORED": "استعادة الدراسة",
+          "upload_evidence_document": "رفع مستند",
+          "download_evidence_document": "تنزيل مستند",
+          "delete_evidence_document": "حذف مستند",
+          "generate_document_summary": "إنشاء ملخص المستند",
+          "confirm_document_summary": "تأكيد ملخص المستند",
+          "generate_combined_summary": "إنشاء الملخص المجمّع",
+          "confirm_combined_summary": "تأكيد الملخص المجمّع",
+          "export": "تصدير",
           "SYSTEM_ADMIN_VIEWED_AUDIT_LOGS": "عرض سجلات التدقيق",
           "SYSTEM_ADMIN_ASSIGNED_NGO_ADMIN": "تعيين مسؤول منظمة",
           "SYSTEM_ADMIN_UPDATED_USER_ROLE": "تحديث دور المستخدم",
           "SYSTEM_ADMIN_UPDATED_USER_STATUS": "تحديث حالة المستخدم",
           "SYSTEM_ADMIN_VIEWED_REPORTS": "عرض التقارير",
-          "SYSTEM_ADMIN_VIEWED_ARCHIVE": "عرض الأرشيف",
           "SYSTEM_ADMIN_ARCHIVED_STUDY": "أرشفة الدراسة",
           "SYSTEM_ADMIN_RESTORED_STUDY": "استعادة الدراسة",
           "SYSTEM_ADMIN_CREATED_ORGANIZATION": "إنشاء المنظمة",
           "SYSTEM_ADMIN_DEACTIVATED_ORGANIZATION": "إلغاء تفعيل المنظمة",
-          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل المنظمة",
-          "ORGANIZATION_DEACTIVATED": "تم إلغاء تفعيل المنظمة",
-          "ORGANIZATION_REACTIVATED": "تم إعادة تفعيل المنظمة"
+          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل المنظمة"
         },
         "entities": {
           "organization": "المنظمة",

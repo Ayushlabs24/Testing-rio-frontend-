@@ -104,8 +104,13 @@ describe("authService", () => {
       regionId: "r1",
       governorateIds: ["g1"],
       centerIds: ["c1"],
-      // RIO-DATA-001 — both consents are part of the registration payload.
-      consent: { usePolicyVersion: "v1", dataSharingVersion: "v1" },
+      // RIO-DATA-001 — both consents are part of the registration payload,
+      // each pinned to the version AND the language it was displayed in.
+      consent: {
+        usePolicyVersion: "v1",
+        dataSharingVersion: "v1",
+        locale: "ar" as const,
+      },
     };
     const result = await authService.signup(payload);
 
@@ -183,9 +188,11 @@ describe("authService", () => {
       },
     });
 
-    const session = await authService.giveConsent();
+    const session = await authService.giveConsent("ar");
 
-    expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.consent);
+    // The locale is what lets the server snapshot the wording the user read
+    // rather than the English source.
+    expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.consent, { locale: "ar" });
     expect(apiClient.get).toHaveBeenCalledWith(endpoints.auth.me);
     expect(session.user.consentedAt).toBe("2026-01-02T00:00:00.000Z");
     expect(session.user.consentedPolicyVersion).toBe("v1");
