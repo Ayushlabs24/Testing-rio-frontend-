@@ -10,7 +10,6 @@ import {
   ClipboardCheck,
   BarChart3,
   ShieldCheck,
-  Clock,
   UserCheck,
   UserPlus,
   Search,
@@ -28,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -59,6 +59,10 @@ import { ToggleUserStatusDialog } from "../_components/toggle-user-status-dialog
 import { OrgStudiesTab } from "../_components/org-studies-tab";
 import { OrgSurveysTab } from "../_components/org-surveys-tab";
 import { OrgReportsTab } from "../_components/org-reports-tab";
+import { OrgArchiveTab } from "../_components/org-archive-tab";
+import { OrgAuditHistoryTab } from "../_components/org-audit-history-tab";
+
+const USERS_PAGE_SIZE = 10;
 
 export default function SystemAdminOrganizationDetailPage({
   params,
@@ -80,6 +84,7 @@ export default function SystemAdminOrganizationDetailPage({
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [usersPage, setUsersPage] = useState(1);
 
   // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
   // Reference), never the legacy free-text `region` array — resolve it by
@@ -148,6 +153,13 @@ export default function SystemAdminOrganizationDetailPage({
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [orgUsers, searchQuery, roleFilter, statusFilter]);
+
+  const usersPageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const usersCurrentPage = Math.min(usersPage, usersPageCount);
+  const pagedUsers = filteredUsers.slice(
+    (usersCurrentPage - 1) * USERS_PAGE_SIZE,
+    usersCurrentPage * USERS_PAGE_SIZE,
+  );
 
   const handleResendInvite = async (userId: string) => {
     setResendingInviteId(userId);
@@ -476,29 +488,6 @@ export default function SystemAdminOrganizationDetailPage({
                       </p>
                     </div>
                   ) : null}
-
-                  <div className="border-border/50 border-t pt-4">
-                    {organization.isActive ? (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeactivateDialogOpen(true)}
-                        className="gap-2"
-                      >
-                        <XCircle className="size-4" />
-                        {t("overview.deactivateButton")}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => setReactivateDialogOpen(true)}
-                        className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-                      >
-                        <CheckCircle2 className="size-4" />
-                        {t("overview.reactivateButton")}
-                      </Button>
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -532,13 +521,22 @@ export default function SystemAdminOrganizationDetailPage({
                     placeholder={tUsers("searchPlaceholder")}
                     aria-label={tUsers("searchPlaceholder")}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setUsersPage(1);
+                    }}
                     className="pl-9 text-xs"
                   />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <Select
+                    value={roleFilter}
+                    onValueChange={(val) => {
+                      setRoleFilter(val);
+                      setUsersPage(1);
+                    }}
+                  >
                     <SelectTrigger className="w-[160px] text-xs">
                       <Filter className="text-muted-foreground mr-1.5 size-3.5" />
                       <SelectValue placeholder={tUsers("filterRole")} />
@@ -553,7 +551,13 @@ export default function SystemAdminOrganizationDetailPage({
                     </SelectContent>
                   </Select>
 
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(val) => {
+                      setStatusFilter(val);
+                      setUsersPage(1);
+                    }}
+                  >
                     <SelectTrigger className="w-[150px] text-xs">
                       <SelectValue placeholder={tUsers("filterStatus")} />
                     </SelectTrigger>
@@ -599,7 +603,7 @@ export default function SystemAdminOrganizationDetailPage({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredUsers.map((user) => {
+                      pagedUsers.map((user) => {
                         const isNgoAdmin = user.role.key === "ngo_admin";
                         const isDisabled = user.status === "disabled";
 
@@ -708,6 +712,21 @@ export default function SystemAdminOrganizationDetailPage({
                     )}
                   </TableBody>
                 </Table>
+
+                {filteredUsers.length > 0 ? (
+                  <div className="border-border flex justify-end border-t px-4 py-3">
+                    <Pagination
+                      page={usersCurrentPage}
+                      pageCount={usersPageCount}
+                      onPageChange={setUsersPage}
+                      previousLabel={tUsers("pagination.previous")}
+                      nextLabel={tUsers("pagination.next")}
+                      pageLabel={(p, count) =>
+                        tUsers("pagination.label", { page: p, count })
+                      }
+                    />
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </TabsContent>
@@ -725,22 +744,13 @@ export default function SystemAdminOrganizationDetailPage({
             <OrgReportsTab organizationId={organization.id} />
           </TabsContent>
 
-          {/* Placeholder for remaining tabs */}
-          {["archive", "auditHistory"].map((tabKey) => (
-            <TabsContent key={tabKey} value={tabKey}>
-              <Card>
-                <CardContent className="text-muted-foreground flex flex-col items-center justify-center py-16 text-center">
-                  <Clock className="text-muted-foreground/40 size-10" />
-                  <h3 className="text-foreground mt-3 text-base font-semibold">
-                    {t("unavailableTabTitle")}
-                  </h3>
-                  <p className="mt-1 max-w-sm text-sm">
-                    {t("unavailableTabDescription")}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
+          <TabsContent value="archive">
+            <OrgArchiveTab organizationId={organization.id} />
+          </TabsContent>
+
+          <TabsContent value="auditHistory">
+            <OrgAuditHistoryTab organizationId={organization.id} />
+          </TabsContent>
         </Tabs>
 
         {/* Dialogs */}

@@ -156,7 +156,7 @@ export function AssignNgoAdminDialog({
                   {t("selectUserLabel")} <span className="text-destructive">*</span>
                 </Label>
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger id="user-select">
+                  <SelectTrigger id="user-select" className="w-full">
                     <SelectValue placeholder={t("selectUserPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -215,7 +215,7 @@ export function AssignNgoAdminDialog({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"

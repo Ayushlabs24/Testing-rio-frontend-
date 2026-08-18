@@ -52,6 +52,11 @@ export const endpoints = {
     domainOptions: "/question-bank/domain-options",
     kpiOptions: "/question-bank/kpi-options",
     questions: "/question-bank/questions",
+    // RIO-FR-012 — admin management (includes deactivated questions).
+    manage: "/question-bank/questions/manage",
+    byId: (id: string) => `/question-bank/questions/${id}`,
+    deactivate: (id: string) => `/question-bank/questions/${id}/deactivate`,
+    reactivate: (id: string) => `/question-bank/questions/${id}/reactivate`,
   },
   surveys: {
     // Each Need runs its own independent survey now — routes are
@@ -248,6 +253,9 @@ export const endpoints = {
   reviewerSla: {
     config: "/reviewer-sla/config",
     alerts: "/reviewer-sla/alerts",
+  },
+  ai: {
+    status: "/ai/status",
   },
   sharingAlerts: {
     list: "/sharing-alerts",

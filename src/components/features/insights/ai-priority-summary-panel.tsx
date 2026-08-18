@@ -76,6 +76,7 @@ export function AiPrioritySummaryPanel({
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Saved Summaries Table State
   const [savedSummaries, setSavedSummaries] = useState<PrioritySummaryRecord[]>([]);
@@ -117,7 +118,16 @@ export function AiPrioritySummaryPanel({
             setDraftOutput(null);
           }
         })
-        .catch(() => setRecord(null))
+        .catch((err: unknown) => {
+          setRecord(null);
+          // Distinguishes "no summary generated yet" (empty response, no
+          // error banner) from an actual load failure — without this the
+          // Generator card renders either way and a real fetch failure
+          // looks identical to a study that just has no summary.
+          setActionError(
+            err instanceof Error ? err.message : "Failed to load AI summary.",
+          );
+        })
         .finally(() => setLoading(false));
     },
     [studyId, surveyId, villageId, activeScope],
@@ -128,7 +138,12 @@ export function AiPrioritySummaryPanel({
     prioritySummaryService
       .getSavedSummariesList(studyId, surveyId)
       .then((list) => setSavedSummaries(list || []))
-      .catch(() => setSavedSummaries([]))
+      .catch((err: unknown) => {
+        setSavedSummaries([]);
+        setActionError(
+          err instanceof Error ? err.message : "Failed to load saved summaries.",
+        );
+      })
       .finally(() => setLoadingSaved(false));
   }, [studyId, surveyId]);
 
@@ -154,6 +169,7 @@ export function AiPrioritySummaryPanel({
 
   const handleSaveSummary = async () => {
     if (!record) return;
+    setActionError(null);
     try {
       setSaving(true);
       const updatedOutput: PrioritySummaryOutput = {
@@ -166,25 +182,29 @@ export function AiPrioritySummaryPanel({
       setEditing(false);
       loadSavedSummariesTable();
     } catch (err: unknown) {
-      console.error(err);
+      setActionError(err instanceof Error ? err.message : "Failed to save summary.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteSaved = async (summaryId: string) => {
+    setActionError(null);
     try {
       await prioritySummaryService.deleteSavedSummary(summaryId);
       loadSavedSummariesTable();
       if (record?.id === summaryId) {
         loadSummary(activeScope);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to delete saved summary.",
+      );
     }
   };
 
   const handleOpenHistory = async () => {
+    setActionError(null);
     try {
       setHistoryOpen(true);
       const list = await prioritySummaryService.getSummaryHistory(
@@ -193,8 +213,11 @@ export function AiPrioritySummaryPanel({
         activeScope,
       );
       setHistoryList(list);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      setHistoryOpen(false);
+      setActionError(
+        err instanceof Error ? err.message : "Failed to load summary audit history.",
+      );
     }
   };
 
@@ -219,6 +242,15 @@ export function AiPrioritySummaryPanel({
 
   return (
     <div className="space-y-6">
+      {actionError ? (
+        <div
+          role="alert"
+          className="border-destructive/40 bg-destructive/10 rounded-lg border p-4 text-sm"
+        >
+          <p className="text-destructive font-semibold">{actionError}</p>
+        </div>
+      ) : null}
+
       {/* ========================================================= */}
       {/* UPPER SECTION: AI SUMMARY GENERATOR & WORKSPACE           */}
       {/* ========================================================= */}

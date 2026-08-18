@@ -53,8 +53,10 @@ export default function NewStudyPage() {
       population: values.population,
       marginOfError: values.marginOfError,
     });
-    // Proceed to the Add Needs options choice screen for the new study
-    router.push(`/studies/${study.id}/add-needs`);
+    // Go straight to the new study's detail page — it already exposes Add
+    // Need / Import Needs / Import Survey Results directly, so the old
+    // intermediate options screen was pure redundancy.
+    router.push(`/studies/${study.id}`);
     // router.push() enqueues the navigation but doesn't wait for it to
     // finish — returning here would let StudyForm's isSubmitting flip back
     // to false and the button flash re-enabled while this page is still

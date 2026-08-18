@@ -515,6 +515,7 @@ export default function SurveyBuilderDetailPage({
         subDomain: question.subDomain,
         indicator: question.indicator ?? null,
         kpi: question.kpi ?? null,
+        priorityWeight: question.priorityWeight ?? null,
         isCustom: false,
         order: prev.length + 1,
         isRequired: question.requiredOptional === "required",
@@ -1568,6 +1569,17 @@ export default function SurveyBuilderDetailPage({
                                     </div>
                                   ) : null}
 
+                                  {q.priorityWeight != null ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("weightLabel")}
+                                      </p>
+                                      <Badge variant="outline" className="mt-0.5">
+                                        {q.priorityWeight}
+                                      </Badge>
+                                    </div>
+                                  ) : null}
+
                                   <div>
                                     <p className="text-muted-foreground text-xs font-medium">
                                       {t("answerTypeLabel")}
@@ -1710,6 +1722,17 @@ export default function SurveyBuilderDetailPage({
                                       </span>{" "}
                                       · {q.indicator}
                                     </p>
+                                  </div>
+                                ) : null}
+
+                                {q.priorityWeight != null ? (
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("weightLabel")}
+                                    </p>
+                                    <Badge variant="outline" className="mt-0.5">
+                                      {q.priorityWeight}
+                                    </Badge>
                                   </div>
                                 ) : null}
 

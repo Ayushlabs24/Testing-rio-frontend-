@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -17,6 +18,8 @@ import {
 } from "@/components/ui/table";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+
+const PAGE_SIZE = 10;
 
 interface ReportItem {
   id: string;
@@ -37,6 +40,7 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -70,6 +74,13 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
     );
   }, [reports, searchQuery]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedReports = filteredReports.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   const handleDownload = async (id: string, format: "pdf" | "excel") => {
     const blob = await apiClient.downloadBlob(endpoints.reports.export(id, format));
     const url = URL.createObjectURL(blob);
@@ -99,7 +110,10 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
             placeholder={t("searchPlaceholder")}
             aria-label={t("searchPlaceholder")}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="pl-9 text-xs"
           />
         </div>
@@ -132,7 +146,7 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredReports.map((report) => {
+              pagedReports.map((report) => {
                 const canExport =
                   report.status === "released" || report.status === "archived";
                 return (
@@ -194,6 +208,19 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
             )}
           </TableBody>
         </Table>
+
+        {filteredReports.length > 0 ? (
+          <div className="border-border flex justify-end border-t px-4 py-3">
+            <Pagination
+              page={currentPage}
+              pageCount={pageCount}
+              onPageChange={setPage}
+              previousLabel={t("pagination.previous")}
+              nextLabel={t("pagination.next")}
+              pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+            />
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -309,9 +309,24 @@ function NeedDetailsCard({
                 <MultiSelect
                   options={studyGovernorates.map((g) => ({ value: g.id, label: g.name }))}
                   values={governorateIds}
-                  onChange={(next) =>
-                    setValue("governorateIds", next, { shouldValidate: true })
-                  }
+                  onChange={(next) => {
+                    setValue("governorateIds", next, { shouldValidate: true });
+                    // Dropping a governorate must also drop any already-selected
+                    // centers that belonged to it — otherwise centerIds keeps an
+                    // orphaned id centerOptions no longer contains, and the
+                    // MultiSelect can't resolve a label for it (falls back to
+                    // showing the raw id, as if it were a real selection).
+                    const stillValidCenterIds = new Set(
+                      studyCenters
+                        .filter((c) => next.includes(c.governorateId))
+                        .map((c) => c.id),
+                    );
+                    setValue(
+                      "centerIds",
+                      centerIds.filter((id) => stillValidCenterIds.has(id)),
+                      { shouldValidate: true },
+                    );
+                  }}
                   placeholder={tGeo("governoratePlaceholder")}
                   searchPlaceholder={tGeo("governorateSearchPlaceholder")}
                   emptyText={tGeo("governorateEmpty")}

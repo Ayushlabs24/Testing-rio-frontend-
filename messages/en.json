@@ -477,6 +477,7 @@
         "tabs": {
           "domains": "Domains & Sub-domains",
           "config": "Thresholds, Flags & Version",
+          "questions": "Question Bank",
           "scoring": "Scoring Lookups"
         },
         "domains": {
@@ -548,6 +549,44 @@
           "factorColumnLabel": "Factor",
           "weightColumnLabel": "Weight",
           "weightTotalLabel": "Total"
+        },
+        "questions": {
+          "filterDomain": "Domain",
+          "allDomains": "All domains",
+          "filterStatus": "Status",
+          "allStatuses": "All statuses",
+          "searchPlaceholder": "Search question ID, text, indicator, or KPI...",
+          "columns": {
+            "questionId": "Question ID",
+            "question": "Question",
+            "domain": "Domain / Sub-domain",
+            "indicator": "Indicator",
+            "weight": "Weight",
+            "status": "Status",
+            "actions": "Actions"
+          },
+          "active": "Active",
+          "inactive": "Inactive",
+          "actions": "Actions",
+          "edit": "Edit",
+          "activate": "Activate",
+          "deactivate": "Deactivate",
+          "editQuestion": "Edit question",
+          "questionTextLabel": "Question text",
+          "indicatorLabel": "Indicator",
+          "kpiLabel": "KPI",
+          "domainLockedHint": "Domain and sub-domain aren't editable here — they determine which surveys and AI recommendations this question matches, so changing them could break existing survey linkage.",
+          "cancel": "Cancel",
+          "save": "Save changes",
+          "saving": "Saving...",
+          "noResults": "No questions match the current filters.",
+          "loadError": "Couldn't load the question bank. Please try again.",
+          "genericError": "Something went wrong. Please try again.",
+          "pagination": {
+            "previous": "Previous",
+            "next": "Next",
+            "label": "Page {page} of {count}"
+          }
         },
         "scoring": {
           "title": "Scoring Methodology & Lookups",
@@ -1582,20 +1621,6 @@
     },
     "studies": {
       "title": "Studies",
-      "addNeedsOptions": {
-        "title": "Add Needs to Study",
-        "subtitle": "Choose how you want to add community needs to this study",
-        "manualTitle": "Manual Form Entry",
-        "manualDescription": "Fill out a form to add needs one by one manually.",
-        "manualButton": "Add Need Manually",
-        "importTitle": "Import Needs from File",
-        "importDescription": "Bulk upload needs from a CSV, Excel, or PDF document.",
-        "importButton": "Import File",
-        "surveyResultsTitle": "Upload Survey Results",
-        "surveyResultsDescription": "Upload survey results (PDF, Word, Excel, CSV) to extract community needs based on low scores and findings.",
-        "surveyResultsButton": "Import Data from Survey Results",
-        "skipToStudy": "Skip for now — View Study Details"
-      },
       "importSurveyResults": {
         "title": "Upload Survey Results",
         "description": "Upload a survey results file (PDF, DOCX, XLSX, CSV) to analyze scores and extract community needs.",
@@ -2044,6 +2069,7 @@
         "edit": "Edit",
         "questionNumber": "Question {number}",
         "indicatorLabel": "Indicator",
+        "weightLabel": "Weight",
         "questionLabel": "Question",
         "answerTypeLabel": "Answer Type",
         "optionsLabel": "Options",
@@ -2177,6 +2203,7 @@
         "questionNumber": "Question {number}",
         "questionLabel": "Question",
         "indicatorLabel": "Indicator",
+        "weightLabel": "Weight",
         "requiredLabel": "Required",
         "approveAndPublish": "Approve & Publish",
         "approving": "Approving...",
@@ -2634,9 +2661,9 @@
       "aiServiceDetail": "Suggestions, extraction, quality observations and drafting are on.",
       "reviewSla": "Review SLAs",
       "reviewSlaStatus": "Healthy",
-      "reviewSlaDetail": "Surveys {surveys}h · reports {reports}h · sharing {sharing}h",
+      "reviewSlaDetail": "Reviewer alerts fire after {hours}h without action.",
       "consentInstruments": "Consent Instruments",
-      "consentDetail": "Data-Use Policy v2.1 · Data-Sharing Consent v1.4",
+      "consentDetail": "Use Policy {version}",
       "manage": "Manage",
       "quickActions": "Quick Actions & Navigation",
       "shortcuts": "Workspace Shortcuts",
@@ -2913,6 +2940,11 @@
         "cancel": "Cancel",
         "successToast": "User account enabled",
         "errorToast": "Unable to enable user account"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
       }
     },
     "studies": {
@@ -2936,6 +2968,11 @@
       "viewOnly": "View Only",
       "readOnlyBadge": "Read-Only Access",
       "noResults": "No studies found matching filter criteria.",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
       "drawer": {
         "title": "Study & Associated Surveys Detail",
         "studyInfo": "Study Information",
@@ -2977,6 +3014,11 @@
       "viewOnly": "View Only",
       "readOnlyBadge": "Read-Only Access",
       "noResults": "No surveys found matching filter criteria.",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
       "drawer": {
         "title": "Survey Details & Response Results",
         "surveyInfo": "Survey Overview",
@@ -3023,7 +3065,12 @@
         "downloadExcel": "Download Excel"
       },
       "readOnlyNotice": "Report views are read-only. Only released/approved reports can be exported.",
-      "noResults": "No reports found matching filter criteria."
+      "noResults": "No reports found matching filter criteria.",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      }
     },
     "archive": {
       "title": "Study Archive & Historical Data",
@@ -3052,6 +3099,11 @@
       },
       "readOnlyBanner": "Archived records are strictly read-only. All raw data, evidence, and snapshots are preserved.",
       "noResults": "No archived records found matching filter criteria.",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
       "drawer": {
         "title": "Archived Record Snapshot",
         "studyInfo": "Study Information",

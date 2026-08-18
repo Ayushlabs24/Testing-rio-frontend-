@@ -181,6 +181,7 @@ export const roles: Role[] = [
       perm("archiveSharingAudit", { read: true, create: true, approve: true }),
       perm("surveyBuilder", { read: true, write: true, create: true, export: true }),
       perm("ncnpReport"),
+      perm("systemLogs"),
     ],
   },
   {
@@ -251,7 +252,7 @@ export const roles: Role[] = [
     key: "human_reviewer",
     name: "Human Reviewer",
     description:
-      "Approves or modifies AI classification, priority, and duplicates before publishing.",
+      "Approves or rejects (with comments) a finalized Survey before it publishes.",
     crossEntity: false,
     enabled: true,
     permissions: [
@@ -403,6 +404,11 @@ export const roles: Role[] = [
       // this role never Approves/Rejects itself (that's system_reviewer's
       // `approve` bit).
       perm("ncnpReport", { read: true, write: true }),
+      // RIO-NFR-016 — the operational log. System Admin is the only role
+      // that holds this module at all: the rows carry stack traces,
+      // internal paths and cross-tenant detail. `export` gates the CSV
+      // download only; there is no write action to grant.
+      perm("systemLogs", { read: true, export: true }),
     ],
   },
   {

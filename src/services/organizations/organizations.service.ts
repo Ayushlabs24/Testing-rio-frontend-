@@ -32,6 +32,7 @@ interface ApiOrganizationSummary extends ApiOrganization {
   studyCount?: number;
   surveyCount?: number;
   reportCount?: number;
+  publishedReportCount?: number;
   ngoAdminName?: string | null;
   ngoAdminEmail?: string | null;
   deactivationReason?: string | null;
@@ -52,6 +53,7 @@ function toOrganizationSummary(api: ApiOrganizationSummary): OrganizationSummary
     studyCount: api.studyCount ?? 0,
     surveyCount: api.surveyCount ?? 0,
     reportCount: api.reportCount ?? 0,
+    publishedReportCount: api.publishedReportCount ?? 0,
     ngoAdminName: api.ngoAdminName ?? null,
     ngoAdminEmail: api.ngoAdminEmail ?? null,
     deactivationReason: api.deactivationReason ?? null,

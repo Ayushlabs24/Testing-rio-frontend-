@@ -287,22 +287,22 @@ export default function SystemAdminOrganizationsPage() {
                       className="hover:bg-muted/50 cursor-pointer"
                       onClick={() => router.push(`/system-admin/organizations/${org.id}`)}
                     >
-                      <TableCell className="text-foreground font-medium">
+                      <TableCell className="text-foreground max-w-[220px] font-medium whitespace-normal">
                         {org.name}
                       </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-xs">
                         {org.registrationNumber ?? "—"}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground max-w-[140px] whitespace-normal">
                         {displayRegion(org)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[220px] whitespace-normal">
                         {org.ngoAdminName ? (
                           <div>
-                            <p className="text-foreground text-xs font-medium">
+                            <p className="text-foreground text-xs font-medium break-words">
                               {org.ngoAdminName}
                             </p>
-                            <p className="text-muted-foreground text-[11px]">
+                            <p className="text-muted-foreground text-[11px] break-words">
                               {org.ngoAdminEmail}
                             </p>
                           </div>

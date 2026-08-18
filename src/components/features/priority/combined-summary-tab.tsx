@@ -207,14 +207,15 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
 
   const handleGenerateCombinedSummary = async () => {
     if (!canAi) return;
+    setError(null);
     if (!selectedScoreSummaryId) {
-      alert(
+      setError(
         "Select a score-based AI summary to combine. If the list is empty, generate one from the Score-Based AI Summary tab first.",
       );
       return;
     }
     if (selectedDocSummaryIds.length === 0) {
-      alert(
+      setError(
         "Please select at least one Document Summary to generate a Combined Summary.",
       );
       return;
@@ -234,7 +235,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to generate Combined Summary.";
-      alert(errorMsg);
+      setError(errorMsg);
     } finally {
       setGenerating(false);
     }
@@ -243,6 +244,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
   const handleConfirmCombinedSummary = async () => {
     if (!canAi || !activeSummary || mutationLockRef.current) return;
     mutationLockRef.current = true;
+    setError(null);
     setActiveMutation("save");
     try {
       const confirmed = await saveAndConfirmCombinedSummary({
@@ -260,7 +262,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to save combined summary.";
-      alert(errorMsg);
+      setError(errorMsg);
     } finally {
       mutationLockRef.current = false;
       setActiveMutation(null);
@@ -272,6 +274,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
       return;
     if (mutationLockRef.current) return;
     mutationLockRef.current = true;
+    setError(null);
     setActiveMutation("report");
     try {
       if (activeSummary && activeSummary.status !== "OFFICER_CONFIRMED") {
@@ -298,7 +301,7 @@ export function CombinedSummaryTab({ studyId }: CombinedSummaryTabProps) {
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to generate combined report.";
-      alert(errorMsg);
+      setError(errorMsg);
     } finally {
       mutationLockRef.current = false;
       setActiveMutation(null);

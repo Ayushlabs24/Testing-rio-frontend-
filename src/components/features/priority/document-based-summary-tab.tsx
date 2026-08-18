@@ -275,13 +275,14 @@ export function DocumentBasedSummaryTab({
   const handleDelete = async (docId: string) => {
     if (!canWrite) return;
     if (!confirm(t("deleteConfirm"))) return;
+    setActionError(null);
     try {
       await evidenceDocumentsService.deleteDocument(studyId, docId);
       await loadData();
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to delete evidence document.";
-      alert(errorMsg);
+      setActionError(errorMsg);
     }
   };
 
@@ -304,6 +305,7 @@ export function DocumentBasedSummaryTab({
    */
   const handleOpenOriginalFile = async (doc: EvidenceDocument) => {
     setOpeningFileId(doc.id);
+    setActionError(null);
     try {
       const blob = await evidenceDocumentsService.getDocumentFileBlob(studyId, doc.id);
       const url = URL.createObjectURL(blob);
@@ -319,7 +321,7 @@ export function DocumentBasedSummaryTab({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to open the original document.";
-      alert(errorMsg);
+      setActionError(errorMsg);
     } finally {
       setOpeningFileId(null);
     }
@@ -327,6 +329,7 @@ export function DocumentBasedSummaryTab({
 
   const handleGenerateSummary = async (doc: EvidenceDocument) => {
     if (!canAi) return;
+    setActionError(null);
     setActiveDocForSummary(doc);
     setSummaryModalOpen(true);
     setGeneratingSummary(true);
@@ -340,7 +343,7 @@ export function DocumentBasedSummaryTab({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to generate AI Document Summary.";
-      alert(errorMsg);
+      setActionError(errorMsg);
       setSummaryModalOpen(false);
     } finally {
       setGeneratingSummary(false);
@@ -349,6 +352,7 @@ export function DocumentBasedSummaryTab({
 
   const handleConfirmSummary = async () => {
     if (!canAi || !currentSummary || !activeDocForSummary) return;
+    setActionError(null);
     setConfirmingSummary(true);
     try {
       if (editingSummary && editedSummaryJson) {
@@ -370,7 +374,7 @@ export function DocumentBasedSummaryTab({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to confirm document summary.";
-      alert(errorMsg);
+      setActionError(errorMsg);
     } finally {
       setConfirmingSummary(false);
     }
@@ -378,6 +382,7 @@ export function DocumentBasedSummaryTab({
 
   const handleGenerateDocReport = async () => {
     if (!canCreateReport) return;
+    setActionError(null);
     setGeneratingReport(true);
     try {
       const report = await reportsService.create({
@@ -388,7 +393,7 @@ export function DocumentBasedSummaryTab({
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to generate Document-Based Report.";
-      alert(errorMsg);
+      setActionError(errorMsg);
     } finally {
       setGeneratingReport(false);
     }

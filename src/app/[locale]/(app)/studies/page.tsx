@@ -135,8 +135,8 @@ export default function StudiesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-3">{t("titleColumn")}</TableHead>
-                  <TableHead className="py-3">{t("needsColumn")}</TableHead>
-                  <TableHead className="py-3">{t("updatedColumn")}</TableHead>
+                  <TableHead className="w-24 py-3">{t("needsColumn")}</TableHead>
+                  <TableHead className="w-36 py-3">{t("updatedColumn")}</TableHead>
                   <TableHead className="w-16 py-3" />
                 </TableRow>
               </TableHeader>
