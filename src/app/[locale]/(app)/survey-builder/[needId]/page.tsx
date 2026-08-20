@@ -1569,14 +1569,24 @@ export default function SurveyBuilderDetailPage({
                                     </div>
                                   ) : null}
 
-                                  {q.priorityWeight != null ? (
+                                  {q.domain ? (
                                     <div>
                                       <p className="text-muted-foreground text-xs font-medium">
-                                        {t("weightLabel")}
+                                        {t("domainLabel")}
                                       </p>
-                                      <Badge variant="outline" className="mt-0.5">
-                                        {q.priorityWeight}
-                                      </Badge>
+                                      <p className="text-foreground text-sm">
+                                        {q.domain}
+                                        {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                      </p>
+                                    </div>
+                                  ) : null}
+
+                                  {q.kpi ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("kpiLabel")}
+                                      </p>
+                                      <p className="text-foreground text-sm">{q.kpi}</p>
                                     </div>
                                   ) : null}
 
@@ -1725,14 +1735,24 @@ export default function SurveyBuilderDetailPage({
                                   </div>
                                 ) : null}
 
-                                {q.priorityWeight != null ? (
+                                {q.domain ? (
                                   <div>
                                     <p className="text-muted-foreground text-xs font-medium">
-                                      {t("weightLabel")}
+                                      {t("domainLabel")}
                                     </p>
-                                    <Badge variant="outline" className="mt-0.5">
-                                      {q.priorityWeight}
-                                    </Badge>
+                                    <p className="text-foreground text-sm">
+                                      {q.domain}
+                                      {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                    </p>
+                                  </div>
+                                ) : null}
+
+                                {q.kpi ? (
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("kpiLabel")}
+                                    </p>
+                                    <p className="text-foreground text-sm">{q.kpi}</p>
                                   </div>
                                 ) : null}
 

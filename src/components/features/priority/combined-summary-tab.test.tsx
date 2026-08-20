@@ -155,7 +155,6 @@ describe("CombinedSummaryTab", () => {
   const initialOutput = { executiveSummary: "Initial narrative" };
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("alert", vi.fn());
     componentMocks.permissions["priorityScoring.write"] = true;
     componentMocks.permissions["reportsDashboards.create"] = true;
     componentMocks.getContext.mockResolvedValue({
@@ -294,7 +293,7 @@ describe("CombinedSummaryTab", () => {
     await user.click(
       await screen.findByRole("button", { name: "Generate Combined Report" }),
     );
-    await waitFor(() => expect(vi.mocked(alert)).toHaveBeenCalledWith("create rejected"));
+    await waitFor(() => expect(screen.getByText("create rejected")).toBeInTheDocument());
     expect(screen.getByText("CONFIRMED & SAVED")).toBeInTheDocument();
   });
 

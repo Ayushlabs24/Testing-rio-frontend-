@@ -6,12 +6,11 @@ import type {
 } from "@/services/questions/questions.types";
 
 /**
- * RIO-FR-012 — Question Bank management (edit/deactivate/reactivate).
- * Reads and writes are both restricted server-side to surveyBuilder:write
- * (NGO Admin, Research Officer, Field Researcher, Human Reviewer, System
- * Admin) — the same roles that already curate a survey's own question
- * list, per the story's own default-behaviour note pending the client's
- * answer on exactly who should manage the bank.
+ * RIO-FR-012 (Q31, client-confirmed 2026-08-20) — Question Bank management.
+ * Initiating a change (edit/deactivate/reactivate) is restricted server-side
+ * to methodologyQuestionBank:write (System Admin/NCNP Admin only). Every
+ * change creates a pending version that only takes effect for new surveys
+ * once a Human Reviewer approves it (methodologyQuestionBank:approve).
  */
 export const questionsService = {
   /** Every question in scope for management — unlike the Survey Builder's
@@ -39,5 +38,22 @@ export const questionsService = {
 
   async reactivate(id: string): Promise<QuestionManagementItem> {
     return apiClient.patch<QuestionManagementItem>(endpoints.questionBank.reactivate(id));
+  },
+
+  // RIO-FR-012 (Q31) — Human Reviewer only (methodologyQuestionBank:approve).
+  async listPendingApprovals(): Promise<QuestionManagementItem[]> {
+    return apiClient.get<QuestionManagementItem[]>(
+      endpoints.questionBank.pendingApprovals,
+    );
+  },
+
+  async approve(id: string): Promise<QuestionManagementItem> {
+    return apiClient.patch<QuestionManagementItem>(endpoints.questionBank.approve(id));
+  },
+
+  async reject(id: string, reason: string): Promise<QuestionManagementItem> {
+    return apiClient.patch<QuestionManagementItem>(endpoints.questionBank.reject(id), {
+      reason,
+    });
   },
 };

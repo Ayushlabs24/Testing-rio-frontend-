@@ -137,7 +137,7 @@
       "triggerLabel": "اتصل بنا",
       "title": "اتصل بنا",
       "description": "هل تواجه مشكلة في تسجيل الدخول أو لديك سؤال؟ أرسل لنا رسالة وسنرد عليك عبر البريد الإلكتروني.",
-      "organizationLabel": "المنظمة",
+      "organizationLabel": "الكيان",
       "organizationPlaceholder": "اختر منظمة",
       "organizationLoading": "جارٍ تحميل المنظمات...",
       "organizationsError": "تعذّر تحميل قائمة المنظمات. يرجى المحاولة لاحقًا.",
@@ -244,7 +244,7 @@
     },
     "sidebar": {
       "dashboard": "لوحة التحكم",
-      "organization": "المنظمة",
+      "organization": "الكيان",
       "roles": "الأدوار",
       "users": "المستخدمون",
       "audit": "سجل التدقيق",
@@ -293,7 +293,7 @@
       "title": "مرحبًا، {name}",
       "description": "إليك ما يجري في مساحة عملك.",
       "stats": {
-        "organizations": "المنظمة",
+        "organizations": "الكيان",
         "users": "المستخدمون",
         "roles": "الأدوار",
         "modules": "الوحدات",
@@ -304,9 +304,9 @@
       },
       "descriptionGlobal": "نظرة عامة على مستوى المنصة عبر كل منظمة.",
       "collective": {
-        "heading": "لوحة التحكم الجماعية",
+        "heading": "لوحة التحكم الكاملة",
         "subtitle": "مجمّعة عبر {studies} دراسة · اعتبارًا من {date}",
-        "loadError": "تعذّر تحميل لوحة التحكم الجماعية.",
+        "loadError": "تعذّر تحميل لوحة التحكم الكاملة.",
         "kpi": {
           "needs": "الاحتياجات المحددة",
           "sla": "الالتزام باتفاقية مستوى الخدمة",
@@ -361,7 +361,7 @@
           "reportsShared": "التقارير المشتركة",
           "pendingSharingRequests": "طلبات المشاركة المعلّقة"
         },
-        "orgColumn": "المنظمة",
+        "orgColumn": "الكيان",
         "activeStudyColumn": "الدراسة النشطة",
         "latestReportColumn": "أحدث تقرير",
         "sharingStatusColumn": "حالة المشاركة",
@@ -582,6 +582,16 @@
           "noResults": "لا توجد أسئلة تطابق عوامل التصفية الحالية.",
           "loadError": "تعذّر تحميل بنك الأسئلة. يرجى المحاولة مرة أخرى.",
           "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+          "submittedForApproval": "تم إرسال التغيير — بانتظار موافقة المراجع البشري.",
+          "pendingApprovals": {
+            "heading": "بانتظار الموافقة ({count})",
+            "empty": "لا توجد تغييرات بانتظار الموافقة.",
+            "submittedAt": "تاريخ الإرسال",
+            "approve": "موافقة",
+            "reject": "رفض",
+            "rejectTitle": "رفض التغيير",
+            "reasonLabel": "سبب الرفض"
+          },
           "pagination": {
             "previous": "السابق",
             "next": "التالي",
@@ -620,7 +630,7 @@
         }
       },
       "organization": {
-        "title": "المنظمة",
+        "title": "الكيان",
         "description": "إدارة ملف منظمتك.",
         "edit": "تعديل",
         "cancel": "إلغاء",
@@ -727,7 +737,7 @@
         "title": "المستخدمون",
         "description": "كل من لديه صلاحية وصول إلى هذه المنظمة.",
         "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني...",
-        "filterOrganizationLabel": "المنظمة",
+        "filterOrganizationLabel": "الكيان",
         "filterOrganizationAll": "كل المنظمات",
         "noResults": "لم يتم العثور على مستخدمين.",
         "newUser": "مستخدم جديد",
@@ -774,7 +784,7 @@
       "organizations": {
         "title": "المنظمات",
         "description": "كل منظمة على المنصة.",
-        "nameColumn": "المنظمة",
+        "nameColumn": "الكيان",
         "regionColumn": "المنطقة",
         "sectorColumn": "القطاع",
         "membersColumn": "الأعضاء",
@@ -844,6 +854,7 @@
           "create": "تم الإنشاء",
           "edit": "تم التعديل",
           "approve": "تم الاعتماد",
+          "reject": "تم الرفض",
           "share": "تمت المشاركة",
           "delete": "تم الحذف",
           "login": "تم تسجيل الدخول",
@@ -891,7 +902,7 @@
           "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل المنظمة"
         },
         "entities": {
-          "organization": "المنظمة",
+          "organization": "الكيان",
           "user": "المستخدم",
           "study": "الدراسة",
           "need": "الاحتياج",
@@ -1078,7 +1089,7 @@
         "orgTopPriorities": "أعلى أولويات المنظمة",
         "comparison": "هذا الاستبيان مقابل المنظمة",
         "thisSurvey": "هذا الاستبيان",
-        "organisation": "المنظمة",
+        "organisation": "الكيان",
         "cov": {
           "needs": "الاحتياجات في الدراسة",
           "coveredHere": "مشمولة هنا",
@@ -1250,7 +1261,7 @@
       "noSharedReports": "لم تتم مشاركة أي دراسات معك بعد.",
       "loadError": "تعذّر تحميل طلبات المشاركة. يرجى المحاولة مرة أخرى.",
       "studyColumn": "الدراسة",
-      "orgColumn": "المنظمة",
+      "orgColumn": "الكيان",
       "roleColumn": "العلاقة",
       "roleOwner": "المالك",
       "roleRequester": "الطالب",
@@ -1269,7 +1280,7 @@
       "view": "عرض الدراسة المشتركة",
       "create": {
         "title": "طلب الوصول إلى دراسة",
-        "ownerOrgLabel": "المنظمة",
+        "ownerOrgLabel": "الكيان",
         "ownerOrgPlaceholder": "ابحث عن منظمة...",
         "ownerOrgSearchPlaceholder": "ابحث بالاسم",
         "ownerOrgEmpty": "لم يتم العثور على منظمات مطابقة.",
@@ -1326,7 +1337,7 @@
         "label": "الصفحة {page} من {count}"
       },
       "reportColumn": "التقرير",
-      "orgColumn": "المنظمة",
+      "orgColumn": "الكيان",
       "roleColumn": "العلاقة",
       "roleOwner": "المالك",
       "roleRequester": "الطالب",
@@ -1345,7 +1356,7 @@
       "view": "عرض التقرير المشترك",
       "create": {
         "title": "طلب الوصول إلى تقرير",
-        "ownerOrgLabel": "المنظمة",
+        "ownerOrgLabel": "الكيان",
         "ownerOrgPlaceholder": "ابحث عن منظمة...",
         "ownerOrgSearchPlaceholder": "ابحث بالاسم",
         "ownerOrgEmpty": "لم يتم العثور على منظمات مطابقة.",
@@ -2079,6 +2090,9 @@
         "edit": "تعديل",
         "questionNumber": "السؤال {number}",
         "indicatorLabel": "المؤشر",
+        "domainLabel": "المجال",
+        "subDomainLabel": "المجال الفرعي",
+        "kpiLabel": "مؤشر الأداء الرئيسي",
         "questionLabel": "السؤال",
         "answerTypeLabel": "نوع الإجابة",
         "optionsLabel": "الخيارات",
@@ -2212,6 +2226,9 @@
         "questionNumber": "السؤال {number}",
         "questionLabel": "السؤال",
         "indicatorLabel": "المؤشر",
+        "domainLabel": "المجال",
+        "subDomainLabel": "المجال الفرعي",
+        "kpiLabel": "مؤشر الأداء الرئيسي",
         "requiredLabel": "مطلوب",
         "approveAndPublish": "اعتماد ونشر",
         "approving": "جارٍ الاعتماد...",
@@ -2901,7 +2918,7 @@
         "emailPlaceholder": "sarah@ngo.org",
         "roleLabel": "الدور",
         "rolePlaceholder": "اختر دورًا...",
-        "organizationLabel": "المنظمة",
+        "organizationLabel": "الكيان",
         "submit": "إرسال الدعوة",
         "submitting": "جارٍ الإرسال...",
         "cancel": "إلغاء",
@@ -2965,7 +2982,7 @@
       "allStatuses": "جميع الحالات",
       "columns": {
         "name": "اسم الدراسة",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "village": "القرى / الجغرافيا",
         "surveysCount": "الاستبيانات المرتبطة",
         "status": "حالة الدراسة",
@@ -3009,7 +3026,7 @@
       "columns": {
         "name": "عنوان الاستبيان",
         "linkedStudy": "الدراسة المرتبطة",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "targetVillage": "القرية المستهدفة",
         "sector": "القطاع / المجال",
         "status": "الحالة",
@@ -3030,7 +3047,7 @@
       "drawer": {
         "title": "تفاصيل الاستبيان ونتائج الاستجابات",
         "surveyInfo": "نظرة عامة على الاستبيان",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "linkedStudy": "الدراسة المرتبطة",
         "village": "القرية المستهدفة",
         "domainCategory": "القطاع / المجال",
@@ -3092,7 +3109,7 @@
       "allSectors": "جميع القطاعات",
       "columns": {
         "title": "عنوان الدراسة / التقرير",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "region": "المنطقة",
         "sector": "القطاع / المجال",
         "kind": "نوع الإدخال",
@@ -3167,7 +3184,7 @@
       "paginationShowing": "عرض {start} - {end} من {total} حدث",
       "paginationPage": "الصفحة {current} من {total}",
       "entityTypes": {
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "user": "المستخدم",
         "study": "الدراسة",
         "report": "التقرير",
@@ -3184,7 +3201,7 @@
       "columns": {
         "timestamp": "الطابع الزمني",
         "actor": "الفاعل",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "action": "الإجراء",
         "entity": "نوع الجهة والتسمية",
         "result": "النتيجة / الحالة",
@@ -3281,7 +3298,7 @@
         "message": "الرسالة",
         "status": "الحالة",
         "duration": "المدة",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "actions": "إجراءات"
       },
       "detail": {
@@ -3291,7 +3308,7 @@
         "context": "السياق",
         "copyJson": "نسخ JSON",
         "requestId": "معرّف الطلب",
-        "organization": "المنظمة",
+        "organization": "الكيان",
         "actor": "الفاعل",
         "ipAddress": "عنوان IP",
         "userAgent": "وكيل المستخدم",
@@ -3363,7 +3380,7 @@
       "page5Title": "تحليلات الاستجابات",
       "page5Description": "اتجاه الاستجابات على مستوى المنصة، والتوزيع الجغرافي والديموغرافي، والمنظمات الأكثر تلقيًا للاستجابات.",
       "orgSummaryTitle": "ملخص المنظمات",
-      "orgSummaryColOrg": "المنظمة",
+      "orgSummaryColOrg": "الكيان",
       "orgSummaryColStudies": "الدراسات",
       "orgSummaryCaption": "ثلاثة تصنيفات منفصلة لأفضل 5 — قائمة واحدة مرتبة حسب مقياس واحد قد تخفي منظمات متفوقة في مقاييس أخرى.",
       "orgSummaryByStudies": "أفضل المنظمات — حسب الدراسات",

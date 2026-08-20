@@ -137,7 +137,9 @@ export const roles: Role[] = [
         export: true,
         share: true,
       }),
-      perm("methodologyQuestionBank", READ_ONLY),
+      // Client-confirmed (2026-08-20): Methodology Configuration belongs at
+      // NCNP Admin (System Admin) level only — mirrors role-matrix.ts.
+      perm("methodologyQuestionBank"),
       perm("studySurvey", {
         read: true,
         write: true,
@@ -260,7 +262,10 @@ export const roles: Role[] = [
       perm("entityTeam", READ_ONLY),
       perm("rolesPermissions"),
       perm("onboardingConsent"),
-      perm("methodologyQuestionBank", READ_ONLY),
+      // RIO-FR-012 (Q31, client-confirmed 2026-08-20): Human Reviewer
+      // approves/rejects a pending Question Bank change — mirrors
+      // role-matrix.ts.
+      perm("methodologyQuestionBank", { read: true, approve: true }),
       // Matrix: Studies = View + Approve only now — the `create` grant that
       // let this role generate public links itself is removed.
       perm("studySurvey", { read: true, approve: true }),

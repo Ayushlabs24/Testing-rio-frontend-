@@ -57,6 +57,10 @@ export const endpoints = {
     byId: (id: string) => `/question-bank/questions/${id}`,
     deactivate: (id: string) => `/question-bank/questions/${id}/deactivate`,
     reactivate: (id: string) => `/question-bank/questions/${id}/reactivate`,
+    // RIO-FR-012 (Q31) — Human Reviewer's approval queue and decisions.
+    pendingApprovals: "/question-bank/questions/pending-approvals",
+    approve: (id: string) => `/question-bank/questions/${id}/approve`,
+    reject: (id: string) => `/question-bank/questions/${id}/reject`,
   },
   surveys: {
     // Each Need runs its own independent survey now — routes are

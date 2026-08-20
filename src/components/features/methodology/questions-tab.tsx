@@ -52,11 +52,18 @@ interface EditFormState {
 }
 
 /**
- * RIO-FR-012 — Question Bank management (edit / deactivate / reactivate).
- * Read is available to anyone who can view this settings page
- * (methodologyQuestionBank:read); the mutating actions below are gated on
- * surveyBuilder:write, matching the backend's own gate on these endpoints
- * exactly — see QuestionsController.
+ * RIO-FR-012 (Q30/Q31, client-confirmed 2026-08-20) — Question Bank
+ * management (edit / deactivate / reactivate), now with versioning +
+ * approval. Read is available to anyone who can view this settings page
+ * (methodologyQuestionBank:read); initiating a change is gated on
+ * methodologyQuestionBank:write (System Admin/NCNP Admin only); approving
+ * or rejecting a pending change is gated on methodologyQuestionBank:approve
+ * (Human Reviewer) — matching the backend's gates exactly, see
+ * QuestionsController.
+ *
+ * Every change now creates a pending version rather than applying
+ * immediately — the management list keeps showing the pre-change (still
+ * current + approved) row until a Human Reviewer approves it.
  *
  * Domain/Sub-domain are intentionally NOT editable here even though the
  * backend's UpdateQuestionInput technically allows it: AI recommendation
@@ -68,7 +75,8 @@ interface EditFormState {
  */
 export function QuestionsTab() {
   const t = useTranslations("app.settings.methodology.questions");
-  const canWrite = usePermission("surveyBuilder", "write");
+  const canWrite = usePermission("methodologyQuestionBank", "write");
+  const canApprove = usePermission("methodologyQuestionBank", "approve");
 
   const [questions, setQuestions] = useState<QuestionManagementItem[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -76,6 +84,7 @@ export function QuestionsTab() {
   const [domainFilter, setDomainFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
   const [page, setPage] = useState(1);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [editingQuestion, setEditingQuestion] = useState<QuestionManagementItem | null>(
     null,
@@ -90,6 +99,13 @@ export function QuestionsTab() {
   const [saving, setSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  const [pending, setPending] = useState<QuestionManagementItem[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<QuestionManagementItem | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectError, setRejectError] = useState<string | null>(null);
+
   const loadQuestions = () => {
     questionsService
       .list()
@@ -103,9 +119,30 @@ export function QuestionsTab() {
       });
   };
 
+  const loadPending = () => {
+    if (!canApprove) return;
+    setPendingLoading(true);
+    questionsService
+      .listPendingApprovals()
+      .then((rows) => setPending(rows))
+      .catch(() => setPending([]))
+      .finally(() => setPendingLoading(false));
+  };
+
   useEffect(() => {
     loadQuestions();
   }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => loadPending());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canApprove]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 5000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   const domainOptions = useMemo(() => {
     const names = new Set((questions ?? []).map((q) => q.domain));
@@ -160,7 +197,9 @@ export function QuestionsTab() {
         kpi: editForm.kpi.trim() || null,
       });
       setEditDialogOpen(false);
+      setSuccessMessage(t("submittedForApproval"));
       loadQuestions();
+      loadPending();
     } catch {
       setFormError(t("genericError"));
     } finally {
@@ -176,14 +215,133 @@ export function QuestionsTab() {
       } else {
         await questionsService.reactivate(question.id);
       }
+      setSuccessMessage(t("submittedForApproval"));
       loadQuestions();
+      loadPending();
     } finally {
       setTogglingId(null);
     }
   }
 
+  async function approvePending(question: QuestionManagementItem) {
+    setDecidingId(question.id);
+    try {
+      await questionsService.approve(question.id);
+      loadPending();
+      loadQuestions();
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
+  function openReject(question: QuestionManagementItem) {
+    setRejectTarget(question);
+    setRejectReason("");
+    setRejectError(null);
+  }
+
+  async function submitReject() {
+    if (!rejectTarget || !rejectReason.trim()) return;
+    setDecidingId(rejectTarget.id);
+    setRejectError(null);
+    try {
+      await questionsService.reject(rejectTarget.id, rejectReason.trim());
+      setRejectTarget(null);
+      loadPending();
+    } catch {
+      setRejectError(t("genericError"));
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
   return (
     <>
+      {successMessage ? (
+        <div
+          role="status"
+          className="border-badge-success bg-badge-success text-badge-success-foreground mb-4 rounded-md border px-4 py-3 text-sm font-medium"
+        >
+          {successMessage}
+        </div>
+      ) : null}
+
+      {canApprove ? (
+        <Card className="mb-6">
+          <CardHeader className="py-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-foreground text-sm font-semibold">
+                {t("pendingApprovals.heading", { count: pending.length })}
+              </h3>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {pendingLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="border-primary size-6 animate-spin rounded-full border-2 border-t-transparent" />
+              </div>
+            ) : pending.length === 0 ? (
+              <p className="text-muted-foreground px-4 pb-4 text-xs">
+                {t("pendingApprovals.empty")}
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("columns.questionId")}</TableHead>
+                    <TableHead>{t("columns.question")}</TableHead>
+                    <TableHead>{t("pendingApprovals.submittedAt")}</TableHead>
+                    <TableHead className="text-right">{t("columns.actions")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pending.map((q) => (
+                    <TableRow key={q.id}>
+                      <TableCell className="text-foreground font-mono text-xs font-medium">
+                        {q.questionId}
+                      </TableCell>
+                      <TableCell dir="auto" className="text-foreground max-w-xs text-xs">
+                        {q.questionText}
+                        {!q.isActive ? (
+                          <Badge variant="outline" className="ml-2 text-[10px]">
+                            {t("inactive")}
+                          </Badge>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-xs">
+                        {q.submittedAt ? new Date(q.submittedAt).toLocaleString() : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            disabled={decidingId === q.id}
+                            onClick={() => approvePending(q)}
+                          >
+                            {t("pendingApprovals.approve")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive text-xs"
+                            disabled={decidingId === q.id}
+                            onClick={() => openReject(q)}
+                          >
+                            {t("pendingApprovals.reject")}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-3">
@@ -247,7 +405,6 @@ export function QuestionsTab() {
                 <TableHead>{t("columns.question")}</TableHead>
                 <TableHead>{t("columns.domain")}</TableHead>
                 <TableHead>{t("columns.indicator")}</TableHead>
-                <TableHead>{t("columns.weight")}</TableHead>
                 <TableHead>{t("columns.status")}</TableHead>
                 <TableHead className="text-right">{t("columns.actions")}</TableHead>
               </TableRow>
@@ -255,7 +412,7 @@ export function QuestionsTab() {
             <TableBody>
               {questions === null ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     <div className="flex justify-center">
                       <div className="border-primary size-6 animate-spin rounded-full border-2 border-t-transparent" />
                     </div>
@@ -264,7 +421,7 @@ export function QuestionsTab() {
               ) : filteredQuestions.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="text-muted-foreground h-24 text-center"
                   >
                     {loadFailed ? t("loadError") : t("noResults")}
@@ -289,9 +446,6 @@ export function QuestionsTab() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {q.indicator ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {q.priorityWeight ?? "—"}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -399,6 +553,48 @@ export function QuestionsTab() {
               disabled={saving || !editForm.questionText.trim()}
             >
               {saving ? t("saving") : t("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={rejectTarget !== null}
+        onOpenChange={(open) => !open && setRejectTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t("pendingApprovals.rejectTitle")} — {rejectTarget?.questionId}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">{t("pendingApprovals.reasonLabel")}</Label>
+              <Textarea
+                id="reject-reason"
+                dir="auto"
+                rows={3}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+            </div>
+            {rejectError ? (
+              <p className="text-destructive text-sm">{rejectError}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectTarget(null)}>
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={submitReject}
+              disabled={decidingId === rejectTarget?.id || !rejectReason.trim()}
+            >
+              {decidingId === rejectTarget?.id
+                ? t("saving")
+                : t("pendingApprovals.reject")}
             </Button>
           </DialogFooter>
         </DialogContent>
