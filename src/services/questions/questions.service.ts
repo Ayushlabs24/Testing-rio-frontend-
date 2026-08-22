@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
+  CreateQuestionPayload,
   QuestionManagementItem,
   UpdateQuestionPayload,
 } from "@/services/questions/questions.types";
@@ -20,6 +21,16 @@ export const questionsService = {
     return apiClient.get<QuestionManagementItem[]>(endpoints.questionBank.manage, {
       params: methodologyVersion ? { methodologyVersion } : undefined,
     });
+  },
+
+  // RIO-FR-012 (AC3, Q31) — a genuinely new question, not an edit. Same
+  // pending-approval mechanism as update/deactivate/reactivate below — it
+  // isn't selectable for new surveys until a Human Reviewer approves it.
+  async create(payload: CreateQuestionPayload): Promise<QuestionManagementItem> {
+    return apiClient.post<QuestionManagementItem>(
+      endpoints.questionBank.questions,
+      payload,
+    );
   },
 
   async update(

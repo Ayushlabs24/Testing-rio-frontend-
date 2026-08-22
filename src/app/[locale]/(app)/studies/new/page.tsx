@@ -17,6 +17,8 @@ import {
   severityScoringService,
   type MethodologyVersion,
 } from "@/services/priority/severity-scoring.service";
+import { studyConfigService } from "@/services/study-config/study-config.service";
+import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import { studiesService } from "@/services/studies/studies.service";
 
 export default function NewStudyPage() {
@@ -27,6 +29,8 @@ export default function NewStudyPage() {
   const [methodologyVersions, setMethodologyVersions] = useState<MethodologyVersion[]>(
     [],
   );
+  const [studyTypes, setStudyTypes] = useState<StudyConfigOption[]>([]);
+  const [targetSectors, setTargetSectors] = useState<StudyConfigOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +48,25 @@ export default function NewStudyPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      studyConfigService.listStudyTypes(),
+      studyConfigService.listTargetSectors(),
+    ])
+      .then(([types, sectors]) => {
+        if (cancelled) return;
+        setStudyTypes(types.filter((o) => o.isActive));
+        setTargetSectors(sectors.filter((o) => o.isActive));
+      })
+      .catch(() => {
+        // Non-fatal — both Selects just render with no options.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubmit = async (values: StudyFormValues) => {
     const study = await studiesService.create({
       title: values.title,
@@ -52,6 +75,8 @@ export default function NewStudyPage() {
       methodologyVersionId: values.methodologyVersionId,
       population: values.population,
       marginOfError: values.marginOfError,
+      studyType: values.studyType ?? undefined,
+      targetSector: values.targetSector ?? undefined,
     });
     // Go straight to the new study's detail page — it already exposes Add
     // Need / Import Needs / Import Survey Results directly, so the old
@@ -75,6 +100,8 @@ export default function NewStudyPage() {
               orgGovernorates={orgGovernorates}
               regionName={regionName}
               methodologyVersions={methodologyVersions}
+              studyTypes={studyTypes}
+              targetSectors={targetSectors}
               onSubmit={handleSubmit}
               onCancel={() => router.push("/studies")}
             />

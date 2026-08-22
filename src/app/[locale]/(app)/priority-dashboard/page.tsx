@@ -29,6 +29,7 @@ import {
 import { PRIORITY_DASHBOARD_PAGE_SIZE } from "@/config/pagination";
 import { Link } from "@/i18n/navigation";
 import { priorityService } from "@/services/priority/priority.service";
+import { GAP_TYPES } from "@/services/priority/priority.types";
 import type {
   PriorityDashboardEntry,
   PriorityScore,
@@ -53,6 +54,7 @@ export default function PriorityDashboardPage() {
   const [levelFilter, setLevelFilter] = useState<PriorityScore["level"] | typeof ALL>(
     ALL,
   );
+  const [gapTypeFilter, setGapTypeFilter] = useState<string>(ALL);
   // Pagination (Aug 14) — this list has no upper bound (every scored Need
   // across every Study), so it needs paging like every other list page.
   const [page, setPage] = useState(1);
@@ -79,9 +81,11 @@ export default function PriorityDashboardPage() {
     return counts;
   }, [entries]);
 
-  const filtered = (entries ?? []).filter((entry) =>
-    levelFilter === ALL ? true : entry.score?.level === levelFilter,
-  );
+  const filtered = (entries ?? []).filter((entry) => {
+    if (levelFilter !== ALL && entry.score?.level !== levelFilter) return false;
+    if (gapTypeFilter !== ALL && entry.gapType !== gapTypeFilter) return false;
+    return true;
+  });
 
   const pageCount = Math.max(
     1,
@@ -96,7 +100,17 @@ export default function PriorityDashboardPage() {
   return (
     <PermissionGuard module="priorityScoring" action="read">
       <PageContainer>
-        <PageHeader title={t("title")} description={t("description")} />
+        <PageHeader
+          title={t("title")}
+          description={t("description")}
+          actions={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/priority-dashboard/village-comparison">
+                {t("compareVillages")}
+              </Link>
+            </Button>
+          }
+        />
         <p className="text-muted-foreground mb-6 text-xs">{t("placeholderNote")}</p>
 
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -124,7 +138,7 @@ export default function PriorityDashboardPage() {
 
         <Card>
           <CardContent className="p-0">
-            <div className="border-border border-b px-4 py-3">
+            <div className="border-border flex flex-wrap gap-3 border-b px-4 py-3">
               <Select
                 value={levelFilter}
                 onValueChange={(v) => {
@@ -146,6 +160,28 @@ export default function PriorityDashboardPage() {
                   <SelectItem value="low">{t("level.low")}</SelectItem>
                 </SelectContent>
               </Select>
+              <Select
+                value={gapTypeFilter}
+                onValueChange={(v) => {
+                  setGapTypeFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-48"
+                  aria-label={t("filterGapTypeLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("filterGapTypeAll")}</SelectItem>
+                  {GAP_TYPES.map((gapType) => (
+                    <SelectItem key={gapType} value={gapType}>
+                      {t(`gapType.${gapType}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <Table>
@@ -154,6 +190,7 @@ export default function PriorityDashboardPage() {
                   <TableHead>{t("studyColumn")}</TableHead>
                   <TableHead className="w-28">{t("scoreColumn")}</TableHead>
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
+                  <TableHead className="w-32">{t("gapTypeColumn")}</TableHead>
                   <TableHead className="w-40">{t("scoredColumn")}</TableHead>
                   <TableHead className="w-44 text-right">{t("actionsColumn")}</TableHead>
                 </TableRow>
@@ -162,7 +199,7 @@ export default function PriorityDashboardPage() {
                 {entries === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 5 }).map((__, cell) => (
+                      {Array.from({ length: 6 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -172,7 +209,7 @@ export default function PriorityDashboardPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -204,6 +241,13 @@ export default function PriorityDashboardPage() {
                           </Badge>
                         ) : (
                           <Badge variant="outline">{t("notScoredBadge")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {entry.gapType ? (
+                          <Badge variant="outline">{t(`gapType.${entry.gapType}`)}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">

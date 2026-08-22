@@ -4,6 +4,7 @@ import { Eye, Globe2, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ModuleAccessList } from "@/components/features/settings/module-access-list";
+import { PermissionGrantsCard } from "@/components/features/settings/permission-grants-card";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -17,6 +18,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { usePermission } from "@/hooks/use-permission";
 import { rolesService } from "@/services/roles/roles.service";
 import type { RoleSummary } from "@/services/roles/roles.types";
 import type { ModulePermission } from "@/types/permissions";
@@ -96,8 +98,8 @@ function RoleDetailSheet({
                   <ShieldCheck className="size-5" />
                 </div>
                 <div>
-                  <SheetTitle>{role.name}</SheetTitle>
-                  <SheetDescription>{role.description}</SheetDescription>
+                  <SheetTitle>{t(`roleNames.${role.key}`)}</SheetTitle>
+                  <SheetDescription>{t(`roleDescriptions.${role.key}`)}</SheetDescription>
                 </div>
               </div>
               {role.crossEntity ? (
@@ -141,6 +143,7 @@ export default function RolesSettingsPage() {
   const [roles, setRoles] = useState<RoleSummary[] | null>(null);
   const [selectedRole, setSelectedRole] = useState<RoleSummary | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const canManageGrants = usePermission("rolesPermissions", "write");
 
   useEffect(() => {
     // Only enabled roles are shown (see roles.ts — currently all 10). A
@@ -170,7 +173,7 @@ export default function RolesSettingsPage() {
                           <ShieldCheck className="size-5" />
                         </div>
                         <p className="text-foreground text-sm font-semibold">
-                          {role.name}
+                          {t(`roleNames.${role.key}`)}
                         </p>
                       </div>
                       {role.crossEntity ? (
@@ -181,7 +184,7 @@ export default function RolesSettingsPage() {
                       ) : null}
                     </div>
                     <p className="text-muted-foreground line-clamp-2 text-sm">
-                      {role.description}
+                      {t(`roleDescriptions.${role.key}`)}
                     </p>
                     <AccessSummary role={role} />
                     {role.key === "citizen_guest" ? null : (
@@ -206,6 +209,10 @@ export default function RolesSettingsPage() {
           open={sheetOpen}
           onOpenChange={setSheetOpen}
         />
+
+        <div className="mt-6">
+          <PermissionGrantsCard canWrite={canManageGrants} />
+        </div>
       </PageContainer>
     </PermissionGuard>
   );

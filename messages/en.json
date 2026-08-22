@@ -283,7 +283,10 @@
       "sharingAlertRejectedReport": "Your request for \"{title}\" was rejected",
       "sharingAlertReasonPrefix": "Reason: {reason}",
       "ncnpReportAlertPendingReview": "NCNP Compiled Report awaiting your review",
-      "ncnpReportAlertReadyToPublish": "NCNP Compiled Report ready to publish"
+      "ncnpReportAlertReadyToPublish": "NCNP Compiled Report ready to publish",
+      "questionBankAlertDeactivated": "Question {questionId} was deactivated — pending your review",
+      "questionBankAlertCreated": "New question {questionId} — pending your review",
+      "questionBankAlertEdited": "Question {questionId} was edited — pending your review"
     },
     "footer": {
       "rightsReserved": "All rights reserved.",
@@ -548,13 +551,42 @@
           "genericError": "Something went wrong. Please try again.",
           "factorColumnLabel": "Factor",
           "weightColumnLabel": "Weight",
-          "weightTotalLabel": "Total"
+          "weightTotalLabel": "Total",
+          "studyTypesHeading": "Study Types",
+          "studyTypesNote": "Configurable values offered when creating a Study. Interim placeholders — rename or replace them once the final list is confirmed.",
+          "targetSectorsHeading": "Target Sectors",
+          "targetSectorsNote": "Configurable values offered when creating a Study, distinct from methodology Domain/Sub-domain. Interim placeholders — rename or replace them once the final list is confirmed.",
+          "noOptionsYet": "No values yet.",
+          "optionActive": "Active",
+          "optionInactive": "Inactive",
+          "renameOption": "Rename",
+          "activateOption": "Activate",
+          "deactivateOption": "Deactivate",
+          "addOptionPlaceholder": "New value name",
+          "addOption": "Add",
+          "optionNameLabel": "Name",
+          "historyHeading": "Change History",
+          "historyNote": "Every edit and publish is retained — nothing is ever overwritten.",
+          "historyShow": "Show history",
+          "historyHide": "Hide history",
+          "historyEmpty": "No changes recorded yet.",
+          "historyUnknownActor": "Unknown",
+          "historyChangeType": {
+            "edit": "Edited",
+            "publish": "Published"
+          },
+          "optionStatusLabel": "Status",
+          "optionActionsLabel": "Actions"
         },
         "questions": {
           "filterDomain": "Domain",
           "allDomains": "All domains",
+          "filterSubDomain": "Sub-domain",
+          "allSubDomains": "All sub-domains",
           "filterStatus": "Status",
           "allStatuses": "All statuses",
+          "bankHeading": "Question Bank",
+          "pendingApprovalBadge": "Pending Approval",
           "searchPlaceholder": "Search question ID, text, indicator, or KPI...",
           "columns": {
             "questionId": "Question ID",
@@ -596,6 +628,33 @@
             "previous": "Previous",
             "next": "Next",
             "label": "Page {page} of {count}"
+          },
+          "rowsPerPageLabel": "Rows per page",
+          "detail": {
+            "title": "Question Details",
+            "subDomain": "Sub-domain",
+            "kpi": "KPI",
+            "answerType": "Answer Type"
+          },
+          "create": {
+            "addQuestion": "Add Question",
+            "questionIdPlaceholder": "e.g. HLT-050",
+            "answerTypeLabel": "Answer Type",
+            "answerTypeSelect": "Single select",
+            "answerTypeMultiselect": "Multi-select",
+            "answerTypeNumeric": "Numeric",
+            "answerTypeChecklist": "Checklist",
+            "answerTypeOpenEnded": "Open-ended (free text)",
+            "requiredLabel": "Required / Optional",
+            "required": "Required",
+            "optional": "Optional",
+            "answerOptionsLabel": "Answer Options",
+            "answerOptionsPlaceholder": "One option per line",
+            "answerOptionsHint": "One option per line — shown as the selectable choices for this question.",
+            "answerOptionsRequired": "Add at least one answer option for this answer type.",
+            "approvalHint": "This question won't be selectable for new surveys until a Human Reviewer approves it.",
+            "questionIdTaken": "\"{questionId}\" already exists in this methodology version.",
+            "submit": "Add question"
           }
         },
         "scoring": {
@@ -698,6 +757,30 @@
         "moduleColumn": "Module",
         "read": "Read",
         "write": "Write",
+        "roleNames": {
+          "ngo_admin": "NGO Admin",
+          "ngo_research_officer": "NGO Research Officer",
+          "field_researcher": "Field Researcher",
+          "human_reviewer": "Human Reviewer",
+          "data_analyst": "Data Analyst",
+          "system_admin": "System Admin",
+          "read_only_viewer": "Read-only Viewer",
+          "center_supervisor": "Center Supervisor (NCNP Supervisor)",
+          "system_reviewer": "System Reviewer",
+          "citizen_guest": "Citizen / Beneficiary Guest"
+        },
+        "roleDescriptions": {
+          "ngo_admin": "Account owner — manages its own entity, teams, and studies, with approval/report-authoring held by other roles.",
+          "ngo_research_officer": "Creates studies and surveys from the question bank and enters data.",
+          "field_researcher": "Enters needs and documents the source and field notes.",
+          "human_reviewer": "Approves or rejects (with comments) a finalized Survey before it publishes.",
+          "data_analyst": "Processes data, reviews quality, and prepares reports and dashboards.",
+          "system_admin": "Manages accounts, roles, permissions, audit log, and configuration settings.",
+          "read_only_viewer": "Views authorized outputs without editing.",
+          "center_supervisor": "Cross-entity view/follow authority to monitor studies, data, reports and the NCNP Compiled Report — no edit rights on entity data.",
+          "system_reviewer": "Reviews the NCNP Compiled Report — approves or rejects (with mandatory notes) before System Admin publishes it. Read-only everywhere else.",
+          "citizen_guest": "Responds to surveys through OTP verification; no internal application access."
+        },
         "access": {
           "full": "Full Access",
           "read": "Read Only",
@@ -731,6 +814,37 @@
           "approve": "Approve",
           "export": "Export",
           "share": "Share"
+        },
+        "grants": {
+          "heading": "Permission Grants",
+          "note": "RIO-RBAC-002 — a Center/NCNP Supervisor is read-only everywhere by default. A grant here is the only way that role ever gets a specific write/create/approve action, optionally scoped to one entity and optionally time-limited.",
+          "newGrant": "New Grant",
+          "granteeLabel": "Grantee",
+          "granteePlaceholder": "Select a Center/NCNP Supervisor",
+          "noSupervisors": "No Center/NCNP Supervisor users found.",
+          "permissionLabel": "Permission",
+          "moduleLabel": "Module",
+          "modulePlaceholder": "Select a module",
+          "actionLabel": "Action",
+          "actionPlaceholder": "Select an action",
+          "scopeLabel": "Entity scope",
+          "scopeAllEntities": "All entities",
+          "reasonLabel": "Reason",
+          "reasonPlaceholder": "Why is this grant needed?",
+          "expiryLabel": "Expires on (optional)",
+          "expiryNote": "Leave blank for a grant with no expiry — it stays active until revoked.",
+          "statusLabel": "Status",
+          "statusActive": "Active",
+          "statusExpired": "Expired",
+          "statusRevoked": "Revoked",
+          "actionsLabel": "Actions",
+          "revoke": "Revoke",
+          "empty": "No permission grants yet.",
+          "loadError": "Couldn't load permission grants. Please try again.",
+          "genericError": "Something went wrong. Please try again.",
+          "cancel": "Cancel",
+          "save": "Grant permission",
+          "saving": "Saving..."
         }
       },
       "users": {
@@ -879,6 +993,9 @@
           "SYSTEM_ADMIN_VIEWED_SURVEY": "Viewed Survey",
           "SYSTEM_ADMIN_VIEWED_REPORT": "Viewed Report",
           "SYSTEM_ADMIN_DOWNLOADED_REPORT": "Downloaded Report",
+          "SUPERVISOR_VIEWED_STUDIES": "Supervisor Viewed Studies",
+          "SUPERVISOR_VIEWED_REPORT": "Supervisor Viewed Report",
+          "SUPERVISOR_DOWNLOADED_REPORT": "Supervisor Downloaded Report",
           "SYSTEM_ADMIN_VIEWED_ARCHIVED_REPORT": "Viewed Archived Report",
           "STUDY_ARCHIVED": "Archived Study",
           "STUDY_RESTORED": "Restored Study",
@@ -906,16 +1023,21 @@
           "evidence_document": "Evidence document",
           "evidence_document_summary": "Evidence document summary",
           "combined_report_summary": "Combined report summary",
-          "ncnp_report": "NCNP Compiled Report"
+          "ncnp_report": "NCNP Compiled Report",
+          "question": "Question Bank item",
+          "need_decision": "Decision"
         }
       }
     },
     "priorityDashboard": {
       "title": "Priority Dashboard",
       "description": "Every Need in your organisation, ranked by priority score.",
+      "compareVillages": "Compare Villages",
       "placeholderNote": "Priority score is a weighted rollup of domain performance scores, per the org's configured methodology weights and critical-domain thresholds. See a Need's Insights page for the full domain breakdown.",
       "filterLevelLabel": "Priority level",
       "filterLevelAll": "All levels",
+      "filterGapTypeLabel": "Gap type",
+      "filterGapTypeAll": "All gap types",
       "pagination": {
         "previous": "Previous",
         "next": "Next",
@@ -935,6 +1057,13 @@
         "medium": "Medium",
         "low": "Low"
       },
+      "gapType": {
+        "acute": "Acute",
+        "chronic": "Chronic",
+        "structural": "Structural",
+        "seasonal": "Seasonal",
+        "equity": "Equity"
+      },
       "summaryCritical": "Critical",
       "summaryHigh": "High",
       "summaryMedium": "Medium",
@@ -942,6 +1071,29 @@
       "notScoredBadge": "Not scored yet",
       "statusColumn": "Study status",
       "viewMatrix": "View Matrix"
+    },
+    "villageComparison": {
+      "title": "Village Comparison",
+      "description": "Compare priority score, needs, and domain severity across villages in the studies you select.",
+      "backToDashboard": "Back to Priority Dashboard",
+      "selectStudiesLabel": "Studies to compare",
+      "selectStudiesPlaceholder": "Select one or more studies",
+      "searchStudies": "Search studies...",
+      "noStudiesFound": "No studies found.",
+      "removeStudyAria": "Remove {study}",
+      "selectAtLeastOne": "Select at least one study to see its villages.",
+      "loading": "Loading comparison...",
+      "loadError": "Couldn't load the village comparison. Please try again.",
+      "noVillages": "No villages found for the selected studies.",
+      "columns": {
+        "village": "Village",
+        "priorityScore": "Priority Score",
+        "status": "Status",
+        "critical": "Critical",
+        "high": "High",
+        "totalNeeds": "Total Needs",
+        "needTypes": "Need Types"
+      }
     },
     "reports": {
       "title": "Reports",
@@ -1680,6 +1832,11 @@
         "villageHint": "Optional — separate multiple villages with commas.",
         "regionLabel": "Region",
         "regionHint": "Inherited from your organization — set in Settings > Organization.",
+        "studyTypeLabel": "Study Type",
+        "studyTypePlaceholder": "Select a study type",
+        "studyTypeHint": "Interim list — will be replaced once finalized.",
+        "targetSectorLabel": "Target Sector",
+        "targetSectorPlaceholder": "Select a target sector",
         "governorateLabel": "Governorates",
         "governoratePlaceholder": "Select governorates",
         "governorateSearchPlaceholder": "Search governorates",
@@ -2184,7 +2341,9 @@
         "sampleDescriptionValidationError": "Fill in all four fields — Expected Sample Size must be a whole number of at least 1.",
         "sampleDescriptionNotProvided": "Not provided",
         "targetGroupLabel": "Target Group",
-        "targetGroupPlaceholder": "e.g. Households with children under 5",
+        "targetGroupPlaceholder": "Select a target group",
+        "targetGroupSearchPlaceholder": "Search target groups...",
+        "targetGroupEmpty": "No matching target group.",
         "expectedSampleSizeLabel": "Expected Sample Size",
         "expectedSampleSizePlaceholder": "e.g. 400",
         "selectionApproachLabel": "Selection Approach",
@@ -2376,6 +2535,36 @@
     }
   },
   "PriorityDashboard": {
+    "decisions": {
+      "title": "Decisions",
+      "subtitle": "Intervention, escalation, and follow-up decisions logged against this need.",
+      "logDecision": "Log Decision",
+      "dialogDescription": "Record a decision and assign it to a responsible party. Requires an approved priority score.",
+      "decisionTypeLabel": "Decision Type",
+      "decisionTypePlaceholder": "Select a decision type",
+      "responsiblePartyLabel": "Responsible Party",
+      "responsiblePartyPlaceholder": "Person or organization",
+      "decisionDateLabel": "Decision Date",
+      "notesLabel": "Notes",
+      "showHistory": "Show history ({count})",
+      "hideHistory": "Hide history",
+      "historyTransition": "{from} → {to}",
+      "historyCreated": "Logged as {to}",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "noDecisions": "No decisions logged yet.",
+      "loadError": "Couldn't load decisions. Please try again.",
+      "genericError": "Couldn't log this decision. Please try again.",
+      "noApprovedScoreError": "This need has no Human-Reviewer-approved priority score yet — a decision can't be logged until one is approved.",
+      "statusUpdateError": "Couldn't update the decision status. Please try again.",
+      "status": {
+        "open": "Open",
+        "in_progress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
     "generateModal": {
       "title": "Generate AI Summary",
       "description": "Select the summary level and scope filters to create a frozen snapshot and generate an executive summary.",
@@ -2502,7 +2691,8 @@
       "tabs": {
         "scoreBased": "Score-Based AI Summary",
         "documentBased": "Document-Based Summary",
-        "combined": "Combined Summary"
+        "combined": "Combined Summary",
+        "decisions": "Decisions"
       },
       "responseQualityTitle": "Response Quality Results",
       "responseQualityDesc": "Completeness check, confidence level flags, and duplicate detection for submitted survey responses.",
@@ -2516,6 +2706,16 @@
       "uniqueResponse": "Unique Response",
       "prioritySuffix": "PRIORITY",
       "noSurveyAssociated": "No survey associated with this need.",
+      "gapTypeLabel": "Gap Type",
+      "gapTypeNote": "Analyst-entered classification of this need's gap — not auto-calculated.",
+      "gapTypeNotSet": "Not set",
+      "gapType": {
+        "acute": "Acute",
+        "chronic": "Chronic",
+        "structural": "Structural",
+        "seasonal": "Seasonal",
+        "equity": "Equity"
+      },
       "recalculateButton": "Recalculate Priority",
       "recalculating": "Recalculating...",
       "priorityMatrixTitle": "Priority Score & Status Matrix",

@@ -25,3 +25,4 @@ export const REVIEWER_SLA_PAGE_SIZE = 10;
 export const PUBLIC_SURVEYS_PAGE_SIZE = 10;
 export const SYSTEM_LOGS_PAGE_SIZE = 15;
 export const QUESTION_BANK_PAGE_SIZE = 10;
+export const QUESTION_BANK_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;

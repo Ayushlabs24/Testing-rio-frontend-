@@ -33,10 +33,39 @@ export interface PriorityDashboardEntry {
   studyId: string;
   studyTitle: string;
   needId: string;
+  // RIO-FR-005 (Q12) — the Need's own analyst-entered Gap Type
+  // classification (acute/chronic/structural/seasonal/equity), distinct
+  // from `score.overrideReason` below.
+  gapType: string | null;
   score: {
     overallScore: number;
     level: "critical" | "high" | "medium" | "low";
-    gapType: string | null;
+    overrideReason: string | null;
     scoredAt: string;
   } | null;
+}
+
+// RIO-FR-005 (Q12, client-confirmed) — final, no additions.
+export const GAP_TYPES = [
+  "acute",
+  "chronic",
+  "structural",
+  "seasonal",
+  "equity",
+] as const;
+export type GapType = (typeof GAP_TYPES)[number];
+
+// RIO-FR-005 (Q9) — affected population is deliberately absent: no data
+// source for it exists anywhere in the platform yet (see the backend's own
+// comment on this type for why it isn't faked with a placeholder).
+export interface VillageComparisonEntry {
+  village: string;
+  studyIds: string[];
+  priorityScore: number | null;
+  priorityStatus: string | null;
+  domainComponents: unknown | null;
+  criticalNeedCount: number;
+  highNeedCount: number;
+  needTypeCounts: Record<string, number>;
+  totalNeedCount: number;
 }

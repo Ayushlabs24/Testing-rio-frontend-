@@ -31,7 +31,9 @@ import { ApiError } from "@/services/api/types";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
 import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
+import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { GAP_TYPES } from "@/services/priority/priority.types";
 import type { Survey } from "@/services/surveys/surveys.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeverityDashboard } from "@/components/features/insights/severity-dashboard";
@@ -43,9 +45,11 @@ import { AiPrioritySummaryPanel } from "@/components/features/insights/ai-priori
 import { SupportingEvidencePanel } from "@/components/features/insights/supporting-evidence-panel";
 import { DocumentBasedSummaryTab } from "@/components/features/priority/document-based-summary-tab";
 import { CombinedSummaryTab } from "@/components/features/priority/combined-summary-tab";
+import { NeedDecisionsPanel } from "@/components/features/priority/need-decisions-panel";
 import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
 
 const CONSOLIDATED = "consolidated";
+const NONE = "none";
 
 export default function PriorityDetailInsightsPage({
   params,
@@ -60,6 +64,21 @@ export default function PriorityDetailInsightsPage({
   // (priorityScoring:create), the same gate the Recalculate button below
   // already uses — both are Data-Analyst-only "run a new analysis" actions.
   const canScore = usePermission("priorityScoring", "create");
+  // RIO-FR-005 (Q12) — analyst-entered, gated to the same permission the
+  // backend's PATCH needs/:needId/gap-type route checks.
+  const canEditGapType = usePermission("priorityScoring", "write");
+  const [savingGapType, setSavingGapType] = useState(false);
+
+  async function handleGapTypeChange(value: string) {
+    const nextGapType = value === NONE ? null : value;
+    setSavingGapType(true);
+    try {
+      const updated = await needsService.setGapType(needId, nextGapType);
+      setNeed(updated);
+    } finally {
+      setSavingGapType(false);
+    }
+  }
 
   const [links, setLinks] = useState<PublicSurveyLink[]>([]);
   const [scope, setScope] = useState<string>(CONSOLIDATED);
@@ -198,6 +217,7 @@ export default function PriorityDetailInsightsPage({
             <TabsTrigger value="summary">{t("tabs.scoreBased")}</TabsTrigger>
             <TabsTrigger value="doc-summary">{t("tabs.documentBased")}</TabsTrigger>
             <TabsTrigger value="combined-summary">{t("tabs.combined")}</TabsTrigger>
+            <TabsTrigger value="decisions">{t("tabs.decisions")}</TabsTrigger>
           </TabsList>
 
           {/* TAB 1: Severity Score (Severity Dashboard + Response Quality) */}
@@ -474,6 +494,39 @@ export default function PriorityDetailInsightsPage({
             ) : (
               <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>
             )}
+          </TabsContent>
+
+          {/* TAB 6: Decisions (RIO-FR-005) */}
+          <TabsContent value="decisions" className="space-y-4">
+            <Card>
+              <CardContent className="space-y-2 p-5">
+                <h2 className="text-foreground text-sm font-semibold">
+                  {t("gapTypeLabel")}
+                </h2>
+                <p className="text-muted-foreground text-xs">{t("gapTypeNote")}</p>
+                <Select
+                  value={need?.gapType ?? NONE}
+                  onValueChange={handleGapTypeChange}
+                  disabled={!canEditGapType || savingGapType}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-64"
+                    aria-label={t("gapTypeLabel")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>{t("gapTypeNotSet")}</SelectItem>
+                    {GAP_TYPES.map((gapType) => (
+                      <SelectItem key={gapType} value={gapType}>
+                        {t(`gapType.${gapType}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+            <NeedDecisionsPanel needId={needId} canManage={canScore} />
           </TabsContent>
         </Tabs>
       </PageContainer>

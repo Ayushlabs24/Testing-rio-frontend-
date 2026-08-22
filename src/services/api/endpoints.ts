@@ -51,6 +51,7 @@ export const endpoints = {
   questionBank: {
     domainOptions: "/question-bank/domain-options",
     kpiOptions: "/question-bank/kpi-options",
+    targetRespondentOptions: "/question-bank/target-respondent-options",
     questions: "/question-bank/questions",
     // RIO-FR-012 — admin management (includes deactivated questions).
     manage: "/question-bank/questions/manage",
@@ -146,6 +147,7 @@ export const endpoints = {
       `/studies/${studyId}/needs/preview-survey-results`,
     importBulk: (studyId: string) => `/studies/${studyId}/needs/import-bulk`,
     byId: (needId: string) => `/needs/${needId}`,
+    gapType: (needId: string) => `/needs/${needId}/gap-type`,
   },
   aiDecisions: {
     // Now the Retry action for a Need whose automatic classification
@@ -176,6 +178,28 @@ export const endpoints = {
       `/domains/${domainId}/subdomains/${subId}/activate`,
     deactivateSubDomain: (domainId: string, subId: string) =>
       `/domains/${domainId}/subdomains/${subId}/deactivate`,
+  },
+  needDecisions: {
+    list: (needId: string) => `/needs/${needId}/decisions`,
+    create: (needId: string) => `/needs/${needId}/decisions`,
+    updateStatus: (needId: string, decisionId: string) =>
+      `/needs/${needId}/decisions/${decisionId}/status`,
+  },
+  studyConfig: {
+    studyTypes: "/study-config/study-types",
+    studyTypeById: (id: string) => `/study-config/study-types/${id}`,
+    activateStudyType: (id: string) => `/study-config/study-types/${id}/activate`,
+    deactivateStudyType: (id: string) => `/study-config/study-types/${id}/deactivate`,
+    targetSectors: "/study-config/target-sectors",
+    targetSectorById: (id: string) => `/study-config/target-sectors/${id}`,
+    activateTargetSector: (id: string) => `/study-config/target-sectors/${id}/activate`,
+    deactivateTargetSector: (id: string) =>
+      `/study-config/target-sectors/${id}/deactivate`,
+    decisionTypes: "/study-config/decision-types",
+    decisionTypeById: (id: string) => `/study-config/decision-types/${id}`,
+    activateDecisionType: (id: string) => `/study-config/decision-types/${id}/activate`,
+    deactivateDecisionType: (id: string) =>
+      `/study-config/decision-types/${id}/deactivate`,
   },
   publicSurveys: {
     // Admin/authenticated side (Publish Survey + Generate QR) — each Need
@@ -214,6 +238,7 @@ export const endpoints = {
     score: (needId: string) => `/needs/${needId}/priority-score`,
     dashboard: "/priority-scores",
     approve: (id: string) => `/priority-scores/${id}/approve`,
+    villageComparison: "/priority-scores/village-comparison",
   },
   reports: {
     list: "/reports",
@@ -264,6 +289,9 @@ export const endpoints = {
   sharingAlerts: {
     list: "/sharing-alerts",
   },
+  questionBankAlerts: {
+    list: "/question-bank-alerts",
+  },
   collectiveDashboard: "/collective-dashboard",
   ncnpReport: {
     get: "/ncnp-report",
@@ -281,9 +309,14 @@ export const endpoints = {
     export: (id: string, format: "pdf" | "excel") =>
       `/ncnp-report-reviews/${id}/export?format=${format}`,
   },
+  permissionGrants: {
+    list: "/permission-grants",
+    revoke: (id: string) => `/permission-grants/${id}/revoke`,
+  },
   methodologyConfig: {
     get: "/methodology-config",
     publish: "/methodology-config/publish",
     versions: "/methodology-config/versions",
+    history: "/methodology-config/history",
   },
 } as const;

@@ -22,6 +22,7 @@ import { previewSampleSize } from "@/lib/sample-size";
 import { ApiError } from "@/services/api/types";
 import type { Governorate } from "@/services/geography/geography.types";
 import type { MethodologyVersion } from "@/services/priority/severity-scoring.service";
+import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import type { Study } from "@/services/studies/studies.types";
 
 export interface StudyFormValues {
@@ -44,6 +45,12 @@ export interface StudyFormValues {
    * is the tighter option the workbook itself names for trend-cycle studies
    * that need finer detection, at the cost of a much larger required sample. */
   marginOfError: number;
+  /** RIO-FR-012 (Q3/Q4/Q35) — sourced from a configurable list, not free
+   * text. Optional: the client's real value list is still unconfirmed, so
+   * this can't be made mandatory yet without blocking Study creation on an
+   * interim placeholder choice. */
+  studyType: string | null;
+  targetSector: string | null;
 }
 
 interface StudyFormProps {
@@ -57,6 +64,11 @@ interface StudyFormProps {
   regionName: string;
   /** PUBLISHED Methodology Versions only — Select options. */
   methodologyVersions: MethodologyVersion[];
+  /** Active Study Type / Target Sector options — RIO-FR-012, Q3/Q4/Q35.
+   * Placeholder values today; the client's real list swaps in here without
+   * any form change once confirmed. */
+  studyTypes: StudyConfigOption[];
+  targetSectors: StudyConfigOption[];
   onSubmit: (values: StudyFormValues) => Promise<void>;
   onCancel: () => void;
 }
@@ -66,6 +78,8 @@ export function StudyForm({
   orgGovernorates,
   regionName,
   methodologyVersions,
+  studyTypes,
+  targetSectors,
   onSubmit,
   onCancel,
 }: StudyFormProps) {
@@ -91,6 +105,8 @@ export function StudyForm({
       )
       .refine((value) => !isCreate || value > 0, tValidation("populationInvalid")),
     marginOfError: z.number(),
+    studyType: z.string().nullable(),
+    targetSector: z.string().nullable(),
   });
 
   const {
@@ -108,6 +124,8 @@ export function StudyForm({
       methodologyVersionId: study?.methodologyVersionId ?? "",
       population: study?.population ?? 0,
       marginOfError: study?.marginOfError ?? 0.1,
+      studyType: study?.studyType ?? null,
+      targetSector: study?.targetSector ?? null,
     },
   });
 
@@ -116,6 +134,8 @@ export function StudyForm({
   const methodologyVersionId = useWatch({ control, name: "methodologyVersionId" });
   const marginOfError = useWatch({ control, name: "marginOfError" });
   const population = useWatch({ control, name: "population" });
+  const studyType = useWatch({ control, name: "studyType" });
+  const targetSector = useWatch({ control, name: "targetSector" });
   const samplePreview = isCreate ? previewSampleSize(population, marginOfError) : null;
 
   const { centers: orgCenters, loaded: orgCentersLoaded } =
@@ -185,119 +205,165 @@ export function StudyForm({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label>{t("regionLabel")}</Label>
-        <Input value={regionName} readOnly disabled />
-        <p className="text-muted-foreground text-sm">{t("regionHint")}</p>
-      </div>
-
-      <div className="space-y-2">
-        <Label>
-          {t("governorateLabel")} <span className="text-destructive">*</span>
-        </Label>
-        <MultiSelect
-          options={orgGovernorates.map((g) => ({ value: g.id, label: g.name }))}
-          values={governorateIds}
-          onChange={(next) => setValue("governorateIds", next)}
-          placeholder={t("governoratePlaceholder")}
-          searchPlaceholder={t("governorateSearchPlaceholder")}
-          emptyText={t("governorateEmpty")}
-          removeAriaLabel={(governorate) =>
-            t("removeGovernorateSelection", { governorate })
-          }
-        />
-        {errors.governorateIds ? (
-          <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
-        ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <Label>
-          {t("centerLabel")} <span className="text-destructive">*</span>
-        </Label>
-        <MultiSelect
-          options={orgCenters.map((c) => ({ value: c.id, label: c.name }))}
-          values={centerIds}
-          onChange={(next) => setValue("centerIds", next)}
-          placeholder={
-            governorateIds.length > 0
-              ? t("centerPlaceholder")
-              : t("selectGovernorateFirst")
-          }
-          searchPlaceholder={t("centerSearchPlaceholder")}
-          emptyText={t("centerEmpty")}
-          removeAriaLabel={(center) => t("removeCenterSelection", { center })}
-          disabled={governorateIds.length === 0}
-        />
-        {errors.centerIds ? (
-          <p className="text-destructive text-sm">{errors.centerIds.message}</p>
-        ) : null}
-      </div>
-
-      <div className="space-y-2">
-        <Label>
-          {t("methodologyVersionLabel")} <span className="text-destructive">*</span>
-        </Label>
-        <Select
-          value={methodologyVersionId}
-          onValueChange={(value) =>
-            setValue("methodologyVersionId", value, { shouldValidate: true })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {methodologyVersions.map((mv) => (
-              <SelectItem key={mv.id} value={mv.id}>
-                {mv.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.methodologyVersionId ? (
-          <p className="text-destructive text-sm">
-            {errors.methodologyVersionId.message}
-          </p>
-        ) : null}
-      </div>
-
-      {isCreate ? (
+      {/* Compact scalar fields paired up so the form doesn't turn into one
+          long single-column scroll — each pair collapses to one column
+          below the md breakpoint instead of squeezing on mobile. */}
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="population">
-            {t("populationLabel")} <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="population"
-            type="number"
-            min={1}
-            step={1}
-            placeholder={t("populationPlaceholder")}
-            {...register("population", { valueAsNumber: true })}
-          />
-          <p className="text-muted-foreground text-sm">{t("populationHint")}</p>
-          {errors.population ? (
-            <p className="text-destructive text-sm">{errors.population.message}</p>
-          ) : null}
+          <Label>{t("regionLabel")}</Label>
+          <Input value={regionName} readOnly disabled />
+          <p className="text-muted-foreground text-sm">{t("regionHint")}</p>
         </div>
-      ) : null}
 
-      {isCreate ? (
         <div className="space-y-2">
-          <Label>{t("marginOfErrorLabel")}</Label>
+          <Label>
+            {t("methodologyVersionLabel")} <span className="text-destructive">*</span>
+          </Label>
           <Select
-            value={String(marginOfError)}
-            onValueChange={(value) => setValue("marginOfError", Number(value))}
+            value={methodologyVersionId}
+            onValueChange={(value) =>
+              setValue("methodologyVersionId", value, { shouldValidate: true })
+            }
           >
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0.1">{t("marginOfError10")}</SelectItem>
-              <SelectItem value="0.05">{t("marginOfError5")}</SelectItem>
+              {methodologyVersions.map((mv) => (
+                <SelectItem key={mv.id} value={mv.id}>
+                  {mv.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <p className="text-muted-foreground text-sm">{t("marginOfErrorHint")}</p>
+          {errors.methodologyVersionId ? (
+            <p className="text-destructive text-sm">
+              {errors.methodologyVersionId.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t("studyTypeLabel")}</Label>
+          <Select
+            value={studyType ?? ""}
+            onValueChange={(value) => setValue("studyType", value || null)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("studyTypePlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {studyTypes.map((option) => (
+                <SelectItem key={option.id} value={option.name}>
+                  {option.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-sm">{t("studyTypeHint")}</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t("targetSectorLabel")}</Label>
+          <Select
+            value={targetSector ?? ""}
+            onValueChange={(value) => setValue("targetSector", value || null)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("targetSectorPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {targetSectors.map((option) => (
+                <SelectItem key={option.id} value={option.name}>
+                  {option.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label>
+            {t("governorateLabel")} <span className="text-destructive">*</span>
+          </Label>
+          <MultiSelect
+            options={orgGovernorates.map((g) => ({ value: g.id, label: g.name }))}
+            values={governorateIds}
+            onChange={(next) => setValue("governorateIds", next)}
+            placeholder={t("governoratePlaceholder")}
+            searchPlaceholder={t("governorateSearchPlaceholder")}
+            emptyText={t("governorateEmpty")}
+            removeAriaLabel={(governorate) =>
+              t("removeGovernorateSelection", { governorate })
+            }
+          />
+          {errors.governorateIds ? (
+            <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            {t("centerLabel")} <span className="text-destructive">*</span>
+          </Label>
+          <MultiSelect
+            options={orgCenters.map((c) => ({ value: c.id, label: c.name }))}
+            values={centerIds}
+            onChange={(next) => setValue("centerIds", next)}
+            placeholder={
+              governorateIds.length > 0
+                ? t("centerPlaceholder")
+                : t("selectGovernorateFirst")
+            }
+            searchPlaceholder={t("centerSearchPlaceholder")}
+            emptyText={t("centerEmpty")}
+            removeAriaLabel={(center) => t("removeCenterSelection", { center })}
+            disabled={governorateIds.length === 0}
+          />
+          {errors.centerIds ? (
+            <p className="text-destructive text-sm">{errors.centerIds.message}</p>
+          ) : null}
+        </div>
+      </div>
+
+      {isCreate ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="population">
+              {t("populationLabel")} <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="population"
+              type="number"
+              min={1}
+              step={1}
+              placeholder={t("populationPlaceholder")}
+              {...register("population", { valueAsNumber: true })}
+            />
+            <p className="text-muted-foreground text-sm">{t("populationHint")}</p>
+            {errors.population ? (
+              <p className="text-destructive text-sm">{errors.population.message}</p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("marginOfErrorLabel")}</Label>
+            <Select
+              value={String(marginOfError)}
+              onValueChange={(value) => setValue("marginOfError", Number(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0.1">{t("marginOfError10")}</SelectItem>
+                <SelectItem value="0.05">{t("marginOfError5")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-sm">{t("marginOfErrorHint")}</p>
+          </div>
         </div>
       ) : null}
 

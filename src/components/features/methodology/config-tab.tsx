@@ -1,11 +1,11 @@
 "use client";
 
-import { CheckCircle2, Pencil } from "lucide-react";
+import { CheckCircle2, Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,30 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
-import type { MethodologyConfig } from "@/services/methodology-config/methodology-config.types";
+import type {
+  MethodologyConfig,
+  MethodologyConfigHistoryEntry,
+} from "@/services/methodology-config/methodology-config.types";
+import { studyConfigService } from "@/services/study-config/study-config.service";
+import type {
+  CreateStudyConfigOptionPayload,
+  StudyConfigOption,
+  UpdateStudyConfigOptionPayload,
+} from "@/services/study-config/study-config.types";
 
 // Weights are edited as whole-number percentages but stored as 0-1 decimals
 // (see the comment on weightSum below) — summing 9 such decimals can land a
@@ -172,6 +190,310 @@ function VersionCard({
   );
 }
 
+// RIO-NFR-017 (client-confirmed, Aug 4) — "retain full version history of
+// every methodology configuration change — never overwrite." The backend
+// now appends an immutable snapshot on every edit/publish
+// (MethodologyConfigHistory); this is what makes that visible — previously
+// there was no UI anywhere to see it, only the single current row.
+function ConfigHistoryCard() {
+  const t = useTranslations("app.settings.methodology.config");
+  const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<MethodologyConfigHistoryEntry[] | null>(null);
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && history === null) {
+      methodologyConfigService
+        .getHistory()
+        .then(setHistory)
+        .catch(() => setHistory([]));
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-foreground text-sm font-semibold">
+              {t("historyHeading")}
+            </h2>
+            <p className="text-muted-foreground mt-1 text-xs">{t("historyNote")}</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={toggle}>
+            {open ? t("historyHide") : t("historyShow")}
+          </Button>
+        </div>
+        {open ? (
+          history === null ? (
+            <div className="bg-muted h-16 animate-pulse rounded-md" />
+          ) : history.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t("historyEmpty")}</p>
+          ) : (
+            <ul className="divide-border divide-y">
+              {history.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={entry.changeType === "publish" ? "default" : "outline"}
+                    >
+                      {t(`historyChangeType.${entry.changeType}`)}
+                    </Badge>
+                    <span className="text-foreground">{entry.version}</span>
+                  </div>
+                  <div className="text-muted-foreground text-xs">
+                    {entry.changedByName ?? t("historyUnknownActor")} ·{" "}
+                    <FormattedDate value={entry.changedAt} withTime />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+// RIO-FR-012 (Sprint 2 clarification Q4, client-confirmed) — Study Type and
+// Target Sector must be "configurable through Methodology Configuration"
+// rather than hardcoded. The backend CRUD for both (StudyConfigController)
+// has existed since this session's earlier work; this component is what
+// was actually missing — until now nothing on the frontend ever called the
+// create/update/activate/deactivate endpoints, only `list()` from the Study
+// form's read-only dropdown. The values shown here are interim placeholders
+// (Baseline Assessment / Follow-up Assessment / etc.) pending the client's
+// actual value list — a System Admin can rename or replace them here once
+// that lands, with no further build needed on this screen.
+function ConfigurableOptionsCard({
+  heading,
+  note,
+  canWrite,
+  list,
+  create,
+  update,
+  setActive,
+}: {
+  heading: string;
+  note: string;
+  canWrite: boolean;
+  list: () => Promise<StudyConfigOption[]>;
+  create: (payload: CreateStudyConfigOptionPayload) => Promise<StudyConfigOption>;
+  update: (
+    id: string,
+    payload: UpdateStudyConfigOptionPayload,
+  ) => Promise<StudyConfigOption>;
+  setActive: (id: string, isActive: boolean) => Promise<StudyConfigOption>;
+}) {
+  const t = useTranslations("app.settings.methodology.config");
+  const [options, setOptions] = useState<StudyConfigOption[] | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  const [editing, setEditing] = useState<StudyConfigOption | null>(null);
+  const [editName, setEditName] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  function load() {
+    list()
+      .then(setOptions)
+      .catch(() => setOptions([]));
+  }
+
+  // `list` is a stable service-method reference passed directly by the
+  // caller (e.g. `studyConfigService.listStudyTypes`, not a wrapping arrow),
+  // so this is safe to run once rather than on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(load, []);
+
+  async function handleAdd() {
+    if (!newName.trim()) return;
+    setAdding(true);
+    setError(null);
+    try {
+      await create({ name: newName.trim() });
+      setNewName("");
+      setAddOpen(false);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleToggleActive(option: StudyConfigOption) {
+    setTogglingId(option.id);
+    setError(null);
+    try {
+      await setActive(option.id, !option.isActive);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  function openEdit(option: StudyConfigOption) {
+    setEditing(option);
+    setEditName(option.name);
+  }
+
+  async function saveEdit() {
+    if (!editing || !editName.trim()) return;
+    setSavingEdit(true);
+    setError(null);
+    try {
+      await update(editing.id, { name: editName.trim() });
+      setEditing(null);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-foreground text-sm font-semibold">{heading}</h2>
+          <p className="text-muted-foreground mt-1 text-xs">{note}</p>
+        </div>
+        {canWrite ? (
+          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+            <Plus className="size-4" />
+            {t("addOption")}
+          </Button>
+        ) : null}
+      </CardHeader>
+      <CardContent className="space-y-3 p-0">
+        {options === null ? (
+          <div className="bg-muted mx-5 mb-5 h-20 animate-pulse rounded-md" />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("optionNameLabel")}</TableHead>
+                <TableHead>{t("optionStatusLabel")}</TableHead>
+                {canWrite ? (
+                  <TableHead className="text-end">{t("optionActionsLabel")}</TableHead>
+                ) : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {options.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={canWrite ? 3 : 2}
+                    className="text-muted-foreground text-center"
+                  >
+                    {t("noOptionsYet")}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                options.map((option) => (
+                  <TableRow key={option.id}>
+                    <TableCell className="text-foreground font-medium">
+                      {option.name}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={option.isActive}
+                          disabled={!canWrite || togglingId === option.id}
+                          onCheckedChange={() => handleToggleActive(option)}
+                          aria-label={
+                            option.isActive ? t("deactivateOption") : t("activateOption")
+                          }
+                        />
+                        <span className="text-muted-foreground text-xs">
+                          {option.isActive ? t("optionActive") : t("optionInactive")}
+                        </span>
+                      </div>
+                    </TableCell>
+                    {canWrite ? (
+                      <TableCell className="text-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(option)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        )}
+        {error ? <p className="text-destructive px-5 pb-4 text-sm">{error}</p> : null}
+      </CardContent>
+
+      <Dialog open={addOpen} onOpenChange={(open) => !open && setAddOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("addOption")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`option-add-input-${heading}`}>{t("optionNameLabel")}</Label>
+            <Input
+              id={`option-add-input-${heading}`}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t("addOptionPlaceholder")}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={handleAdd} disabled={adding || !newName.trim()}>
+              {adding ? t("saving") : t("addOption")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("renameOption")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="option-name-input">{t("optionNameLabel")}</Label>
+            <Input
+              id="option-name-input"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              {t("cancel")}
+            </Button>
+            <Button onClick={saveEdit} disabled={savingEdit || !editName.trim()}>
+              {savingEdit ? t("saving") : t("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
 export function MethodologyConfigTab() {
   const t = useTranslations("app.settings.methodology.config");
   const canWrite = usePermission("methodologyQuestionBank", "write");
@@ -300,6 +622,7 @@ export function MethodologyConfigTab() {
       ) : null}
 
       <VersionCard config={config} canWrite={canWrite} onChanged={applyConfig} />
+      <ConfigHistoryCard />
 
       <Card>
         <CardContent className="space-y-4 p-5">
@@ -475,6 +798,26 @@ export function MethodologyConfigTab() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfigurableOptionsCard
+        heading={t("studyTypesHeading")}
+        note={t("studyTypesNote")}
+        canWrite={canWrite}
+        list={studyConfigService.listStudyTypes}
+        create={studyConfigService.createStudyType}
+        update={studyConfigService.updateStudyType}
+        setActive={studyConfigService.setStudyTypeActive}
+      />
+
+      <ConfigurableOptionsCard
+        heading={t("targetSectorsHeading")}
+        note={t("targetSectorsNote")}
+        canWrite={canWrite}
+        list={studyConfigService.listTargetSectors}
+        create={studyConfigService.createTargetSector}
+        update={studyConfigService.updateTargetSector}
+        setActive={studyConfigService.setTargetSectorActive}
+      />
     </div>
   );
 }

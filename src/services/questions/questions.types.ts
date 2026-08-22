@@ -37,3 +37,18 @@ export interface UpdateQuestionPayload {
   indicator?: string | null;
   kpi?: string | null;
 }
+
+export type QuestionAnswerType =
+  "select" | "multiselect" | "numeric" | "checklist" | "open_ended";
+
+export interface CreateQuestionPayload {
+  questionId: string;
+  domain: string;
+  subDomain: string;
+  indicator?: string;
+  kpi?: string;
+  questionText: string;
+  answerType: QuestionAnswerType;
+  answerOptions?: string[];
+  requiredOptional: "required" | "optional";
+}

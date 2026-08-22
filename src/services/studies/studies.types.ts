@@ -36,6 +36,9 @@ export interface Study {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  // RIO-FR-012 (Q3/Q4/Q35) — configurable-list values, see CreateStudyPayload.
+  studyType: string | null;
+  targetSector: string | null;
 }
 
 /** `GET /studies/{id}` only — the list endpoint doesn't compute this per row. */
@@ -62,6 +65,10 @@ export interface CreateStudyPayload {
   methodologyVersionId: string;
   population: number;
   marginOfError?: number;
+  // RIO-FR-012 (Q3/Q4/Q35) — validated server-side against the active
+  // StudyTypeOption/TargetSectorOption names, not free text.
+  studyType?: string;
+  targetSector?: string;
 }
 
 export interface UpdateStudyPayload {
@@ -73,6 +80,8 @@ export interface UpdateStudyPayload {
   // but never nullable — once set at creation, a Study can no longer be
   // left without a methodology version.
   methodologyVersionId?: string;
+  studyType?: string;
+  targetSector?: string;
 }
 
 export interface ListStudiesParams {

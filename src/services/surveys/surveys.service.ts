@@ -285,6 +285,15 @@ export const surveysService = {
     return apiClient.get<string[]>(endpoints.questionBank.kpiOptions);
   },
 
+  /** The Question Bank's confirmed "who answers this question" vocabulary
+   * (METH — Question Bank column J — head of household, caregiver of a
+   * child 0-59 months, etc.), sourced live so it tracks whatever the
+   * current methodology version actually contains. Populates Sample
+   * Description's Target Group combobox. */
+  async getTargetRespondentOptions(): Promise<string[]> {
+    return apiClient.get<string[]>(endpoints.questionBank.targetRespondentOptions);
+  },
+
   /** Empty `pairs` means "every active Question Bank entry" — the
    * allDomainsSelected case, where there's no specific Domain/Sub-domain to
    * filter by. Non-empty `pairs` matches any of them (a single classified

@@ -17,6 +17,8 @@ import {
   severityScoringService,
   type MethodologyVersion,
 } from "@/services/priority/severity-scoring.service";
+import { studyConfigService } from "@/services/study-config/study-config.service";
+import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
 
@@ -30,6 +32,8 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
   const [methodologyVersions, setMethodologyVersions] = useState<MethodologyVersion[]>(
     [],
   );
+  const [studyTypes, setStudyTypes] = useState<StudyConfigOption[]>([]);
+  const [targetSectors, setTargetSectors] = useState<StudyConfigOption[]>([]);
 
   const [study, setStudy] = useState<Study | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -57,12 +61,33 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      studyConfigService.listStudyTypes(),
+      studyConfigService.listTargetSectors(),
+    ])
+      .then(([types, sectors]) => {
+        if (cancelled) return;
+        setStudyTypes(types.filter((o) => o.isActive));
+        setTargetSectors(sectors.filter((o) => o.isActive));
+      })
+      .catch(() => {
+        // Non-fatal — both Selects just render with no options.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubmit = async (values: StudyFormValues) => {
     await studiesService.update(id, {
       title: values.title,
       governorateIds: values.governorateIds,
       centerIds: values.centerIds,
       methodologyVersionId: values.methodologyVersionId,
+      studyType: values.studyType ?? undefined,
+      targetSector: values.targetSector ?? undefined,
     });
     router.push(`/studies/${id}`);
   };
@@ -87,6 +112,8 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
                 orgGovernorates={orgGovernorates}
                 regionName={regionName}
                 methodologyVersions={methodologyVersions}
+                studyTypes={studyTypes}
+                targetSectors={targetSectors}
                 onSubmit={handleSubmit}
                 onCancel={() => router.push(`/studies/${id}`)}
               />

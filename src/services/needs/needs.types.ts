@@ -105,6 +105,9 @@ export interface Need {
    * next, not just the browser tab that staged it. */
   proposedDomains: { domain: string; subDomain: string }[] | null;
   proposedReason: string | null;
+  /** RIO-FR-005 (Q12) — one of GAP_TYPES (see priority.types.ts), or null.
+   * Analyst-entered, never auto-calculated. */
+  gapType: string | null;
   createdBy: string;
   /** Resolved display name for Entered By — null if the creating user has
    * since been removed. */
@@ -165,4 +168,3 @@ export interface BulkImportNeedItem {
   village?: string;
   referenceId?: string;
 }
-
