@@ -15,6 +15,9 @@ export interface Question {
   subDomain: string;
   indicator?: string;
   kpi?: string;
+  /** RIO-AI-002: the methodology weight behind this question — null when
+   * the bank entry has none set. */
+  priorityWeight?: number | null;
   questionText: string;
   answerType: string;
   answerOptions?: string[] | null;
@@ -42,6 +45,12 @@ export interface SurveyQuestionItem {
   subDomain: string | null;
   indicator: string | null;
   kpi: string | null;
+  /** RIO-AI-002: only ever set for a Question Bank item (isCustom: false)
+   * on internal Survey Builder screens — undefined on the citizen-facing
+   * response payload, which never receives it (see the backend's
+   * toQuestionDto includeWeight parameter), and always undefined for a
+   * custom question (isCustom: true), which has no bank weight. */
+  priorityWeight?: number | null;
   isCustom: boolean;
   order: number;
   isRequired: boolean;
@@ -274,6 +283,15 @@ export const surveysService = {
    * (see QuestionsService.getKpiOptions on the backend). */
   async getKpiOptions(): Promise<string[]> {
     return apiClient.get<string[]>(endpoints.questionBank.kpiOptions);
+  },
+
+  /** The Question Bank's confirmed "who answers this question" vocabulary
+   * (METH — Question Bank column J — head of household, caregiver of a
+   * child 0-59 months, etc.), sourced live so it tracks whatever the
+   * current methodology version actually contains. Populates Sample
+   * Description's Target Group combobox. */
+  async getTargetRespondentOptions(): Promise<string[]> {
+    return apiClient.get<string[]>(endpoints.questionBank.targetRespondentOptions);
   },
 
   /** Empty `pairs` means "every active Question Bank entry" — the

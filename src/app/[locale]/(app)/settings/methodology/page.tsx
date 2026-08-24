@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { MethodologyConfigTab } from "@/components/features/methodology/config-tab";
 import { DomainsTab } from "@/components/features/methodology/domains-tab";
+import { QuestionsTab } from "@/components/features/methodology/questions-tab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function MethodologyConfigurationPage() {
@@ -24,12 +25,18 @@ export default function MethodologyConfigurationPage() {
             <TabsTrigger value="config" size="lg">
               {t("tabs.config")}
             </TabsTrigger>
+            <TabsTrigger value="questions" size="lg">
+              {t("tabs.questions")}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="domains" className="mt-6">
             <DomainsTab />
           </TabsContent>
           <TabsContent value="config" className="mt-6">
             <MethodologyConfigTab />
+          </TabsContent>
+          <TabsContent value="questions" className="mt-6">
+            <QuestionsTab />
           </TabsContent>
         </Tabs>
       </PageContainer>

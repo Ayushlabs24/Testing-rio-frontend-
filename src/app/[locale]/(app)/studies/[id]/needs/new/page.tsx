@@ -33,6 +33,8 @@ interface NeedFormValues {
   village: string[];
   governorateIds: string[];
   centerIds: string[];
+  affectedPeople: string;
+  affectedHouseholds: string;
 }
 
 let stagedFileIdCounter = 0;
@@ -142,6 +144,22 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
     village: z.array(z.string()),
     governorateIds: z.array(z.string()),
     centerIds: z.array(z.string()),
+    // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — "Roughly how many
+    // people/households does this need affect?" Both optional, kept as
+    // strings on the form so an empty field round-trips as "" rather than
+    // NaN; parsed to a non-negative integer (or omitted) on submit.
+    affectedPeople: z
+      .string()
+      .refine(
+        (v) => v === "" || (/^\d+$/.test(v) && Number(v) >= 0),
+        tValidation("affectedPopulationInvalid"),
+      ),
+    affectedHouseholds: z
+      .string()
+      .refine(
+        (v) => v === "" || (/^\d+$/.test(v) && Number(v) >= 0),
+        tValidation("affectedPopulationInvalid"),
+      ),
   });
 
   const {
@@ -161,6 +179,8 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       village: study?.villages ?? [],
       governorateIds: [],
       centerIds: [],
+      affectedPeople: "",
+      affectedHouseholds: "",
     },
   });
 
@@ -185,6 +205,12 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
         village: values.village,
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
+        affectedPeople:
+          values.affectedPeople === "" ? undefined : Number(values.affectedPeople),
+        affectedHouseholds:
+          values.affectedHouseholds === ""
+            ? undefined
+            : Number(values.affectedHouseholds),
       });
       // The Need itself is already saved at this point — a failed upload
       // must never block navigating to it (and definitely must never cause
@@ -284,9 +310,24 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                         label: g.name,
                       }))}
                       values={governorateIds}
-                      onChange={(next) =>
-                        setValue("governorateIds", next, { shouldValidate: true })
-                      }
+                      onChange={(next) => {
+                        setValue("governorateIds", next, { shouldValidate: true });
+                        // Dropping a governorate must also drop any already-selected
+                        // centers that belonged to it — otherwise centerIds keeps an
+                        // orphaned id centerOptions no longer contains, and the
+                        // MultiSelect can't resolve a label for it (falls back to
+                        // showing the raw id, as if it were a real selection).
+                        const stillValidCenterIds = new Set(
+                          studyCenters
+                            .filter((c) => next.includes(c.governorateId))
+                            .map((c) => c.id),
+                        );
+                        setValue(
+                          "centerIds",
+                          centerIds.filter((id) => stillValidCenterIds.has(id)),
+                          { shouldValidate: true },
+                        );
+                      }}
                       placeholder={tGeo("governoratePlaceholder")}
                       searchPlaceholder={tGeo("governorateSearchPlaceholder")}
                       emptyText={tGeo("governorateEmpty")}
@@ -336,6 +377,44 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                   {errors.village ? (
                     <p className="text-destructive text-sm">{errors.village.message}</p>
                   ) : null}
+                </div>
+
+                {/* RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — the
+                    manually entered figure is the PRIMARY Affected
+                    Population value; both are optional and independent. */}
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="affectedPeople">{t("affectedPeopleLabel")}</Label>
+                    <Input
+                      id="affectedPeople"
+                      type="number"
+                      min={0}
+                      placeholder={t("affectedPeoplePlaceholder")}
+                      {...register("affectedPeople")}
+                    />
+                    {errors.affectedPeople ? (
+                      <p className="text-destructive text-sm">
+                        {errors.affectedPeople.message}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="affectedHouseholds">
+                      {t("affectedHouseholdsLabel")}
+                    </Label>
+                    <Input
+                      id="affectedHouseholds"
+                      type="number"
+                      min={0}
+                      placeholder={t("affectedHouseholdsPlaceholder")}
+                      {...register("affectedHouseholds")}
+                    />
+                    {errors.affectedHouseholds ? (
+                      <p className="text-destructive text-sm">
+                        {errors.affectedHouseholds.message}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

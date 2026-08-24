@@ -23,6 +23,9 @@ import { organizationsService } from "@/services/organizations/organizations.ser
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { PlatformStudyStats } from "@/services/studies/studies.types";
+import { aiService } from "@/services/ai/ai.service";
+import { reviewerSlaService } from "@/services/reviewer-sla/reviewer-sla.service";
+import { consentService } from "@/services/consent/consent.service";
 import { CreateOrganizationDialog } from "../organizations/_components/create-organization-dialog";
 import { GovernanceWidget } from "../_components/governance-widget";
 
@@ -31,6 +34,12 @@ export default function SystemAdminDashboardPage() {
   const [organizations, setOrganizations] = useState<OrganizationSummary[] | null>(null);
   const [studyStats, setStudyStats] = useState<PlatformStudyStats | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  // System Status panel data — each fetched independently and left
+  // `undefined` on failure (SystemStatusPanel already renders "Unavailable"
+  // for undefined), so one signal failing never blocks the other two.
+  const [aiOnline, setAiOnline] = useState<boolean | undefined>(undefined);
+  const [slaHours, setSlaHours] = useState<number | undefined>(undefined);
+  const [consentVersion, setConsentVersion] = useState<string | undefined>(undefined);
 
   const loadDashboardData = () => {
     organizationsService
@@ -40,6 +49,18 @@ export default function SystemAdminDashboardPage() {
     studiesService
       .getPlatformStats()
       .then(setStudyStats)
+      .catch(() => undefined);
+    aiService
+      .getStatus()
+      .then((status) => setAiOnline(status.online))
+      .catch(() => undefined);
+    reviewerSlaService
+      .getConfig()
+      .then((config) => setSlaHours(config.slaHours))
+      .catch(() => undefined);
+    consentService
+      .getActive()
+      .then((policies) => setConsentVersion(policies.usePolicy.version))
       .catch(() => undefined);
   };
 
@@ -58,10 +79,12 @@ export default function SystemAdminDashboardPage() {
     0;
   const totalSurveysCount =
     organizations?.reduce((sum, o) => sum + (o.surveyCount ?? 0), 0) ?? 0;
+  // "Published" = released or archived — ReportStatus has no `published`
+  // value of its own. Was previously summing unfiltered `reportCount`
+  // (every status, including draft/submitted/rejected), which inflated this
+  // stat far past the actual number of released/archived reports.
   const publishedReportsCount =
-    organizations?.reduce((sum, o) => sum + (o.reportCount ?? 0), 0) ??
-    studyStats?.reportsGenerated ??
-    0;
+    organizations?.reduce((sum, o) => sum + (o.publishedReportCount ?? 0), 0) ?? 0;
   const pendingReviews = studyStats?.pendingReviews ?? 0;
 
   return (
@@ -151,7 +174,11 @@ export default function SystemAdminDashboardPage() {
 
           {/* ── System Status ────────────────────────────────────────────── */}
           <div className="border-border/60 bg-card rounded-2xl border p-6 shadow-sm">
-            <SystemStatusPanel />
+            <SystemStatusPanel
+              aiServiceOnline={aiOnline}
+              reviewSlaHours={slaHours}
+              consentVersion={consentVersion}
+            />
           </div>
 
           {/* ── Platform Governance & Security Alerts ────────────────────── */}

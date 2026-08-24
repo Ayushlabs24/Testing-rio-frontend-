@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -16,6 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiClient } from "@/services/api/client";
+
+const PAGE_SIZE = 10;
 
 interface SurveyItem {
   id: string;
@@ -37,6 +40,7 @@ export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
   const [surveys, setSurveys] = useState<SurveyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -70,6 +74,13 @@ export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
     );
   }, [surveys, searchQuery]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredSurveys.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedSurveys = filteredSurveys.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -89,7 +100,10 @@ export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
             placeholder={t("searchPlaceholder")}
             aria-label={t("searchPlaceholder")}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="pl-9 text-xs"
           />
         </div>
@@ -122,7 +136,7 @@ export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredSurveys.map((survey) => (
+              pagedSurveys.map((survey) => (
                 <TableRow key={survey.id}>
                   <TableCell className="text-foreground font-medium">
                     {survey.title}
@@ -149,6 +163,19 @@ export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
             )}
           </TableBody>
         </Table>
+
+        {filteredSurveys.length > 0 ? (
+          <div className="border-border flex justify-end border-t px-4 py-3">
+            <Pagination
+              page={currentPage}
+              pageCount={pageCount}
+              onPageChange={setPage}
+              previousLabel={t("pagination.previous")}
+              nextLabel={t("pagination.next")}
+              pageLabel={(p, count) => t("pagination.label", { page: p, count })}
+            />
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

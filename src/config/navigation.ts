@@ -182,7 +182,8 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "sharing",
     "reviewerSla",
     "audit",
-    "methodologyConfig",
+    // Client-confirmed (2026-08-20): Methodology Configuration belongs at
+    // NCNP Admin (System Admin) level only — removed from NGO Admin's nav.
   ],
   // Audit fix (Aug 13): every role's list below was cross-checked against
   // its actual role-matrix.ts grants — several roles (most whose grants

@@ -27,14 +27,14 @@ export function AuthShell({
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Compact banner shown only below the lg breakpoint, in place of the full hero panel. */}
       <div className="bg-gradient-hero text-on-brand-foreground flex flex-col gap-2 px-6 pt-4 pb-6 sm:px-8 sm:pt-5 sm:pb-8 lg:hidden">
-        <Logo variant="hero" size="lg" className="-ml-5" />
+        <Logo variant="hero" size="lg" className="-ms-5" />
         <h2 className="mt-2 text-xl font-semibold tracking-tight text-balance sm:text-2xl">
           {heroTitle}
         </h2>
       </div>
 
       <div className="bg-gradient-hero text-on-brand-foreground hidden flex-col justify-between px-8 pt-6 pb-8 lg:flex lg:px-10 lg:pt-8 lg:pb-10 xl:px-14 xl:pt-10 xl:pb-14">
-        <Logo variant="hero" size="lg" className="-ml-5" />
+        <Logo variant="hero" size="lg" className="-ms-5" />
 
         <div className="max-w-md space-y-6">
           <h2 className="text-3xl font-semibold tracking-tight text-balance xl:text-4xl">

@@ -25,6 +25,7 @@ import {
   useReviewerSlaBadge,
 } from "@/hooks/use-reviewer-sla-badge";
 import { useNcnpReportBadge } from "@/hooks/use-ncnp-report-badge";
+import { useQuestionBankAlerts } from "@/hooks/use-question-bank-alerts";
 import { useSharingNotifications } from "@/hooks/use-sharing-notifications";
 import type { SharingNotification } from "@/hooks/use-sharing-notifications";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -148,10 +149,12 @@ function NotificationsBell({
   canSeeReviewerSla,
   canSeeSharing,
   canSeeNcnpReport,
+  canSeeQuestionBankAlerts,
 }: {
   canSeeReviewerSla: boolean;
   canSeeSharing: boolean;
   canSeeNcnpReport: boolean;
+  canSeeQuestionBankAlerts: boolean;
 }) {
   const t = useTranslations("app.topbar");
   const router = useRouter();
@@ -164,11 +167,15 @@ function NotificationsBell({
     markAllSeen,
   } = useSharingNotifications();
   const ncnpReport = useNcnpReportBadge();
+  const questionBankAlerts = useQuestionBankAlerts();
   const [open, setOpen] = useState(false);
 
   const reviewerSlaCount = canSeeReviewerSla ? reviewerSla.count : 0;
   const sharingCount = canSeeSharing ? sharingUnreadCount : 0;
   const ncnpReportCount = canSeeNcnpReport ? ncnpReport.unreadCount : 0;
+  const questionBankAlertsCount = canSeeQuestionBankAlerts
+    ? questionBankAlerts.unreadCount
+    : 0;
   // Decides the summary row's wording below — a Reviewer/Approver's count
   // is surveys AND reports awaiting THEIR decision; anyone else seeing this
   // bell (a Research Officer) is looking at their OWN submitted surveys'
@@ -187,7 +194,8 @@ function NotificationsBell({
     // reviewer-sla/page.tsx's canApprove.
     (session?.role.permissions.find((p) => p.module === "priorityScoring")?.create ??
       false);
-  const totalCount = reviewerSlaCount + sharingCount + ncnpReportCount;
+  const totalCount =
+    reviewerSlaCount + sharingCount + ncnpReportCount + questionBankAlertsCount;
 
   // Same color language as the Reviewer SLA Alerts page's own status
   // badges (STATUS_VARIANT in reviewer-sla/page.tsx) — breached escalates
@@ -235,6 +243,15 @@ function NotificationsBell({
     );
   }
 
+  function handleQuestionBankAlertClick(alertId: string) {
+    questionBankAlerts.markSeen(alertId);
+    setOpen(false);
+    // No URL-tab-sync on this page today (Tabs defaultValue="domains",
+    // client-only) — lands on Methodology with Questions one click away,
+    // same as this bell already does for reviewer-sla/sharing/ncnp-report.
+    router.push("/settings/methodology");
+  }
+
   function handleMarkAllSeen() {
     if (canSeeSharing) markAllSeen();
     if (canSeeReviewerSla && session?.user.id) {
@@ -253,6 +270,7 @@ function NotificationsBell({
       // all as read" look like it did nothing for up to that long.
       ncnpReport.refresh();
     }
+    if (canSeeQuestionBankAlerts) questionBankAlerts.markAllSeen();
     setOpen(false);
   }
 
@@ -333,8 +351,31 @@ function NotificationsBell({
             ))
           : null}
 
+        {canSeeQuestionBankAlerts && questionBankAlertsCount > 0
+          ? questionBankAlerts.notifications.slice(0, 20).map((alert) => (
+              <DropdownMenuItem
+                key={alert.id}
+                onClick={() => handleQuestionBankAlertClick(alert.id)}
+                className="flex items-center gap-2"
+              >
+                <span className="bg-primary size-2 shrink-0 rounded-full" />
+                <span className="flex-1 text-sm">
+                  {alert.changeKind === "deactivated"
+                    ? t("questionBankAlertDeactivated", { questionId: alert.questionId })
+                    : alert.changeKind === "created"
+                      ? t("questionBankAlertCreated", { questionId: alert.questionId })
+                      : t("questionBankAlertEdited", { questionId: alert.questionId })}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {timeAgo(alert.submittedAt)}
+                </span>
+              </DropdownMenuItem>
+            ))
+          : null}
+
         {(canSeeReviewerSla && reviewerSlaCount > 0) ||
-        (canSeeNcnpReport && ncnpReportCount > 0) ? (
+        (canSeeNcnpReport && ncnpReportCount > 0) ||
+        (canSeeQuestionBankAlerts && questionBankAlertsCount > 0) ? (
           canSeeSharing ? (
             <DropdownMenuSeparator />
           ) : null
@@ -368,7 +409,10 @@ function NotificationsBell({
           )
         ) : null}
 
-        {!canSeeSharing && reviewerSlaCount === 0 && ncnpReportCount === 0 ? (
+        {!canSeeSharing &&
+        reviewerSlaCount === 0 &&
+        ncnpReportCount === 0 &&
+        questionBankAlertsCount === 0 ? (
           <p className="text-muted-foreground px-2 py-4 text-center text-sm">
             {t("sharingAlertsEmpty")}
           </p>
@@ -416,6 +460,16 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   const canSeeNcnpReport =
     session.role.enabled &&
     (session.role.permissions.find((p) => p.module === "ncnpReport")?.read ?? false);
+  // Deliberately role-key-checked, not permission-checked: methodologyQuestionBank:read
+  // is held by five other roles too (Research Officer, Field Researcher,
+  // Data Analyst, read_only_viewer, center_supervisor — see role-matrix.ts)
+  // who are just browsing the bank, not reviewing changes to it. Kept in
+  // sync with the backend's own ALERT_VISIBLE_ROLES gate
+  // (question-bank-alerts.service.ts) so this boolean and what the
+  // endpoint actually returns never disagree.
+  const canSeeQuestionBankAlerts =
+    session.role.enabled &&
+    (session.role.key === "human_reviewer" || session.role.key === "system_reviewer");
 
   return (
     <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6 lg:px-8">
@@ -449,7 +503,7 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
                 crossEntity={session.role.crossEntity}
               />
               {session.role.crossEntity ? null : (
-                <span className="ml-2.5 min-w-0 flex-1 break-words">
+                <span className="ms-2.5 min-w-0 flex-1 break-words">
                   {session.organization.name}
                 </span>
               )}
@@ -478,11 +532,15 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
             {tSysAdmin("platformContext")}
           </Badge>
         ) : null}
-        {canSeeReviewerSla || canSeeSharing || canSeeNcnpReport ? (
+        {canSeeReviewerSla ||
+        canSeeSharing ||
+        canSeeNcnpReport ||
+        canSeeQuestionBankAlerts ? (
           <NotificationsBell
             canSeeReviewerSla={canSeeReviewerSla}
             canSeeSharing={canSeeSharing}
             canSeeNcnpReport={canSeeNcnpReport}
+            canSeeQuestionBankAlerts={canSeeQuestionBankAlerts}
           />
         ) : null}
         <LanguageSwitcher />

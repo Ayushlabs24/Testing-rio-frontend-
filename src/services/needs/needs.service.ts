@@ -27,6 +27,12 @@ export const needsService = {
     return apiClient.patch<Need>(endpoints.needs.byId(needId), payload);
   },
 
+  /** RIO-FR-005 (Q12) — analyst-entered, one of the five fixed values or
+   * null to clear. Gated server-side to priorityScoring:write. */
+  async setGapType(needId: string, gapType: string | null): Promise<Need> {
+    return apiClient.patch<Need>(endpoints.needs.gapType(needId), { gapType });
+  },
+
   /** Only while the Need is still `draft` — the backend rejects (409)
    * anything past that, same rule as editing. */
   async remove(needId: string): Promise<void> {

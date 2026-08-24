@@ -7,7 +7,10 @@ import { Link } from "@/i18n/navigation";
 
 interface SystemStatusPanelProps {
   aiServiceOnline?: boolean;
-  reviewSlaHours?: { surveys: number; reports: number; sharing: number };
+  // A single global SLA-hours figure — the backend (ReviewerSlaService) has
+  // never had a per-type (surveys/reports/sharing) breakdown; the earlier
+  // three-number shape here didn't correspond to anything real.
+  reviewSlaHours?: number;
   consentVersion?: string;
   className?: string;
 }
@@ -46,11 +49,7 @@ export function SystemStatusPanel({
       statusText: reviewSlaHours ? t("reviewSlaStatus") : t("statusUnavailable"),
       statusVariant: reviewSlaHours ? "ok" : "attention",
       detail: reviewSlaHours
-        ? t("reviewSlaDetail", {
-            surveys: reviewSlaHours.surveys,
-            reports: reviewSlaHours.reports,
-            sharing: reviewSlaHours.sharing,
-          })
+        ? t("reviewSlaDetail", { hours: reviewSlaHours })
         : t("statusNotConfigured"),
       href: "/settings/methodology",
       manageLabel: t("manage"),
@@ -62,7 +61,9 @@ export function SystemStatusPanel({
       title: t("consentInstruments"),
       statusText: consentVersion ?? t("statusUnavailable"),
       statusVariant: consentVersion ? "ok" : "attention",
-      detail: consentVersion ? t("consentDetail") : t("statusNotConfigured"),
+      detail: consentVersion
+        ? t("consentDetail", { version: consentVersion })
+        : t("statusNotConfigured"),
       href: "/settings/organization",
       manageLabel: t("manage"),
     },

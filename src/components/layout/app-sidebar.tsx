@@ -130,7 +130,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
             />
             {role.crossEntity ? null : (
               <span
-                className="text-sidebar-foreground ml-2.5 min-w-0 flex-1 text-sm font-semibold break-words"
+                className="text-sidebar-foreground ms-2.5 min-w-0 flex-1 text-sm font-semibold break-words"
                 title={organization.name}
               >
                 {organization.name}
