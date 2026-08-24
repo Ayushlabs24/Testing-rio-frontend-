@@ -1,3 +1,5 @@
+import type { ConfidenceBand } from "@/services/ai-decisions/ai-decisions.types";
+
 export type NeedStatus =
   | "draft"
   | "pending_ai_classification"
@@ -92,6 +94,15 @@ export interface Need {
    * predicted (an audit trail of predicted vs. decided). */
   aiSuggestedDomain: string | null;
   aiSuggestedSubDomain: string | null;
+  /** RIO-AI-001 — the latest classification's self-reported confidence (0..1)
+   * and its resolved band, so the Needs list can show and filter on it
+   * without opening each Need.
+   *
+   * `null` band = no classification has run for this Need yet. That is NOT
+   * the same as the "not_reported" band, which means one ran and returned no
+   * confidence. */
+  aiConfidence: number | null;
+  aiConfidenceBand: ConfidenceBand | null;
   /** When the most recent classification attempt completed (success or
    * failure) — cleared and re-set on every retry. */
   classifiedAt: string | null;
@@ -165,4 +176,3 @@ export interface BulkImportNeedItem {
   village?: string;
   referenceId?: string;
 }
-

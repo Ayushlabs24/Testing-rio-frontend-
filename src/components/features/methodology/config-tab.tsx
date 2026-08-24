@@ -190,6 +190,16 @@ export function MethodologyConfigTab() {
     dontKnowRatioThreshold: "",
     minRespondentsForStandardConfidence: "",
   });
+  // RIO-AI-001 — the AI classification confidence bands. Held as percentage
+  // STRINGS for the inputs (a reviewer thinks in "70%", not "0.7") and
+  // converted back to the 0..1 scale the API uses on save. Kept separate from
+  // `flags` above: those gate a survey's response-data confidence, these gate
+  // a model's self-reported confidence in a classification — same word, two
+  // unrelated scales.
+  const [aiConfidence, setAiConfidence] = useState({
+    lowConfidenceThreshold: "",
+    veryLowConfidenceThreshold: "",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -216,6 +226,14 @@ export function MethodologyConfigTab() {
         c.confidenceFlagSettings.minRespondentsForStandardConfidence,
       ),
     });
+    setAiConfidence({
+      lowConfidenceThreshold: String(
+        Math.round(c.aiClassificationSettings.lowConfidenceThreshold * 100),
+      ),
+      veryLowConfidenceThreshold: String(
+        Math.round(c.aiClassificationSettings.veryLowConfidenceThreshold * 100),
+      ),
+    });
     setDirty(false);
   }
 
@@ -236,13 +254,14 @@ export function MethodologyConfigTab() {
   const setThresholdsDirty = markDirty(setThresholds);
   const setFactorWeightsDirty = markDirty(setFactorWeights);
   const setFlagsDirty = markDirty(setFlags);
+  const setAiConfidenceDirty = markDirty(setAiConfidence);
 
   async function save() {
     // Belt-and-suspenders alongside the button's `disabled` — the backend
     // already rejects an off-100% total, but by then thresholds/flags may
     // have already been persisted alongside the invalid weights (the bug
     // this guards against). Never even issue the request when it's invalid.
-    if (!weightSumValid) return;
+    if (!weightSumValid || !aiConfidenceOrderValid) return;
     setSaving(true);
     setError(null);
     try {
@@ -262,6 +281,12 @@ export function MethodologyConfigTab() {
           minRespondentsForStandardConfidence: Number(
             flags.minRespondentsForStandardConfidence,
           ),
+        },
+        // Back to the 0..1 scale the API and AiDecision.confidence both use.
+        aiClassificationSettings: {
+          lowConfidenceThreshold: Number(aiConfidence.lowConfidenceThreshold) / 100,
+          veryLowConfidenceThreshold:
+            Number(aiConfidence.veryLowConfidenceThreshold) / 100,
         },
       });
       applyConfig(updated);
@@ -285,6 +310,14 @@ export function MethodologyConfigTab() {
   const weightSumPercent = Math.round(weightSum * 100);
   const weightSumValid = Math.abs(weightSum - 1) <= WEIGHT_SUM_TOLERANCE;
 
+  // Mirrors the backend's validateAiClassificationSettings. Checked here too
+  // so the reason is visible next to the fields rather than only arriving as
+  // a save error — and so an invalid pair never gets sent alongside the other
+  // (valid) threshold families, which would persist those and reject the rest.
+  const aiConfidenceOrderValid =
+    Number(aiConfidence.veryLowConfidenceThreshold) <
+    Number(aiConfidence.lowConfidenceThreshold);
+
   return (
     <div className="space-y-6">
       {canWrite ? (
@@ -293,7 +326,10 @@ export function MethodologyConfigTab() {
           {saved && !dirty ? (
             <p className="text-badge-success-foreground text-sm">{t("savedNote")}</p>
           ) : null}
-          <Button onClick={save} disabled={saving || !dirty || !weightSumValid}>
+          <Button
+            onClick={save}
+            disabled={saving || !dirty || !weightSumValid || !aiConfidenceOrderValid}
+          >
             {saving ? t("saving") : t("save")}
           </Button>
         </div>
@@ -473,6 +509,68 @@ export function MethodologyConfigTab() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* RIO-AI-001 — the thresholds below which an AI classification
+          suggestion is flagged for closer reviewer attention. Entered as
+          percentages because that is how the reviewer screen displays a
+          confidence; stored on the 0..1 scale. */}
+      <Card>
+        <CardContent className="space-y-4 p-5">
+          <h2 className="text-foreground text-sm font-semibold">
+            {t("aiConfidenceHeading")}
+          </h2>
+          <p className="text-muted-foreground text-xs">{t("aiConfidenceNote")}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="ai-confidence-low">{t("aiLowConfidenceLabel")}</Label>
+              <Input
+                id="ai-confidence-low"
+                type="number"
+                step="1"
+                min={0}
+                max={100}
+                value={aiConfidence.lowConfidenceThreshold}
+                onChange={(e) =>
+                  setAiConfidenceDirty({
+                    ...aiConfidence,
+                    lowConfidenceThreshold: e.target.value,
+                  })
+                }
+                disabled={!canWrite}
+                aria-invalid={!aiConfidenceOrderValid ? true : undefined}
+              />
+              <p className="text-muted-foreground text-xs">{t("aiLowConfidenceHint")}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ai-confidence-very-low">
+                {t("aiVeryLowConfidenceLabel")}
+              </Label>
+              <Input
+                id="ai-confidence-very-low"
+                type="number"
+                step="1"
+                min={0}
+                max={100}
+                value={aiConfidence.veryLowConfidenceThreshold}
+                onChange={(e) =>
+                  setAiConfidenceDirty({
+                    ...aiConfidence,
+                    veryLowConfidenceThreshold: e.target.value,
+                  })
+                }
+                disabled={!canWrite}
+                aria-invalid={!aiConfidenceOrderValid ? true : undefined}
+              />
+              <p className="text-muted-foreground text-xs">
+                {t("aiVeryLowConfidenceHint")}
+              </p>
+            </div>
+          </div>
+          {!aiConfidenceOrderValid ? (
+            <p className="text-destructive text-xs">{t("aiConfidenceOrderError")}</p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

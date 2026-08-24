@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   CalendarDays,
   Clock,
   MapPin,
@@ -19,6 +20,13 @@ import {
   formatDate as formatDateIntl,
   formatDateTime as formatDateTimeIntl,
 } from "@/lib/format-date";
+import {
+  confidenceBandLabelKey,
+  confidencePercent,
+  confidenceTextClass,
+  isFlaggedConfidence,
+} from "@/lib/confidence-band";
+import { cn } from "@/lib/utils";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
@@ -138,6 +146,36 @@ function CompactNameList({ names }: { names: string[] }) {
   );
 }
 
+// RIO-AI-001 — the confidence flag, in the one place a reviewer decides
+// which Need to open next. Reads the band the backend already resolved from
+// the configured thresholds; nothing here re-derives a threshold.
+function NeedConfidenceCell({ need }: { need: Need }) {
+  const t = useTranslations("app.studies.classification");
+  const band = need.aiConfidenceBand;
+
+  // No classification has run yet — there is nothing to be confident about.
+  // Deliberately not rendered as 0% or as a flag.
+  if (band === null) return <span className="text-muted-foreground">—</span>;
+
+  const percent = confidencePercent(need.aiConfidence);
+  return (
+    <span className="flex items-center gap-1.5 whitespace-nowrap">
+      <span className={cn("font-semibold tabular-nums", confidenceTextClass(band))}>
+        {percent === null ? t("confidenceNotReported") : `${percent}%`}
+      </span>
+      {isFlaggedConfidence(band) ? (
+        <AlertTriangle
+          className={cn("size-3.5 shrink-0", confidenceTextClass(band))}
+          aria-hidden="true"
+        />
+      ) : null}
+      {/* The band name is the accessible form of the icon+colour above —
+          a colour alone announces nothing to a screen reader. */}
+      <span className="sr-only">{t(confidenceBandLabelKey(band))}</span>
+    </span>
+  );
+}
+
 type AiClassificationStatus = "not_started" | "classified" | "reviewed";
 type SurveyStatus = "not_started" | "draft" | "submitted" | "rejected" | "published";
 
@@ -188,6 +226,11 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const [surveyImportOpen, setSurveyImportOpen] = useState(false);
   const [needQuery, setNeedQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<NeedStatus | "all">("all");
+  // RIO-AI-001 — "low-confidence suggestions are flagged for closer reviewer
+  // attention". A flag inside each Need only helps if the reviewer already
+  // knows which Need to open, so the flag is surfaced here and this filter
+  // narrows the list to exactly the ones that need a closer look.
+  const [lowConfidenceOnly, setLowConfidenceOnly] = useState(false);
 
   const loadNeeds = () => {
     needsService
@@ -290,7 +333,12 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
         const query = needQuery.trim().toLowerCase();
         const matchesQuery = !query || need.title.toLowerCase().includes(query);
         const matchesStatus = statusFilter === "all" || need.status === statusFilter;
-        return matchesQuery && matchesStatus;
+        // A Need with no classification yet has no band at all, so it is not
+        // "low confidence" — it has no confidence to judge. Excluded rather
+        // than swept in, so the filter means what it says.
+        const matchesConfidence =
+          !lowConfidenceOnly || isFlaggedConfidence(need.aiConfidenceBand);
+        return matchesQuery && matchesStatus && matchesConfidence;
       })
     : null;
 
@@ -405,6 +453,16 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant={lowConfidenceOnly ? "default" : "outline"}
+                  className="h-9 w-full gap-2 sm:w-auto"
+                  aria-pressed={lowConfidenceOnly}
+                  onClick={() => setLowConfidenceOnly((prev) => !prev)}
+                >
+                  <AlertTriangle className="size-4" />
+                  {t("filterLowConfidence")}
+                </Button>
               </div>
 
               {filteredNeedRows === null ? (
@@ -430,6 +488,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                           <TableHead>{t("villageColumn")}</TableHead>
                           <TableHead>{t("statusColumn")}</TableHead>
                           <TableHead>{t("aiStatusColumn")}</TableHead>
+                          <TableHead>{t("aiConfidenceColumn")}</TableHead>
                           <TableHead>{t("surveyStatusColumn")}</TableHead>
                           {canDeleteNeed ? <TableHead className="w-12" /> : null}
                         </TableRow>
@@ -476,6 +535,9 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                               <Badge variant={AI_STATUS_VARIANT[aiStatus]}>
                                 {t(`aiStatus.${aiStatus}`)}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <NeedConfidenceCell need={need} />
                             </TableCell>
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Link href={`/survey-builder/${need.id}`}>
