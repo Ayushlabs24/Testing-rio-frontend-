@@ -108,6 +108,12 @@ export interface Need {
   /** RIO-FR-005 (Q12) — one of GAP_TYPES (see priority.types.ts), or null.
    * Analyst-entered, never auto-calculated. */
   gapType: string | null;
+  /** RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — "Roughly how many
+   * people/households does this need affect?" entered on the need-entry
+   * form. This is the PRIMARY Affected Population value; no GASTAT
+   * reference cross-check exists yet (blocked on the client's dataset). */
+  affectedPeople: number | null;
+  affectedHouseholds: number | null;
   createdBy: string;
   /** Resolved display name for Entered By — null if the creating user has
    * since been removed. */
@@ -125,6 +131,8 @@ export interface CreateNeedPayload {
   governorateIds?: string[];
   centerIds?: string[];
   referenceId?: string;
+  affectedPeople?: number;
+  affectedHouseholds?: number;
 }
 
 export interface UpdateNeedPayload {
@@ -134,6 +142,8 @@ export interface UpdateNeedPayload {
   governorateIds?: string[];
   centerIds?: string[];
   referenceId?: string | null;
+  affectedPeople?: number | null;
+  affectedHouseholds?: number | null;
 }
 
 export interface ImportNeedRowError {

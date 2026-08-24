@@ -41,6 +41,8 @@ interface NeedFormValues {
   village: string[];
   governorateIds: string[];
   centerIds: string[];
+  affectedPeople: string;
+  affectedHouseholds: string;
 }
 
 function VillageChips({ villages }: { villages: string[] }) {
@@ -168,6 +170,20 @@ function NeedDetailsCard({
     village: z.array(z.string()),
     governorateIds: z.array(z.string()),
     centerIds: z.array(z.string()),
+    // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — kept as strings on
+    // the form so an empty field round-trips as "" rather than NaN.
+    affectedPeople: z
+      .string()
+      .refine(
+        (v) => v === "" || (/^\d+$/.test(v) && Number(v) >= 0),
+        tValidation("affectedPopulationInvalid"),
+      ),
+    affectedHouseholds: z
+      .string()
+      .refine(
+        (v) => v === "" || (/^\d+$/.test(v) && Number(v) >= 0),
+        tValidation("affectedPopulationInvalid"),
+      ),
   });
 
   const {
@@ -184,6 +200,9 @@ function NeedDetailsCard({
       village: need.village,
       governorateIds: need.governorateIds,
       centerIds: need.centerIds,
+      affectedPeople: need.affectedPeople === null ? "" : String(need.affectedPeople),
+      affectedHouseholds:
+        need.affectedHouseholds === null ? "" : String(need.affectedHouseholds),
     },
   });
 
@@ -206,6 +225,10 @@ function NeedDetailsCard({
         village: values.village,
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
+        affectedPeople:
+          values.affectedPeople === "" ? null : Number(values.affectedPeople),
+        affectedHouseholds:
+          values.affectedHouseholds === "" ? null : Number(values.affectedHouseholds),
       });
       onSaved(updated);
       setEditing(false);
@@ -373,6 +396,42 @@ function NeedDetailsCard({
               ) : null}
             </div>
 
+            {/* RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — the
+                manually entered figure is the PRIMARY Affected Population
+                value; both are optional and independent. */}
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="affectedPeople">{t("affectedPeopleLabel")}</Label>
+                <Input
+                  id="affectedPeople"
+                  type="number"
+                  min={0}
+                  placeholder={t("affectedPeoplePlaceholder")}
+                  {...register("affectedPeople")}
+                />
+                {errors.affectedPeople ? (
+                  <p className="text-destructive text-sm">
+                    {errors.affectedPeople.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="affectedHouseholds">{t("affectedHouseholdsLabel")}</Label>
+                <Input
+                  id="affectedHouseholds"
+                  type="number"
+                  min={0}
+                  placeholder={t("affectedHouseholdsPlaceholder")}
+                  {...register("affectedHouseholds")}
+                />
+                {errors.affectedHouseholds ? (
+                  <p className="text-destructive text-sm">
+                    {errors.affectedHouseholds.message}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
             {submitError ? (
               <p className="text-destructive text-sm">{submitError}</p>
             ) : null}
@@ -429,6 +488,20 @@ function NeedDetailsCard({
               </FilledField>
               <FilledField label={t("villageLabel")}>
                 <VillageChips villages={need.village} />
+              </FilledField>
+              <FilledField label={t("affectedPeopleLabel")}>
+                {need.affectedPeople === null ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  need.affectedPeople.toLocaleString()
+                )}
+              </FilledField>
+              <FilledField label={t("affectedHouseholdsLabel")}>
+                {need.affectedHouseholds === null ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  need.affectedHouseholds.toLocaleString()
+                )}
               </FilledField>
               <FilledField label={t("systemReferenceIdLabel")}>
                 <span className="font-mono">{need.internalReferenceId}</span>

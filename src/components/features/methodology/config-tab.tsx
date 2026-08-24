@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -25,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FormattedDate } from "@/components/common/formatted-date";
+import { METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
@@ -199,17 +208,36 @@ function ConfigHistoryCard() {
   const t = useTranslations("app.settings.methodology.config");
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<MethodologyConfigHistoryEntry[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE);
+
+  function load() {
+    setLoadError(null);
+    methodologyConfigService
+      .getHistory()
+      .then(setHistory)
+      .catch((err) => {
+        // Distinct from "no history yet" — a failed request must not render
+        // as a quiet empty state, or a real outage looks identical to a
+        // brand-new config with nothing recorded.
+        setHistory(null);
+        setLoadError(err instanceof ApiError ? err.message : t("historyLoadError"));
+      });
+  }
 
   function toggle() {
     const next = !open;
     setOpen(next);
-    if (next && history === null) {
-      methodologyConfigService
-        .getHistory()
-        .then(setHistory)
-        .catch(() => setHistory([]));
-    }
+    if (next && history === null && !loadError) load();
   }
+
+  const pageCount = Math.max(1, Math.ceil((history?.length ?? 0) / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pagedHistory = (history ?? []).slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   return (
     <Card>
@@ -226,32 +254,73 @@ function ConfigHistoryCard() {
           </Button>
         </div>
         {open ? (
-          history === null ? (
+          loadError ? (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-destructive text-sm">{loadError}</p>
+              <Button size="sm" variant="outline" onClick={load}>
+                {t("historyRetry")}
+              </Button>
+            </div>
+          ) : history === null ? (
             <div className="bg-muted h-16 animate-pulse rounded-md" />
           ) : history.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("historyEmpty")}</p>
           ) : (
-            <ul className="divide-border divide-y">
-              {history.map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
+            <>
+              <ul className="divide-border divide-y">
+                {pagedHistory.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={entry.changeType === "publish" ? "default" : "outline"}
+                      >
+                        {t(`historyChangeType.${entry.changeType}`)}
+                      </Badge>
+                      <span className="text-foreground">{entry.version}</span>
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      {entry.changedByName ?? t("historyUnknownActor")} ·{" "}
+                      <FormattedDate value={entry.changedAt} withTime />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-border flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
                 >
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={entry.changeType === "publish" ? "default" : "outline"}
-                    >
-                      {t(`historyChangeType.${entry.changeType}`)}
-                    </Badge>
-                    <span className="text-foreground">{entry.version}</span>
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {entry.changedByName ?? t("historyUnknownActor")} ·{" "}
-                    <FormattedDate value={entry.changedAt} withTime />
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-40"
+                    aria-label={t("historyRowsPerPage")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 25, 50, 100].map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {t("historyRowsPerPage")}: {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Pagination
+                  page={currentPage}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  previousLabel={t("historyPagePrevious")}
+                  nextLabel={t("historyPageNext")}
+                  pageLabel={(p, count) => t("historyPageLabel", { page: p, count })}
+                  className="sm:w-auto"
+                />
+              </div>
+            </>
           )
         ) : null}
       </CardContent>
@@ -817,6 +886,24 @@ export function MethodologyConfigTab() {
         create={studyConfigService.createTargetSector}
         update={studyConfigService.updateTargetSector}
         setActive={studyConfigService.setTargetSectorActive}
+      />
+
+      {/* RIO-FR-005 (Q10, client-confirmed) — "Decision Types should be
+          configurable via an admin screen rather than hardcoded — starting
+          with Intervention, Escalation, and Follow-up." The backend CRUD
+          (StudyConfigController's decision-types routes) and the frontend
+          service methods both already existed; this card was the missing
+          piece — nothing previously called create/update/activate/
+          deactivate, only the read-only list() the decision-logging
+          dropdown uses. */}
+      <ConfigurableOptionsCard
+        heading={t("decisionTypesHeading")}
+        note={t("decisionTypesNote")}
+        canWrite={canWrite}
+        list={studyConfigService.listDecisionTypes}
+        create={studyConfigService.createDecisionType}
+        update={studyConfigService.updateDecisionType}
+        setActive={studyConfigService.setDecisionTypeActive}
       />
     </div>
   );

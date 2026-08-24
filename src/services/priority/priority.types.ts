@@ -55,9 +55,6 @@ export const GAP_TYPES = [
 ] as const;
 export type GapType = (typeof GAP_TYPES)[number];
 
-// RIO-FR-005 (Q9) — affected population is deliberately absent: no data
-// source for it exists anywhere in the platform yet (see the backend's own
-// comment on this type for why it isn't faked with a placeholder).
 export interface VillageComparisonEntry {
   village: string;
   studyIds: string[];
@@ -68,4 +65,9 @@ export interface VillageComparisonEntry {
   highNeedCount: number;
   needTypeCounts: Record<string, number>;
   totalNeedCount: number;
+  // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — sum of each Need's
+  // manually entered affectedPeople/affectedHouseholds for this village.
+  // Null (not 0) when none of the village's Needs have a value entered yet.
+  affectedPeople: number | null;
+  affectedHouseholds: number | null;
 }

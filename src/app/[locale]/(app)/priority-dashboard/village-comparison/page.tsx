@@ -108,6 +108,7 @@ export default function VillageComparisonPage() {
                     <TableHead>{t("columns.critical")}</TableHead>
                     <TableHead>{t("columns.high")}</TableHead>
                     <TableHead>{t("columns.totalNeeds")}</TableHead>
+                    <TableHead>{t("columns.affectedPopulation")}</TableHead>
                     <TableHead>{t("columns.needTypes")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -130,6 +131,29 @@ export default function VillageComparisonPage() {
                       <TableCell>{entry.criticalNeedCount}</TableCell>
                       <TableCell>{entry.highNeedCount}</TableCell>
                       <TableCell>{entry.totalNeedCount}</TableCell>
+                      <TableCell>
+                        {entry.affectedPeople === null &&
+                        entry.affectedHouseholds === null ? (
+                          "—"
+                        ) : (
+                          <div className="text-xs">
+                            {entry.affectedPeople !== null ? (
+                              <div>
+                                {t("columns.affectedPeopleValue", {
+                                  count: entry.affectedPeople,
+                                })}
+                              </div>
+                            ) : null}
+                            {entry.affectedHouseholds !== null ? (
+                              <div>
+                                {t("columns.affectedHouseholdsValue", {
+                                  count: entry.affectedHouseholds,
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(entry.needTypeCounts).map(([domain, count]) => (

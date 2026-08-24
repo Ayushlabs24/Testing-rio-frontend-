@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -31,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PERMISSION_GRANTS_PAGE_SIZE } from "@/config/pagination";
 import { ApiError } from "@/services/api/types";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
@@ -73,6 +75,12 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  // Grows by one row every time a grant is issued, with no upper bound —
+  // needs real pagination, unlike the small option lists elsewhere on this
+  // page (Study Types, Target Sectors).
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(PERMISSION_GRANTS_PAGE_SIZE);
 
   function load() {
     permissionGrantsService
@@ -141,6 +149,13 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
     }
   }
 
+  const pageCount = Math.max(1, Math.ceil((grants?.length ?? 0) / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pagedGrants = (grants ?? []).slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between">
@@ -191,7 +206,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                   </TableCell>
                 </TableRow>
               ) : (
-                grants.map((grant) => (
+                pagedGrants.map((grant) => (
                   <TableRow key={grant.id}>
                     <TableCell className="text-foreground font-medium">
                       {grant.granteeName ?? grant.granteeId}
@@ -239,6 +254,37 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
             </TableBody>
           </Table>
         )}
+        {grants && grants.length > 0 ? (
+          <div className="border-border flex flex-col gap-3 border-t px-5 pt-3 pb-1 sm:flex-row sm:items-center sm:justify-between">
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-8 w-full sm:w-40" aria-label={t("rowsPerPage")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {t("rowsPerPage")}: {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Pagination
+              page={currentPage}
+              pageCount={pageCount}
+              onPageChange={setPage}
+              previousLabel={t("pagePrevious")}
+              nextLabel={t("pageNext")}
+              pageLabel={(p, count) => t("pageLabel", { page: p, count })}
+              className="sm:w-auto"
+            />
+          </div>
+        ) : null}
       </CardContent>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
