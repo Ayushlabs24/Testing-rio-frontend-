@@ -31,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -212,6 +213,11 @@ export default function SurveyBuilderDetailPage({
   // not a single-value Select like Methodology Version above — synced from
   // `survey` whenever it (re)loads, see the effect below.
   const [targetGroup, setTargetGroup] = useState("");
+  // The Question Bank's confirmed "who answers this question" vocabulary
+  // (METH — Question Bank column J) — reused here as Target Group's options
+  // instead of free text, since it's the same underlying concept (who the
+  // survey's sample is drawn from). Sourced live, not hardcoded.
+  const [targetRespondentOptions, setTargetRespondentOptions] = useState<string[]>([]);
   // RIO-FR-024/RIO-FR-011 clarification (Aug 11, client-confirmed): the
   // Sample Description's Expected Size is a separate value entered by the
   // NGO, deliberately NOT auto-populated from the Study's own calculated
@@ -361,6 +367,13 @@ export default function SurveyBuilderDetailPage({
     methodologyConfigService
       .listVersionOptions()
       .then(setMethodologyOptions)
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    surveysService
+      .getTargetRespondentOptions()
+      .then(setTargetRespondentOptions)
       .catch(() => undefined);
   }, []);
 
@@ -515,6 +528,7 @@ export default function SurveyBuilderDetailPage({
         subDomain: question.subDomain,
         indicator: question.indicator ?? null,
         kpi: question.kpi ?? null,
+        priorityWeight: question.priorityWeight ?? null,
         isCustom: false,
         order: prev.length + 1,
         isRequired: question.requiredOptional === "required",
@@ -1338,11 +1352,32 @@ export default function SurveyBuilderDetailPage({
                             <Label htmlFor="sample-target-group">
                               {t("targetGroupLabel")}
                             </Label>
-                            <Input
-                              id="sample-target-group"
-                              value={targetGroup}
-                              onChange={(e) => setTargetGroup(e.target.value)}
+                            <Combobox
+                              aria-label={t("targetGroupLabel")}
+                              items={
+                                // Preserves an older survey's free-text value
+                                // (from before this became a fixed-vocabulary
+                                // picker) as a selectable item, so reopening
+                                // this step never silently blanks it out.
+                                targetGroup &&
+                                !targetRespondentOptions.includes(targetGroup)
+                                  ? [
+                                      { value: targetGroup, label: targetGroup },
+                                      ...targetRespondentOptions.map((v) => ({
+                                        value: v,
+                                        label: v,
+                                      })),
+                                    ]
+                                  : targetRespondentOptions.map((v) => ({
+                                      value: v,
+                                      label: v,
+                                    }))
+                              }
+                              value={targetGroup || null}
+                              onSelect={setTargetGroup}
                               placeholder={t("targetGroupPlaceholder")}
+                              searchPlaceholder={t("targetGroupSearchPlaceholder")}
+                              emptyText={t("targetGroupEmpty")}
                             />
                           </div>
                           <div className="space-y-1.5">
@@ -1568,6 +1603,27 @@ export default function SurveyBuilderDetailPage({
                                     </div>
                                   ) : null}
 
+                                  {q.domain ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("domainLabel")}
+                                      </p>
+                                      <p className="text-foreground text-sm">
+                                        {q.domain}
+                                        {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                      </p>
+                                    </div>
+                                  ) : null}
+
+                                  {q.kpi ? (
+                                    <div>
+                                      <p className="text-muted-foreground text-xs font-medium">
+                                        {t("kpiLabel")}
+                                      </p>
+                                      <p className="text-foreground text-sm">{q.kpi}</p>
+                                    </div>
+                                  ) : null}
+
                                   <div>
                                     <p className="text-muted-foreground text-xs font-medium">
                                       {t("answerTypeLabel")}
@@ -1710,6 +1766,27 @@ export default function SurveyBuilderDetailPage({
                                       </span>{" "}
                                       · {q.indicator}
                                     </p>
+                                  </div>
+                                ) : null}
+
+                                {q.domain ? (
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("domainLabel")}
+                                    </p>
+                                    <p className="text-foreground text-sm">
+                                      {q.domain}
+                                      {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                    </p>
+                                  </div>
+                                ) : null}
+
+                                {q.kpi ? (
+                                  <div>
+                                    <p className="text-muted-foreground text-xs font-medium">
+                                      {t("kpiLabel")}
+                                    </p>
+                                    <p className="text-foreground text-sm">{q.kpi}</p>
                                   </div>
                                 ) : null}
 

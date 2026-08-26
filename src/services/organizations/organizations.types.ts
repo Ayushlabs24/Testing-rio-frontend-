@@ -70,6 +70,8 @@ export interface OrganizationSummary extends Organization {
   studyCount?: number;
   surveyCount?: number;
   reportCount?: number;
+  /** Subset of `reportCount` with status `released` or `archived` — ReportStatus has no `published` value of its own. */
+  publishedReportCount?: number;
   ngoAdminName?: string | null;
   ngoAdminEmail?: string | null;
   deactivationReason?: string | null;

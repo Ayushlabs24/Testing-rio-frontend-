@@ -23,4 +23,11 @@ export const SYSTEM_ADMIN_ORGANIZATIONS_PAGE_SIZE = 10;
 export const ARCHIVE_PAGE_SIZE = 10;
 export const REVIEWER_SLA_PAGE_SIZE = 10;
 export const PUBLIC_SURVEYS_PAGE_SIZE = 10;
-export const SYSTEM_LOGS_PAGE_SIZE = 10;
+export const SYSTEM_LOGS_PAGE_SIZE = 15;
+export const QUESTION_BANK_PAGE_SIZE = 10;
+export const QUESTION_BANK_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+// Both grow by one row per action taken (a config edit/publish; a grant
+// issued) with no upper bound — unlike the small, admin-curated option
+// lists (Study Types, Target Sectors) that share this screen.
+export const METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE = 10;
+export const PERMISSION_GRANTS_PAGE_SIZE = 10;

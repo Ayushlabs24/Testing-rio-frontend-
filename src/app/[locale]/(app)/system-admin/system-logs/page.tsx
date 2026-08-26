@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SYSTEM_LOGS_PAGE_SIZE } from "@/config/pagination";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
 import { systemLogsService } from "@/services/system-logs/system-logs.service";
@@ -52,7 +53,7 @@ import {
 } from "./_components/system-log-filter-utils";
 import { SystemLogLevelBadge } from "./_components/system-log-level-badge";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = SYSTEM_LOGS_PAGE_SIZE;
 /** Matches SYSTEM_LOG_RETENTION_DAYS' default on the API. */
 const RETENTION_DAYS = 90;
 
@@ -401,11 +402,11 @@ export default function SystemLogsPage() {
                         <TableCell className="text-muted-foreground text-xs">
                           {t(`categories.${item.category}`)}
                         </TableCell>
-                        <TableCell className="text-foreground font-mono text-[11px]">
+                        <TableCell className="text-foreground font-mono text-xs">
                           {item.source}
                         </TableCell>
                         <TableCell className="max-w-md text-xs">
-                          <span className="text-foreground line-clamp-1 break-words">
+                          <span className="text-foreground block break-words whitespace-normal">
                             {item.message}
                           </span>
                           {item.eventCode && (

@@ -2,6 +2,7 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
   MethodologyConfig,
+  MethodologyConfigHistoryEntry,
   MethodologyVersionOption,
   UpdateMethodologyConfigPayload,
 } from "@/services/methodology-config/methodology-config.types";
@@ -20,6 +21,11 @@ export const methodologyConfigService = {
   async listVersionOptions(): Promise<MethodologyVersionOption[]> {
     return apiClient.get<MethodologyVersionOption[]>(
       endpoints.methodologyConfig.versions,
+    );
+  },
+  async getHistory(): Promise<MethodologyConfigHistoryEntry[]> {
+    return apiClient.get<MethodologyConfigHistoryEntry[]>(
+      endpoints.methodologyConfig.history,
     );
   },
 };
