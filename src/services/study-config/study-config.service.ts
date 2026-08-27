@@ -101,4 +101,32 @@ export const studyConfigService = {
       : endpoints.studyConfig.deactivateDecisionType(id);
     return apiClient.patch<StudyConfigOption>(path);
   },
+
+  // RIO-FR-003 AC 6 — the theme vocabulary the extractor may pick from.
+  async listNeedThemes(): Promise<StudyConfigOption[]> {
+    return apiClient.get<StudyConfigOption[]>(endpoints.studyConfig.needThemes);
+  },
+
+  async createNeedTheme(
+    payload: CreateStudyConfigOptionPayload,
+  ): Promise<StudyConfigOption> {
+    return apiClient.post<StudyConfigOption>(endpoints.studyConfig.needThemes, payload);
+  },
+
+  async updateNeedTheme(
+    id: string,
+    payload: UpdateStudyConfigOptionPayload,
+  ): Promise<StudyConfigOption> {
+    return apiClient.patch<StudyConfigOption>(
+      endpoints.studyConfig.needThemeById(id),
+      payload,
+    );
+  },
+
+  async setNeedThemeActive(id: string, isActive: boolean): Promise<StudyConfigOption> {
+    const path = isActive
+      ? endpoints.studyConfig.activateNeedTheme(id)
+      : endpoints.studyConfig.deactivateNeedTheme(id);
+    return apiClient.patch<StudyConfigOption>(path);
+  },
 };

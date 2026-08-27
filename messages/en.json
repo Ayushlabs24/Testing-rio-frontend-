@@ -598,7 +598,9 @@
             "publish": "Published"
           },
           "optionStatusLabel": "Status",
-          "optionActionsLabel": "Actions"
+          "optionActionsLabel": "Actions",
+          "needThemesHeading": "Need Themes",
+          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring."
         },
         "questions": {
           "filterDomain": "Domain",
@@ -1040,6 +1042,8 @@
           "generate_need_summary": "Need summary suggested",
           "edit_need_summary": "Need summary edited",
           "confirm_need_summary": "Need summary confirmed",
+          "extract_need_themes": "Need themes extracted",
+          "override_priority_score": "Priority score overridden",
           "export": "Exported"
         },
         "entities": {
@@ -1104,7 +1108,32 @@
       "summaryLow": "Low",
       "notScoredBadge": "Not scored yet",
       "statusColumn": "Study status",
-      "viewMatrix": "View Matrix"
+      "viewMatrix": "View Matrix",
+      "breakdown": {
+        "heading": "Priority score breakdown",
+        "modelNote": "Weighted mean of the configured priority factors, methodology {version}.",
+        "noVersion": "version not recorded",
+        "computedWas": "System computed {value}",
+        "partialCoverage": "Based on {percent}% of the configured factors. The rest have no evidence recorded yet and are excluded rather than counted as zero.",
+        "overriddenHeading": "Overridden by a reviewer",
+        "colFactor": "Factor",
+        "colWeight": "Weight",
+        "colValue": "Value",
+        "colContribution": "Contribution",
+        "notMeasured": "Not measured",
+        "approved": "Signed off",
+        "awaitingSignOff": "Awaiting sign-off",
+        "overrideAction": "Override score",
+        "overrideTitle": "Override the computed score",
+        "overrideDescription": "Your score replaces the computed one everywhere it is ranked or reported. The computed value and your reason are both kept on the record.",
+        "overrideScoreLabel": "Your score (0-100)",
+        "overrideScoreHint": "The system computed {computed}.",
+        "overrideReasonLabel": "Reason for the override",
+        "overrideReasonHint": "Required. This is what a later reader sees when they ask why the number changed.",
+        "overrideConfirm": "Save override",
+        "cancel": "Cancel",
+        "genericError": "Something went wrong. Please try again."
+      }
     },
     "villageComparison": {
       "title": "Village Comparison",
@@ -2241,6 +2270,27 @@
         "regenerateAction": "Regenerate",
         "savedNote": "Draft saved.",
         "awaitingReviewer": "A reviewer must confirm this summary before it is used in reports.",
+        "genericError": "Something went wrong. Please try again."
+      },
+      "urgency": {
+        "label": "Urgency",
+        "notSet": "Not set",
+        "hint": "How soon this need must be acted on. Severity says how bad it is; urgency says how soon.",
+        "immediate": "Immediate",
+        "this_cycle": "Within this cycle",
+        "next_cycle": "Next cycle",
+        "no_fixed_timeline": "No fixed timeline",
+        "saved": "Urgency saved."
+      },
+      "themes": {
+        "label": "Recurring themes",
+        "none": "No themes extracted yet",
+        "hint": "What this need is about, matched against the approved theme list. Themes also drive the recurrence factor in the priority score.",
+        "extractAction": "Re-extract themes",
+        "filterLabel": "Theme",
+        "filterAll": "All themes",
+        "groupHeading": "Needs by theme",
+        "needCount": "{count, plural, one {# need} other {# needs}}",
         "genericError": "Something went wrong. Please try again."
       }
     },

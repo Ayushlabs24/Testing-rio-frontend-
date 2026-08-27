@@ -598,7 +598,9 @@
             "publish": "تم النشر"
           },
           "optionStatusLabel": "الحالة",
-          "optionActionsLabel": "الإجراءات"
+          "optionActionsLabel": "الإجراءات",
+          "needThemesHeading": "مواضيع الاحتياجات",
+          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية."
         },
         "questions": {
           "filterDomain": "المجال",
@@ -1040,6 +1042,8 @@
           "generate_need_summary": "اقتُرح ملخص الاحتياج",
           "edit_need_summary": "عُدّل ملخص الاحتياج",
           "confirm_need_summary": "اعتُمد ملخص الاحتياج",
+          "extract_need_themes": "استُخرجت مواضيع الاحتياج",
+          "override_priority_score": "عُدّلت درجة الأولوية",
           "export": "تصدير",
           "SYSTEM_ADMIN_VIEWED_AUDIT_LOGS": "عرض سجلات التدقيق",
           "SYSTEM_ADMIN_ASSIGNED_NGO_ADMIN": "تعيين مسؤول كيان",
@@ -1114,7 +1118,32 @@
       "summaryLow": "منخفضة",
       "notScoredBadge": "لم يُسجَّل بعد",
       "statusColumn": "حالة الدراسة",
-      "viewMatrix": "عرض المصفوفة"
+      "viewMatrix": "عرض المصفوفة",
+      "breakdown": {
+        "heading": "تفصيل درجة الأولوية",
+        "modelNote": "المتوسط المرجّح لعوامل الأولوية المضبوطة، منهجية {version}.",
+        "noVersion": "لم تُسجّل النسخة",
+        "computedWas": "احتسب النظام {value}",
+        "partialCoverage": "محسوبة على {percent}% من العوامل المضبوطة. البقية لا توجد لها بيانات بعد، وقد استُبعدت بدل احتسابها صفرًا.",
+        "overriddenHeading": "عُدّلت من قبل المراجع",
+        "colFactor": "العامل",
+        "colWeight": "الوزن",
+        "colValue": "القيمة",
+        "colContribution": "المساهمة",
+        "notMeasured": "غير مقاسة",
+        "approved": "معتمدة",
+        "awaitingSignOff": "بانتظار الاعتماد",
+        "overrideAction": "تعديل الدرجة",
+        "overrideTitle": "تعديل الدرجة المحتسبة",
+        "overrideDescription": "ستحل درجتك محل الدرجة المحتسبة في كل ترتيب وتقرير. تُحفظ الدرجة المحتسبة وسببك معًا في السجل.",
+        "overrideScoreLabel": "درجتك (0-100)",
+        "overrideScoreHint": "احتسب النظام {computed}.",
+        "overrideReasonLabel": "سبب التعديل",
+        "overrideReasonHint": "مطلوب. هذا ما سيقرأه من يسأل لاحقًا عن سبب تغيّر الرقم.",
+        "overrideConfirm": "حفظ التعديل",
+        "cancel": "إلغاء",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      }
     },
     "villageComparison": {
       "title": "مقارنة القرى",
@@ -2251,6 +2280,27 @@
         "regenerateAction": "إعادة الإنشاء",
         "savedNote": "تم حفظ المسودة.",
         "awaitingReviewer": "يجب أن يعتمد المراجع هذا الملخص قبل استخدامه في التقارير.",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      },
+      "urgency": {
+        "label": "الإلحاح",
+        "notSet": "غير محدد",
+        "hint": "متى يجب التعامل مع هذا الاحتياج. الشدة تبيّن مدى سوء الوضع، والإلحاح يبيّن متى يجب التحرك.",
+        "immediate": "فوري",
+        "this_cycle": "خلال هذه الدورة",
+        "next_cycle": "الدورة القادمة",
+        "no_fixed_timeline": "بدون موعد محدد",
+        "saved": "تم حفظ الإلحاح."
+      },
+      "themes": {
+        "label": "المواضيع المتكررة",
+        "none": "لم تُستخرج مواضيع بعد",
+        "hint": "ما يدور حوله هذا الاحتياج، مطابَقًا بقائمة المواضيع المعتمدة. تُستخدم المواضيع أيضًا في احتساب عامل التكرار ضمن درجة الأولوية.",
+        "extractAction": "إعادة استخراج المواضيع",
+        "filterLabel": "الموضوع",
+        "filterAll": "كل المواضيع",
+        "groupHeading": "الاحتياجات حسب الموضوع",
+        "needCount": "{count, plural, zero {# احتياج} one {احتياج واحد} two {احتياجان} few {# احتياجات} many {# احتياجًا} other {# احتياج}}",
         "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
       }
     },

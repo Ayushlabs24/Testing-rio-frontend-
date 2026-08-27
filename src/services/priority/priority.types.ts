@@ -1,9 +1,29 @@
-/** Explainable breakdown — one entry per indicator that fed this score. */
-export interface PriorityFactor {
-  indicator: string;
+/** RIO-FR-003 AC 2 — one row of the breakdown the reviewer sees, so the score
+ * explains itself rather than arriving as a bare number.
+ *
+ * `value` is null when the evidence for that factor does not exist yet (an
+ * unset urgency, a need with no themes). Null is shown as "Not measured" and
+ * excluded from the weighted mean — deliberately NOT rendered as 0, which
+ * would read as "we checked and it is nothing". */
+export interface PriorityFactorComponent {
+  key: string;
+  label: string;
   weight: number;
-  responseValue: number;
-  weightedContribution: number;
+  value: number | null;
+  contribution: number | null;
+  /** Plain-language source of the value — "450 people affected",
+   *  "3 village(s)". Rendered under the number. */
+  basis: string | null;
+}
+
+/** The stored `factors` JSON on a score. */
+export interface PriorityFactorBreakdown {
+  model: string;
+  methodologyVersion: string | null;
+  /** Share of the configured weight that had evidence behind it. */
+  coverage: number;
+  score: number;
+  components: PriorityFactorComponent[];
 }
 
 export interface PriorityScore {
@@ -16,8 +36,17 @@ export interface PriorityScore {
   overallScore: number;
   level: "critical" | "high" | "medium" | "low";
   gapType: string;
-  factors: PriorityFactor[];
+  factors: PriorityFactorBreakdown;
   cycleNote: string | null;
+  /** What the engine computed. Never rewritten by an override. */
+  computedScore: number;
+  /** RIO-FR-003 AC 5 — the reviewer's own number, kept beside the computed
+   *  one so the two stay distinguishable. Null until someone disagrees. */
+  overrideScore: number | null;
+  overrideReason: string | null;
+  overriddenAt: string | null;
+  /** What to rank and display: the override when set, else the computed. */
+  effectiveScore: number;
   scoredAt: string;
   /** A Priority Score never becomes publicly visible (dashboard/reports)
    * until a reviewer approves it. */
@@ -37,6 +66,11 @@ export interface PriorityDashboardEntry {
   // classification (acute/chronic/structural/seasonal/equity), distinct
   // from `score.overrideReason` below.
   gapType: string | null;
+  /** RIO-FR-003 AC 6 — filter and group by theme without a second fetch. */
+  themes: string[];
+  /** RIO-FR-003 AC 1 — an unset urgency is a real gap in the score, so it is
+   *  visible in the list rather than only on the need page. */
+  urgency: string | null;
   score: {
     overallScore: number;
     level: "critical" | "high" | "medium" | "low";

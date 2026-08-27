@@ -8,6 +8,9 @@ import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { PriorityBreakdown } from "@/components/features/priority/priority-breakdown";
+import { priorityService } from "@/services/priority/priority.service";
+import type { PriorityScore } from "@/services/priority/priority.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -89,12 +92,33 @@ export default function PriorityDetailInsightsPage({
   );
   const [priorityV2, setPriorityV2] = useState<VillagePriorityResult | null>(null);
   const [need, setNeed] = useState<Need | null>(null);
+  // RIO-FR-003 — the explainable nine-factor score, separate from the
+  // village-level PriorityV2 assessment rendered below it. The two answer
+  // different questions (this need vs this village) and have opposite
+  // polarity, so they are deliberately shown as two panels, not merged.
+  const [needScore, setNeedScore] = useState<PriorityScore | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [assessing, setAssessing] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [summaryKey, setSummaryKey] = useState(0);
+
+  // RIO-FR-003 — load any existing per-need score so the breakdown is there
+  // before the reviewer presses Recalculate. Silent on failure: a need that
+  // has never been scored legitimately has none.
+  useEffect(() => {
+    let stale = false;
+    priorityService
+      .getLatest(needId)
+      .then((s) => {
+        if (!stale) setNeedScore(s);
+      })
+      .catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [needId]);
 
   useEffect(() => {
     let stale = false;
@@ -149,6 +173,9 @@ export default function PriorityDetailInsightsPage({
         null,
       );
       setPriorityV2(result);
+      // RIO-FR-003 — the per-need explainable score is produced by its own
+      // endpoint, so recalculating the rollups is not enough on its own.
+      setNeedScore(await priorityService.score(needId));
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("recalculateError"));
@@ -333,6 +360,15 @@ export default function PriorityDetailInsightsPage({
                     </Button>
                   ) : null}
                 </div>
+
+                {/* RIO-FR-003 AC 2 — the component breakdown, above the
+                    village assessment because it is the number this need is
+                    ranked and signed off on. */}
+                {needScore ? (
+                  <div className="mb-6">
+                    <PriorityBreakdown score={needScore} onScoreUpdated={setNeedScore} />
+                  </div>
+                ) : null}
 
                 {priorityV2 ? (
                   <div className="space-y-6">

@@ -1089,6 +1089,18 @@ export function MethodologyConfigTab() {
         update={studyConfigService.updateDecisionType}
         setActive={studyConfigService.setDecisionTypeActive}
       />
+
+      {/* RIO-FR-003 AC 6 — editing this list changes what needs get filed
+          under, and therefore what the recurrence factor counts. */}
+      <ConfigurableOptionsCard
+        heading={t("needThemesHeading")}
+        note={t("needThemesNote")}
+        canWrite={canWrite}
+        list={studyConfigService.listNeedThemes}
+        create={studyConfigService.createNeedTheme}
+        update={studyConfigService.updateNeedTheme}
+        setActive={studyConfigService.setNeedThemeActive}
+      />
     </div>
   );
 }

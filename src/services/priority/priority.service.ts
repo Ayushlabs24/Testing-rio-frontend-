@@ -24,6 +24,21 @@ export const priorityService = {
       params: { gapType },
     });
   },
+  /** RIO-FR-003 AC 5 — the reviewer replacing the computed number.
+   *
+   * The reason is not optional. The server refuses an empty one and the
+   * database has a CHECK constraint behind that, so the UI disabling the
+   * button is a courtesy, not the guard. */
+  async override(
+    id: string,
+    overrideScore: number,
+    reason: string,
+  ): Promise<PriorityScore> {
+    return apiClient.patch<PriorityScore>(endpoints.priority.override(id), {
+      overrideScore,
+      reason,
+    });
+  },
   // Human Review gate — a Priority Score never becomes publicly visible
   // (dashboard/reports) until a reviewer approves it here.
   async approve(id: string): Promise<PriorityScore> {
