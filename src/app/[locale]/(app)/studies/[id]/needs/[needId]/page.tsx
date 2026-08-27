@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
+import { NeedSummarySection } from "@/components/features/studies/need-summary-section";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
@@ -701,6 +702,12 @@ export default function NeedWorkspacePage({
               </div>
             </WorkflowStep>
           ) : null}
+
+          {/* RIO-AI-003 — renders nothing when the description was short
+              enough not to be summarised, which is the common case.
+              Keyed on the need id so moving to another need mounts a fresh
+              panel rather than briefly showing the previous need's summary. */}
+          <NeedSummarySection key={need.id} needId={need.id} />
 
           <AiClassificationSection need={need} onNeedUpdated={setNeed} />
         </div>

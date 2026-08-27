@@ -559,6 +559,13 @@
           "aiVeryLowConfidenceLabel": "Very low confidence below (%)",
           "aiVeryLowConfidenceHint": "Suggestions under this get the strongest warning.",
           "aiConfidenceOrderError": "The very-low threshold must be below the low threshold.",
+          "aiSummaryHeading": "Need Summary Suggestions",
+          "aiSummaryNote": "When a need description is longer than this, the system suggests a shorter version for a reviewer to edit and confirm. The original description is always kept. The same character count applies to every language.",
+          "aiSummaryThresholdLabel": "Suggest a summary above (characters)",
+          "aiSummaryThresholdHint": "Descriptions shorter than this are left as written.",
+          "aiSummaryMaxLabel": "Maximum summary length (characters)",
+          "aiSummaryMaxHint": "The suggested summary will not exceed this length.",
+          "aiSummaryOrderError": "The maximum summary length must be below the length that triggers a summary.",
           "studyTypesHeading": "Study Types",
           "studyTypesNote": "Configurable values offered when creating a Study. Interim placeholders — rename or replace them once the final list is confirmed.",
           "targetSectorsHeading": "Target Sectors",
@@ -1030,6 +1037,9 @@
           "confirm_document_summary": "Confirmed Document Summary",
           "generate_combined_summary": "Generated Combined Summary",
           "confirm_combined_summary": "Confirmed Combined Summary",
+          "generate_need_summary": "Need summary suggested",
+          "edit_need_summary": "Need summary edited",
+          "confirm_need_summary": "Need summary confirmed",
           "export": "Exported"
         },
         "entities": {
@@ -1603,7 +1613,8 @@
         "report_approval": "Report Approval",
         "report_released": "Released",
         "report_rejected": "Rejected",
-        "evidence_document_uploaded": "Evidence Summary Pending"
+        "evidence_document_uploaded": "Evidence Summary Pending",
+        "need_summary_approval": "Need Summary Pending"
       },
       "titleOwn": "My Submissions",
       "descriptionOwn": "Surveys and reports you've submitted, and whether they were approved or sent back for changes.",
@@ -2206,6 +2217,31 @@
         "actionsColumn": "Actions",
         "removeNeed": "Remove",
         "backToSelect": "Choose another file"
+      },
+      "needSummary": {
+        "heading": "Suggested Summary",
+        "intro": "This description is {length} characters long, so the system suggested a shorter version. A reviewer must confirm it before it is used in reports.",
+        "statusDraft": "Awaiting review",
+        "statusConfirmed": "Confirmed",
+        "statusStale": "Out of date",
+        "staleNote": "The need description changed after this summary was decided. Regenerate it, or the original description will be used in reports.",
+        "summaryLabel": "Suggested summary",
+        "sourceLabel": "Original description",
+        "sourceNote": "The original is always kept. It is what classification and scoring use.",
+        "modelNote": "Suggested by {model}. Edit it before confirming if anything is wrong.",
+        "editedNote": "Edited by a reviewer. The model's original wording is kept in the record.",
+        "warningsHeading": "{count, plural, one {# check needs your attention} other {# checks need your attention}}",
+        "warning": {
+          "FACT_NOT_IN_SOURCE": "\"{detail}\" does not appear in the original description.",
+          "FACT_DROPPED": "\"{detail}\" is in the original description but not in the summary.",
+          "NUMBER_INVENTED": "The number {detail} appears in the summary but not in the original description."
+        },
+        "confirmAction": "Confirm summary",
+        "saveAction": "Save draft",
+        "regenerateAction": "Regenerate",
+        "savedNote": "Draft saved.",
+        "awaitingReviewer": "A reviewer must confirm this summary before it is used in reports.",
+        "genericError": "Something went wrong. Please try again."
       }
     },
     "questionEditor": {
@@ -2471,6 +2507,35 @@
         "rejected": "Rejected",
         "published": "Published",
         "SUPERSEDED": "Superseded"
+      }
+    },
+    "needSummaries": {
+      "title": "Need Summaries",
+      "description": "Suggested summaries of long need descriptions, awaiting your confirmation. Nothing here reaches a report until you confirm it.",
+      "pendingCount": "{count, plural, =0 {Nothing awaiting review} one {# summary awaiting review} other {# summaries awaiting review}}",
+      "confirmSelected": "{count, plural, =0 {Confirm selected} one {Confirm # summary} other {Confirm # summaries}}",
+      "confirmedAll": "{count, plural, one {# summary confirmed.} other {# summaries confirmed.}}",
+      "confirmedPartial": "{confirmed} confirmed, {skipped} skipped — they were already decided or replaced by a newer summary.",
+      "empty": "No summaries are waiting for review.",
+      "selectAll": "Select all summaries on this page",
+      "selectOne": "Select the summary for {need}",
+      "colNeed": "Need",
+      "colSummary": "Suggested summary",
+      "colSource": "Came from",
+      "colGenerated": "Suggested",
+      "gateNote": "Confirming records your decision against the summary. The original description is always kept, and classification and scoring keep using it.",
+      "genericError": "Something went wrong. Please try again.",
+      "trigger": {
+        "manual_entry": "Typed in",
+        "bulk_import": "File import",
+        "pdf_import": "PDF extraction",
+        "citizen_input": "Citizen input",
+        "manual_regenerate": "Regenerated"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
       }
     }
   },

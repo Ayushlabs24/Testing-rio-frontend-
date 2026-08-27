@@ -27,6 +27,16 @@ export interface AiClassificationSettings {
   veryLowConfidenceThreshold: number;
 }
 
+/** RIO-AI-003 — when a need description is long enough to be summarised, and
+ * how long the suggested summary may be. `statementLengthThreshold` is a
+ * character count and is deliberately the same for every language (client
+ * decision, 25 Aug 2026): a word count behaves very differently in Arabic,
+ * which is more compact per character than English. */
+export interface AiSummarySettings {
+  statementLengthThreshold: number;
+  maxSummaryChars: number;
+}
+
 export type MethodologyStatus = "draft" | "published";
 
 export interface MethodologyConfig {
@@ -39,6 +49,7 @@ export interface MethodologyConfig {
   priorityFactorWeights: PriorityFactorWeight[];
   confidenceFlagSettings: ConfidenceFlagSettings;
   aiClassificationSettings: AiClassificationSettings;
+  aiSummarySettings: AiSummarySettings;
   updatedAt: string;
   updatedByName: string | null;
 }
@@ -52,6 +63,8 @@ export interface MethodologyConfigHistoryEntry {
   priorityThresholds: PriorityThresholds;
   priorityFactorWeights: PriorityFactorWeight[];
   confidenceFlagSettings: ConfidenceFlagSettings;
+  aiClassificationSettings: AiClassificationSettings;
+  aiSummarySettings: AiSummarySettings;
   changedByName: string | null;
   changedAt: string;
 }
@@ -62,6 +75,7 @@ export interface UpdateMethodologyConfigPayload {
   priorityFactorWeights?: Array<{ key: string; weight: number }>;
   confidenceFlagSettings?: Partial<ConfidenceFlagSettings>;
   aiClassificationSettings?: Partial<AiClassificationSettings>;
+  aiSummarySettings?: Partial<AiSummarySettings>;
 }
 
 /** TEMPORARY — see the MethodologyVersionOption model comment on the

@@ -44,7 +44,8 @@ export type SlaAlertType =
   | "report_approval"
   | "report_released"
   | "report_rejected"
-  | "evidence_document_uploaded";
+  | "evidence_document_uploaded"
+  | "need_summary_approval";
 
 export interface SlaAlert {
   id: string;

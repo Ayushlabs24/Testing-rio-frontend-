@@ -591,6 +591,14 @@ export function MethodologyConfigTab() {
     lowConfidenceThreshold: "",
     veryLowConfidenceThreshold: "",
   });
+  // RIO-AI-003 — when a need description is long enough to be summarised, and
+  // how long the suggestion may be. Plain character counts, so unlike
+  // `aiConfidence` above there is no percentage conversion: what the reviewer
+  // types is what the API stores.
+  const [aiSummary, setAiSummary] = useState({
+    statementLengthThreshold: "",
+    maxSummaryChars: "",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -625,6 +633,10 @@ export function MethodologyConfigTab() {
         Math.round(c.aiClassificationSettings.veryLowConfidenceThreshold * 100),
       ),
     });
+    setAiSummary({
+      statementLengthThreshold: String(c.aiSummarySettings.statementLengthThreshold),
+      maxSummaryChars: String(c.aiSummarySettings.maxSummaryChars),
+    });
     setDirty(false);
   }
 
@@ -646,13 +658,14 @@ export function MethodologyConfigTab() {
   const setFactorWeightsDirty = markDirty(setFactorWeights);
   const setFlagsDirty = markDirty(setFlags);
   const setAiConfidenceDirty = markDirty(setAiConfidence);
+  const setAiSummaryDirty = markDirty(setAiSummary);
 
   async function save() {
     // Belt-and-suspenders alongside the button's `disabled` — the backend
     // already rejects an off-100% total, but by then thresholds/flags may
     // have already been persisted alongside the invalid weights (the bug
     // this guards against). Never even issue the request when it's invalid.
-    if (!weightSumValid || !aiConfidenceOrderValid) return;
+    if (!weightSumValid || !aiConfidenceOrderValid || !aiSummaryOrderValid) return;
     setSaving(true);
     setError(null);
     try {
@@ -678,6 +691,10 @@ export function MethodologyConfigTab() {
           lowConfidenceThreshold: Number(aiConfidence.lowConfidenceThreshold) / 100,
           veryLowConfidenceThreshold:
             Number(aiConfidence.veryLowConfidenceThreshold) / 100,
+        },
+        aiSummarySettings: {
+          statementLengthThreshold: Number(aiSummary.statementLengthThreshold),
+          maxSummaryChars: Number(aiSummary.maxSummaryChars),
         },
       });
       applyConfig(updated);
@@ -709,6 +726,12 @@ export function MethodologyConfigTab() {
     Number(aiConfidence.veryLowConfidenceThreshold) <
     Number(aiConfidence.lowConfidenceThreshold);
 
+  // Mirrors the backend's validateAiSummarySettings. A summary allowed to be
+  // as long as the text that triggers it is not a summary — the feature would
+  // still look configured while doing nothing.
+  const aiSummaryOrderValid =
+    Number(aiSummary.maxSummaryChars) < Number(aiSummary.statementLengthThreshold);
+
   return (
     <div className="space-y-6">
       {canWrite ? (
@@ -719,7 +742,13 @@ export function MethodologyConfigTab() {
           ) : null}
           <Button
             onClick={save}
-            disabled={saving || !dirty || !weightSumValid || !aiConfidenceOrderValid}
+            disabled={
+              saving ||
+              !dirty ||
+              !weightSumValid ||
+              !aiConfidenceOrderValid ||
+              !aiSummaryOrderValid
+            }
           >
             {saving ? t("saving") : t("save")}
           </Button>
@@ -962,6 +991,63 @@ export function MethodologyConfigTab() {
           </div>
           {!aiConfidenceOrderValid ? (
             <p className="text-destructive text-xs">{t("aiConfidenceOrderError")}</p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* RIO-AI-003 — when a long need description gets a suggested summary.
+          Plain character counts, and one number for every language: Arabic is
+          more compact per character than English, so a word count would behave
+          as two different rules (client decision, 25 Aug 2026). */}
+      <Card>
+        <CardContent className="space-y-4 p-5">
+          <h2 className="text-foreground text-sm font-semibold">
+            {t("aiSummaryHeading")}
+          </h2>
+          <p className="text-muted-foreground text-xs">{t("aiSummaryNote")}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="ai-summary-threshold">{t("aiSummaryThresholdLabel")}</Label>
+              <Input
+                id="ai-summary-threshold"
+                type="number"
+                step="100"
+                min={200}
+                max={5000}
+                value={aiSummary.statementLengthThreshold}
+                onChange={(e) =>
+                  setAiSummaryDirty({
+                    ...aiSummary,
+                    statementLengthThreshold: e.target.value,
+                  })
+                }
+                disabled={!canWrite}
+                aria-invalid={!aiSummaryOrderValid ? true : undefined}
+              />
+              <p className="text-muted-foreground text-xs">
+                {t("aiSummaryThresholdHint")}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ai-summary-max">{t("aiSummaryMaxLabel")}</Label>
+              <Input
+                id="ai-summary-max"
+                type="number"
+                step="50"
+                min={100}
+                max={2000}
+                value={aiSummary.maxSummaryChars}
+                onChange={(e) =>
+                  setAiSummaryDirty({ ...aiSummary, maxSummaryChars: e.target.value })
+                }
+                disabled={!canWrite}
+                aria-invalid={!aiSummaryOrderValid ? true : undefined}
+              />
+              <p className="text-muted-foreground text-xs">{t("aiSummaryMaxHint")}</p>
+            </div>
+          </div>
+          {!aiSummaryOrderValid ? (
+            <p className="text-destructive text-xs">{t("aiSummaryOrderError")}</p>
           ) : null}
         </CardContent>
       </Card>
