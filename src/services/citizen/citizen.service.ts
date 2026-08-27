@@ -2,6 +2,8 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
   CheckDuplicatePayload,
+  RecordSessionEventPayload,
+  StartSessionResult,
   CheckDuplicateResult,
   RequestOtpPayload,
   RequestOtpResult,
@@ -19,6 +21,36 @@ import type {
 export const citizenService = {
   async resolveSurvey(token: string): Promise<ResolvedSurvey> {
     return apiClient.get<ResolvedSurvey>(endpoints.citizen.resolve(token));
+  },
+
+  /**
+   * Abandonment tracking (RPT10 Q-2). Both calls are fire-and-forget from the
+   * caller's point of view — a respondent must never see an error, or be
+   * blocked, because telemetry about their sitting failed to post. Failures
+   * resolve to null/false rather than throwing.
+   */
+  async startSession(token: string): Promise<StartSessionResult | null> {
+    try {
+      return await apiClient.post<StartSessionResult | null>(
+        endpoints.citizen.startSession(token),
+        {},
+      );
+    } catch {
+      return null;
+    }
+  },
+
+  async recordSessionEvent(
+    token: string,
+    sessionId: string,
+    payload: RecordSessionEventPayload,
+  ): Promise<boolean> {
+    try {
+      await apiClient.post(endpoints.citizen.sessionEvent(token, sessionId), payload);
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   async checkDuplicate(

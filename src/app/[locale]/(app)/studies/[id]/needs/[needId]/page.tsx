@@ -41,9 +41,15 @@ interface NeedFormValues {
   village: string[];
   governorateIds: string[];
   centerIds: string[];
+  // A string, not a number — see the create form's own note: an emptied field
+  // must stay distinguishable from zero, because clearing the estimate and
+  // recording "nobody is affected" are different statements.
+  affectedPopulation: string;
   affectedPeople: string;
   affectedHouseholds: string;
 }
+
+const MAX_AFFECTED_POPULATION = 50_000_000;
 
 function VillageChips({ villages }: { villages: string[] }) {
   const t = useTranslations("app.studies.detail");
@@ -170,6 +176,11 @@ function NeedDetailsCard({
     village: z.array(z.string()),
     governorateIds: z.array(z.string()),
     centerIds: z.array(z.string()),
+    affectedPopulation: z
+      .string()
+      .trim()
+      .refine(
+        (v) => v === "" || (/^\d+$/.test(v) && Number(v) <= MAX_AFFECTED_POPULATION),
     // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — kept as strings on
     // the form so an empty field round-trips as "" rather than NaN.
     affectedPeople: z
@@ -200,6 +211,8 @@ function NeedDetailsCard({
       village: need.village,
       governorateIds: need.governorateIds,
       centerIds: need.centerIds,
+      affectedPopulation:
+        need.affectedPopulation === null ? "" : String(need.affectedPopulation),
       affectedPeople: need.affectedPeople === null ? "" : String(need.affectedPeople),
       affectedHouseholds:
         need.affectedHouseholds === null ? "" : String(need.affectedHouseholds),
@@ -225,6 +238,11 @@ function NeedDetailsCard({
         village: values.village,
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
+        // Emptied means "clear the estimate", which the API takes as an
+        // explicit null — omitting the key would silently leave the old value
+        // in place while the form showed it as gone.
+        affectedPopulation:
+          values.affectedPopulation === "" ? null : Number(values.affectedPopulation),
         affectedPeople:
           values.affectedPeople === "" ? null : Number(values.affectedPeople),
         affectedHouseholds:
@@ -396,6 +414,30 @@ function NeedDetailsCard({
               ) : null}
             </div>
 
+            {/* Editable after the fact so a better estimate can replace a first
+                guess — but it can only ever be ANSWERED here, never derived:
+                nothing else in the platform knows how many people one need
+                affects. See the create form's note. */}
+            <div className="space-y-2">
+              <Label htmlFor="affectedPopulation">{t("affectedPopulationLabel")}</Label>
+              <Input
+                id="affectedPopulation"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={MAX_AFFECTED_POPULATION}
+                step={1}
+                placeholder={t("affectedPopulationPlaceholder")}
+                {...register("affectedPopulation")}
+              />
+              <p className="text-muted-foreground text-xs">
+                {t("affectedPopulationHint")}
+              </p>
+              {errors.affectedPopulation ? (
+                <p className="text-destructive text-sm">
+                  {errors.affectedPopulation.message}
+                </p>
+              ) : null}
             {/* RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — the
                 manually entered figure is the PRIMARY Affected Population
                 value; both are optional and independent. */}
@@ -489,6 +531,13 @@ function NeedDetailsCard({
               <FilledField label={t("villageLabel")}>
                 <VillageChips villages={need.village} />
               </FilledField>
+              <FilledField label={t("affectedPopulationLabel")}>
+                {/* A dash means no estimate was given — not zero people. Same
+                    distinction the Top-Priority Report's column makes. */}
+                {need.affectedPopulation === null ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  need.affectedPopulation.toLocaleString()
               <FilledField label={t("affectedPeopleLabel")}>
                 {need.affectedPeople === null ? (
                   <span className="text-muted-foreground">—</span>

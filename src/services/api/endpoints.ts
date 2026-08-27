@@ -227,6 +227,12 @@ export const endpoints = {
     requestOtp: (token: string) => `/public/surveys/${token}/otp/request`,
     verifyOtp: (token: string) => `/public/surveys/${token}/otp/verify`,
     submitResponse: (token: string) => `/public/surveys/${token}/responses`,
+    // Abandonment tracking (RPT10 Q-2). Session metadata only — see the
+    // backend's RecordSessionEventBody, which has no field that could carry
+    // an answer.
+    startSession: (token: string) => `/public/surveys/${token}/sessions`,
+    sessionEvent: (token: string, sessionId: string) =>
+      `/public/surveys/${token}/sessions/${sessionId}/events`,
   },
   responseQuality: {
     assess: (needId: string) => `/needs/${needId}/response-quality/assess`,

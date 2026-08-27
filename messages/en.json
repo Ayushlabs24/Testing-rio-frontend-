@@ -1180,7 +1180,10 @@
         "generating": "Generating...",
         "genericError": "Something went wrong. Please try again.",
         "reportTypeSearchPlaceholder": "Search report types",
-        "reportTypeEmpty": "No matching report types."
+        "reportTypeEmpty": "No matching report types.",
+        "surveyScopeLabel": "Survey scope (optional)",
+        "surveyScopePlaceholder": "All surveys in this study",
+        "surveyScopeAll": "All surveys in this study"
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -1283,6 +1286,14 @@
         "summaryOfNeeds": "Summary of Needs",
         "needsByDomain": "Needs by Domain, Sub-domain and Indicator",
         "patternAnalysis": "Pattern & Intersection Analysis",
+        "tierSummary": "Needs by Priority Tier",
+        "domainRollup": "Domain Rollup",
+        "noMaskingAlert": "No-Masking Alert",
+        "completeness": "Completeness & Confidence",
+        "domainConfidence": "Confidence by Domain",
+        "flaggedRecords": "Flagged Records",
+        "flaggedRecordsNone": "No incomplete or unassessed records were found. Every indicator in scope produced a measurable score.",
+        "flaggedRecordsNote": "Records below are flagged, not removed. Each remains part of the dataset and is excluded only from severity averages, where noted.",
         "priorityNeeds": "Priority Needs",
         "dataQualityNotes": "Data Quality Notes",
         "needRecords": "All Need Records",
@@ -1314,7 +1325,11 @@
           "intersections": "Intersections (equity)"
         },
         "pn": {
-          "notMeasured": "Not measured — excluded from the ranking"
+          "notMeasured": "Not measured — excluded from the ranking",
+          "rankingBasis": "Ranked by {basis}. The Priority Score column is that calculation's output for each need.",
+          "locationScope": "Location is the same for every row ({location}) because a need is measured as an indicator-level aggregate across the whole assessed scope, not attributed to one village. The full scope is given under Geographic Scope.",
+          "affectedPopulationMissing": "Affected population was not recorded for these needs, so every row shows a dash. It is asked for on the need-entry form and cannot be filled in afterwards for needs recorded before the question existed. The population figure under Response Quality is the study AREA's population — it sizes the sample and is not the number of people affected by any individual need.",
+          "affectedPopulationScope": "Affected population is the estimate given when the need was recorded, in answer to “roughly how many people does this need affect?”. It describes the need as a whole, so it repeats across that need’s indicator rows rather than varying by indicator. A dash means no estimate was given, not zero people."
         },
         "dq": {
           "submitted": "Submitted",
@@ -1331,7 +1346,33 @@
         },
         "scale": {
           "severity": "0-100 · higher = worse"
-        }
+        },
+        "calculationBasis": "Calculation Basis",
+        "cb": {
+          "needsIndexWorking": "Needs Index — working",
+          "priorityScoreWorking": "Priority Score — working",
+          "thresholds": "Thresholds applied"
+        },
+        "dataCollectionScope": "Data-Collection Scope",
+        "surveysNotCovered": "Surveys NOT covered by these figures",
+        "abandonment": "Survey Abandonment",
+        "sessionsStarted": "Sessions started",
+        "sessionsSubmitted": "Submitted",
+        "sessionsAbandoned": "Abandoned",
+        "sessionsInFlight": "Still in progress",
+        "abandonmentRate": "Abandonment rate",
+        "meanProgressWhenAbandoned": "Mean progress when abandoned",
+        "remindersSent": "Reminders sent",
+        "responsesWithoutSession": "Responses with no session record",
+        "invalidResponses": "Invalid Responses",
+        "excludedSubmitted": "Excluded submitted responses",
+        "abandonedSessions": "Abandoned / incomplete sessions",
+        "invalidTotal": "Invalid responses (total)",
+        "unansweredRequired": "Unanswered Required Questions",
+        "requiredQuestions": "Required questions in scope",
+        "submittedResponses": "Submitted responses",
+        "requiredAnswerSlots": "Required answers expected",
+        "leftBlank": "Left blank"
       },
       "detail": {
         "title": "Report content",
@@ -1902,6 +1943,9 @@
         "villageLabel": "Village",
         "villageFreeTextHint": "Optional — type a village name and press Enter to add it.",
         "villageEmptyHint": "Type a village name to add it.",
+        "affectedPopulationLabel": "Affected population",
+        "affectedPopulationPlaceholder": "e.g. 450",
+        "affectedPopulationHint": "Roughly how many people does this need affect? Optional — an estimate is fine. Leave blank if you don’t know; reports show a dash rather than assuming a number. This can only be recorded here, so it cannot be added later for needs already saved without it.",
         "removeVillage": "Remove {village}",
         "affectedPeopleLabel": "Affected people (Optional)",
         "affectedPeoplePlaceholder": "Roughly how many people does this need affect?",

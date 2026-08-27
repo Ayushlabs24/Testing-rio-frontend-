@@ -71,6 +71,11 @@ export interface Need {
    * every Need on creation regardless of entry method, never editable.
    * Distinct from `referenceId` above (the submitter's own external id). */
   internalReferenceId: string;
+  /** Roughly how many people this need affects — the estimate given on the
+   *  need-entry form. Null when it wasn't answered, and on every need recorded
+   *  before the question existed; the Top-Priority Report prints a dash and
+   *  says why rather than substituting the study-area population. */
+  affectedPopulation: number | null;
   status: NeedStatus;
   /** The Approver's final ("Approved") Domain/Sub-Domain — written only by
    * AiDecisionsService.review when a classification is approved/overridden.
@@ -131,6 +136,7 @@ export interface CreateNeedPayload {
   governorateIds?: string[];
   centerIds?: string[];
   referenceId?: string;
+  affectedPopulation?: number;
   affectedPeople?: number;
   affectedHouseholds?: number;
 }
@@ -142,6 +148,8 @@ export interface UpdateNeedPayload {
   governorateIds?: string[];
   centerIds?: string[];
   referenceId?: string | null;
+  /** Explicit null clears the estimate; omitted leaves it untouched. */
+  affectedPopulation?: number | null;
   affectedPeople?: number | null;
   affectedHouseholds?: number | null;
 }
@@ -177,4 +185,5 @@ export interface BulkImportNeedItem {
   statement: string;
   village?: string;
   referenceId?: string;
+  affectedPopulation?: number;
 }

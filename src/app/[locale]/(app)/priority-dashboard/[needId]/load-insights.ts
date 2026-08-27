@@ -49,8 +49,17 @@ export function loadPriorityInsights(
     })
     .catch(() => undefined);
 
+  // RIO-FR-011: the PUBLISHED version, never "latest" — see
+  // surveysService.getPublishedSurveyByNeedId's own comment. This is a
+  // read-only screen, and the VillagePriorityAssessment rows are keyed on
+  // the PUBLISHED survey's id (that is the version whose responses were
+  // scored). Resolving "latest" here meant that the moment a new draft
+  // version was created for a Need, getVillagePriority() looked up an id
+  // that has no assessment and returned null — the page then showed no
+  // priority data at all, even though the list page still showed that
+  // Need's score. PriorityV2Service.listForOrg guards the same way.
   surveysService
-    .getSurveyByNeedId(needId)
+    .getPublishedSurveyByNeedId(needId)
     .then((srv) => {
       if (isStale()) return;
       setSurvey(srv);

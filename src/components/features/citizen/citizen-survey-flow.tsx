@@ -10,7 +10,7 @@ import {
   Star,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,6 +23,7 @@ import type {
   AgeBracket,
   Gender,
   ResolvedSurvey,
+  SurveySessionStep,
 } from "@/services/citizen/citizen.types";
 import { ApiError } from "@/services/api/types";
 import {
@@ -171,6 +172,11 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Abandonment tracking (RPT10 Q-2, client answer 24 Aug). A ref, not state:
+  // the id is read inside callbacks and must never trigger a re-render, and a
+  // survey the respondent abandons must not have been kept alive by one.
+  const sessionIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     citizenService
       .resolveSurvey(token)
@@ -181,7 +187,30 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       .catch(() => setLoadState("notFound"));
   }, [token]);
 
-  const questions = survey?.questions ?? [];
+  // Opens the session as soon as the survey resolves — the sitting starts when
+  // the respondent can see questions, not when they first type. Everything
+  // here is best-effort: a failed session write leaves sessionIdRef null and
+  // every later track() call becomes a no-op, so tracking can never block a
+  // respondent. Nothing about their answers is sent by any of it.
+  useEffect(() => {
+    if (loadState !== "ready") return;
+    let cancelled = false;
+    void citizenService.startSession(token).then((result) => {
+      // `result?.sessionId` rather than `result` — the backend answers with an
+      // empty body when it could not open a session, which the API client
+      // surfaces as undefined. Either way tracking stays off and the
+      // respondent notices nothing.
+      if (!cancelled && result?.sessionId) sessionIdRef.current = result.sessionId;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadState, token]);
+
+  // Memoised, not a fresh array each render: the answered-count memo below
+  // depends on it, and a new identity every render would recompute (and
+  // re-post) on every keystroke.
+  const questions = useMemo(() => survey?.questions ?? [], [survey]);
 
   // Fixed steps (details, otp) + one step per question + review.
   const totalSteps = 2 + questions.length + 1;
@@ -191,6 +220,23 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     if (phase === "questions") return 2 + questionIndex + 1;
     return totalSteps;
   }, [phase, questionIndex, totalSteps]);
+
+  // How many questions currently hold a value — a COUNT, which is the only
+  // thing about the answers that ever leaves the page for tracking purposes.
+  const answeredCount = useMemo(
+    () => questions.filter((q) => (answers[q.code] ?? "").trim().length > 0).length,
+    [questions, answers],
+  );
+
+  function track(step: SurveySessionStep, position = 0): void {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+    void citizenService.recordSessionEvent(token, sessionId, {
+      step,
+      position,
+      answeredCount,
+    });
+  }
 
   // Duplicate submission is checked as soon as the participant provides
   // their contact details — before any OTP challenge (or any other record)
@@ -230,7 +276,14 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         setError(t("details.duplicateError"));
         return;
       }
-      const result = await citizenService.requestOtp(token, { contact, mobile });
+      // sessionId here is what gives the session a contact channel — the
+      // only thing that makes a completion reminder possible at all (see the
+      // backend's SurveyReminderService).
+      const result = await citizenService.requestOtp(token, {
+        contact,
+        mobile,
+        sessionId: sessionIdRef.current ?? undefined,
+      });
       setChallengeId(result.challengeId);
       setDevCode(result.codeTexted ? null : (result.code ?? null));
       setPhase("otp");
@@ -246,7 +299,11 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      await citizenService.verifyOtp(token, { challengeId, code });
+      await citizenService.verifyOtp(token, {
+        challengeId,
+        code,
+        sessionId: sessionIdRef.current ?? undefined,
+      });
       setQuestionIndex(0);
       // A survey with zero questions has nothing to show on the "questions"
       // phase (which unconditionally renders `questions[questionIndex]`) —
@@ -270,8 +327,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     setError(null);
     if (questionIndex + 1 < questions.length) {
       setQuestionIndex(questionIndex + 1);
+      // Recorded on each advance, so an abandoned sitting says WHERE it
+      // stopped rather than only that it did.
+      track("ANSWERING", questionIndex + 1);
     } else {
       setPhase("review");
+      track("REVIEW", questions.length);
     }
   }
 
@@ -305,6 +366,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         gender: gender || undefined,
         ageBracket,
         answers,
+        sessionId: sessionIdRef.current ?? undefined,
       });
       setTerminal("submitted");
     } catch (err) {

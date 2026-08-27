@@ -35,6 +35,15 @@ export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT13", // Executive Summary
   "RPT16", // Combined Evidence & Score Report
   "RPT17", // Evidence Document-Based Report
+  // RIO-RPT-001 acceptance criterion 1 — all six named report types must be
+  // generatable on demand. Their generators existed before this list did, so
+  // omitting them here was what actually made them unreachable: the backend
+  // would have served each one, but nothing in the UI could ask for it.
+  "RPT14", // Village Report
+  "RPT04", // Sector / Domain-wise Needs
+  "RPT06", // Region Report
+  "RPT03", // Top-Priority Report (RPT09 is the same generator under the BRD's other name)
+  "RPT10", // Data-Quality Report
 ];
 
 // Client-confirmed (Aug 13): "submitted" is its own status — a report
@@ -58,6 +67,11 @@ export const REPORT_TYPE_META: Record<
     // Survey-scoped types (RPT01/RPT15) — the Generate dialog shows a survey
     // picker for these, and the backend 400s with SURVEY_ID_REQUIRED without it.
     requiresSurveyId: boolean;
+    // OPTIONALLY survey-scoped (RPT10): study-wide by default, narrowable to
+    // one survey. The Generate dialog shows the picker with an explicit
+    // "all surveys" choice, and the report states which scope produced its
+    // figures. Mirrors the backend's REPORT_TYPE_META.
+    supportsSurveyId?: boolean;
   }
 > = {
   RPT01: {
@@ -73,9 +87,9 @@ export const REPORT_TYPE_META: Record<
     requiresSurveyId: false,
   },
   RPT03: {
-    name: "Top Needs View",
+    name: "Top-Priority Report",
     exportFormats: ["pdf", "excel"],
-    requiresStudyId: false,
+    requiresStudyId: true,
     requiresSurveyId: false,
   },
   RPT04: {
@@ -111,13 +125,17 @@ export const REPORT_TYPE_META: Record<
   RPT09: {
     name: "Priority Ranking",
     exportFormats: ["pdf", "excel"],
-    requiresStudyId: false,
+    requiresStudyId: true,
     requiresSurveyId: false,
   },
   RPT10: {
-    name: "Data Quality Indicators",
-    exportFormats: ["excel"],
-    requiresStudyId: false,
+    supportsSurveyId: true,
+    name: "Data-Quality Report",
+    // Both formats: the BRD's Reports & Dashboard sheet lists this one as
+    // Excel-only, but RIO-RPT-001 acceptance criterion 2 requires every report
+    // type to export to PDF *and* Excel. Mirrors the backend's REPORT_TYPE_META.
+    exportFormats: ["pdf", "excel"],
+    requiresStudyId: true,
     requiresSurveyId: false,
   },
   RPT11: {
