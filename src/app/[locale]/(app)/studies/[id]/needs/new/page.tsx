@@ -161,6 +161,8 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       .trim()
       .refine(
         (v) => v === "" || (/^\d+$/.test(v) && Number(v) <= MAX_AFFECTED_POPULATION),
+        tValidation("affectedPopulationInvalid"),
+      ),
     // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — "Roughly how many
     // people/households does this need affect?" Both optional, kept as
     // strings on the form so an empty field round-trips as "" rather than
@@ -432,6 +434,8 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                       {errors.affectedPopulation.message}
                     </p>
                   ) : null}
+                </div>
+
                 {/* RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — the
                     manually entered figure is the PRIMARY Affected
                     Population value; both are optional and independent. */}

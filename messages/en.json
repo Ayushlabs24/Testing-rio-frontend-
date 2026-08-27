@@ -2803,7 +2803,15 @@
       "domainList": "Domain: {domains}",
       "domainSingle": "Domain: {domain}",
       "descriptionFallback": "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights.",
-      "recalculateError": "Failed to recalculate priority score"
+      "recalculateError": "Failed to recalculate priority score",
+      "recalculateReason": {
+        "SURVEY_NOT_FOUND": "Recalculation could not run — the published survey for this need was not found.",
+        "NO_RESPONSES": "No survey responses have been submitted for this need yet, so there is nothing to score.",
+        "NO_METHODOLOGY_VERSION": "No methodology version is available for this survey, so priority could not be calculated.",
+        "NO_DOMAIN_PRIORITY_CONFIG": "Domain priority weights are not configured for this survey's methodology version, so priority could not be calculated.",
+        "NO_DOMAIN_ROLLUPS": "No domain-level severity scores matched the configured priority domains, so priority could not be calculated.",
+        "NO_RESULT": "Recalculation finished but produced no priority score."
+      }
     },
     "severityDashboard": {
       "filterLabel": "Governorate Filter",

@@ -138,11 +138,20 @@ export default function PriorityDetailInsightsPage({
   }
 
   async function handleScore() {
-    if (!survey) return;
+    // Unlike Tab 1, this button lives outside the `survey ? ... : ...` branch
+    // that hides the rest of the page when the Need has no PUBLISHED survey,
+    // so it is clickable with `survey === null`. Reporting that is the whole
+    // point — an early `return` here made the click a complete no-op: no
+    // spinner, no error, and the panel still reading "No priority score
+    // calculated for this need yet."
+    if (!survey) {
+      setError(t("noPublishedSurvey"));
+      return;
+    }
     setScoring(true);
     setError(null);
     try {
-      await severityScoringService.recalculate(survey.studyId, survey.id);
+      const outcome = await severityScoringService.recalculate(survey.studyId, survey.id);
       const result = await severityScoringService.getVillagePriority(
         survey.studyId,
         survey.id,
@@ -150,6 +159,16 @@ export default function PriorityDetailInsightsPage({
       );
       setPriorityV2(result);
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
+      // A run can succeed as an HTTP call and still compute nothing (no
+      // responses submitted yet, methodology reference data missing). Say
+      // which, rather than leaving the panel looking unchanged.
+      if (!result) {
+        setError(
+          outcome.reason
+            ? t(`recalculateReason.${outcome.reason}`)
+            : t("recalculateReason.NO_RESULT"),
+        );
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("recalculateError"));
     } finally {

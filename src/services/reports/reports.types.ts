@@ -29,9 +29,13 @@ export type ReportTypeCode = (typeof REPORT_TYPES)[number];
 // standards in front of the same reader. Their generators, contracts and
 // renderers are untouched — already-generated reports still open and export.
 // Re-listing a code here is all that is needed to bring one back.
+// RPT15 (Survey & Dashboard) is deliberately absent: hidden at the UI level
+// only. Its generator, contract, renderer and export path are untouched, so
+// already-generated RPT15 reports still open, export and share exactly as
+// before - this list governs nothing but what the Generate dialog offers.
+// Re-adding the code here brings it back.
 export const GENERATABLE_REPORT_TYPES: ReportTypeCode[] = [
   "RPT01", // Individual Survey Report (single survey)
-  "RPT15", // Survey & Dashboard Report
   "RPT13", // Executive Summary
   "RPT16", // Combined Evidence & Score Report
   "RPT17", // Evidence Document-Based Report

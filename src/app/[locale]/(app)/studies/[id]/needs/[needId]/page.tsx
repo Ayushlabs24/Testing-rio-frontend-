@@ -181,6 +181,8 @@ function NeedDetailsCard({
       .trim()
       .refine(
         (v) => v === "" || (/^\d+$/.test(v) && Number(v) <= MAX_AFFECTED_POPULATION),
+        tValidation("affectedPopulationInvalid"),
+      ),
     // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — kept as strings on
     // the form so an empty field round-trips as "" rather than NaN.
     affectedPeople: z
@@ -438,6 +440,8 @@ function NeedDetailsCard({
                   {errors.affectedPopulation.message}
                 </p>
               ) : null}
+            </div>
+
             {/* RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — the
                 manually entered figure is the PRIMARY Affected Population
                 value; both are optional and independent. */}
@@ -538,6 +542,8 @@ function NeedDetailsCard({
                   <span className="text-muted-foreground">—</span>
                 ) : (
                   need.affectedPopulation.toLocaleString()
+                )}
+              </FilledField>
               <FilledField label={t("affectedPeopleLabel")}>
                 {need.affectedPeople === null ? (
                   <span className="text-muted-foreground">—</span>

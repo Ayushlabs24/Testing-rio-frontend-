@@ -108,6 +108,18 @@ export interface VillagePriorityResult {
   methodologyVersion: string;
 }
 
+export type RecalculateReason =
+  | "SURVEY_NOT_FOUND"
+  | "NO_RESPONSES"
+  | "NO_METHODOLOGY_VERSION"
+  | "NO_DOMAIN_PRIORITY_CONFIG"
+  | "NO_DOMAIN_ROLLUPS";
+
+export interface RecalculateResult {
+  success: boolean;
+  reason?: RecalculateReason;
+}
+
 export const severityScoringService = {
   async listMethodologyVersions(): Promise<MethodologyVersion[]> {
     return apiClient.get<MethodologyVersion[]>("/methodology-versions");
@@ -175,8 +187,14 @@ export const severityScoringService = {
     );
   },
 
-  async recalculate(studyId: string, surveyId: string): Promise<{ success: boolean }> {
-    return apiClient.post<{ success: boolean }>(
+  /** `reason` is present only when `success` is false — the backend's
+   * recalculation pipeline has several legitimate "nothing to compute"
+   * exits (no responses submitted yet, methodology reference data missing
+   * for the survey's version, no domain rollups matching the configured
+   * domains) and reports which one it hit so the caller can say so instead
+   * of leaving the Priority Score panel unchanged with no explanation. */
+  async recalculate(studyId: string, surveyId: string): Promise<RecalculateResult> {
+    return apiClient.post<RecalculateResult>(
       `/studies/${studyId}/surveys/${surveyId}/recalculate`,
       {},
     );
