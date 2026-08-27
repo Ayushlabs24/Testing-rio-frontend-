@@ -11,6 +11,10 @@
  */
 export interface Study {
   id: string;
+  // RIO-RBAC-002 (client-confirmed, 2026-08-27 round) — System Admin is
+  // platform-wide; acting on an already-existing Study (e.g. adding a Need)
+  // needs to know which org to send as X-Act-As-Org. Always present.
+  orgId: string;
   title: string;
   villages: string[];
   // Mandatory multi-select subsets of the owning Organization's own

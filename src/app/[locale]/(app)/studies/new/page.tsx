@@ -10,9 +10,20 @@ import {
 } from "@/components/features/studies/study-form";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useOrgGovernorates } from "@/hooks/use-org-governorates";
 import { useOrgRegionName } from "@/hooks/use-org-region-name";
+import { organizationsService } from "@/services/organizations/organizations.service";
+import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import {
   severityScoringService,
   type MethodologyVersion,
@@ -24,8 +35,33 @@ import { studiesService } from "@/services/studies/studies.service";
 export default function NewStudyPage() {
   const t = useTranslations("app.studies.form");
   const router = useRouter();
-  const orgGovernorates = useOrgGovernorates();
-  const regionName = useOrgRegionName();
+  const { session } = useAuth();
+  // RIO-RBAC-002 (client-confirmed, 2026-08-27 round) — System Admin is
+  // platform-wide, not tied to one org, so it must explicitly choose which
+  // organisation a new Study belongs to. Every other role creates a Study
+  // under its own org, same as before — this selector never shows for them.
+  const isCrossEntity = session?.role.crossEntity === true;
+  const [orgs, setOrgs] = useState<OrganizationSummary[]>([]);
+  const [actAsOrgId, setActAsOrgId] = useState<string>("");
+
+  useEffect(() => {
+    if (!isCrossEntity) return;
+    let cancelled = false;
+    organizationsService
+      .listAll()
+      .then((all) => {
+        if (!cancelled) setOrgs(all);
+      })
+      .catch(() => {
+        // Non-fatal — the Select just renders with no options.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCrossEntity]);
+
+  const orgGovernorates = useOrgGovernorates(isCrossEntity ? actAsOrgId : undefined);
+  const regionName = useOrgRegionName(isCrossEntity ? actAsOrgId : undefined);
   const [methodologyVersions, setMethodologyVersions] = useState<MethodologyVersion[]>(
     [],
   );
@@ -68,16 +104,19 @@ export default function NewStudyPage() {
   }, []);
 
   const handleSubmit = async (values: StudyFormValues) => {
-    const study = await studiesService.create({
-      title: values.title,
-      governorateIds: values.governorateIds,
-      centerIds: values.centerIds,
-      methodologyVersionId: values.methodologyVersionId,
-      population: values.population,
-      marginOfError: values.marginOfError,
-      studyType: values.studyType ?? undefined,
-      targetSector: values.targetSector ?? undefined,
-    });
+    const study = await studiesService.create(
+      {
+        title: values.title,
+        governorateIds: values.governorateIds,
+        centerIds: values.centerIds,
+        methodologyVersionId: values.methodologyVersionId,
+        population: values.population,
+        marginOfError: values.marginOfError,
+        studyType: values.studyType ?? undefined,
+        targetSector: values.targetSector ?? undefined,
+      },
+      isCrossEntity ? actAsOrgId : undefined,
+    );
     // Go straight to the new study's detail page — it already exposes Add
     // Need / Import Needs / Import Survey Results directly, so the old
     // intermediate options screen was pure redundancy.
@@ -95,16 +134,36 @@ export default function NewStudyPage() {
       <PageContainer>
         <PageHeader title={t("createTitle")} description={t("createDescription")} />
         <Card>
-          <CardContent className="p-6">
-            <StudyForm
-              orgGovernorates={orgGovernorates}
-              regionName={regionName}
-              methodologyVersions={methodologyVersions}
-              studyTypes={studyTypes}
-              targetSectors={targetSectors}
-              onSubmit={handleSubmit}
-              onCancel={() => router.push("/studies")}
-            />
+          <CardContent className="space-y-6 p-6">
+            {isCrossEntity ? (
+              <div className="space-y-1.5">
+                <Label>{t("organizationLabel")}</Label>
+                <Select value={actAsOrgId} onValueChange={setActAsOrgId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t("organizationPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgs.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">{t("organizationHint")}</p>
+              </div>
+            ) : null}
+            {!isCrossEntity || actAsOrgId ? (
+              <StudyForm
+                orgGovernorates={orgGovernorates}
+                regionName={regionName}
+                methodologyVersions={methodologyVersions}
+                studyTypes={studyTypes}
+                targetSectors={targetSectors}
+                onSubmit={handleSubmit}
+                onCancel={() => router.push("/studies")}
+              />
+            ) : null}
           </CardContent>
         </Card>
       </PageContainer>

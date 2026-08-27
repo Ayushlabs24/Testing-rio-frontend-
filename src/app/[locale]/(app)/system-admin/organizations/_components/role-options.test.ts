@@ -30,4 +30,32 @@ describe("getAssignableOrganizationRoles", () => {
       "center_supervisor",
     ]);
   });
+
+  // Regression: the Invite User and Change Role dialogs originally fetched
+  // `GET /roles` raw via apiClient, typed as a local interface that *claimed*
+  // an `enabled: boolean`. The backend's RoleDef (rbac/role-matrix.ts) carries
+  // no such field — it is UI-only, synthesized by rolesService.list() from the
+  // local matrix. So every role arrived `enabled: undefined`, this filter
+  // dropped all of them, and both dropdowns rendered empty — leaving no way to
+  // assign Center Supervisor anywhere in the UI. The `.catch(() => setRoles([]))`
+  // in both dialogs made the failure indistinguishable from a normal empty list.
+  //
+  // This locks in the contract that made that a silent failure rather than a
+  // type error: callers MUST go through rolesService, never a raw apiClient.get.
+  it("drops every role when handed the raw backend shape, which has no `enabled` field", () => {
+    const rawBackendRole = (key: string, crossEntity = false) => ({
+      id: key,
+      key,
+      name: key,
+      crossEntity,
+    });
+
+    const result = getAssignableOrganizationRoles([
+      rawBackendRole("ngo_admin"),
+      rawBackendRole("research_lead"),
+      rawBackendRole("center_supervisor", true),
+    ] as Parameters<typeof getAssignableOrganizationRoles>[0]);
+
+    expect(result).toEqual([]);
+  });
 });

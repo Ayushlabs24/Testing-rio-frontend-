@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import type {
   CreateOrganizationPayload,
   Organization,
@@ -61,8 +62,13 @@ function toOrganizationSummary(api: ApiOrganizationSummary): OrganizationSummary
 }
 
 export const organizationsService = {
-  async getCurrent(): Promise<Organization> {
-    const api = await apiClient.get<ApiOrganization>(endpoints.organizations.current);
+  // `actAsOrgId` — System Admin only (see act-as-org.ts) — resolves "current"
+  // to the chosen org instead of System Admin's own platform-only home org.
+  async getCurrent(actAsOrgId?: string): Promise<Organization> {
+    const api = await apiClient.get<ApiOrganization>(
+      endpoints.organizations.current,
+      actAsOrgOptions(actAsOrgId),
+    );
     return toOrganization(api);
   },
 

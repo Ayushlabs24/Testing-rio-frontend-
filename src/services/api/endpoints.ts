@@ -200,6 +200,10 @@ export const endpoints = {
     activateDecisionType: (id: string) => `/study-config/decision-types/${id}/activate`,
     deactivateDecisionType: (id: string) =>
       `/study-config/decision-types/${id}/deactivate`,
+    gapTypes: "/study-config/gap-types",
+    gapTypeById: (id: string) => `/study-config/gap-types/${id}`,
+    activateGapType: (id: string) => `/study-config/gap-types/${id}/activate`,
+    deactivateGapType: (id: string) => `/study-config/gap-types/${id}/deactivate`,
   },
   publicSurveys: {
     // Admin/authenticated side (Publish Survey + Generate QR) — each Need
@@ -321,6 +325,8 @@ export const endpoints = {
   },
   methodologyConfig: {
     get: "/methodology-config",
+    approve: "/methodology-config/approve",
+    reject: "/methodology-config/reject",
     publish: "/methodology-config/publish",
     versions: "/methodology-config/versions",
     history: "/methodology-config/history",

@@ -2,6 +2,7 @@ import { studies } from "@/mocks/data/studies";
 import { mockDelay } from "@/mocks/utils";
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import type {
   CreateStudyPayload,
   ListStudiesParams,
@@ -45,8 +46,15 @@ export const studiesService = {
     return apiClient.get<StudyDetail>(endpoints.studies.byId(id));
   },
 
-  async create(payload: CreateStudyPayload): Promise<Study> {
-    return apiClient.post<Study>(endpoints.studies.create, payload);
+  // `actAsOrgId` — System Admin only (see act-as-org.ts) — creates the
+  // Study under the chosen org instead of System Admin's own platform-only
+  // home org.
+  async create(payload: CreateStudyPayload, actAsOrgId?: string): Promise<Study> {
+    return apiClient.post<Study>(
+      endpoints.studies.create,
+      payload,
+      actAsOrgOptions(actAsOrgId),
+    );
   },
 
   async update(id: string, payload: UpdateStudyPayload): Promise<Study> {

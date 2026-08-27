@@ -217,27 +217,32 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      const created = await needsService.create(studyId, {
-        // Blank stays blank here — the fallback-from-statement derivation
-        // happens server-side, not by pre-filling the field ourselves.
-        title: values.title || undefined,
-        statement: values.statement,
-        village: values.village,
-        governorateIds: values.governorateIds,
-        centerIds: values.centerIds,
-        // Blank stays absent rather than becoming 0 — the Top-Priority Report
-        // distinguishes "no estimate given" (a dash) from "nobody affected".
-        affectedPopulation:
-          values.affectedPopulation === ""
-            ? undefined
-            : Number(values.affectedPopulation),
-        affectedPeople:
-          values.affectedPeople === "" ? undefined : Number(values.affectedPeople),
-        affectedHouseholds:
-          values.affectedHouseholds === ""
-            ? undefined
-            : Number(values.affectedHouseholds),
-      });
+      const created = await needsService.create(
+        studyId,
+        {
+          // Blank stays blank here — the fallback-from-statement derivation
+          // happens server-side, not by pre-filling the field ourselves.
+          title: values.title || undefined,
+          statement: values.statement,
+          village: values.village,
+          governorateIds: values.governorateIds,
+          centerIds: values.centerIds,
+          // Blank stays absent rather than becoming 0 — the Top-Priority Report
+          // distinguishes "no estimate given" (a dash) from "nobody affected".
+          affectedPopulation:
+            values.affectedPopulation === ""
+              ? undefined
+              : Number(values.affectedPopulation),
+          affectedPeople:
+            values.affectedPeople === "" ? undefined : Number(values.affectedPeople),
+          affectedHouseholds:
+            values.affectedHouseholds === ""
+              ? undefined
+              : Number(values.affectedHouseholds),
+        },
+        // Always the Study's own org — see needsService.create's comment.
+        study?.orgId,
+      );
       // The Need itself is already saved at this point — a failed upload
       // must never block navigating to it (and definitely must never cause
       // a second, duplicate Need to get created by leaving the form up for

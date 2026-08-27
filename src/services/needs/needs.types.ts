@@ -54,6 +54,10 @@ export type NeedSource =
 export interface Need {
   id: string;
   studyId: string;
+  // RIO-RBAC-002 (client-confirmed, 2026-08-27 round) — same reasoning as
+  // Study.orgId: needed for System Admin to send X-Act-As-Org when acting
+  // on this Need (e.g. creating a Public Survey Link). Always present.
+  orgId: string;
   title: string;
   statement: string;
   village: string[];

@@ -16,7 +16,7 @@ export interface ConfidenceFlagSettings {
   minRespondentsForStandardConfidence: number;
 }
 
-export type MethodologyStatus = "draft" | "published";
+export type MethodologyStatus = "draft" | "pending_approval" | "approved" | "published";
 
 export interface MethodologyConfig {
   id: string;
@@ -24,6 +24,9 @@ export interface MethodologyConfig {
   status: MethodologyStatus;
   publishedByName: string | null;
   publishedAt: string | null;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
   priorityThresholds: PriorityThresholds;
   priorityFactorWeights: PriorityFactorWeight[];
   confidenceFlagSettings: ConfidenceFlagSettings;
@@ -31,12 +34,12 @@ export interface MethodologyConfig {
   updatedByName: string | null;
 }
 
-// RIO-NFR-017 — one immutable snapshot per edit/publish, newest first.
+// RIO-NFR-017 — one immutable snapshot per edit/approve/reject/publish, newest first.
 export interface MethodologyConfigHistoryEntry {
   id: string;
   version: string;
   status: MethodologyStatus;
-  changeType: "edit" | "publish";
+  changeType: "edit" | "approve" | "reject" | "publish";
   priorityThresholds: PriorityThresholds;
   priorityFactorWeights: PriorityFactorWeight[];
   confidenceFlagSettings: ConfidenceFlagSettings;

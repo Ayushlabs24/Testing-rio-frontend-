@@ -21,19 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { rolesService } from "@/services/roles/roles.service";
+import type { RoleSummary } from "@/services/roles/roles.types";
 import { usersService } from "@/services/users/users.service";
 import type { OrgUser } from "@/services/users/users.types";
-import { apiClient } from "@/services/api/client";
-import { endpoints } from "@/services/api/endpoints";
 import { getAssignableOrganizationRoles } from "./role-options";
-
-interface RoleOption {
-  id: string;
-  key: string;
-  name: string;
-  enabled: boolean;
-  crossEntity: boolean;
-}
 
 interface ChangeRoleDialogProps {
   organizationId: string;
@@ -52,7 +44,7 @@ export function ChangeRoleDialog({
 }: ChangeRoleDialogProps) {
   const t = useTranslations("systemAdmin.users.changeRoleDialog");
 
-  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [reason, setReason] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -61,8 +53,13 @@ export function ChangeRoleDialog({
   useEffect(() => {
     let isMounted = true;
     if (open && user) {
-      apiClient
-        .get<RoleOption[]>(endpoints.roles.list)
+      // Must go through rolesService, NOT a raw apiClient.get on
+      // endpoints.roles.list — see the same note in invite-user-dialog.tsx:
+      // `enabled` is a UI-only field the backend's RoleDef does not carry,
+      // so fetching raw left every role falsy-filtered out of
+      // getAssignableOrganizationRoles and emptied this dropdown.
+      rolesService
+        .list()
         .then((allRoles) => {
           if (isMounted) {
             setSelectedRoleId(user.role.id);
@@ -72,13 +69,16 @@ export function ChangeRoleDialog({
           }
         })
         .catch(() => {
-          if (isMounted) setRoles([]);
+          if (isMounted) {
+            setRoles([]);
+            setErrorMsg(t("roleLoadError"));
+          }
         });
     }
     return () => {
       isMounted = false;
     };
-  }, [open, user]);
+  }, [open, user, t]);
 
   if (!user) return null;
 

@@ -21,18 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { rolesService } from "@/services/roles/roles.service";
+import type { RoleSummary } from "@/services/roles/roles.types";
 import { usersService } from "@/services/users/users.service";
-import { apiClient } from "@/services/api/client";
-import { endpoints } from "@/services/api/endpoints";
 import { getAssignableOrganizationRoles } from "./role-options";
-
-interface RoleOption {
-  id: string;
-  key: string;
-  name: string;
-  enabled: boolean;
-  crossEntity: boolean;
-}
 
 interface InviteUserDialogProps {
   organizationId: string;
@@ -54,7 +46,7 @@ export function InviteUserDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("");
-  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<{
@@ -65,8 +57,15 @@ export function InviteUserDialog({
 
   useEffect(() => {
     if (open) {
-      apiClient
-        .get<RoleOption[]>(endpoints.roles.list)
+      // Must go through rolesService, NOT a raw apiClient.get on
+      // endpoints.roles.list: `enabled` is a UI-only field the backend's
+      // RoleDef does not carry (see role-matrix.ts), synthesized here by
+      // joining the local matrix. Fetching raw left every role with
+      // `enabled: undefined`, which getAssignableOrganizationRoles filters
+      // out as falsy — emptying this dropdown entirely and leaving no way
+      // to assign Center Supervisor anywhere in the UI.
+      rolesService
+        .list()
         .then((allRoles) => {
           // Filter out System Admin role for organization user management
           const filtered = getAssignableOrganizationRoles(allRoles);
@@ -75,9 +74,12 @@ export function InviteUserDialog({
             setRoleId(filtered[0].id);
           }
         })
-        .catch(() => setRoles([]));
+        .catch(() => {
+          setRoles([]);
+          setErrorMsg(t("roleLoadError"));
+        });
     }
-  }, [open]);
+  }, [open, t]);
 
   const resetForm = () => {
     setName("");

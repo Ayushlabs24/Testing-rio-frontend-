@@ -522,14 +522,25 @@
           "statusLabel": "Status",
           "status": {
             "draft": "Draft",
+            "pending_approval": "Pending approval",
+            "approved": "Approved",
             "published": "Published"
           },
           "publishedByLabel": "Published by",
           "publishedAtLabel": "Published date",
           "lastUpdatedLabel": "Last updated",
+          "reviewerNoteLabel": "Reviewer note",
           "editVersion": "Edit version",
           "publish": "Publish",
           "publishing": "Publishing...",
+          "approve": "Approve",
+          "reject": "Reject",
+          "approveDialogTitle": "Approve methodology configuration",
+          "rejectDialogTitle": "Reject methodology configuration",
+          "reviewerNotesLabel": "Reviewer notes",
+          "reviewerNotesRequired": "Reviewer notes are required.",
+          "confirmApprove": "Confirm approval",
+          "confirmReject": "Confirm rejection",
           "thresholdsHeading": "Priority Thresholds",
           "thresholdsNote": "Severity cutoffs Priority Dashboard's placeholder scoring uses to classify Critical/High/Medium/Low — see scope.md §8.",
           "criticalSeverityLabel": "Critical severity (Health/Water only)",
@@ -558,6 +569,8 @@
           "targetSectorsNote": "Configurable values offered when creating a Study, distinct from methodology Domain/Sub-domain. Interim placeholders — rename or replace them once the final list is confirmed.",
           "decisionTypesHeading": "Decision Types",
           "decisionTypesNote": "Configurable values offered when logging a Need decision (Intervention, Escalation, Follow-up by default). Add more as needed — e.g. Referral, Deferred, No Action Needed.",
+          "gapTypesHeading": "Gap Types",
+          "gapTypesNote": "Configurable values offered when classifying a Need's gap type on the Priority Dashboard (Acute, Chronic, Structural, Seasonal, Equity by default).",
           "noOptionsYet": "No values yet.",
           "optionActive": "Active",
           "optionInactive": "Inactive",
@@ -581,6 +594,8 @@
           "historyPageLabel": "Page {page} of {count}",
           "historyChangeType": {
             "edit": "Edited",
+            "approve": "Approved",
+            "reject": "Rejected",
             "publish": "Published"
           },
           "optionStatusLabel": "Status",
@@ -1874,6 +1889,9 @@
       "form": {
         "createTitle": "New study",
         "createDescription": "Give the study a title — define its need and evidence afterward.",
+        "organizationLabel": "Organization",
+        "organizationPlaceholder": "Select the organization this study belongs to",
+        "organizationHint": "As System Admin, choose which organization this study belongs to — its Governorates/Centers below will match that organization's own scope.",
         "editTitle": "Edit study",
         "editDescription": "Title is the only field you can change here.",
         "titleLabel": "Study title",
@@ -2794,6 +2812,18 @@
         "weight": "Weight",
         "weightedContribution": "Weighted Contribution"
       },
+      "scoreComponents": {
+        "title": "Score Components",
+        "pendingNote": "Urgency and Theme show placeholder values until RIO-FR-003's scoring engine produces them — Severity and Affected Group Size are already live data.",
+        "severity": "Severity",
+        "urgency": "Urgency",
+        "affectedGroupSize": "Affected Group Size",
+        "theme": "Theme",
+        "placeholderBadge": "Placeholder",
+        "affectedGroupSizeEmpty": "Not recorded",
+        "people": "{count} people",
+        "households": "{count} households"
+      },
       "noAssessment": "No response quality assessment run yet. Click \"Run Quality Assessment\" above to run checks.",
       "noPublishedSurvey": "No published survey for this need yet.",
       "noPriorityCalculated": "No priority score calculated for this need yet. Click \"Recalculate Priority\" above to compute.",
@@ -3187,7 +3217,8 @@
         "temporaryPasswordEmailed": "A temporary password has been emailed to them. They'll be asked to set their own password the first time they sign in.",
         "temporaryPasswordNotEmailed": "Email delivery isn't configured yet, so here's their temporary password — share it with them securely:",
         "temporaryPasswordHint": "They'll be asked to set their own password the first time they sign in.",
-        "done": "Done"
+        "done": "Done",
+        "roleLoadError": "Couldn't load roles. Please close this dialog and try again."
       },
       "changeRoleDialog": {
         "title": "Change User Role",
@@ -3201,7 +3232,8 @@
         "submitting": "Updating...",
         "cancel": "Cancel",
         "successToast": "User role updated successfully",
-        "errorToast": "Failed to update user role"
+        "errorToast": "Failed to update user role",
+        "roleLoadError": "Couldn't load roles. Please close this dialog and try again."
       },
       "disableDialog": {
         "title": "Disable User Account?",

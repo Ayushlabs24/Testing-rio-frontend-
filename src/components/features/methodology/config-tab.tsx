@@ -1,11 +1,12 @@
 "use client";
 
-import { CheckCircle2, Pencil, Plus } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, ShieldCheck, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
 import {
   Dialog,
   DialogContent,
@@ -59,10 +60,12 @@ const WEIGHT_SUM_TOLERANCE = 0.01;
 function VersionCard({
   config,
   canWrite,
+  canApprove,
   onChanged,
 }: {
   config: MethodologyConfig;
   canWrite: boolean;
+  canApprove: boolean;
   onChanged: (updated: MethodologyConfig) => void;
 }) {
   const t = useTranslations("app.settings.methodology.config");
@@ -71,6 +74,9 @@ function VersionCard({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reviewDialogMode, setReviewDialogMode] = useState<"approve" | "reject" | null>(
+    null,
+  );
 
   async function saveVersion() {
     setSaving(true);
@@ -97,6 +103,19 @@ function VersionCard({
       // affordance (the button just stays enabled) is acceptable here.
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleReviewConfirm(notes: string) {
+    try {
+      const updated =
+        reviewDialogMode === "approve"
+          ? await methodologyConfigService.approve(notes)
+          : await methodologyConfigService.reject(notes);
+      onChanged(updated);
+      setReviewDialogMode(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
     }
   }
 
@@ -129,7 +148,11 @@ function VersionCard({
               className={
                 config.status === "published"
                   ? "bg-badge-success text-badge-success-foreground border-transparent"
-                  : undefined
+                  : config.status === "approved"
+                    ? "bg-badge-info text-badge-info-foreground border-transparent"
+                    : config.status === "pending_approval"
+                      ? "bg-badge-warning text-badge-warning-foreground border-transparent"
+                      : undefined
               }
             >
               {t(`status.${config.status}`)}
@@ -158,18 +181,79 @@ function VersionCard({
             </p>
           </div>
         </div>
-        {canWrite && config.status === "draft" ? (
-          <Button
-            size="sm"
-            className="mt-4 gap-1.5"
-            onClick={publish}
-            disabled={publishing}
-          >
-            <CheckCircle2 className="size-3.5" />
-            {publishing ? t("publishing") : t("publish")}
-          </Button>
+
+        {config.status === "approved" || config.reviewedByName ? (
+          <div className="bg-muted/50 mt-4 rounded-md p-3">
+            <p className="text-muted-foreground text-xs">{t("reviewerNoteLabel")}</p>
+            <p className="text-foreground mt-1 text-sm">
+              {config.reviewNotes ?? "—"}
+              {config.reviewedByName ? (
+                <span className="text-muted-foreground">
+                  {" — "}
+                  {config.reviewedByName}
+                  {config.reviewedAt ? (
+                    <>
+                      {" · "}
+                      <FormattedDate value={config.reviewedAt} withTime />
+                    </>
+                  ) : null}
+                </span>
+              ) : null}
+            </p>
+          </div>
         ) : null}
+
+        {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {canApprove && config.status === "pending_approval" ? (
+            <>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setReviewDialogMode("approve")}
+              >
+                <ShieldCheck className="size-3.5" />
+                {t("approve")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive hover:text-destructive gap-1.5"
+                onClick={() => setReviewDialogMode("reject")}
+              >
+                <XCircle className="size-3.5" />
+                {t("reject")}
+              </Button>
+            </>
+          ) : null}
+
+          {canWrite && config.status === "approved" ? (
+            <Button size="sm" className="gap-1.5" onClick={publish} disabled={publishing}>
+              <CheckCircle2 className="size-3.5" />
+              {publishing ? t("publishing") : t("publish")}
+            </Button>
+          ) : null}
+        </div>
       </CardContent>
+
+      <RejectReasonDialog
+        open={reviewDialogMode !== null}
+        onOpenChange={(open) => !open && setReviewDialogMode(null)}
+        onConfirm={handleReviewConfirm}
+        title={
+          reviewDialogMode === "approve"
+            ? t("approveDialogTitle")
+            : t("rejectDialogTitle")
+        }
+        reasonLabel={t("reviewerNotesLabel")}
+        reasonRequiredError={t("reviewerNotesRequired")}
+        cancelLabel={t("cancel")}
+        confirmLabel={
+          reviewDialogMode === "approve" ? t("confirmApprove") : t("confirmReject")
+        }
+        confirmVariant={reviewDialogMode === "approve" ? "default" : "destructive"}
+      />
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
@@ -566,6 +650,7 @@ function ConfigurableOptionsCard({
 export function MethodologyConfigTab() {
   const t = useTranslations("app.settings.methodology.config");
   const canWrite = usePermission("methodologyQuestionBank", "write");
+  const canApprove = usePermission("methodologyQuestionBank", "approve");
 
   const [config, setConfig] = useState<MethodologyConfig | null>(null);
   const [thresholds, setThresholds] = useState({
@@ -690,7 +775,12 @@ export function MethodologyConfigTab() {
         </div>
       ) : null}
 
-      <VersionCard config={config} canWrite={canWrite} onChanged={applyConfig} />
+      <VersionCard
+        config={config}
+        canWrite={canWrite}
+        canApprove={canApprove}
+        onChanged={applyConfig}
+      />
       <ConfigHistoryCard />
 
       <Card>
@@ -904,6 +994,21 @@ export function MethodologyConfigTab() {
         create={studyConfigService.createDecisionType}
         update={studyConfigService.updateDecisionType}
         setActive={studyConfigService.setDecisionTypeActive}
+      />
+
+      {/* Client correction (2026-08-27), superseding RIO-FR-005 Q12's
+          "five fixed values, final, no additions" — Gap Types now belongs
+          in the same configurable-list family as Study Types/Target
+          Sectors/Decision Types above. Seeded with the 5 original values
+          so existing Need.gapType data keeps working unchanged. */}
+      <ConfigurableOptionsCard
+        heading={t("gapTypesHeading")}
+        note={t("gapTypesNote")}
+        canWrite={canWrite}
+        list={studyConfigService.listGapTypes}
+        create={studyConfigService.createGapType}
+        update={studyConfigService.updateGapType}
+        setActive={studyConfigService.setGapTypeActive}
       />
     </div>
   );
