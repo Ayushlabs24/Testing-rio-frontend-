@@ -59,6 +59,11 @@ function alertHref(alert: SlaAlert): string {
   if (alert.type === "evidence_document_uploaded") {
     return `/priority-dashboard/${alert.needId}`;
   }
+  // RIO-AI-003 — deliberately the QUEUE, not this one need. Summaries arrive
+  // in bursts (one bulk import produces one per imported need), and the queue
+  // is the only place they can be confirmed together. Linking to the single
+  // need would make a 50-row import 50 page visits.
+  if (alert.type === "need_summary_approval") return "/need-summaries";
   return `/survey-builder/${alert.needId}`;
 }
 
@@ -80,7 +85,15 @@ export default function ReviewerSlaPage() {
   // "queue" framing (Due/Status columns, "Review now") rather than the "My
   // Submissions" framing meant for someone reviewing their own past work.
   const canGenerateEvidenceSummary = usePermission("priorityScoring", "create");
-  const canApprove = canApproveSurveys || canApproveReports || canGenerateEvidenceSummary;
+  // Same reasoning as evidence above: aiReview:approve is an org-wide to-do
+  // queue (need_summary_approval, gated on this exact grant backend-side), so
+  // it belongs in the "queue" framing rather than "My Submissions".
+  const canConfirmNeedSummaries = usePermission("aiReview", "approve");
+  const canApprove =
+    canApproveSurveys ||
+    canApproveReports ||
+    canGenerateEvidenceSummary ||
+    canConfirmNeedSummaries;
   const [config, setConfig] = useState<SlaConfig | null>(null);
   const [alerts, setAlerts] = useState<SlaAlert[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -192,9 +205,14 @@ export default function ReviewerSlaPage() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    {/* Type column hidden for now — t("typeColumn")/t(`type.${alert.type}`) still exist, just not rendered. */}
-                    <TableHead className="w-[22%]">{t("studyColumn")}</TableHead>
-                    <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
+                    {/* Un-hidden for RIO-AI-003. This table now routes to four
+                        different destinations (survey builder, report detail,
+                        priority dashboard, need-summary queue) and "Review now"
+                        looks identical in every row — without the type, the
+                        reviewer cannot tell what they are about to open. */}
+                    <TableHead className="w-44">{t("typeColumn")}</TableHead>
+                    <TableHead className="w-[18%]">{t("studyColumn")}</TableHead>
+                    <TableHead className="w-[18%]">{t("needColumn")}</TableHead>
                     <TableHead className="w-40">{t("createdColumn")}</TableHead>
                     {/* Due/breach only applies to the still-open Approver
                         queue — a Research Officer's alerts are already
@@ -216,7 +234,7 @@ export default function ReviewerSlaPage() {
                   {alerts === null ? (
                     Array.from({ length: 3 }).map((_, index) => (
                       <TableRow key={index}>
-                        {Array.from({ length: canApprove ? 6 : 4 }).map((__, cell) => (
+                        {Array.from({ length: canApprove ? 7 : 5 }).map((__, cell) => (
                           <TableCell key={cell} className="py-4">
                             <div className="bg-muted h-4 w-24 rounded" />
                           </TableCell>
@@ -226,7 +244,7 @@ export default function ReviewerSlaPage() {
                   ) : alerts.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={canApprove ? 6 : 4}
+                        colSpan={canApprove ? 7 : 5}
                         className="text-muted-foreground h-32 text-center"
                       >
                         <div className="flex flex-col items-center gap-2.5">
@@ -246,7 +264,9 @@ export default function ReviewerSlaPage() {
                   ) : (
                     pagedAlerts.map((alert) => (
                       <TableRow key={alert.id}>
-                        {/* Type cell hidden for now — see the matching header comment above. */}
+                        <TableCell className="text-muted-foreground py-4 align-top text-sm break-words whitespace-normal">
+                          {t(`type.${alert.type}`)}
+                        </TableCell>
                         <TableCell className="py-4 align-top text-sm font-medium break-words whitespace-normal">
                           <Link href={alertHref(alert)} className="hover:underline">
                             {alert.studyTitle}

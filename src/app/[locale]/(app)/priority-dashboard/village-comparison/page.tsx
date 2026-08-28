@@ -110,6 +110,7 @@ export default function VillageComparisonPage() {
                     <TableHead>{t("columns.totalNeeds")}</TableHead>
                     <TableHead>{t("columns.affectedPopulation")}</TableHead>
                     <TableHead>{t("columns.needTypes")}</TableHead>
+                    <TableHead>{t("columns.domainSeverity")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -162,6 +163,27 @@ export default function VillageComparisonPage() {
                             </Badge>
                           ))}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {entry.domainComponents === null ||
+                        entry.domainComponents.length === 0 ? (
+                          <span className="text-muted-foreground text-xs">
+                            {t("noDomainData")}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {entry.domainComponents.map((dc) => (
+                              <Badge
+                                key={dc.domainKey}
+                                variant={dc.triggeredOverride ? "destructive" : "outline"}
+                                className="text-xs"
+                              >
+                                {dc.domainNameSnapshot}:{" "}
+                                {Math.round(dc.domainSeverityScore)}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

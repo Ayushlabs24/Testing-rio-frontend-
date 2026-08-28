@@ -529,6 +529,7 @@
           "publishedByLabel": "نُشر بواسطة",
           "publishedAtLabel": "تاريخ النشر",
           "lastUpdatedLabel": "آخر تحديث",
+          "versionNote": "هذا التصنيف هو تسمية مرجعية فقط، وليس إصدارًا يمكن التبديل بينه — نشر عتبات أو أوزان أو مقاييس جديدة أدناه يؤثر فورًا على كل عملية حساب درجة مستقبلية. الدرجات السابقة لا تُحفظ مرتبطة بالإصدار الذي أنتجها؛ راجع سجل التغييرات لمعرفة ما تغيّر ومتى.",
           "reviewerNoteLabel": "ملاحظة المراجع",
           "editVersion": "تعديل الإصدار",
           "publish": "نشر",
@@ -551,6 +552,29 @@
           "factorWeightsNote": "العوامل التسعة القابلة للتهيئة وراء درجة الأولوية المبدئية — اضبط وزن كل عامل كنسبة مئوية من الدرجة الإجمالية؛ يجب أن يبلغ مجموع الأوزان 100٪.",
           "weightSumNote": "إجمالي الوزن: {sum}٪ (يجب أن يكون 100٪)",
           "weightSumError": "يجب أن يساوي إجمالي الوزن 100٪ بالضبط.",
+          "factorScalesHeading": "مقاييس عوامل الأولوية",
+          "factorScalesNote": "كيف تتحول قيمة خام إلى القيمة من 0 إلى 100 التي يضربها كل وزن عامل أعلاه — مثلاً ما تساويه \"450 شخصًا متأثرًا\" من أصل 100.",
+          "factorScalesRangesHeading": "نطاقات التحويل",
+          "factorScalesAffectedPopulationLabel": "عدد السكان المتأثرين",
+          "factorScalesGeographicCoverageLabel": "التغطية الجغرافية",
+          "factorScalesFrequencyLabel": "تكرار الاحتياجات المماثلة",
+          "factorScalesFloorLabel": "الحد الأدنى",
+          "factorScalesCeilingLabel": "الحد الأقصى",
+          "factorScalesToLabel": "إلى",
+          "factorScalesFloorAria": "الحد الأدنى لـ {label}",
+          "factorScalesCeilingAria": "الحد الأقصى لـ {label}",
+          "factorScalesRangeError": "يجب أن يكون الحد الأقصى أكبر من الحد الأدنى.",
+          "factorScalesUrgencyHeading": "مقياس الإلحاح",
+          "factorScalesUrgencyLevel": {
+            "immediate": "فوري",
+            "this_cycle": "هذه الدورة",
+            "next_cycle": "الدورة القادمة",
+            "no_fixed_timeline": "بلا إطار زمني محدد"
+          },
+          "factorScalesEquitySpreadLabel": "عتبة التفاوت في الإنصاف",
+          "factorScalesEquitySpreadNote": "مدى اتساع الفجوة بين شرائح المستجيبين (الجنس، العمر، الإعاقة) التي تُعتبر عدم إنصاف، على نفس المقياس من 0 إلى 100.",
+          "factorScalesStrategicAxesHeading": "المحاور الاستراتيجية",
+          "factorScalesAxisValueAria": "قيمة {label}",
           "flagsHeading": "أعلام الثقة",
           "flagsNote": "عندما تُخالف استجابات إحدى الدراسات أيًا من القاعدتين، يُضبط علم ثقة جودة الاستجابة لها على \"منخفض\".",
           "dontKnowRatioLabel": "عتبة نسبة \"لا أعرف\" (0–1)",
@@ -563,6 +587,20 @@
           "factorColumnLabel": "العامل",
           "weightColumnLabel": "الوزن",
           "weightTotalLabel": "الإجمالي",
+          "aiConfidenceHeading": "ثقة تصنيف الذكاء الاصطناعي",
+          "aiConfidenceNote": "عندما تقل ثقة اقتراح المجال المقدّم من الذكاء الاصطناعي عن هذه الحدود، تُبرزه شاشة المراجعة لمزيد من الانتباه. تُدخل كنسبة مئوية من الثقة التي يبلّغ عنها النموذج.",
+          "aiLowConfidenceLabel": "ثقة منخفضة تحت (%)",
+          "aiLowConfidenceHint": "الاقتراحات تحت هذا الحد تُعلَّم لمراجعة أدق.",
+          "aiVeryLowConfidenceLabel": "ثقة منخفضة جدًا تحت (%)",
+          "aiVeryLowConfidenceHint": "الاقتراحات تحت هذا الحد تحصل على أقوى تحذير.",
+          "aiConfidenceOrderError": "يجب أن يكون حد الثقة المنخفضة جدًا أقل من حد الثقة المنخفضة.",
+          "aiSummaryHeading": "اقتراحات ملخص الاحتياج",
+          "aiSummaryNote": "عندما يكون وصف الاحتياج أطول من هذا الحد، يقترح النظام نسخة أقصر ليقوم المراجع بتعديلها واعتمادها. يُحتفظ دائمًا بالوصف الأصلي. ينطبق العدد نفسه من الأحرف على جميع اللغات.",
+          "aiSummaryThresholdLabel": "اقتراح ملخص عند تجاوز (عدد الأحرف)",
+          "aiSummaryThresholdHint": "الأوصاف الأقصر من هذا الحد تُترك كما كُتبت.",
+          "aiSummaryMaxLabel": "الحد الأقصى لطول الملخص (عدد الأحرف)",
+          "aiSummaryMaxHint": "لن يتجاوز الملخص المقترح هذا الطول.",
+          "aiSummaryOrderError": "يجب أن يكون الحد الأقصى لطول الملخص أقل من الطول الذي يستدعي إنشاء ملخص.",
           "studyTypesHeading": "أنواع الدراسة",
           "studyTypesNote": "القيم القابلة للتهيئة المعروضة عند إنشاء دراسة. قيم مؤقتة — يمكن إعادة تسميتها أو استبدالها عند تأكيد القائمة النهائية.",
           "targetSectorsHeading": "القطاعات المستهدفة",
@@ -599,7 +637,9 @@
             "publish": "تم النشر"
           },
           "optionStatusLabel": "الحالة",
-          "optionActionsLabel": "الإجراءات"
+          "optionActionsLabel": "الإجراءات",
+          "needThemesHeading": "مواضيع الاحتياجات",
+          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية."
         },
         "questions": {
           "filterDomain": "المجال",
@@ -1028,6 +1068,11 @@
           "confirm_document_summary": "تأكيد ملخص المستند",
           "generate_combined_summary": "إنشاء الملخص المجمّع",
           "confirm_combined_summary": "تأكيد الملخص المجمّع",
+          "generate_need_summary": "اقتُرح ملخص الاحتياج",
+          "edit_need_summary": "عُدّل ملخص الاحتياج",
+          "confirm_need_summary": "اعتُمد ملخص الاحتياج",
+          "extract_need_themes": "استُخرجت مواضيع الاحتياج",
+          "override_priority_score": "عُدّلت درجة الأولوية",
           "export": "تصدير",
           "SYSTEM_ADMIN_VIEWED_AUDIT_LOGS": "عرض سجلات التدقيق",
           "SYSTEM_ADMIN_ASSIGNED_NGO_ADMIN": "تعيين مسؤول كيان",
@@ -1102,7 +1147,32 @@
       "summaryLow": "منخفضة",
       "notScoredBadge": "لم يُسجَّل بعد",
       "statusColumn": "حالة الدراسة",
-      "viewMatrix": "عرض المصفوفة"
+      "viewMatrix": "عرض المصفوفة",
+      "breakdown": {
+        "heading": "تفصيل درجة الأولوية",
+        "modelNote": "المتوسط المرجّح لعوامل الأولوية المضبوطة، منهجية {version}.",
+        "noVersion": "لم تُسجّل النسخة",
+        "computedWas": "احتسب النظام {value}",
+        "partialCoverage": "محسوبة على {percent}% من العوامل المضبوطة. البقية لا توجد لها بيانات بعد، وقد استُبعدت بدل احتسابها صفرًا.",
+        "overriddenHeading": "عُدّلت من قبل المراجع",
+        "colFactor": "العامل",
+        "colWeight": "الوزن",
+        "colValue": "القيمة",
+        "colContribution": "المساهمة",
+        "notMeasured": "غير مقاسة",
+        "approved": "معتمدة",
+        "awaitingSignOff": "بانتظار الاعتماد",
+        "overrideAction": "تعديل الدرجة",
+        "overrideTitle": "تعديل الدرجة المحتسبة",
+        "overrideDescription": "ستحل درجتك محل الدرجة المحتسبة في كل ترتيب وتقرير. تُحفظ الدرجة المحتسبة وسببك معًا في السجل.",
+        "overrideScoreLabel": "درجتك (0-100)",
+        "overrideScoreHint": "احتسب النظام {computed}.",
+        "overrideReasonLabel": "سبب التعديل",
+        "overrideReasonHint": "مطلوب. هذا ما سيقرأه من يسأل لاحقًا عن سبب تغيّر الرقم.",
+        "overrideConfirm": "حفظ التعديل",
+        "cancel": "إلغاء",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      }
     },
     "villageComparison": {
       "title": "مقارنة القرى",
@@ -1127,8 +1197,10 @@
         "affectedPopulation": "السكان المتأثرون",
         "affectedPeopleValue": "{count, plural, one {# شخص} other {# أشخاص}}",
         "affectedHouseholdsValue": "{count, plural, one {# أسرة} other {# أسر}}",
-        "needTypes": "أنواع الاحتياجات"
-      }
+        "needTypes": "أنواع الاحتياجات",
+        "domainSeverity": "شدة المجالات"
+      },
+      "noDomainData": "لم يتم التقييم بعد"
     },
     "reports": {
       "title": "التقارير",
@@ -1652,7 +1724,8 @@
         "report_approval": "اعتماد التقرير",
         "report_released": "منشور",
         "report_rejected": "مرفوض",
-        "evidence_document_uploaded": "ملخص الأدلة معلّق"
+        "evidence_document_uploaded": "ملخص الأدلة معلّق",
+        "need_summary_approval": "ملخص احتياج بانتظار الاعتماد"
       },
       "titleOwn": "مشاركاتي",
       "descriptionOwn": "الاستبيانات والتقارير التي قدّمتها، وما إذا تمت الموافقة عليها أو أُعيدت لإجراء تغييرات.",
@@ -2071,11 +2144,11 @@
         "override": "تجاوز المجال",
         "chooseClassification": "اختر التصنيف",
         "allDomainsNotice": "لم يتمكن الذكاء الاصطناعي من تصنيف هذا الاحتياج بثقة. يرجى اختيار المجال والمجال الفرعي المناسبين للمتابعة.",
-        "overridePendingNote": "تم تجهيز تجاوز المجال — تم تحديث الأسئلة في صفحة منشئ الاستبيانات. انتقل إلى هناك للاعتماد والنشر أو الرفض.",
+        "overridePendingNote": "تم تجهيز التصنيف المُعدّل — وتم تحديث الأسئلة المقترحة. يمكنك اعتماده هنا، أو فتح منشئ الاستبيان لمراجعة الأسئلة أولًا.",
         "overrideDisabledSurveySubmitted": "تم إرسال الاستبيان للاعتماد — سيصبح التجاوز متاحًا مرة أخرى بمجرد أن يرفضه المراجع/المعتمِد مع إبداء ملاحظات.",
-        "sentForApproval": "بانتظار قبول المراجع/المعتمِد لهذا التصنيف أو تجاوزه أو رفضه.",
+        "sentForApproval": "في انتظار قيام المراجع/المعتمد باعتماد هذا التصنيف أو تعديله أو رفضه.",
         "sentForApprovalTooltip": "لا يزال بإمكانك فتح منشئ الاستبيانات أدناه لمراجعة الأسئلة المقترحة وتعديلها أثناء انتظار ذلك.",
-        "overrideDialogTitle": "تجاوز تصنيف الذكاء الاصطناعي",
+        "overrideDialogTitle": "تعديل تصنيف الذكاء الاصطناعي",
         "overrideDialogDescription": "اختر مجالًا أو أكثر ومجالات فرعية، واشرح سبب تغيير اقتراح الذكاء الاصطناعي. ستُحدَّث الأسئلة المقترحة وفق الاختيار الجديد.",
         "domainLabel": "المجال (المجالات)",
         "subDomainLabel": "المجال (المجالات) الفرعية",
@@ -2089,11 +2162,28 @@
         "removeSubDomainAria": "إزالة {subDomain}",
         "overrideReasonLabel": "سبب التجاوز",
         "overrideReasonPlaceholder": "اشرح سبب تغيير اقتراح الذكاء الاصطناعي...",
-        "previewOverride": "تجاوز",
+        "previewOverride": "معاينة فقط",
         "previewing": "جارٍ التحميل...",
-        "overrideError": "تعذّر معاينة هذا التجاوز. يرجى المحاولة مرة أخرى.",
+        "overrideError": "تعذّر حفظ هذا التعديل. يرجى المحاولة مرة أخرى.",
         "cancel": "إلغاء",
-        "viewSuggestedQuestions": "عرض الأسئلة المقترحة"
+        "viewSuggestedQuestions": "عرض الأسئلة المقترحة",
+        "approve": "اعتماد",
+        "approveError": "تعذّر اعتماد هذا التصنيف. يرجى المحاولة مرة أخرى.",
+        "modify": "تعديل التصنيف",
+        "modifyAndApprove": "تعديل واعتماد",
+        "reject": "رفض",
+        "rejectTitle": "رفض تصنيف الذكاء الاصطناعي",
+        "rejectDescription": "ستتم إعادة الاحتياج لإعادة التصنيف. وضّح الخطأ ليتم تصحيحه.",
+        "rejectCommentsLabel": "سبب الرفض",
+        "rejectCommentsPlaceholder": "وضّح سبب رفض هذا التصنيف...",
+        "rejectCommentsRequired": "يجب إدخال سبب قبل الرفض.",
+        "rejectError": "تعذّر رفض هذا التصنيف. يرجى المحاولة مرة أخرى.",
+        "confidenceNotReported": "غير مُبلّغ عنها",
+        "confidenceNotReportedHint": "لم يُبلّغ النموذج عن درجة ثقة لهذا الاقتراح — راجعه بالعناية نفسها المخصصة للاقتراحات منخفضة الثقة.",
+        "confidenceStandard": "ثقة اعتيادية",
+        "confidenceLow": "ثقة منخفضة",
+        "confidenceVeryLow": "ثقة منخفضة جدًا",
+        "confidenceLowHint": "أقل من الحد المحدد ({threshold}%) في إعدادات المنهجية — راجع هذا الاقتراح بعناية قبل اتخاذ القرار."
       },
       "detail": {
         "backToList": "العودة إلى الدراسات",
@@ -2157,7 +2247,9 @@
         },
         "surveyPendingReviewTitle": "الاستبيان مُرسل للاعتماد",
         "surveyPendingReviewDescription": "لهذا الاحتياج استبيان بانتظار مراجعتك.",
-        "reviewSurvey": "مراجعة الاستبيان"
+        "reviewSurvey": "مراجعة الاستبيان",
+        "aiConfidenceColumn": "ثقة الذكاء الاصطناعي",
+        "filterLowConfidence": "الثقة المنخفضة فقط"
       },
       "delete": {
         "action": "حذف",
@@ -2242,6 +2334,52 @@
         "actionsColumn": "الإجراءات",
         "removeNeed": "حذف",
         "backToSelect": "اختيار ملف آخر"
+      },
+      "needSummary": {
+        "heading": "الملخص المقترح",
+        "intro": "طول هذا الوصف {length} حرفًا، لذلك اقترح النظام نسخة أقصر. يجب أن يعتمدها المراجع قبل استخدامها في التقارير.",
+        "statusDraft": "بانتظار المراجعة",
+        "statusConfirmed": "معتمد",
+        "statusStale": "غير محدّث",
+        "staleNote": "تغيّر وصف الاحتياج بعد اعتماد هذا الملخص. أعد إنشاءه، وإلا فسيُستخدم الوصف الأصلي في التقارير.",
+        "summaryLabel": "الملخص المقترح",
+        "sourceLabel": "الوصف الأصلي",
+        "sourceNote": "يُحتفظ دائمًا بالوصف الأصلي، وهو ما يعتمد عليه التصنيف والتقييم.",
+        "modelNote": "اقترحه {model}. عدّله قبل الاعتماد إذا كان هناك أي خطأ.",
+        "editedNote": "عدّله المراجع. الصياغة الأصلية للنموذج محفوظة في السجل.",
+        "warningsHeading": "{count, plural, zero {# تنبيه يحتاج انتباهك} one {# تنبيه يحتاج انتباهك} two {# تنبيهان يحتاجان انتباهك} few {# تنبيهات تحتاج انتباهك} many {# تنبيهًا يحتاج انتباهك} other {# تنبيه يحتاج انتباهك}}",
+        "warning": {
+          "FACT_NOT_IN_SOURCE": "\"{detail}\" غير موجود في الوصف الأصلي.",
+          "FACT_DROPPED": "\"{detail}\" موجود في الوصف الأصلي لكنه غير موجود في الملخص.",
+          "NUMBER_INVENTED": "الرقم {detail} يظهر في الملخص لكنه غير موجود في الوصف الأصلي."
+        },
+        "confirmAction": "اعتماد الملخص",
+        "saveAction": "حفظ المسودة",
+        "regenerateAction": "إعادة الإنشاء",
+        "savedNote": "تم حفظ المسودة.",
+        "awaitingReviewer": "يجب أن يعتمد المراجع هذا الملخص قبل استخدامه في التقارير.",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      },
+      "urgency": {
+        "label": "الإلحاح",
+        "notSet": "غير محدد",
+        "hint": "متى يجب التعامل مع هذا الاحتياج. الشدة تبيّن مدى سوء الوضع، والإلحاح يبيّن متى يجب التحرك.",
+        "immediate": "فوري",
+        "this_cycle": "خلال هذه الدورة",
+        "next_cycle": "الدورة القادمة",
+        "no_fixed_timeline": "بدون موعد محدد",
+        "saved": "تم حفظ الإلحاح."
+      },
+      "themes": {
+        "label": "المواضيع المتكررة",
+        "none": "لم تُستخرج مواضيع بعد",
+        "hint": "ما يدور حوله هذا الاحتياج، مطابَقًا بقائمة المواضيع المعتمدة. تُستخدم المواضيع أيضًا في احتساب عامل التكرار ضمن درجة الأولوية.",
+        "extractAction": "إعادة استخراج المواضيع",
+        "filterLabel": "الموضوع",
+        "filterAll": "كل المواضيع",
+        "groupHeading": "الاحتياجات حسب الموضوع",
+        "needCount": "{count, plural, zero {# احتياج} one {احتياج واحد} two {احتياجان} few {# احتياجات} many {# احتياجًا} other {# احتياج}}",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
       }
     },
     "questionEditor": {
@@ -2505,6 +2643,35 @@
         "rejected": "مرفوض",
         "published": "منشور",
         "SUPERSEDED": "تم استبدالها"
+      }
+    },
+    "needSummaries": {
+      "title": "ملخصات الاحتياجات",
+      "description": "ملخصات مقترحة لأوصاف الاحتياجات الطويلة، بانتظار اعتمادك. لا يصل أي منها إلى التقارير قبل أن تعتمده.",
+      "pendingCount": "{count, plural, =0 {لا يوجد ما ينتظر المراجعة} one {ملخص واحد بانتظار المراجعة} two {ملخصان بانتظار المراجعة} few {# ملخصات بانتظار المراجعة} many {# ملخصًا بانتظار المراجعة} other {# ملخص بانتظار المراجعة}}",
+      "confirmSelected": "{count, plural, =0 {اعتماد المحدد} one {اعتماد ملخص واحد} two {اعتماد ملخصين} few {اعتماد # ملخصات} many {اعتماد # ملخصًا} other {اعتماد # ملخص}}",
+      "confirmedAll": "{count, plural, one {تم اعتماد ملخص واحد.} two {تم اعتماد ملخصين.} few {تم اعتماد # ملخصات.} many {تم اعتماد # ملخصًا.} other {تم اعتماد # ملخص.}}",
+      "confirmedPartial": "تم اعتماد {confirmed}، وتم تخطي {skipped} لأنها اعتُمدت مسبقًا أو استُبدلت بملخص أحدث.",
+      "empty": "لا توجد ملخصات بانتظار المراجعة.",
+      "selectAll": "تحديد جميع الملخصات في هذه الصفحة",
+      "selectOne": "تحديد ملخص {need}",
+      "colNeed": "الاحتياج",
+      "colSummary": "الملخص المقترح",
+      "colSource": "المصدر",
+      "colGenerated": "تاريخ الاقتراح",
+      "gateNote": "يسجّل الاعتماد قرارك على الملخص. يُحتفظ دائمًا بالوصف الأصلي، ويستمر التصنيف والتقييم في الاعتماد عليه.",
+      "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+      "trigger": {
+        "manual_entry": "إدخال يدوي",
+        "bulk_import": "استيراد ملف",
+        "pdf_import": "استخراج من PDF",
+        "citizen_input": "مشاركة مواطن",
+        "manual_regenerate": "أُعيد إنشاؤه"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
       }
     }
   },
@@ -2819,18 +2986,6 @@
         "performanceScore": "درجة الأداء",
         "weight": "الوزن",
         "weightedContribution": "المساهمة المرجّحة"
-      },
-      "scoreComponents": {
-        "title": "مكونات الدرجة",
-        "pendingNote": "تعرض \"الإلحاح\" و\"الموضوع\" قيمًا مؤقتة إلى أن ينتج محرك التسجيل الخاص بـ RIO-FR-003 قيمها الفعلية — أما \"الشدة\" و\"حجم الفئة المتأثرة\" فهما بيانات حقيقية بالفعل.",
-        "severity": "الشدة",
-        "urgency": "الإلحاح",
-        "affectedGroupSize": "حجم الفئة المتأثرة",
-        "theme": "الموضوع",
-        "placeholderBadge": "قيمة مؤقتة",
-        "affectedGroupSizeEmpty": "غير مسجَّل",
-        "people": "{count} شخص",
-        "households": "{count} أسرة"
       },
       "noAssessment": "لم يتم تشغيل تقييم جودة استجابة بعد. انقر فوق \"تشغيل تقييم الجودة\" أعلاه لتشغيل الفحوصات.",
       "noPublishedSurvey": "لا يوجد استبيان منشور لهذا الاحتياج بعد.",

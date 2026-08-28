@@ -31,3 +31,9 @@ export const QUESTION_BANK_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 // lists (Study Types, Target Sectors) that share this screen.
 export const METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE = 10;
 export const PERMISSION_GRANTS_PAGE_SIZE = 10;
+// RIO-AI-003's reviewer queue. Deliberately larger than the other reviewer
+// lists: one bulk import produces one draft per imported need, so this queue
+// arrives in bursts of tens, and the whole point of its bulk-confirm action is
+// clearing a burst in one pass rather than ten pages of ten.
+export const NEED_SUMMARY_QUEUE_PAGE_SIZE = 25;
+export const NEED_SUMMARY_QUEUE_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;

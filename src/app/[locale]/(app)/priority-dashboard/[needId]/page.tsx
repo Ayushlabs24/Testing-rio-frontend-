@@ -8,6 +8,9 @@ import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
+import { PriorityBreakdown } from "@/components/features/priority/priority-breakdown";
+import { priorityService } from "@/services/priority/priority.service";
+import type { PriorityScore } from "@/services/priority/priority.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,18 +54,6 @@ import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
 
 const CONSOLIDATED = "consolidated";
 const NONE = "none";
-
-// RIO-FR-005 criterion 1 (Score Components card, "priority" tab below) —
-// Urgency and Theme have no backend field yet: Urgency is part of
-// RIO-FR-003's scoring engine (not yet built — see the master clarification
-// log), and Theme is a separate, also-unbuilt AI capability ("Recurring
-// theme extraction", client-confirmed Round 1 Q24: free-text per Need, not a
-// score). These are the only two hardcoded values on this page — replace
-// both the instant real fields/endpoints exist; nothing else needs to
-// change, since Severity (`priorityV2.priorityStatus`) and Affected Group
-// Size (`need.affectedPeople`/`affectedHouseholds`) already read real data.
-const PLACEHOLDER_URGENCY = "High";
-const PLACEHOLDER_THEME = "Water access";
 
 export default function PriorityDetailInsightsPage({
   params,
@@ -110,12 +101,33 @@ export default function PriorityDetailInsightsPage({
   );
   const [priorityV2, setPriorityV2] = useState<VillagePriorityResult | null>(null);
   const [need, setNeed] = useState<Need | null>(null);
+  // RIO-FR-003 — the explainable nine-factor score, separate from the
+  // village-level PriorityV2 assessment rendered below it. The two answer
+  // different questions (this need vs this village) and have opposite
+  // polarity, so they are deliberately shown as two panels, not merged.
+  const [needScore, setNeedScore] = useState<PriorityScore | null>(null);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [assessing, setAssessing] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [summaryKey, setSummaryKey] = useState(0);
+
+  // RIO-FR-003 — load any existing per-need score so the breakdown is there
+  // before the reviewer presses Recalculate. Silent on failure: a need that
+  // has never been scored legitimately has none.
+  useEffect(() => {
+    let stale = false;
+    priorityService
+      .getLatest(needId)
+      .then((s) => {
+        if (!stale) setNeedScore(s);
+      })
+      .catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [needId]);
 
   useEffect(() => {
     let stale = false;
@@ -179,6 +191,9 @@ export default function PriorityDetailInsightsPage({
         null,
       );
       setPriorityV2(result);
+      // RIO-FR-003 — the per-need explainable score is produced by its own
+      // endpoint, so recalculating the rollups is not enough on its own.
+      setNeedScore(await priorityService.score(needId));
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
       // A run can succeed as an HTTP call and still compute nothing (no
       // responses submitted yet, methodology reference data missing). Say
@@ -374,6 +389,15 @@ export default function PriorityDetailInsightsPage({
                   ) : null}
                 </div>
 
+                {/* RIO-FR-003 AC 2 — the component breakdown, above the
+                    village assessment because it is the number this need is
+                    ranked and signed off on. */}
+                {needScore ? (
+                  <div className="mb-6">
+                    <PriorityBreakdown score={needScore} onScoreUpdated={setNeedScore} />
+                  </div>
+                ) : null}
+
                 {priorityV2 ? (
                   <div className="space-y-6">
                     {/* Status Badge */}
@@ -423,82 +447,6 @@ export default function PriorityDetailInsightsPage({
                           {criticalOverrides.length}
                         </p>
                       </div>
-                    </div>
-
-                    {/* RIO-FR-005 criterion 1 — individual score components,
-                        not just the aggregate priority score above. Severity
-                        and Affected Group Size are real data; Urgency and
-                        Theme are placeholders until RIO-FR-003's scoring
-                        engine and the separate Recurring Theme Extraction
-                        capability exist — see the constants above and the
-                        "Placeholder" badges below. */}
-                    <div>
-                      <h3 className="mb-3 text-sm font-semibold">
-                        {t("scoreComponents.title")}
-                      </h3>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="bg-muted/40 rounded-lg p-4">
-                          <p className="text-muted-foreground text-xs font-semibold uppercase">
-                            {t("scoreComponents.severity")}
-                          </p>
-                          <p className="text-foreground mt-1 text-lg font-bold">
-                            {priorityV2.priorityStatus}
-                          </p>
-                        </div>
-                        <div className="bg-muted/40 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-muted-foreground text-xs font-semibold uppercase">
-                              {t("scoreComponents.urgency")}
-                            </p>
-                            <Badge variant="outline" className="text-[10px]">
-                              {t("scoreComponents.placeholderBadge")}
-                            </Badge>
-                          </div>
-                          <p className="text-foreground mt-1 text-lg font-bold">
-                            {PLACEHOLDER_URGENCY}
-                          </p>
-                        </div>
-                        <div className="bg-muted/40 rounded-lg p-4">
-                          <p className="text-muted-foreground text-xs font-semibold uppercase">
-                            {t("scoreComponents.affectedGroupSize")}
-                          </p>
-                          <p className="text-foreground mt-1 text-lg font-bold">
-                            {need?.affectedPeople == null &&
-                            need?.affectedHouseholds == null
-                              ? t("scoreComponents.affectedGroupSizeEmpty")
-                              : [
-                                  need?.affectedPeople != null
-                                    ? t("scoreComponents.people", {
-                                        count: need.affectedPeople,
-                                      })
-                                    : null,
-                                  need?.affectedHouseholds != null
-                                    ? t("scoreComponents.households", {
-                                        count: need.affectedHouseholds,
-                                      })
-                                    : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                          </p>
-                        </div>
-                        <div className="bg-muted/40 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-muted-foreground text-xs font-semibold uppercase">
-                              {t("scoreComponents.theme")}
-                            </p>
-                            <Badge variant="outline" className="text-[10px]">
-                              {t("scoreComponents.placeholderBadge")}
-                            </Badge>
-                          </div>
-                          <p className="text-foreground mt-1 text-lg font-bold">
-                            {PLACEHOLDER_THEME}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground mt-2 text-xs">
-                        {t("scoreComponents.pendingNote")}
-                      </p>
                     </div>
 
                     {/* Critical Domain Override Alert */}

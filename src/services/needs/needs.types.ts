@@ -1,3 +1,5 @@
+import type { ConfidenceBand } from "@/services/ai-decisions/ai-decisions.types";
+
 export type NeedStatus =
   | "draft"
   | "pending_ai_classification"
@@ -101,6 +103,15 @@ export interface Need {
    * predicted (an audit trail of predicted vs. decided). */
   aiSuggestedDomain: string | null;
   aiSuggestedSubDomain: string | null;
+  /** RIO-AI-001 — the latest classification's self-reported confidence (0..1)
+   * and its resolved band, so the Needs list can show and filter on it
+   * without opening each Need.
+   *
+   * `null` band = no classification has run for this Need yet. That is NOT
+   * the same as the "not_reported" band, which means one ran and returned no
+   * confidence. */
+  aiConfidence: number | null;
+  aiConfidenceBand: ConfidenceBand | null;
   /** When the most recent classification attempt completed (success or
    * failure) — cleared and re-set on every retry. */
   classifiedAt: string | null;
@@ -117,6 +128,12 @@ export interface Need {
   /** RIO-FR-005 (Q12) — one of GAP_TYPES (see priority.types.ts), or null.
    * Analyst-entered, never auto-calculated. */
   gapType: string | null;
+  /** RIO-FR-003 AC 1 — the human-assigned urgency level. Null until a reviewer
+   *  sets it, and scored as unmeasured rather than as "not urgent". */
+  urgency: string | null;
+  /** RIO-FR-003 AC 6 — recurring themes, extracted from the statement against
+   *  a closed vocabulary. Also what the recurrence factor counts. */
+  themes: string[];
   /** RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — "Roughly how many
    * people/households does this need affect?" entered on the need-entry
    * form. This is the PRIMARY Affected Population value; no GASTAT

@@ -148,6 +148,24 @@ export const endpoints = {
     importBulk: (studyId: string) => `/studies/${studyId}/needs/import-bulk`,
     byId: (needId: string) => `/needs/${needId}`,
     gapType: (needId: string) => `/needs/${needId}/gap-type`,
+    // RIO-FR-003 AC 1 — the human-assigned urgency level.
+    urgency: (needId: string) => `/needs/${needId}/urgency`,
+    // RIO-FR-003 AC 6 — recurring themes, and the counts that back the
+    // group-by-theme view.
+    extractThemes: (needId: string) => `/needs/${needId}/themes/extract`,
+    themeCounts: "/need-themes/counts",
+  },
+  // RIO-AI-003 — the suggested summary of a long need description. There is
+  // deliberately no `generate` route: the AC says the summary is suggested
+  // automatically when a need is written, so generation is a server-side
+  // trigger, not something the UI calls. Only `regenerate` is user-initiated.
+  needSummaries: {
+    forNeed: (needId: string) => `/needs/${needId}/summary`,
+    regenerate: (needId: string) => `/needs/${needId}/summary/regenerate`,
+    pending: "/need-summaries/pending",
+    byId: (summaryId: string) => `/need-summaries/${summaryId}`,
+    confirm: (summaryId: string) => `/need-summaries/${summaryId}/confirm`,
+    confirmBatch: "/need-summaries/confirm-batch",
   },
   aiDecisions: {
     // Now the Retry action for a Need whose automatic classification
@@ -204,6 +222,11 @@ export const endpoints = {
     gapTypeById: (id: string) => `/study-config/gap-types/${id}`,
     activateGapType: (id: string) => `/study-config/gap-types/${id}/activate`,
     deactivateGapType: (id: string) => `/study-config/gap-types/${id}/deactivate`,
+    // RIO-FR-003 AC 6 — the theme vocabulary.
+    needThemes: "/study-config/need-themes",
+    needThemeById: (id: string) => `/study-config/need-themes/${id}`,
+    activateNeedTheme: (id: string) => `/study-config/need-themes/${id}/activate`,
+    deactivateNeedTheme: (id: string) => `/study-config/need-themes/${id}/deactivate`,
   },
   publicSurveys: {
     // Admin/authenticated side (Publish Survey + Generate QR) — each Need
@@ -248,6 +271,9 @@ export const endpoints = {
     score: (needId: string) => `/needs/${needId}/priority-score`,
     dashboard: "/priority-scores",
     approve: (id: string) => `/priority-scores/${id}/approve`,
+    // RIO-FR-003 AC 5 — a reviewer replacing the computed number, with a
+    // mandatory reason. The computed value stays on the record.
+    override: (id: string) => `/priority-scores/${id}/override`,
     villageComparison: "/priority-scores/village-comparison",
   },
   reports: {

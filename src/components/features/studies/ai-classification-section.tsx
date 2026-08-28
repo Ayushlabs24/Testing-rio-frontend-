@@ -31,6 +31,14 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import {
+  confidenceBadgeVariant,
+  confidenceBandLabelKey,
+  confidenceBarClass,
+  confidencePercent,
+  confidenceTextClass,
+  isFlaggedConfidence,
+} from "@/lib/confidence-band";
+import {
   aiDecisionsService,
   aiReviewService,
 } from "@/services/ai-decisions/ai-decisions.service";
@@ -103,6 +111,17 @@ export function AiClassificationSection({
   >({});
   const [overrideReason, setOverrideReason] = useState("");
   const [overridePreviewLoading, setOverridePreviewLoading] = useState(false);
+  // RIO-AI-001 — approve / modify / reject each resolve in a single action
+  // from this screen. Before this they were split across two pages: the
+  // suggestion and its confidence were shown here, while the Approve/Reject
+  // buttons lived on the Survey Builder page, so "modify" meant staging a
+  // proposal here and then approving it somewhere else.
+  const [approving, setApproving] = useState(false);
+  const [decidingModify, setDecidingModify] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectComments, setRejectComments] = useState("");
+  const [rejectCommentsError, setRejectCommentsError] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState(false);
 
   // A staged (not-yet-decided) Override, read straight off the Need itself
   // (Need.proposedDomains/proposedReason — see schema.prisma) rather than
@@ -401,6 +420,70 @@ export function AiClassificationSection({
     setOverriding(true);
   }
 
+  /** Refreshes the Need after a decision so the whole section re-renders
+   * against the new status, and clears any stale error. */
+  async function reloadAfterDecision() {
+    const updated = await needsService.getById(need.id);
+    onNeedUpdated?.(updated);
+  }
+
+  /** Approve the AI's suggestion exactly as it stands — one click, no dialog.
+   * No reason is captured because nothing was changed; the acceptance
+   * criterion only requires a reason when the reviewer MODIFIES. */
+  async function approveAsIs() {
+    setError(null);
+    setApproving(true);
+    try {
+      await aiReviewService.approve(need.id, {});
+      await reloadAfterDecision();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("approveError"));
+    } finally {
+      setApproving(false);
+    }
+  }
+
+  /** Modify + approve in one call. `reason` is mandatory (the backend
+   * contract requires it too), which is what satisfies "if the reviewer
+   * modifies the suggestion, the reason for the change is captured". */
+  async function modifyAndApprove() {
+    const pairs = pairsFromSelections();
+    const reason = overrideReason.trim();
+    if (pairs.length === 0 || reason.length === 0) return;
+    setError(null);
+    setDecidingModify(true);
+    try {
+      await aiReviewService.approve(need.id, { domainOverride: { pairs, reason } });
+      setOverriding(false);
+      await reloadAfterDecision();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("overrideError"));
+    } finally {
+      setDecidingModify(false);
+    }
+  }
+
+  async function submitReject() {
+    const comments = rejectComments.trim();
+    if (comments.length === 0) {
+      setRejectCommentsError(t("rejectCommentsRequired"));
+      return;
+    }
+    setError(null);
+    setRejecting(true);
+    try {
+      await aiReviewService.reject(need.id, comments);
+      setRejectOpen(false);
+      setRejectComments("");
+      setRejectCommentsError(null);
+      await reloadAfterDecision();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("rejectError"));
+    } finally {
+      setRejecting(false);
+    }
+  }
+
   async function previewOverride() {
     const pairs = pairsFromSelections();
     const reason = overrideReason.trim();
@@ -423,6 +506,8 @@ export function AiClassificationSection({
       setOverridePreviewLoading(false);
     }
   }
+
+  const latestConfidencePercent = confidencePercent(latest?.confidence ?? null);
 
   const showPostApprovalSummary =
     need.status === "reviewer_approved" ||
@@ -690,10 +775,15 @@ export function AiClassificationSection({
                 ) : null}
               </div>
 
-              {/* Confidence as an actual progress bar (tiered green/amber/
-                  red), plus the Working Domain once an override is staged. */}
+              {/* Confidence as an actual progress bar, banded by the
+                  methodology config's configurable thresholds (RIO-AI-001).
+                  Rendered for EVERY suggestion — including 0% and "not
+                  reported" — because the acceptance criterion asks for a
+                  numeric confidence on every one of them. It used to be
+                  hidden whenever confidence was 0, which is exactly the case
+                  a reviewer most needs to see. */}
               <div className="space-y-4">
-                {latest && latest.confidence > 0 ? (
+                {latest ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
@@ -702,29 +792,47 @@ export function AiClassificationSection({
                       <span
                         className={cn(
                           "text-sm font-bold tabular-nums",
-                          latest.confidence >= 0.7
-                            ? "text-success"
-                            : latest.confidence >= 0.4
-                              ? "text-warning"
-                              : "text-destructive",
+                          confidenceTextClass(latest.confidenceBand),
                         )}
                       >
-                        {Math.round(latest.confidence * 100)}%
+                        {latestConfidencePercent === null
+                          ? t("confidenceNotReported")
+                          : `${latestConfidencePercent}%`}
                       </span>
                     </div>
                     <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          latest.confidence >= 0.7
-                            ? "bg-success"
-                            : latest.confidence >= 0.4
-                              ? "bg-warning"
-                              : "bg-destructive",
+                          confidenceBarClass(latest.confidenceBand),
                         )}
-                        style={{ width: `${Math.round(latest.confidence * 100)}%` }}
+                        style={{ width: `${latestConfidencePercent ?? 0}%` }}
                       />
                     </div>
+                    {/* The actual "flagged for closer reviewer attention"
+                        signal. A colour alone is not a flag — it carries no
+                        wording, no reason, and nothing a screen reader can
+                        announce. */}
+                    {isFlaggedConfidence(latest.confidenceBand) ? (
+                      <div className="flex items-start gap-2 pt-1">
+                        <Badge
+                          variant={confidenceBadgeVariant(latest.confidenceBand)}
+                          className="gap-1"
+                        >
+                          <AlertTriangle className="size-3" />
+                          {t(confidenceBandLabelKey(latest.confidenceBand))}
+                        </Badge>
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          {latest.confidenceBand === "not_reported"
+                            ? t("confidenceNotReportedHint")
+                            : t("confidenceLowHint", {
+                                threshold: Math.round(
+                                  latest.confidenceThresholds.low * 100,
+                                ),
+                              })}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -803,28 +911,69 @@ export function AiClassificationSection({
                   </div>
                 ) : null}
 
-                {/* Match the review hierarchy from the reference: the broad
-                    Override action leads the row, while Suggested Questions
-                    stays beside it as the narrower navigation action. */}
-                <div className="flex flex-col gap-2.5 sm:flex-row">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full flex-1"
-                    onClick={startOverride}
-                    disabled={overrideDisabledForResearcher}
-                    title={
-                      overrideDisabledForResearcher
-                        ? t("overrideDisabledSurveySubmitted")
-                        : undefined
-                    }
-                  >
-                    {need.allDomainsSelected ? t("chooseClassification") : t("override")}
-                  </Button>
-                  {hasSurvey ? (
+                {/* RIO-AI-001 — the decision row. Approve / Modify / Reject
+                    all resolve here, in one action each, rather than the
+                    reviewer staging a proposal on this page and then
+                    approving it on the Survey Builder page.
+
+                    Approve leads (it is the common case on a confident
+                    suggestion); Reject is `outline` rather than
+                    `destructive` because it sends the Need back for
+                    re-classification, it does not delete anything.
+
+                    Hidden entirely when the AI could not classify
+                    (allDomainsSelected): there is no suggestion to approve,
+                    so the only honest action is to choose a classification. */}
+                {isReadyForReview ? (
+                  <div className="flex flex-col gap-2.5 sm:flex-row">
+                    {!need.allDomainsSelected ? (
+                      <LoadingButton
+                        type="button"
+                        className="w-full flex-1 gap-2 font-medium"
+                        onClick={approveAsIs}
+                        disabled={rejecting}
+                        isLoading={approving}
+                        text={t("approve")}
+                      />
+                    ) : null}
                     <Button
                       type="button"
-                      className="w-full flex-1 gap-2 font-medium"
+                      variant="outline"
+                      className="w-full flex-1"
+                      onClick={startOverride}
+                      disabled={overrideDisabledForResearcher || approving || rejecting}
+                      title={
+                        overrideDisabledForResearcher
+                          ? t("overrideDisabledSurveySubmitted")
+                          : undefined
+                      }
+                    >
+                      {need.allDomainsSelected ? t("chooseClassification") : t("modify")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full flex-1"
+                      onClick={() => {
+                        setRejectComments("");
+                        setRejectCommentsError(null);
+                        setRejectOpen(true);
+                      }}
+                      disabled={approving || rejecting}
+                    >
+                      {t("reject")}
+                    </Button>
+                  </div>
+                ) : null}
+
+                {/* Navigation, deliberately on its own row below the
+                    decision — it is not one of the three decisions. */}
+                {hasSurvey ? (
+                  <div className="flex">
+                    <Button
+                      type="button"
+                      variant={isReadyForReview ? "outline" : "default"}
+                      className="w-full gap-2 font-medium"
                       onClick={() => router.push(`/survey-builder/${need.id}`)}
                     >
                       <ClipboardList className="size-4" />
@@ -832,8 +981,8 @@ export function AiClassificationSection({
                         ? t("viewSuggestedQuestions")
                         : t("openSurveyBuilder")}
                     </Button>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
 
                 {pendingOverride ? (
                   <p className="text-muted-foreground text-xs">
@@ -934,18 +1083,93 @@ export function AiClassificationSection({
               type="button"
               variant="outline"
               onClick={() => setOverriding(false)}
-              disabled={overridePreviewLoading}
+              disabled={overridePreviewLoading || decidingModify}
+            >
+              {t("cancel")}
+            </Button>
+            {/* Preview stays available as the secondary action — it stages the
+                proposal and regenerates the suggested questions WITHOUT
+                deciding, which is still useful for a reviewer who wants to
+                see the resulting question list before committing. It is no
+                longer the only route to a decision. */}
+            <LoadingButton
+              type="button"
+              variant="outline"
+              onClick={previewOverride}
+              disabled={
+                decidingModify ||
+                pairsFromSelections().length === 0 ||
+                overrideReason.trim().length === 0
+              }
+              isLoading={overridePreviewLoading}
+              text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
+            />
+            {/* The single action the acceptance criterion asks for: the
+                modified classification and its mandatory reason are decided
+                in one call. */}
+            <LoadingButton
+              type="button"
+              onClick={modifyAndApprove}
+              disabled={
+                overridePreviewLoading ||
+                pairsFromSelections().length === 0 ||
+                overrideReason.trim().length === 0
+              }
+              isLoading={decidingModify}
+              text={t("modifyAndApprove")}
+            />
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject — comments are mandatory, matching the backend contract
+          (AiReviewRejectBody requires a non-empty `comments`). Rejecting
+          sends the Need back to pending_ai_classification so it can be
+          edited and re-classified; it does not delete anything. */}
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("rejectTitle")}</DialogTitle>
+            <DialogDescription>{t("rejectDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="ai-reject-comments">{t("rejectCommentsLabel")}</Label>
+            <Textarea
+              id="ai-reject-comments"
+              value={rejectComments}
+              onChange={(e) => {
+                setRejectComments(e.target.value);
+                if (rejectCommentsError) setRejectCommentsError(null);
+              }}
+              placeholder={t("rejectCommentsPlaceholder")}
+              required
+              aria-invalid={rejectCommentsError ? true : undefined}
+              aria-describedby={
+                rejectCommentsError ? "ai-reject-comments-error" : undefined
+              }
+            />
+            {rejectCommentsError ? (
+              <p id="ai-reject-comments-error" className="text-destructive text-xs">
+                {rejectCommentsError}
+              </p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectOpen(false)}
+              disabled={rejecting}
             >
               {t("cancel")}
             </Button>
             <LoadingButton
               type="button"
-              onClick={previewOverride}
-              disabled={
-                pairsFromSelections().length === 0 || overrideReason.trim().length === 0
-              }
-              isLoading={overridePreviewLoading}
-              text={overridePreviewLoading ? t("previewing") : t("previewOverride")}
+              variant="destructive"
+              onClick={submitReject}
+              disabled={rejectComments.trim().length === 0}
+              isLoading={rejecting}
+              text={t("reject")}
             />
           </DialogFooter>
         </DialogContent>

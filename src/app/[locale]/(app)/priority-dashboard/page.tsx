@@ -50,6 +50,7 @@ const LEVEL_VARIANT: Record<
 
 export default function PriorityDashboardPage() {
   const t = useTranslations("app.priorityDashboard");
+  const tTheme = useTranslations("app.studies.themes");
   const [entries, setEntries] = useState<PriorityDashboardEntry[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [levelFilter, setLevelFilter] = useState<PriorityScore["level"] | typeof ALL>(
@@ -64,6 +65,10 @@ export default function PriorityDashboardPage() {
       .then((options) => setGapTypeOptions(options.filter((o) => o.isActive)))
       .catch(() => undefined);
   }, []);
+  // RIO-FR-003 AC 6 — "the ability to filter/group needs by theme". The
+  // options come from the loaded rows rather than a separate fetch, so the
+  // list only ever offers themes that are actually in use.
+  const [themeFilter, setThemeFilter] = useState<string>(ALL);
   // Pagination (Aug 14) — this list has no upper bound (every scored Need
   // across every Study), so it needs paging like every other list page.
   const [page, setPage] = useState(1);
@@ -81,6 +86,18 @@ export default function PriorityDashboardPage() {
       });
   }, []);
 
+  // AC 6's grouping — every theme in use with how many needs carry it,
+  // ordered so the most widespread problem reads first.
+  const themeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of entries ?? []) {
+      for (const theme of entry.themes) counts.set(theme, (counts.get(theme) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([theme, needCount]) => ({ theme, needCount }))
+      .sort((a, b) => b.needCount - a.needCount || a.theme.localeCompare(b.theme));
+  }, [entries]);
+
   const summary = useMemo(() => {
     const counts = { critical: 0, high: 0, medium: 0, low: 0, unscored: 0 };
     for (const entry of entries ?? []) {
@@ -93,6 +110,7 @@ export default function PriorityDashboardPage() {
   const filtered = (entries ?? []).filter((entry) => {
     if (levelFilter !== ALL && entry.score?.level !== levelFilter) return false;
     if (gapTypeFilter !== ALL && entry.gapType !== gapTypeFilter) return false;
+    if (themeFilter !== ALL && !entry.themes.includes(themeFilter)) return false;
     return true;
   });
 
@@ -189,6 +207,28 @@ export default function PriorityDashboardPage() {
                       {t.has(`gapType.${option.name}`)
                         ? t(`gapType.${option.name}` as Parameters<typeof t>[0])
                         : option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={themeFilter}
+                onValueChange={(v) => {
+                  setThemeFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-56"
+                  aria-label={tTheme("filterLabel")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{tTheme("filterAll")}</SelectItem>
+                  {themeCounts.map(({ theme, needCount }) => (
+                    <SelectItem key={theme} value={theme}>
+                      {theme} ({needCount})
                     </SelectItem>
                   ))}
                 </SelectContent>
