@@ -123,6 +123,17 @@ export const endpoints = {
   consentPolicy: {
     active: "/consent-policy/active",
     organizationStatus: "/consent-policy/organization-status",
+    // Public — the citizen survey notice (RIO-NFR-002).
+    citizen: "/consent-policy/citizen",
+    // Client-confirmed (2026-08-27) — consent text is versioned and managed
+    // through the app in V2 rather than hardcoded per release. System Admin
+    // drafts/edits/submits/publishes; System Reviewer approves or rejects.
+    versions: "/consent-policy/versions",
+    version: (id: string) => `/consent-policy/versions/${id}`,
+    submitVersion: (id: string) => `/consent-policy/versions/${id}/submit`,
+    approveVersion: (id: string) => `/consent-policy/versions/${id}/approve`,
+    rejectVersion: (id: string) => `/consent-policy/versions/${id}/reject`,
+    publishVersion: (id: string) => `/consent-policy/versions/${id}/publish`,
   },
   contact: {
     // Public enquiry form on the auth pages — unauthenticated on the backend.

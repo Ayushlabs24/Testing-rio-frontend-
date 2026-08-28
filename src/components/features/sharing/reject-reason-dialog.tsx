@@ -91,6 +91,11 @@ export function RejectReasonDialog({
               if (error) setError(null);
             }}
             aria-invalid={error ? true : undefined}
+            // Capped rather than fixed: the shared Textarea grows to fit its
+            // value, so a long note pushed Cancel/Confirm below the fold and
+            // left the dialog with no visible way to submit it. Short notes
+            // still size themselves; past the cap the box scrolls instead.
+            className="max-h-56 overflow-y-auto"
           />
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
         </div>

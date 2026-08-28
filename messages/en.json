@@ -481,7 +481,8 @@
           "domains": "Domains & Sub-domains",
           "config": "Thresholds, Flags & Version",
           "questions": "Question Bank",
-          "scoring": "Scoring Lookups"
+          "scoring": "Scoring Lookups",
+          "consent": "Consent Policies"
         },
         "domains": {
           "domainsHeading": "Domains",
@@ -749,6 +750,71 @@
           "noLookups": "No scoring lookups have been uploaded for this methodology version yet.",
           "loading": "Loading lookups...",
           "genericError": "Something went wrong. Please try again."
+        },
+        "consent": {
+          "intro": "The Terms of Use and Data Sharing Policy shown during signup, and the consent notice shown to citizens during a survey. A System Admin drafts a new version and submits it; a System Reviewer approves it; the System Admin then publishes it. Every version is kept, and each consent stays tied to the version that was active when it was given.",
+          "kind": {
+            "use_policy": {
+              "heading": "Terms of Use",
+              "note": "Accepted by every account owner during registration."
+            },
+            "data_sharing": {
+              "heading": "Data Sharing Policy",
+              "note": "The separate consent to share the organization's data — versioned independently of the Terms of Use."
+            },
+            "citizen_consent": {
+              "heading": "Citizen Consent (Survey)",
+              "note": "The notice a citizen accepts before a public survey collects anything. Each response records the version its respondent read."
+            }
+          },
+          "status": {
+            "draft": "Draft",
+            "pending_approval": "Pending approval",
+            "approved": "Approved",
+            "published": "Published"
+          },
+          "liveVersionLabel": "Live at signup",
+          "noLiveVersion": "No published version",
+          "newVersion": "New version",
+          "activeBadge": "Live",
+          "lastUpdatedBy": "Last updated by {name}",
+          "unknownActor": "Unknown",
+          "versionLabel": "Version label",
+          "versionPlaceholder": "e.g. v2",
+          "versionHint": "Must be unique for this policy. Users' consent records reference it, so it can't be reused.",
+          "textLabel": "Policy text ({language})",
+          "textArHint": "No Arabic translation yet. Arabic readers will be shown the English wording, and their consent recorded as English, until one is added.",
+          "createDraft": "Create draft",
+          "saveDraft": "Save draft",
+          "saving": "Saving...",
+          "submitForApproval": "Submit for approval",
+          "approve": "Approve",
+          "reject": "Reject",
+          "publish": "Publish",
+          "publishing": "Publishing...",
+          "cancel": "Cancel",
+          "reviewerNoteLabel": "Reviewer note",
+          "reviewerNotesLabel": "Reviewer notes",
+          "reviewerNotesRequired": "Reviewer notes are required.",
+          "approveDialogTitle": "Approve consent policy version",
+          "rejectDialogTitle": "Reject consent policy version",
+          "confirmApprove": "Confirm approval",
+          "confirmReject": "Confirm rejection",
+          "historyHeading": "Version history",
+          "historyEmpty": "No versions yet.",
+          "loadError": "Couldn't load the consent policies. Please try again.",
+          "retry": "Retry",
+          "genericError": "Something went wrong. Please try again.",
+          "englishTextMissing": "The English wording is empty. Switch the application language to English to enter it — English is what readers fall back to when a translation is missing, so it cannot be left blank.",
+          "language": {
+            "en": "English",
+            "ar": "Arabic"
+          },
+          "closeText": "Close",
+          "showText": "Show policy text",
+          "showMore": "Show more",
+          "showLess": "Show less",
+          "textHeading": "Policy text"
         }
       },
       "organization": {
@@ -1092,7 +1158,8 @@
           "combined_report_summary": "Combined report summary",
           "ncnp_report": "NCNP Compiled Report",
           "question": "Question Bank item",
-          "need_decision": "Decision"
+          "need_decision": "Decision",
+          "consent_policy": "Consent policy"
         }
       }
     },
@@ -2725,18 +2792,6 @@
         "privacyNotice": "Your responses are used only in aggregate to understand community needs and inform planning. This is not a request or complaint system, and you will not be personally contacted about your answers.",
         "consentTitle": "Personal Information Consent",
         "consentVersionLine": "Version {version}",
-        "consentThisOrg": "this organisation",
-        "consentContactChannelPlaceholder": "[contact channel]",
-        "consentPurposeLabel": "Purpose",
-        "consentPurposeBody": "Your responses will be used to assess development needs in your village and to help plan community programs. Participation is entirely voluntary, and you may stop at any time.",
-        "consentCollectLabel": "What we collect",
-        "consentCollectBody": "Survey responses about household and community conditions. Contact details (name, mobile number, email) are collected only if you choose to provide them.",
-        "consentHandlingLabel": "How your data is handled",
-        "consentHandlingBody": "Your individual responses are kept confidential, stored securely within Saudi Arabia, and reported only in aggregated form. Your identity will not appear in any report.",
-        "consentRightsLabel": "Your rights",
-        "consentRightsBody": "Under the Saudi Personal Data Protection Law, you may request access to, correction of, or deletion of your personal data, and you may withdraw this consent at any time by contacting {contactChannel}.",
-        "consentRetentionLabel": "Retention",
-        "consentRetentionBody": "Personal data is kept only as long as needed for the study, then deleted or de-identified in line with the platform's retention policy.",
         "consentAgreeLabel": "I agree to the collection and use of my information as described above. (Date and time recorded automatically.)",
         "consentRequired": "You must agree to the consent notice before continuing.",
         "nameRequired": "Enter your name before continuing.",
@@ -2745,7 +2800,8 @@
         "ageBracketRequired": "Select your age bracket before continuing.",
         "submit": "Start Survey",
         "submitting": "Checking...",
-        "duplicateError": "You have already submitted a response for this survey."
+        "duplicateError": "You have already submitted a response for this survey.",
+        "consentUnavailable": "The consent notice could not be loaded, so this survey cannot accept a response right now. Please try again shortly."
       },
       "otp": {
         "title": "Enter your verification code",
@@ -2978,6 +3034,18 @@
         "performanceScore": "Performance Score",
         "weight": "Weight",
         "weightedContribution": "Weighted Contribution"
+      },
+      "scoreComponents": {
+        "title": "Score Components",
+        "pendingNote": "Urgency and Theme show placeholder values until RIO-FR-003's scoring engine produces them — Severity and Affected Group Size are already live data.",
+        "severity": "Severity",
+        "urgency": "Urgency",
+        "affectedGroupSize": "Affected Group Size",
+        "theme": "Theme",
+        "placeholderBadge": "Placeholder",
+        "affectedGroupSizeEmpty": "Not recorded",
+        "people": "{count} people",
+        "households": "{count} households"
       },
       "noAssessment": "No response quality assessment run yet. Click \"Run Quality Assessment\" above to run checks.",
       "noPublishedSurvey": "No published survey for this need yet.",
