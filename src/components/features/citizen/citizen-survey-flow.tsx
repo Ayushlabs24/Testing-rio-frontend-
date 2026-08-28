@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Star,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -139,6 +139,9 @@ function ScaleStars({ value, max }: { value: number; max: number }) {
 
 export function CitizenSurveyFlow({ token }: { token: string }) {
   const t = useTranslations("citizen.survey");
+  // Only "en"/"ar" are ever routed locales (see i18n/routing.ts) — safe to
+  // pass straight through as the consent.locale the backend expects.
+  const locale = useLocale() as "en" | "ar";
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [survey, setSurvey] = useState<ResolvedSurvey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -367,6 +370,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         ageBracket,
         answers,
         sessionId: sessionIdRef.current ?? undefined,
+        consent: { version: CONSENT_COPY_VERSION, locale },
       });
       setTerminal("submitted");
     } catch (err) {

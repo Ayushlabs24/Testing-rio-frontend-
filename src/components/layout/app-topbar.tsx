@@ -246,10 +246,7 @@ function NotificationsBell({
   function handleQuestionBankAlertClick(alertId: string) {
     questionBankAlerts.markSeen(alertId);
     setOpen(false);
-    // No URL-tab-sync on this page today (Tabs defaultValue="domains",
-    // client-only) — lands on Methodology with Questions one click away,
-    // same as this bell already does for reviewer-sla/sharing/ncnp-report.
-    router.push("/settings/methodology");
+    router.push("/settings/methodology?tab=questions");
   }
 
   function handleMarkAllSeen() {
@@ -360,14 +357,24 @@ function NotificationsBell({
               >
                 <span className="bg-primary size-2 shrink-0 rounded-full" />
                 <span className="flex-1 text-sm">
-                  {alert.changeKind === "deactivated"
-                    ? t("questionBankAlertDeactivated", { questionId: alert.questionId })
-                    : alert.changeKind === "created"
-                      ? t("questionBankAlertCreated", { questionId: alert.questionId })
-                      : t("questionBankAlertEdited", { questionId: alert.questionId })}
+                  {alert.type === "question_resolved"
+                    ? alert.resolution === "approved"
+                      ? t("questionBankAlertApproved", { questionId: alert.questionId })
+                      : t("questionBankAlertRejected", { questionId: alert.questionId })
+                    : alert.changeKind === "deactivated"
+                      ? t("questionBankAlertDeactivated", {
+                          questionId: alert.questionId,
+                        })
+                      : alert.changeKind === "created"
+                        ? t("questionBankAlertCreated", { questionId: alert.questionId })
+                        : t("questionBankAlertEdited", { questionId: alert.questionId })}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  {timeAgo(alert.submittedAt)}
+                  {timeAgo(
+                    alert.type === "question_resolved"
+                      ? alert.reviewedAt
+                      : alert.submittedAt,
+                  )}
                 </span>
               </DropdownMenuItem>
             ))
@@ -469,7 +476,9 @@ export function AppTopbar({ collapsed, onToggleCollapsed }: AppTopbarProps) {
   // endpoint actually returns never disagree.
   const canSeeQuestionBankAlerts =
     session.role.enabled &&
-    (session.role.key === "human_reviewer" || session.role.key === "system_reviewer");
+    (session.role.key === "human_reviewer" ||
+      session.role.key === "system_reviewer" ||
+      session.role.key === "system_admin");
 
   return (
     <header className="border-border bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur-sm sm:px-6 lg:px-8">

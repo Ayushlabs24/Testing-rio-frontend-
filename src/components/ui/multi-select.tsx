@@ -34,6 +34,11 @@ interface MultiSelectProps {
   maxVisibleChips?: number;
   /** Label for the popover's explicit close action. Defaults to "Done". */
   doneLabel?: string;
+  /** Fires whenever the popover opens/closes (Done, outside click, or Esc)
+   * — for a caller that needs to react to "the picker is closed now" rather
+   * than every individual toggle inside `onChange` (e.g. running an
+   * expensive query only once selection is finished, not per checkbox). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 const DEFAULT_MAX_VISIBLE_CHIPS = 4;
@@ -61,6 +66,7 @@ export function MultiSelect({
   moreLabel,
   maxVisibleChips = DEFAULT_MAX_VISIBLE_CHIPS,
   doneLabel,
+  onOpenChange,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -129,6 +135,7 @@ export function MultiSelect({
       onOpenChange={(next) => {
         setOpen(next);
         if (next) setQuery("");
+        onOpenChange?.(next);
       }}
     >
       <PopoverTrigger asChild>
@@ -268,7 +275,10 @@ export function MultiSelect({
         <div className="border-border border-t p-1.5">
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              onOpenChange?.(false);
+            }}
             className="hover:bg-accent hover:text-accent-foreground w-full cursor-pointer rounded-md px-2.5 py-1.5 text-center text-sm font-medium"
           >
             {doneLabel ?? "Done"}

@@ -736,6 +736,43 @@ export default function SurveyBuilderDetailPage({
   // step — it hands the survey to APPROVED, and the Researcher (or anyone
   // else holding surveyBuilder:write) does a separate, deliberate Publish
   // afterwards (see publishSurveyNow below). Renamed from saveAndPublish.
+  // The classification decision itself is still exactly one AiDecision
+  // review — only meaningful while the Need hasn't been reviewed yet. Once
+  // reviewer_approved+ this step is a no-op, not an error. Re-fetches the
+  // Need fresh from the server rather than trusting the page's own `need`
+  // state: that state can go stale (e.g. the classification was approved
+  // earlier — on this same page or elsewhere — without this page
+  // re-rendering against it), and calling AiDecisionsService.approve a
+  // second time on an already-decided Need throws AI_DECISION_NOT_FOUND
+  // ("No AI classification is pending review for this need"), surfacing a
+  // confusing error for an approve action that already, genuinely
+  // succeeded. AI_DECISION_NOT_FOUND is swallowed here for that reason —
+  // every other error still surfaces normally.
+  async function resolveClassificationIfPending(): Promise<void> {
+    const fresh = await needsService.getById(needId);
+    if (fresh.status !== "ai_classified") return;
+    // The staged Override (if any) now lives on the Need itself
+    // (proposedDomains/proposedReason) rather than sessionStorage, so it's
+    // whatever was actually staged last — by this Approver or by the
+    // Researcher who submitted it — regardless of whose session this is.
+    // The backend clears both fields once this Approve call consumes them
+    // (see AiDecisionsService.review).
+    // reason is required going forward (see overrideDomainPreview), so
+    // proposedReason is only ever missing here for a staged override that
+    // predates that requirement — treat it the same as "no staged
+    // override" rather than sending a reason-less override.
+    const domainOverride =
+      fresh.proposedDomains && fresh.proposedDomains.length > 0 && fresh.proposedReason
+        ? { pairs: fresh.proposedDomains, reason: fresh.proposedReason }
+        : undefined;
+    try {
+      await aiReviewService.approve(needId, { domainOverride });
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "AI_DECISION_NOT_FOUND") return;
+      throw err;
+    }
+  }
+
   async function saveAndApprove(comments: string) {
     if (!survey || !need) return;
     if (!survey.methodologyVersion) {
@@ -746,28 +783,7 @@ export default function SurveyBuilderDetailPage({
     setError(null);
     setMessage(null);
     try {
-      // The classification decision itself is still exactly one AiDecision
-      // review — only meaningful while the Need hasn't been reviewed yet.
-      // Once reviewer_approved+ (a second visit here, e.g. after Reject sent
-      // it back and it was reclassified+approved again through some other
-      // path), this step is a no-op rather than an error.
-      if (need.status === "ai_classified") {
-        // The staged Override (if any) now lives on the Need itself
-        // (proposedDomains/proposedReason) rather than sessionStorage, so
-        // it's whatever was actually staged last — by this Approver or by
-        // the Researcher who submitted it — regardless of whose session
-        // this is. The backend clears both fields once this Approve call
-        // consumes them (see AiDecisionsService.review).
-        // reason is required going forward (see overrideDomainPreview), so
-        // proposedReason is only ever missing here for a staged override
-        // that predates that requirement — treat it the same as "no staged
-        // override" rather than sending a reason-less override.
-        const domainOverride =
-          need.proposedDomains && need.proposedDomains.length > 0 && need.proposedReason
-            ? { pairs: need.proposedDomains, reason: need.proposedReason }
-            : undefined;
-        await aiReviewService.approve(needId, { domainOverride });
-      }
+      await resolveClassificationIfPending();
 
       const saved = await surveysService.updateQuestions(
         survey.id,
@@ -810,17 +826,7 @@ export default function SurveyBuilderDetailPage({
     setError(null);
     setMessage(null);
     try {
-      if (need.status === "ai_classified") {
-        // reason is required going forward (see overrideDomainPreview), so
-        // proposedReason is only ever missing here for a staged override
-        // that predates that requirement — treat it the same as "no staged
-        // override" rather than sending a reason-less override.
-        const domainOverride =
-          need.proposedDomains && need.proposedDomains.length > 0 && need.proposedReason
-            ? { pairs: need.proposedDomains, reason: need.proposedReason }
-            : undefined;
-        await aiReviewService.approve(needId, { domainOverride });
-      }
+      await resolveClassificationIfPending();
 
       await surveysService.updateQuestions(
         survey.id,
@@ -1314,7 +1320,7 @@ export default function SurveyBuilderDetailPage({
                       <SelectContent>
                         {methodologyOptions.map((option) => (
                           <SelectItem key={option.id} value={option.version}>
-                            {option.version}
+                            {option.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

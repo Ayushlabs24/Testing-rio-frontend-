@@ -32,9 +32,7 @@ function writeSeenIds(userId: string, ids: Set<string>): void {
   }
 }
 
-export interface QuestionBankNotification extends QuestionBankAlert {
-  seen: boolean;
-}
+export type QuestionBankNotification = QuestionBankAlert & { seen: boolean };
 
 export interface QuestionBankAlertsState {
   notifications: QuestionBankNotification[];

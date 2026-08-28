@@ -573,13 +573,15 @@ export function QuestionsTab() {
                 <TableHead>{t("columns.domain")}</TableHead>
                 <TableHead>{t("columns.indicator")}</TableHead>
                 <TableHead>{t("columns.status")}</TableHead>
-                <TableHead className="text-right">{t("columns.actions")}</TableHead>
+                {canWrite ? (
+                  <TableHead className="text-right">{t("columns.actions")}</TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {questions === null ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={canWrite ? 6 : 5} className="h-24 text-center">
                     <div className="flex justify-center">
                       <div className="border-primary size-6 animate-spin rounded-full border-2 border-t-transparent" />
                     </div>
@@ -588,7 +590,7 @@ export function QuestionsTab() {
               ) : filteredQuestions.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={canWrite ? 6 : 5}
                     className="text-muted-foreground h-24 text-center"
                   >
                     {loadFailed ? t("loadError") : t("noResults")}
@@ -644,11 +646,11 @@ export function QuestionsTab() {
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell
-                      className="text-right"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {canWrite ? (
+                    {canWrite ? (
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -670,8 +672,8 @@ export function QuestionsTab() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      ) : null}
-                    </TableCell>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))
               )}

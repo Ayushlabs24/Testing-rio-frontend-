@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePermission } from "@/hooks/use-permission";
 import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
@@ -96,6 +97,12 @@ export default function SystemAdminOrganizationDetailPage({
       .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
       .catch(() => setRegionNameById(new Map()));
   }, []);
+
+  // RIO-RBAC-002 governance email (client-confirmed): System Reviewer holds
+  // View + Approve on Users & Organizations, System Admin holds Create/Edit
+  // (write) — not Approve. Same split as the org list page.
+  const canEdit = usePermission("entityTeam", "write");
+  const canApprove = usePermission("entityTeam", "approve");
 
   // Dialog states
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
@@ -266,39 +273,43 @@ export default function SystemAdminOrganizationDetailPage({
           </div>
 
           <div>
-            {organization.isActive ? (
-              <Button
-                variant="outline"
-                onClick={() => setDeactivateDialogOpen(true)}
-                className="gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
-              >
-                <XCircle className="size-4" />
-                {t("overview.deactivateButton")}
-              </Button>
-            ) : !organization.approvedAt ? (
-              // RIO-FR-010 (client-confirmed): a never-approved
-              // self-registration needs Approve, not Reactivate — the two
-              // are different actions (approve also issues the entity's
-              // first real credentials). Same distinction the org list page
-              // already makes.
-              <Button
-                variant="outline"
-                onClick={() => setApproveDialogOpen(true)}
-                className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
-              >
-                <ShieldCheck className="size-4" />
-                {t("overview.approveButton")}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setReactivateDialogOpen(true)}
-                className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
-              >
-                <CheckCircle2 className="size-4" />
-                {t("overview.reactivateButton")}
-              </Button>
-            )}
+            {organization.isActive
+              ? canEdit && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeactivateDialogOpen(true)}
+                    className="gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+                  >
+                    <XCircle className="size-4" />
+                    {t("overview.deactivateButton")}
+                  </Button>
+                )
+              : !organization.approvedAt
+                ? // RIO-FR-010 (client-confirmed): a never-approved
+                  // self-registration needs Approve, not Reactivate — the two
+                  // are different actions (approve also issues the entity's
+                  // first real credentials). RIO-RBAC-002 governance email:
+                  // Approve is System Reviewer's action, not System Admin's.
+                  canApprove && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setApproveDialogOpen(true)}
+                      className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                    >
+                      <ShieldCheck className="size-4" />
+                      {t("overview.approveButton")}
+                    </Button>
+                  )
+                : canEdit && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setReactivateDialogOpen(true)}
+                      className="gap-2 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                    >
+                      <CheckCircle2 className="size-4" />
+                      {t("overview.reactivateButton")}
+                    </Button>
+                  )}
           </div>
         </div>
 
@@ -437,18 +448,20 @@ export default function SystemAdminOrganizationDetailPage({
                     </div>
                   ) : null}
 
-                  <div className="border-border/50 border-t pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setAssignAdminDialogOpen(true)}
-                      disabled={!organization.isActive}
-                      className="w-full gap-2"
-                    >
-                      <UserCheck className="size-4" />
-                      {hasNgoAdmin ? tNgo("changeButton") : tNgo("assignButton")}
-                    </Button>
-                  </div>
+                  {canEdit ? (
+                    <div className="border-border/50 border-t pt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAssignAdminDialogOpen(true)}
+                        disabled={!organization.isActive}
+                        className="w-full gap-2"
+                      >
+                        <UserCheck className="size-4" />
+                        {hasNgoAdmin ? tNgo("changeButton") : tNgo("assignButton")}
+                      </Button>
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
 
@@ -502,15 +515,17 @@ export default function SystemAdminOrganizationDetailPage({
                     {tUsers("title")} ({orgUsers.length})
                   </CardTitle>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setInviteUserDialogOpen(true)}
-                  disabled={!organization.isActive}
-                  className="gap-2"
-                >
-                  <UserPlus className="size-4" />
-                  {tUsers("inviteButton")}
-                </Button>
+                {canEdit ? (
+                  <Button
+                    size="sm"
+                    onClick={() => setInviteUserDialogOpen(true)}
+                    disabled={!organization.isActive}
+                    className="gap-2"
+                  >
+                    <UserPlus className="size-4" />
+                    {tUsers("inviteButton")}
+                  </Button>
+                ) : null}
               </CardHeader>
 
               {/* Filters Bar */}
@@ -643,68 +658,70 @@ export default function SystemAdminOrganizationDetailPage({
                               {new Date(user.createdAt).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                {/* Change Role */}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setChangeRoleUser(user)}
-                                  disabled={!organization.isActive}
-                                  className="size-8 p-0"
-                                  title={tUsers("actions.changeRole")}
-                                >
-                                  <Shield className="text-muted-foreground size-3.5" />
-                                </Button>
-
-                                {/* Resend Invite (if status === 'invited') */}
-                                {user.status === "invited" ? (
+                              {canEdit ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Change Role */}
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleResendInvite(user.id)}
-                                    disabled={
-                                      resendingInviteId === user.id ||
-                                      !organization.isActive
-                                    }
-                                    className="size-8 p-0"
-                                    title={tUsers("actions.resendInvite")}
-                                  >
-                                    <RefreshCw
-                                      className={`text-muted-foreground size-3.5 ${resendingInviteId === user.id ? "animate-spin" : ""}`}
-                                    />
-                                  </Button>
-                                ) : null}
-
-                                {/* Enable / Disable User */}
-                                {isDisabled ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setToggleStatusUser(user);
-                                      setTargetStatus("active");
-                                    }}
+                                    onClick={() => setChangeRoleUser(user)}
                                     disabled={!organization.isActive}
-                                    className="size-8 p-0 text-emerald-600 hover:text-emerald-700"
-                                    title={tUsers("actions.enableUser")}
+                                    className="size-8 p-0"
+                                    title={tUsers("actions.changeRole")}
                                   >
-                                    <UserCheck className="size-3.5" />
+                                    <Shield className="text-muted-foreground size-3.5" />
                                   </Button>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setToggleStatusUser(user);
-                                      setTargetStatus("disabled");
-                                    }}
-                                    className="text-destructive hover:text-destructive size-8 p-0"
-                                    title={tUsers("actions.disableUser")}
-                                  >
-                                    <UserX className="size-3.5" />
-                                  </Button>
-                                )}
-                              </div>
+
+                                  {/* Resend Invite (if status === 'invited') */}
+                                  {user.status === "invited" ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleResendInvite(user.id)}
+                                      disabled={
+                                        resendingInviteId === user.id ||
+                                        !organization.isActive
+                                      }
+                                      className="size-8 p-0"
+                                      title={tUsers("actions.resendInvite")}
+                                    >
+                                      <RefreshCw
+                                        className={`text-muted-foreground size-3.5 ${resendingInviteId === user.id ? "animate-spin" : ""}`}
+                                      />
+                                    </Button>
+                                  ) : null}
+
+                                  {/* Enable / Disable User */}
+                                  {isDisabled ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setToggleStatusUser(user);
+                                        setTargetStatus("active");
+                                      }}
+                                      disabled={!organization.isActive}
+                                      className="size-8 p-0 text-emerald-600 hover:text-emerald-700"
+                                      title={tUsers("actions.enableUser")}
+                                    >
+                                      <UserCheck className="size-3.5" />
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setToggleStatusUser(user);
+                                        setTargetStatus("disabled");
+                                      }}
+                                      className="text-destructive hover:text-destructive size-8 p-0"
+                                      title={tUsers("actions.disableUser")}
+                                    >
+                                      <UserX className="size-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : null}
                             </TableCell>
                           </TableRow>
                         );

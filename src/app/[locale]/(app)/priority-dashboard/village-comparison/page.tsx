@@ -30,6 +30,7 @@ export default function VillageComparisonPage() {
   const [entries, setEntries] = useState<VillageComparisonEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
     studiesService
@@ -50,25 +51,33 @@ export default function VillageComparisonPage() {
     }
   }
 
-  useEffect(() => {
-    // Nothing to fetch with an empty selection — the render below already
-    // shows "select at least one study" ahead of the `entries` branches, so
-    // a stale `entries` value from a previous selection is never shown.
-    if (selectedStudyIds.length === 0) return;
-    let active = true;
-    queueMicrotask(() => {
-      if (active) void loadComparison(selectedStudyIds);
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStudyIds]);
+  // Deliberately NOT reactive on every `selectedStudyIds` change — checking
+  // several studies in a row used to re-run the comparison after each
+  // individual click, which also meant the picker never visually settled
+  // before the page below it jumped. Now it only runs once the picker
+  // actually closes (Done, outside click, or Esc), or immediately when a
+  // chip is removed with the picker already closed (that's a single,
+  // deliberate action with nothing left to batch).
+  function applySelection(next: string[]) {
+    setSelectedStudyIds(next);
+    if (isPickerOpen) return;
+    if (next.length > 0) void loadComparison(next);
+    else setEntries(null);
+  }
+
+  function handlePickerOpenChange(open: boolean) {
+    setIsPickerOpen(open);
+    if (open) return;
+    if (selectedStudyIds.length > 0) void loadComparison(selectedStudyIds);
+    else setEntries(null);
+  }
 
   return (
     <PermissionGuard module="priorityScoring" action="read">
       <PageContainer>
-        <BackButton href="/priority-dashboard" label={t("backToDashboard")} />
+        <div className="mb-6 flex justify-start">
+          <BackButton href="/priority-dashboard" label={t("backToDashboard")} />
+        </div>
         <PageHeader title={t("title")} description={t("description")} />
 
         <Card className="mt-4">
@@ -79,7 +88,8 @@ export default function VillageComparisonPage() {
             <MultiSelect
               options={studies.map((s) => ({ value: s.id, label: s.title }))}
               values={selectedStudyIds}
-              onChange={setSelectedStudyIds}
+              onChange={applySelection}
+              onOpenChange={handlePickerOpenChange}
               placeholder={t("selectStudiesPlaceholder")}
               searchPlaceholder={t("searchStudies")}
               emptyText={t("noStudiesFound")}

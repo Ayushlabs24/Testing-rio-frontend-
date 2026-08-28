@@ -37,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SYSTEM_ADMIN_ORGANIZATIONS_PAGE_SIZE } from "@/config/pagination";
+import { usePermission } from "@/hooks/use-permission";
 import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { OrganizationSummary } from "@/services/organizations/organizations.types";
@@ -61,6 +62,14 @@ export default function SystemAdminOrganizationsPage() {
   const [deactivateOrg, setDeactivateOrg] = useState<OrganizationSummary | null>(null);
   const [reactivateOrg, setReactivateOrg] = useState<OrganizationSummary | null>(null);
   const [approveOrg, setApproveOrg] = useState<OrganizationSummary | null>(null);
+
+  // RIO-RBAC-002 governance email (client-confirmed): System Reviewer holds
+  // View + Approve on Users & Organizations, System Admin holds Create/Edit
+  // (write) — not Approve. So the two roles now see different actions on
+  // this same shared screen, not different screens.
+  const canCreate = usePermission("entityTeam", "create");
+  const canEdit = usePermission("entityTeam", "write");
+  const canApprove = usePermission("entityTeam", "approve");
 
   // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
   // Reference), never the legacy free-text `region` array — so an org
@@ -164,10 +173,12 @@ export default function SystemAdminOrganizationsPage() {
           title={t("title")}
           description={t("description")}
           actions={
-            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-              <PlusCircle className="size-4" />
-              {t("createButton")}
-            </Button>
+            canCreate ? (
+              <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+                <PlusCircle className="size-4" />
+                {t("createButton")}
+              </Button>
+            ) : undefined
           }
         />
 
@@ -347,41 +358,47 @@ export default function SystemAdminOrganizationsPage() {
                               <Eye className="size-4" />
                             </Link>
                           </Button>
-                          {org.isActive ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeactivateOrg(org)}
-                              title={t("inactive")}
-                              className="text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
-                            >
-                              <XCircle className="size-4" />
-                            </Button>
-                          ) : !org.approvedAt ? (
-                            // RIO-FR-010 (client-confirmed): a never-approved
-                            // self-registration needs Approve, not Reactivate
-                            // — the two are different actions (approve also
-                            // issues the entity's first real credentials).
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setApproveOrg(org)}
-                              title={t("pendingApproval")}
-                              className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
-                            >
-                              <ShieldCheck className="size-4" />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setReactivateOrg(org)}
-                              title={t("active")}
-                              className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
-                            >
-                              <CheckCircle2 className="size-4" />
-                            </Button>
-                          )}
+                          {org.isActive
+                            ? canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDeactivateOrg(org)}
+                                  title={t("inactive")}
+                                  className="text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+                                >
+                                  <XCircle className="size-4" />
+                                </Button>
+                              )
+                            : !org.approvedAt
+                              ? // RIO-FR-010 (client-confirmed): a never-approved
+                                // self-registration needs Approve, not Reactivate
+                                // — the two are different actions (approve also
+                                // issues the entity's first real credentials).
+                                // RIO-RBAC-002 governance email: Approve is
+                                // System Reviewer's action, not System Admin's.
+                                canApprove && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setApproveOrg(org)}
+                                    title={t("pendingApproval")}
+                                    className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                                  >
+                                    <ShieldCheck className="size-4" />
+                                  </Button>
+                                )
+                              : canEdit && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setReactivateOrg(org)}
+                                    title={t("active")}
+                                    className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700"
+                                  >
+                                    <CheckCircle2 className="size-4" />
+                                  </Button>
+                                )}
                         </div>
                       </TableCell>
                     </TableRow>

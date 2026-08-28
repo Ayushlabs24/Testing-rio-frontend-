@@ -286,7 +286,9 @@
       "ncnpReportAlertReadyToPublish": "NCNP Compiled Report ready to publish",
       "questionBankAlertDeactivated": "Question {questionId} was deactivated — pending your review",
       "questionBankAlertCreated": "New question {questionId} — pending your review",
-      "questionBankAlertEdited": "Question {questionId} was edited — pending your review"
+      "questionBankAlertEdited": "Question {questionId} was edited — pending your review",
+      "questionBankAlertApproved": "Question {questionId} was approved",
+      "questionBankAlertRejected": "Question {questionId} was rejected"
     },
     "footer": {
       "rightsReserved": "All rights reserved.",
@@ -1152,6 +1154,8 @@
         "notMeasured": "Not measured",
         "approved": "Signed off",
         "awaitingSignOff": "Awaiting sign-off",
+        "approveAction": "Approve score",
+        "approving": "Approving...",
         "overrideAction": "Override score",
         "overrideTitle": "Override the computed score",
         "overrideDescription": "Your score replaces the computed one everywhere it is ranked or reported. The computed value and your reason are both kept on the record.",

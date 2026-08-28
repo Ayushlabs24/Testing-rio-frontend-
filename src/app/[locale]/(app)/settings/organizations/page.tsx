@@ -196,7 +196,13 @@ export default function OrganizationsSettingsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (session?.role.key === "system_admin") {
+    // RIO-RBAC-002 governance email (client-confirmed): System Reviewer now
+    // holds View (platform-wide) + Approve on Users & Organizations, same as
+    // System Admin's own reason for redirecting here — this page has no
+    // regionId fallback (self-registered orgs show a blank region — see
+    // /system-admin/organizations's displayRegion) and no Approve action at
+    // all, so neither role should land on it.
+    if (session?.role.key === "system_admin" || session?.role.key === "system_reviewer") {
       router.replace("/system-admin/organizations");
     } else {
       organizationsService.listAll().then(setOrganizations);
