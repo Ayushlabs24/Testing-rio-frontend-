@@ -1,3 +1,4 @@
+import type { ConsentLocale } from "@/services/consent/consent.types";
 export interface ResolvedSurvey {
   studyId: string;
   title: string;
@@ -69,14 +70,14 @@ export interface SubmitResponsePayload {
   ageBracket: AgeBracket;
   answers: Record<string, string>;
   sessionId?: string;
-  // RIO-NFR-002 — required by the backend (SubmitResponseBody), checked
-  // against the live citizen_consent policy server-side. Previously missing
-  // here entirely, which 400'd every real submission through the actual
-  // public survey link with "must have required property 'consent'".
-  consent: {
-    version: string;
-    locale: "en" | "ar";
-  };
+  /**
+   * RIO-NFR-002 — the citizen-consent version the respondent read and
+   * accepted, plus the language they read it in. Required: the server rejects
+   * a submission whose version is not the live one, so a response can always
+   * be traced to the exact notice behind it. Only the pointer is sent; the
+   * wording is never accepted from the client.
+   */
+  consent: { version: string; locale: ConsentLocale };
 }
 
 export interface SubmitResponseResult {

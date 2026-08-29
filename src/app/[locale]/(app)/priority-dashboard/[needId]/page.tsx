@@ -55,6 +55,18 @@ import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
 const CONSOLIDATED = "consolidated";
 const NONE = "none";
 
+// RIO-FR-005 criterion 1 (Score Components card, "priority" tab below) —
+// Urgency and Theme have no backend field yet: Urgency is part of
+// RIO-FR-003's scoring engine (not yet built — see the master clarification
+// log), and Theme is a separate, also-unbuilt AI capability ("Recurring
+// theme extraction", client-confirmed Round 1 Q24: free-text per Need, not a
+// score). These are the only two hardcoded values on this page — replace
+// both the instant real fields/endpoints exist; nothing else needs to
+// change, since Severity (`priorityV2.priorityStatus`) and Affected Group
+// Size (`need.affectedPeople`/`affectedHouseholds`) already read real data.
+const PLACEHOLDER_URGENCY = "High";
+const PLACEHOLDER_THEME = "Water access";
+
 export default function PriorityDetailInsightsPage({
   params,
 }: {
@@ -447,6 +459,82 @@ export default function PriorityDetailInsightsPage({
                           {criticalOverrides.length}
                         </p>
                       </div>
+                    </div>
+
+                    {/* RIO-FR-005 criterion 1 — individual score components,
+                        not just the aggregate priority score above. Severity
+                        and Affected Group Size are real data; Urgency and
+                        Theme are placeholders until RIO-FR-003's scoring
+                        engine and the separate Recurring Theme Extraction
+                        capability exist — see the constants above and the
+                        "Placeholder" badges below. */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold">
+                        {t("scoreComponents.title")}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <p className="text-muted-foreground text-xs font-semibold uppercase">
+                            {t("scoreComponents.severity")}
+                          </p>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {priorityV2.priorityStatus}
+                          </p>
+                        </div>
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-muted-foreground text-xs font-semibold uppercase">
+                              {t("scoreComponents.urgency")}
+                            </p>
+                            <Badge variant="outline" className="text-[10px]">
+                              {t("scoreComponents.placeholderBadge")}
+                            </Badge>
+                          </div>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {PLACEHOLDER_URGENCY}
+                          </p>
+                        </div>
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <p className="text-muted-foreground text-xs font-semibold uppercase">
+                            {t("scoreComponents.affectedGroupSize")}
+                          </p>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {need?.affectedPeople == null &&
+                            need?.affectedHouseholds == null
+                              ? t("scoreComponents.affectedGroupSizeEmpty")
+                              : [
+                                  need?.affectedPeople != null
+                                    ? t("scoreComponents.people", {
+                                        count: need.affectedPeople,
+                                      })
+                                    : null,
+                                  need?.affectedHouseholds != null
+                                    ? t("scoreComponents.households", {
+                                        count: need.affectedHouseholds,
+                                      })
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                          </p>
+                        </div>
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-muted-foreground text-xs font-semibold uppercase">
+                              {t("scoreComponents.theme")}
+                            </p>
+                            <Badge variant="outline" className="text-[10px]">
+                              {t("scoreComponents.placeholderBadge")}
+                            </Badge>
+                          </div>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {PLACEHOLDER_THEME}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground mt-2 text-xs">
+                        {t("scoreComponents.pendingNote")}
+                      </p>
                     </div>
 
                     {/* Critical Domain Override Alert */}
