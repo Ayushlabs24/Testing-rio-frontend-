@@ -75,10 +75,22 @@ export const aiReviewService = {
    * decision — see AiDecisionsService.manualClassify on the backend. Only
    * honors a single pair (the backend method itself is effectively
    * unreachable via the automatic path now — see that method's own
-   * comment). */
-  async manualClassify(needId: string, domain: string, subDomain: string): Promise<void> {
+   * comment).
+   *
+   * `reason` is required by the backend's shared AiReviewOverrideDomainBody
+   * schema (same one overrideDomainPreview uses) — this call used to omit
+   * it entirely, so every manual classification 400'd with a validation
+   * error and the whole "AI could not classify this need" recovery path
+   * was completely unusable. */
+  async manualClassify(
+    needId: string,
+    domain: string,
+    subDomain: string,
+    reason: string,
+  ): Promise<void> {
     await apiClient.post(endpoints.aiReview.manualClassify(needId), {
       pairs: [{ domain, subDomain }],
+      reason,
     });
   },
 };

@@ -43,6 +43,10 @@ export interface Study {
   // RIO-FR-012 (Q3/Q4/Q35) — configurable-list values, see CreateStudyPayload.
   studyType: string | null;
   targetSector: string | null;
+  // Populated by the list endpoint for a cross-org reader (System Admin,
+  // System Reviewer, Center Supervisor) who now sees every org's studies —
+  // undefined for a same-org caller, which already knows its own org.
+  orgName?: string;
 }
 
 /** `GET /studies/{id}` only — the list endpoint doesn't compute this per row. */
@@ -51,12 +55,6 @@ export interface StudyDetail extends Study {
   needCount: number;
 }
 
-/**
- * There is no cross-entity studies listing on the backend (unlike
- * Organizations/Users) — `GET /studies` always scopes to the caller's own
- * org via ambient org context, even for a cross-entity role. So list rows
- * are just `Study`, no `organizationName` column to show.
- */
 export type StudySummary = Study;
 
 export interface CreateStudyPayload {
@@ -92,6 +90,8 @@ export interface ListStudiesParams {
   limit?: number;
   offset?: number;
   search?: string;
+  // Cross-org readers only — filters to one organization's studies.
+  organizationId?: string;
 }
 
 /** Dashboard counters. Still mock-backed — no stats endpoint exists yet. */

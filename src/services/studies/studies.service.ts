@@ -36,6 +36,7 @@ export const studiesService = {
           limit: params.limit,
           offset: params.offset,
           search: params.search,
+          organizationId: params.organizationId,
         },
       },
     );

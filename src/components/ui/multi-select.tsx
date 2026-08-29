@@ -167,8 +167,20 @@ export function MultiSelect({
           ) : (
             <>
               {visibleValues.map((value) => (
-                <Badge key={value} variant="secondary" className="gap-1">
-                  {byValue.get(value) ?? value}
+                // `Badge`'s base variant is `shrink-0 whitespace-nowrap` with
+                // no max-width, so a long label (e.g. a full study title)
+                // just grows past the trigger's right edge instead of
+                // wrapping to a new line — `max-w-full` bounds it to the
+                // container's own width so flex-wrap always has a fitting
+                // size to wrap on, and the inner `truncate` span ellipsizes
+                // the label itself rather than the whole chip (keeping the
+                // remove "x" visible).
+                <Badge
+                  key={value}
+                  variant="secondary"
+                  className="max-w-full min-w-0 gap-1"
+                >
+                  <span className="min-w-0 truncate">{byValue.get(value) ?? value}</span>
                   <span
                     role="button"
                     tabIndex={0}
@@ -184,6 +196,7 @@ export function MultiSelect({
                       }
                     }}
                     aria-label={removeAriaLabel(byValue.get(value) ?? value)}
+                    className="shrink-0"
                   >
                     <X className="size-3" />
                   </span>

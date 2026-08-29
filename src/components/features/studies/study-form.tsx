@@ -69,6 +69,9 @@ interface StudyFormProps {
    * any form change once confirmed. */
   studyTypes: StudyConfigOption[];
   targetSectors: StudyConfigOption[];
+  /** System Admin only: the org this Study is being created for, when it
+   * differs from the acting user's own — see useOrgCentersForGovernorates. */
+  actAsOrgId?: string;
   onSubmit: (values: StudyFormValues) => Promise<void>;
   onCancel: () => void;
 }
@@ -80,6 +83,7 @@ export function StudyForm({
   methodologyVersions,
   studyTypes,
   targetSectors,
+  actAsOrgId,
   onSubmit,
   onCancel,
 }: StudyFormProps) {
@@ -138,8 +142,10 @@ export function StudyForm({
   const targetSector = useWatch({ control, name: "targetSector" });
   const samplePreview = isCreate ? previewSampleSize(population, marginOfError) : null;
 
-  const { centers: orgCenters, loaded: orgCentersLoaded } =
-    useOrgCentersForGovernorates(governorateIds);
+  const { centers: orgCenters, loaded: orgCentersLoaded } = useOrgCentersForGovernorates(
+    governorateIds,
+    actAsOrgId,
+  );
 
   // Center options are scoped to the currently-selected Governorates —
   // whenever that set (or the org's own Center list) changes and the

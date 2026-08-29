@@ -30,15 +30,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { STUDIES_PAGE_SIZE, STUDIES_PAGE_SIZE_OPTIONS } from "@/config/pagination";
+import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
 import { Link, useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 
+const ALL_ORGS = "all";
+
 export default function StudiesPage() {
   const t = useTranslations("app.studies");
   const router = useRouter();
+  const { session } = useAuth();
+  const isCrossEntity = session?.role.crossEntity ?? false;
   const canCreate = usePermission("studySurvey", "create");
   const canWrite = usePermission("studySurvey", "write");
 
@@ -48,12 +53,16 @@ export default function StudiesPage() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(STUDIES_PAGE_SIZE);
+  // Organization filter — only meaningful for a cross-org reader (System
+  // Admin, System Reviewer, Center Supervisor), who now see every org's
+  // studies on this one page; a same-org role only ever has its own.
+  const [orgFilter, setOrgFilter] = useState<string>(ALL_ORGS);
 
   // No synchronous setState here: doing that inside the effect would trigger a
   // cascading render. Both flags are set from the settled promise instead.
   const load = useCallback(() => {
     studiesService
-      .list()
+      .list({ limit: 200 })
       .then((rows) => {
         setStudies(rows);
         setLoadFailed(false);
@@ -80,22 +89,36 @@ export default function StudiesPage() {
     load();
   }, [load]);
 
-  // Filtering is client-side even though the API supports it: the pilot-volume
-  // list is small, and this keeps typing responsive without a request per
-  // keystroke. Move to server-side filters when a tenant outgrows one page.
+  // Derived from whatever's actually loaded, orgId→orgName so the filter
+  // still reads correctly if two orgs happen to share a display name.
+  const availableOrganizations = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const study of studies ?? []) {
+      if (study.orgName && !map.has(study.orgId)) map.set(study.orgId, study.orgName);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [studies]);
+
+  // Filtering is client-side even though the API supports both: the
+  // pilot-volume list is small, and this keeps typing responsive without a
+  // request per keystroke. Move to server-side filters when a tenant
+  // outgrows one page.
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return (studies ?? []).filter((study) => {
+      if (orgFilter !== ALL_ORGS && study.orgId !== orgFilter) return false;
       if (!normalized) return true;
       return study.title.toLowerCase().includes(normalized);
     });
-  }, [studies, query]);
+  }, [studies, query, orgFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const columnCount = 4;
+  const columnCount = isCrossEntity ? 5 : 4;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -129,12 +152,39 @@ export default function StudiesPage() {
                   className="h-8 ps-9"
                 />
               </div>
+              {isCrossEntity ? (
+                <Select
+                  value={orgFilter}
+                  onValueChange={(value) => {
+                    setOrgFilter(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-8 w-full sm:w-56"
+                    aria-label={t("filterOrganizationLabel")}
+                  >
+                    <SelectValue placeholder={t("filterOrganizationLabel")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_ORGS}>{t("filterOrganizationAll")}</SelectItem>
+                    {availableOrganizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
             </div>
 
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-3">{t("titleColumn")}</TableHead>
+                  {isCrossEntity ? (
+                    <TableHead className="w-48 py-3">{t("organizationColumn")}</TableHead>
+                  ) : null}
                   <TableHead className="w-24 py-3">{t("needsColumn")}</TableHead>
                   <TableHead className="w-36 py-3">{t("updatedColumn")}</TableHead>
                   <TableHead className="w-16 py-3" />
@@ -179,6 +229,11 @@ export default function StudiesPage() {
                           {study.title}
                         </Link>
                       </TableCell>
+                      {isCrossEntity ? (
+                        <TableCell className="text-muted-foreground py-4 align-middle text-sm whitespace-normal">
+                          {study.orgName ?? "—"}
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">
                         {needCountByStudy[study.id] ?? 0}
                       </TableCell>

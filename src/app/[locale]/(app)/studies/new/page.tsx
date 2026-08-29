@@ -160,6 +160,7 @@ export default function NewStudyPage() {
                 methodologyVersions={methodologyVersions}
                 studyTypes={studyTypes}
                 targetSectors={targetSectors}
+                actAsOrgId={isCrossEntity ? actAsOrgId : undefined}
                 onSubmit={handleSubmit}
                 onCancel={() => router.push("/studies")}
               />

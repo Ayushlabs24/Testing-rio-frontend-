@@ -10,7 +10,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
  * (role.key === "system_admin"). Center Supervisors (crossEntity read-only) and
  * NGO Admins/Users are redirected away to /dashboard.
  *
- * Two carve-outs, both opened for every crossEntity role, not just System
+ * Three carve-outs, all opened for every crossEntity role, not just System
  * Admin, so the finer-grained check inside each page (CrossEntityGuard /
  * PermissionGuard) is what actually decides access — this outer gate just
  * stops it being redirected to /dashboard before that inner check runs:
@@ -25,6 +25,13 @@ import { usePathname, useRouter } from "@/i18n/navigation";
  *   Deactivate/Reactivate actions stay gated to entityTeam:write/:create,
  *   which only System Admin holds — so this carve-out only ever surfaces
  *   the view + the Approve action to System Reviewer, nothing more.
+ * - /system-admin/audit-log — role-matrix.ts already grants System Reviewer
+ *   `archiveSharingAudit: read` (client-confirmed: "Audit Log — View only"),
+ *   but this outer gate was bouncing them to /dashboard before that grant
+ *   ever got checked, making the platform-wide Audit Log fully unreachable
+ *   for a role the backend already allows to view it. System Logs is
+ *   deliberately NOT carved out here — that module stays System-Admin-only
+ *   by design (see PERMISSION_MODULES' `systemLogs` comment in role-matrix.ts).
  */
 export function SystemAdminGuard({ children }: { children: ReactNode }) {
   const { session, isLoading } = useAuth();
@@ -33,9 +40,10 @@ export function SystemAdminGuard({ children }: { children: ReactNode }) {
   const isSystemAdmin = session?.role.key === "system_admin";
   const isSharedNcnpReportRoute = pathname.startsWith("/system-admin/ncnp-report");
   const isSharedOrganizationsRoute = pathname.startsWith("/system-admin/organizations");
+  const isSharedAuditLogRoute = pathname.startsWith("/system-admin/audit-log");
   const allowed =
     isSystemAdmin ||
-    ((isSharedNcnpReportRoute || isSharedOrganizationsRoute) &&
+    ((isSharedNcnpReportRoute || isSharedOrganizationsRoute || isSharedAuditLogRoute) &&
       Boolean(session?.role.crossEntity));
 
   useEffect(() => {

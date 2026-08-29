@@ -621,7 +621,14 @@ export default function UsersSettingsPage() {
           title={t("title")}
           description={isCrossEntity ? tOrgs("usersDescriptionGlobal") : t("description")}
           actions={
-            canCreate && assignableRoles.length > 0 ? (
+            // Not on this page for a crossEntity role (System Admin/Reviewer,
+            // Center Supervisor) — this list is platform-wide, every user
+            // across every org, so "create a user" has no single org to
+            // attach to. System Admin already creates users from inside a
+            // specific org's own Users tab (Settings → Organizations → an
+            // org → Users → Invite User) — this button would just duplicate
+            // that with an extra, redundant org picker.
+            !isCrossEntity && canCreate && assignableRoles.length > 0 ? (
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
                 {t("newUser")}

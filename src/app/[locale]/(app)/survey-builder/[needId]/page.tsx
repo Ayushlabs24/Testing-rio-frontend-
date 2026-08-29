@@ -269,6 +269,7 @@ export default function SurveyBuilderDetailPage({
   >([]);
   const [manualDomain, setManualDomain] = useState<string | null>(null);
   const [manualSubDomain, setManualSubDomain] = useState<string | null>(null);
+  const [manualReason, setManualReason] = useState("");
   const [manualClassifying, setManualClassifying] = useState(false);
   const subDomainOptionsFor = (domain: string | null): string[] =>
     domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
@@ -420,11 +421,16 @@ export default function SurveyBuilderDetailPage({
   }, []);
 
   async function submitManualClassification() {
-    if (!manualDomain || !manualSubDomain) return;
+    if (!manualDomain || !manualSubDomain || !manualReason.trim()) return;
     setManualClassifying(true);
     setError(null);
     try {
-      await aiReviewService.manualClassify(needId, manualDomain, manualSubDomain);
+      await aiReviewService.manualClassify(
+        needId,
+        manualDomain,
+        manualSubDomain,
+        manualReason.trim(),
+      );
       load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -1278,11 +1284,30 @@ export default function SurveyBuilderDetailPage({
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="manual-classification-reason">
+                      {t("manualClassificationReasonLabel")}
+                    </Label>
+                    <Textarea
+                      id="manual-classification-reason"
+                      rows={3}
+                      value={manualReason}
+                      onChange={(e) => setManualReason(e.target.value)}
+                      placeholder={t("manualClassificationReasonPlaceholder")}
+                      disabled={!canWrite || manualClassifying}
+                      className="sm:w-96"
+                    />
+                  </div>
                   {canWrite ? (
                     <Button
                       size="sm"
                       onClick={submitManualClassification}
-                      disabled={!manualDomain || !manualSubDomain || manualClassifying}
+                      disabled={
+                        !manualDomain ||
+                        !manualSubDomain ||
+                        !manualReason.trim() ||
+                        manualClassifying
+                      }
                       className="gap-1.5"
                     >
                       {manualClassifying ? (
