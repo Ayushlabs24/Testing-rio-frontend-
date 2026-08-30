@@ -50,6 +50,7 @@ export function PriorityBreakdown({
   const [value, setValue] = useState(String(score.effectiveScore));
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const breakdown = score.factors;
@@ -70,6 +71,23 @@ export function PriorityBreakdown({
       setError(err instanceof ApiError ? err.message : t("genericError"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Sign off on the computed score as-is — distinct from Override above,
+  // which changes the number. Previously missing entirely: the backend
+  // endpoint and this service call both existed, but nothing in the UI
+  // ever triggered it, so a reviewer with genuine approve permission had
+  // no way to actually approve a score, only to override one.
+  async function submitApprove() {
+    setApproving(true);
+    setError(null);
+    try {
+      onScoreUpdated(await priorityService.approve(score.id));
+    } catch (err: unknown) {
+      setError(err instanceof ApiError ? err.message : t("genericError"));
+    } finally {
+      setApproving(false);
     }
   }
 
@@ -184,10 +202,19 @@ export function PriorityBreakdown({
         {/* AC 5. Gated on approve rather than write: overruling the engine is
             a decision about the number, not a run of it. */}
         {canOverride && !score.isApproved ? (
-          <Button variant="outline" onClick={() => setOpen(true)}>
-            <PencilLine className="size-4" aria-hidden />
-            {t("overrideAction")}
-          </Button>
+          <>
+            <LoadingButton
+              onClick={submitApprove}
+              isLoading={approving}
+              disabled={saving}
+              startIcon={<CheckCircle2 className="size-4" aria-hidden />}
+              text={approving ? t("approving") : t("approveAction")}
+            />
+            <Button variant="outline" onClick={() => setOpen(true)} disabled={approving}>
+              <PencilLine className="size-4" aria-hidden />
+              {t("overrideAction")}
+            </Button>
+          </>
         ) : null}
       </div>
 

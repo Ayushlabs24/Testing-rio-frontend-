@@ -7,21 +7,151 @@ import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { priorityService } from "@/services/priority/priority.service";
 import type { VillageComparisonEntry } from "@/services/priority/priority.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
+
+// Same critical/high/medium/low → variant mapping the main Priority
+// Dashboard list uses (see LEVEL_VARIANT there) — the API sends this field
+// upper-cased ("HIGH"), the dashboard's own type lower-cases it, so this
+// normalizes before mapping rather than duplicating a second casing.
+const STATUS_VARIANT: Record<
+  string,
+  "default" | "secondary" | "outline" | "destructive"
+> = {
+  critical: "destructive",
+  high: "default",
+  medium: "secondary",
+  low: "outline",
+};
+
+function statusVariant(
+  status: string | null,
+): "default" | "secondary" | "outline" | "destructive" {
+  if (!status) return "outline";
+  return STATUS_VARIANT[status.toLowerCase()] ?? "outline";
+}
+
+/** One village's full comparison, as its own card — laid out so every card
+ * shows the same fields in the same vertical order, making a column-to-
+ * column scan across cards do the actual "compare" work a plain wide table
+ * left to horizontal scrolling. */
+function VillageCard({
+  entry,
+  t,
+}: {
+  entry: VillageComparisonEntry;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const hasAffected = entry.affectedPeople !== null || entry.affectedHouseholds !== null;
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="gap-3 pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-foreground text-base font-semibold break-words">
+            {entry.village}
+          </h3>
+          {entry.priorityStatus ? (
+            <Badge variant={statusVariant(entry.priorityStatus)} className="shrink-0">
+              {entry.priorityStatus}
+            </Badge>
+          ) : null}
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-foreground text-3xl font-bold tabular-nums">
+            {entry.priorityScore !== null ? entry.priorityScore.toFixed(1) : "—"}
+          </span>
+          <span className="text-muted-foreground text-xs">
+            {t("columns.priorityScore")}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-4 pt-0">
+        <div className="border-border grid grid-cols-3 gap-2 border-y py-3 text-center">
+          <div>
+            <p className="text-foreground text-lg font-semibold tabular-nums">
+              {entry.criticalNeedCount}
+            </p>
+            <p className="text-muted-foreground text-[11px]">{t("columns.critical")}</p>
+          </div>
+          <div className="border-border border-x">
+            <p className="text-foreground text-lg font-semibold tabular-nums">
+              {entry.highNeedCount}
+            </p>
+            <p className="text-muted-foreground text-[11px]">{t("columns.high")}</p>
+          </div>
+          <div>
+            <p className="text-foreground text-lg font-semibold tabular-nums">
+              {entry.totalNeedCount}
+            </p>
+            <p className="text-muted-foreground text-[11px]">{t("columns.totalNeeds")}</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground mb-1 text-xs font-medium">
+            {t("columns.affectedPopulation")}
+          </p>
+          {hasAffected ? (
+            <div className="text-foreground text-sm">
+              {entry.affectedPeople !== null ? (
+                <p>{t("columns.affectedPeopleValue", { count: entry.affectedPeople })}</p>
+              ) : null}
+              {entry.affectedHouseholds !== null ? (
+                <p>
+                  {t("columns.affectedHouseholdsValue", {
+                    count: entry.affectedHouseholds,
+                  })}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">—</p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-muted-foreground mb-1 text-xs font-medium">
+            {t("columns.needTypes")}
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {Object.entries(entry.needTypeCounts).map(([domain, count]) => (
+              <Badge key={domain} variant="secondary" className="text-xs">
+                {domain} ({count})
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-auto">
+          <p className="text-muted-foreground mb-1 text-xs font-medium">
+            {t("columns.domainSeverity")}
+          </p>
+          {entry.domainComponents === null || entry.domainComponents.length === 0 ? (
+            <p className="text-muted-foreground text-xs">{t("noDomainData")}</p>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {entry.domainComponents.map((dc) => (
+                <Badge
+                  key={dc.domainKey}
+                  variant={dc.triggeredOverride ? "destructive" : "outline"}
+                  className="text-xs"
+                >
+                  {dc.domainNameSnapshot}: {Math.round(dc.domainSeverityScore)}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function VillageComparisonPage() {
   const t = useTranslations("app.villageComparison");
@@ -30,6 +160,7 @@ export default function VillageComparisonPage() {
   const [entries, setEntries] = useState<VillageComparisonEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
     studiesService
@@ -50,25 +181,33 @@ export default function VillageComparisonPage() {
     }
   }
 
-  useEffect(() => {
-    // Nothing to fetch with an empty selection — the render below already
-    // shows "select at least one study" ahead of the `entries` branches, so
-    // a stale `entries` value from a previous selection is never shown.
-    if (selectedStudyIds.length === 0) return;
-    let active = true;
-    queueMicrotask(() => {
-      if (active) void loadComparison(selectedStudyIds);
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStudyIds]);
+  // Deliberately NOT reactive on every `selectedStudyIds` change — checking
+  // several studies in a row used to re-run the comparison after each
+  // individual click, which also meant the picker never visually settled
+  // before the page below it jumped. Now it only runs once the picker
+  // actually closes (Done, outside click, or Esc), or immediately when a
+  // chip is removed with the picker already closed (that's a single,
+  // deliberate action with nothing left to batch).
+  function applySelection(next: string[]) {
+    setSelectedStudyIds(next);
+    if (isPickerOpen) return;
+    if (next.length > 0) void loadComparison(next);
+    else setEntries(null);
+  }
+
+  function handlePickerOpenChange(open: boolean) {
+    setIsPickerOpen(open);
+    if (open) return;
+    if (selectedStudyIds.length > 0) void loadComparison(selectedStudyIds);
+    else setEntries(null);
+  }
 
   return (
     <PermissionGuard module="priorityScoring" action="read">
       <PageContainer>
-        <BackButton href="/priority-dashboard" label={t("backToDashboard")} />
+        <div className="mb-6 flex justify-start">
+          <BackButton href="/priority-dashboard" label={t("backToDashboard")} />
+        </div>
         <PageHeader title={t("title")} description={t("description")} />
 
         <Card className="mt-4">
@@ -79,7 +218,8 @@ export default function VillageComparisonPage() {
             <MultiSelect
               options={studies.map((s) => ({ value: s.id, label: s.title }))}
               values={selectedStudyIds}
-              onChange={setSelectedStudyIds}
+              onChange={applySelection}
+              onOpenChange={handlePickerOpenChange}
               placeholder={t("selectStudiesPlaceholder")}
               searchPlaceholder={t("searchStudies")}
               emptyText={t("noStudiesFound")}
@@ -97,100 +237,17 @@ export default function VillageComparisonPage() {
         ) : entries && entries.length === 0 ? (
           <p className="text-muted-foreground mt-6 text-sm">{t("noVillages")}</p>
         ) : entries ? (
-          <Card className="mt-4">
-            <CardContent className="overflow-x-auto p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("columns.village")}</TableHead>
-                    <TableHead>{t("columns.priorityScore")}</TableHead>
-                    <TableHead>{t("columns.status")}</TableHead>
-                    <TableHead>{t("columns.critical")}</TableHead>
-                    <TableHead>{t("columns.high")}</TableHead>
-                    <TableHead>{t("columns.totalNeeds")}</TableHead>
-                    <TableHead>{t("columns.affectedPopulation")}</TableHead>
-                    <TableHead>{t("columns.needTypes")}</TableHead>
-                    <TableHead>{t("columns.domainSeverity")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {entries.map((entry) => (
-                    <TableRow key={entry.village}>
-                      <TableCell className="font-medium">{entry.village}</TableCell>
-                      <TableCell>
-                        {entry.priorityScore !== null
-                          ? entry.priorityScore.toFixed(1)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {entry.priorityStatus ? (
-                          <Badge variant="outline">{entry.priorityStatus}</Badge>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell>{entry.criticalNeedCount}</TableCell>
-                      <TableCell>{entry.highNeedCount}</TableCell>
-                      <TableCell>{entry.totalNeedCount}</TableCell>
-                      <TableCell>
-                        {entry.affectedPeople === null &&
-                        entry.affectedHouseholds === null ? (
-                          "—"
-                        ) : (
-                          <div className="text-xs">
-                            {entry.affectedPeople !== null ? (
-                              <div>
-                                {t("columns.affectedPeopleValue", {
-                                  count: entry.affectedPeople,
-                                })}
-                              </div>
-                            ) : null}
-                            {entry.affectedHouseholds !== null ? (
-                              <div>
-                                {t("columns.affectedHouseholdsValue", {
-                                  count: entry.affectedHouseholds,
-                                })}
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {Object.entries(entry.needTypeCounts).map(([domain, count]) => (
-                            <Badge key={domain} variant="secondary" className="text-xs">
-                              {domain} ({count})
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {entry.domainComponents === null ||
-                        entry.domainComponents.length === 0 ? (
-                          <span className="text-muted-foreground text-xs">
-                            {t("noDomainData")}
-                          </span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {entry.domainComponents.map((dc) => (
-                              <Badge
-                                key={dc.domainKey}
-                                variant={dc.triggeredOverride ? "destructive" : "outline"}
-                                className="text-xs"
-                              >
-                                {dc.domainNameSnapshot}:{" "}
-                                {Math.round(dc.domainSeverityScore)}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <div
+            className={cn(
+              "mt-4 grid grid-cols-1 gap-4",
+              entries.length >= 2 && "md:grid-cols-2",
+              entries.length >= 3 && "xl:grid-cols-3",
+            )}
+          >
+            {entries.map((entry) => (
+              <VillageCard key={entry.village} entry={entry} t={t} />
+            ))}
+          </div>
         ) : null}
       </PageContainer>
     </PermissionGuard>

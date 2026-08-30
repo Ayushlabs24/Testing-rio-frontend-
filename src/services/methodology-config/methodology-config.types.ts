@@ -117,8 +117,14 @@ export interface UpdateMethodologyConfigPayload {
 
 /** TEMPORARY — see the MethodologyVersionOption model comment on the
  * backend. Backs the Survey workflow's Methodology Version selector until
- * the real source of versions is clarified. */
+ * the real source of versions is clarified.
+ *
+ * `name` is the human-readable label ("Village Needs Methodology v5.0 -
+ * ..."), same one the New Study screen shows for the same published
+ * MethodologyVersion row — use it for display. `version` stays what gets
+ * persisted onto Survey.methodologyVersion, unchanged. */
 export interface MethodologyVersionOption {
   id: string;
   version: string;
+  name: string;
 }

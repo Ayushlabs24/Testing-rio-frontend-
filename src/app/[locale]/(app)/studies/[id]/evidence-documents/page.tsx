@@ -572,7 +572,7 @@ export default function EvidenceDocumentsPage({
                 </div>
               )}
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>{t("fields.title")} *</Label>
                 <Input
                   required
@@ -584,7 +584,7 @@ export default function EvidenceDocumentsPage({
                 />
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>{t("fields.file")} *</Label>
                 <Input
                   type="file"
@@ -595,7 +595,7 @@ export default function EvidenceDocumentsPage({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-1.5">
                   <Label>{t("fields.documentType")}</Label>
                   <Select
                     value={uploadForm.documentType}
@@ -616,7 +616,7 @@ export default function EvidenceDocumentsPage({
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label>{t("fields.sourceReferenceId")} *</Label>
                   <Input
                     required
@@ -629,7 +629,7 @@ export default function EvidenceDocumentsPage({
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>{t("fields.collectedDate")} *</Label>
                 <Input
                   type="date"
@@ -641,7 +641,7 @@ export default function EvidenceDocumentsPage({
                 />
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>{t("fields.description")}</Label>
                 <Textarea
                   value={uploadForm.description}

@@ -211,11 +211,11 @@ export default function SurveyBuilderPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[18%]">{t("studyColumn")}</TableHead>
-                  <TableHead className="w-[22%]">{t("needColumn")}</TableHead>
-                  <TableHead className="w-[38%]">{t("domainColumn")}</TableHead>
-                  <TableHead className="w-[12%]">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-20" />
+                  <TableHead className="w-[16%]">{t("studyColumn")}</TableHead>
+                  <TableHead className="w-[20%]">{t("needColumn")}</TableHead>
+                  <TableHead className="w-[28%]">{t("domainColumn")}</TableHead>
+                  <TableHead className="w-[24%]">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -34,6 +34,11 @@ interface MultiSelectProps {
   maxVisibleChips?: number;
   /** Label for the popover's explicit close action. Defaults to "Done". */
   doneLabel?: string;
+  /** Fires whenever the popover opens/closes (Done, outside click, or Esc)
+   * — for a caller that needs to react to "the picker is closed now" rather
+   * than every individual toggle inside `onChange` (e.g. running an
+   * expensive query only once selection is finished, not per checkbox). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 const DEFAULT_MAX_VISIBLE_CHIPS = 4;
@@ -61,6 +66,7 @@ export function MultiSelect({
   moreLabel,
   maxVisibleChips = DEFAULT_MAX_VISIBLE_CHIPS,
   doneLabel,
+  onOpenChange,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -129,6 +135,7 @@ export function MultiSelect({
       onOpenChange={(next) => {
         setOpen(next);
         if (next) setQuery("");
+        onOpenChange?.(next);
       }}
     >
       <PopoverTrigger asChild>
@@ -160,8 +167,20 @@ export function MultiSelect({
           ) : (
             <>
               {visibleValues.map((value) => (
-                <Badge key={value} variant="secondary" className="gap-1">
-                  {byValue.get(value) ?? value}
+                // `Badge`'s base variant is `shrink-0 whitespace-nowrap` with
+                // no max-width, so a long label (e.g. a full study title)
+                // just grows past the trigger's right edge instead of
+                // wrapping to a new line — `max-w-full` bounds it to the
+                // container's own width so flex-wrap always has a fitting
+                // size to wrap on, and the inner `truncate` span ellipsizes
+                // the label itself rather than the whole chip (keeping the
+                // remove "x" visible).
+                <Badge
+                  key={value}
+                  variant="secondary"
+                  className="max-w-full min-w-0 gap-1"
+                >
+                  <span className="min-w-0 truncate">{byValue.get(value) ?? value}</span>
                   <span
                     role="button"
                     tabIndex={0}
@@ -177,6 +196,7 @@ export function MultiSelect({
                       }
                     }}
                     aria-label={removeAriaLabel(byValue.get(value) ?? value)}
+                    className="shrink-0"
                   >
                     <X className="size-3" />
                   </span>
@@ -268,7 +288,10 @@ export function MultiSelect({
         <div className="border-border border-t p-1.5">
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              onOpenChange?.(false);
+            }}
             className="hover:bg-accent hover:text-accent-foreground w-full cursor-pointer rounded-md px-2.5 py-1.5 text-center text-sm font-medium"
           >
             {doneLabel ?? "Done"}

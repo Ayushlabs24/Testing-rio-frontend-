@@ -9,13 +9,23 @@ import type { Center } from "@/services/geography/geography.types";
  * an empty list while `governorateIds` is empty. Non-fatal on failure: the
  * picker just renders with no options.
  *
+ * `actAsOrgId` — System Admin only: when set, resolves the CHOSEN org's
+ * centers instead of the caller's own, matching useOrgGovernorates /
+ * useOrgRegionName. Without this, a System Admin creating a Study for
+ * another org saw "No centers found" regardless of that org's real
+ * centers, because this always resolved System Admin's own (centerless)
+ * home org instead of the one selected in the form.
+ *
  * `loaded` is derived by comparing the last-resolved key against the
  * current one — `false` until the fetch for the *current* `governorateIds`
  * has settled. Callers that prune a stale selection against `centers` must
  * wait for `loaded` first, otherwise they'd prune against the empty
  * initial state before the real list ever arrives and wipe out a value
  * that was actually still valid. */
-export function useOrgCentersForGovernorates(governorateIds: string[]): {
+export function useOrgCentersForGovernorates(
+  governorateIds: string[],
+  actAsOrgId?: string,
+): {
   centers: Center[];
   loaded: boolean;
 } {
@@ -31,7 +41,7 @@ export function useOrgCentersForGovernorates(governorateIds: string[]): {
     const load =
       ids.length === 0
         ? Promise.resolve([])
-        : organizationsService.getCurrent().then(async (org) => {
+        : organizationsService.getCurrent(actAsOrgId).then(async (org) => {
             const lists = await Promise.all(
               ids.map((id) => geographyService.listCenters(id)),
             );
@@ -53,7 +63,7 @@ export function useOrgCentersForGovernorates(governorateIds: string[]): {
     return () => {
       cancelled = true;
     };
-  }, [key]);
+  }, [key, actAsOrgId]);
 
   const loaded = resolved.key === key;
   return { centers: loaded ? resolved.centers : [], loaded };
