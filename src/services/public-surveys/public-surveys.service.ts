@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import type {
   CreateSurveyLinkPayload,
   PublicSurveyLink,
@@ -14,13 +15,19 @@ export const publicSurveysService = {
     return apiClient.get<PublicSurveyLink[]>(endpoints.publicSurveys.links(needId));
   },
 
+  // `actAsOrgId` — pass the parent Need's own orgId here always, not just
+  // for System Admin: harmless for a regular tenant caller, load-bearing
+  // for System Admin creating a link under a Need it doesn't own — see
+  // needsService.create's identical comment.
   async createLink(
     needId: string,
     payload: CreateSurveyLinkPayload,
+    actAsOrgId?: string,
   ): Promise<PublicSurveyLink> {
     return apiClient.post<PublicSurveyLink>(
       endpoints.publicSurveys.links(needId),
       payload,
+      actAsOrgOptions(actAsOrgId),
     );
   },
 

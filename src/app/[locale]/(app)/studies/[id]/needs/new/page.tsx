@@ -33,9 +33,19 @@ interface NeedFormValues {
   village: string[];
   governorateIds: string[];
   centerIds: string[];
+  // Held as a string, not a number: an empty <input type="number"> yields NaN
+  // once coerced, and "not answered" has to stay distinguishable from zero all
+  // the way to the payload — the report says different things about the two.
+  affectedPopulation: string;
   affectedPeople: string;
   affectedHouseholds: string;
 }
+
+// "Roughly how many people does this need affect?" — a whole count of people,
+// or blank. The upper bound matches the API contract (Saudi Arabia's
+// population rounded up): high enough never to reject a real estimate, low
+// enough to catch a mistyped digit run before it reaches a report.
+const MAX_AFFECTED_POPULATION = 50_000_000;
 
 let stagedFileIdCounter = 0;
 interface StagedFile {
@@ -144,6 +154,15 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
     village: z.array(z.string()),
     governorateIds: z.array(z.string()),
     centerIds: z.array(z.string()),
+    // Optional on purpose — an estimate nobody is confident in is worth less
+    // than an honest blank, and the report prints a dash and says why.
+    affectedPopulation: z
+      .string()
+      .trim()
+      .refine(
+        (v) => v === "" || (/^\d+$/.test(v) && Number(v) <= MAX_AFFECTED_POPULATION),
+        tValidation("affectedPopulationInvalid"),
+      ),
     // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — "Roughly how many
     // people/households does this need affect?" Both optional, kept as
     // strings on the form so an empty field round-trips as "" rather than
@@ -179,6 +198,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       village: study?.villages ?? [],
       governorateIds: [],
       centerIds: [],
+      affectedPopulation: "",
       affectedPeople: "",
       affectedHouseholds: "",
     },
@@ -197,21 +217,32 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      const created = await needsService.create(studyId, {
-        // Blank stays blank here — the fallback-from-statement derivation
-        // happens server-side, not by pre-filling the field ourselves.
-        title: values.title || undefined,
-        statement: values.statement,
-        village: values.village,
-        governorateIds: values.governorateIds,
-        centerIds: values.centerIds,
-        affectedPeople:
-          values.affectedPeople === "" ? undefined : Number(values.affectedPeople),
-        affectedHouseholds:
-          values.affectedHouseholds === ""
-            ? undefined
-            : Number(values.affectedHouseholds),
-      });
+      const created = await needsService.create(
+        studyId,
+        {
+          // Blank stays blank here — the fallback-from-statement derivation
+          // happens server-side, not by pre-filling the field ourselves.
+          title: values.title || undefined,
+          statement: values.statement,
+          village: values.village,
+          governorateIds: values.governorateIds,
+          centerIds: values.centerIds,
+          // Blank stays absent rather than becoming 0 — the Top-Priority Report
+          // distinguishes "no estimate given" (a dash) from "nobody affected".
+          affectedPopulation:
+            values.affectedPopulation === ""
+              ? undefined
+              : Number(values.affectedPopulation),
+          affectedPeople:
+            values.affectedPeople === "" ? undefined : Number(values.affectedPeople),
+          affectedHouseholds:
+            values.affectedHouseholds === ""
+              ? undefined
+              : Number(values.affectedHouseholds),
+        },
+        // Always the Study's own org — see needsService.create's comment.
+        study?.orgId,
+      );
       // The Need itself is already saved at this point — a failed upload
       // must never block navigating to it (and definitely must never cause
       // a second, duplicate Need to get created by leaving the form up for
@@ -376,6 +407,37 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                   />
                   {errors.village ? (
                     <p className="text-destructive text-sm">{errors.village.message}</p>
+                  ) : null}
+                </div>
+
+                {/* The one figure behind the Top-Priority Report's Affected
+                    Population column (client-confirmed Option A). It exists
+                    nowhere else in the platform: Study.population is the study
+                    AREA's population and sizes the sample, so it cannot stand
+                    in for this. Asked here because it can only ever be
+                    answered at the point the need is recorded — it is not
+                    reconstructable afterwards. */}
+                <div className="space-y-2">
+                  <Label htmlFor="affectedPopulation">
+                    {t("affectedPopulationLabel")}
+                  </Label>
+                  <Input
+                    id="affectedPopulation"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={MAX_AFFECTED_POPULATION}
+                    step={1}
+                    placeholder={t("affectedPopulationPlaceholder")}
+                    {...register("affectedPopulation")}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {t("affectedPopulationHint")}
+                  </p>
+                  {errors.affectedPopulation ? (
+                    <p className="text-destructive text-sm">
+                      {errors.affectedPopulation.message}
+                    </p>
                   ) : null}
                 </div>
 

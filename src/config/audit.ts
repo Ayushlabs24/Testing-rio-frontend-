@@ -56,6 +56,11 @@ export const AUDIT_ENTITY_TYPES = [
   "evidence",
   "report",
   "sharing_request",
+  // Client-confirmed (2026-08-27) — the versioned Terms of Use / Data Sharing
+  // Policy content itself, drafted and published from Methodology
+  // Configuration. Distinct from `consent` the action, which is a user
+  // accepting one of these versions.
+  "consent_policy",
 ] as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
@@ -76,4 +81,5 @@ export const AUDIT_ENTITY_MODULE: Record<AuditEntityType, PermissionModule> = {
   evidence: "dataCollection",
   report: "reportsDashboards",
   sharing_request: "archiveSharingAudit",
+  consent_policy: "onboardingConsent",
 };

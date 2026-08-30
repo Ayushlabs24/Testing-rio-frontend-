@@ -89,12 +89,28 @@ export const GAP_TYPES = [
 ] as const;
 export type GapType = (typeof GAP_TYPES)[number];
 
+// Mirrors the backend's DomainPriorityComponent (priority-v2.service.ts) —
+// one row per domain in a village's most recent priority calculation.
+export interface DomainPriorityComponent {
+  domainKey: string;
+  domainNameSnapshot: string;
+  domainSeverityScore: number;
+  domainPerformanceScore: number;
+  domainWeight: number;
+  weightedContribution: number;
+  isCriticalDomain: boolean;
+  criticalThreshold: number;
+  triggeredOverride: boolean;
+}
+
 export interface VillageComparisonEntry {
   village: string;
   studyIds: string[];
   priorityScore: number | null;
   priorityStatus: string | null;
-  domainComponents: unknown | null;
+  // RIO-FR-005 criterion 2 — per-domain severity, already computed by
+  // VillageAggregationService; null until the village has a scored Need.
+  domainComponents: DomainPriorityComponent[] | null;
   criticalNeedCount: number;
   highNeedCount: number;
   needTypeCounts: Record<string, number>;

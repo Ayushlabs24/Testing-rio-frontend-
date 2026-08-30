@@ -169,13 +169,21 @@ const DOMAIN_COLUMNS: ColSpec[] = [
   { key: "name", label: "Domain" },
   { key: "domainCode", label: "Code" },
   // Severity is ALWAYS shown. Null renders "—", never 0.
-  { key: "severityScore", label: "Severity" },
+  // This is the AVERAGE; the two that follow are the methodology's no-masking
+  // rule (a domain can average Low while hiding a Critical KPI). KEEP IN SYNC
+  // with DOMAIN_TABLE_COLS in report-doc.ts — the export and the screen must
+  // show the same columns or a masking domain is visible in only one of them.
+  { key: "severityScore", label: "Avg Severity" },
+  { key: "maxKpiSeverity", label: "Max KPI Severity" },
+  // The worst KPI's NAME is not a column here either — it is in the Domain
+  // Masking Alert, where it is actionable. See DOMAIN_TABLE_COLS in report-doc.ts.
   { key: "performanceScore", label: "Performance" },
   { key: "weight", label: "Weight" },
   { key: "kpiCount", label: "KPIs defined" },
   { key: "confidence", label: "Confidence" },
   { key: "validResponseRatePct", label: "Valid %" },
   { key: "isCriticalDomain", label: "Critical" },
+  { key: "masksCriticalFinding", label: "Masking?" },
 ];
 
 // One row per Unified Need Record — the client's domain / sub-domain /
@@ -192,6 +200,66 @@ const NEED_RECORD_COLUMNS: ColSpec[] = [
   // Why this row carries no severity, or why its equity check could not run —
   // a blank Equity "No" would otherwise read as "checked, no inequity found".
   { key: "notMeasuredReason", label: "Notes", format: needNotes },
+];
+
+// Where a need sits, compact enough for a table cell. The full scope sentence
+// (`unitGeo.scopeLabel`) belongs in the Geographic Scope block, not in a column
+// with eleven neighbours — so take the most specific single place name.
+function compactGeoLabel(r: Dict): string {
+  const g = r.unitGeo;
+  if (!isObj(g)) return "—";
+  const villages = Array.isArray(g.villages)
+    ? g.villages.filter((v): v is string => typeof v === "string")
+    : [];
+  const govs = Array.isArray(g.governorateNames)
+    ? g.governorateNames.filter((v): v is string => typeof v === "string")
+    : [];
+  if (villages.length === 1) return villages[0];
+  if (govs.length === 1) return govs[0];
+  if (govs.length > 1) return `${govs[0]} +${govs.length - 1}`;
+  if (typeof g.regionName === "string" && g.regionName) return g.regionName;
+  return "—";
+}
+
+// The client's Top-Priority specification as columns: "domain, sub-domain,
+// location, priority score, severity, affected population, and ranking".
+//
+// MIRRORS report-doc.ts's PRIORITY_NEED_COLS exactly — the on-screen report and
+// the exported PDF/Excel are the same report, and a column that exists in one
+// and not the other is the export-parity failure AC 2 is about.
+//
+// `relevanceScore` is headed "Priority Score" because that is the client's word
+// for the priority-scoring mechanism's per-need output. It read "Relevance",
+// while the only thing on the page labelled "Priority Score" was a different,
+// village-level figure.
+const PRIORITY_NEED_COLUMNS: ColSpec[] = [
+  { key: "rank", label: "#" },
+  { key: "domain", label: "Domain" },
+  { key: "subDomain", label: "Sub-domain" },
+  { key: "indicatorName", label: "Indicator" },
+  { key: "unitGeo", label: "Location", format: compactGeoLabel },
+  {
+    key: "relevanceScore",
+    label: "Priority Score",
+    format: (r) =>
+      typeof r.relevanceScore === "number" ? r.relevanceScore.toFixed(2) : "—",
+  },
+  { key: "severityScore", label: "Severity" },
+  { key: "severityBand", label: "Band" },
+  // The source Need's own recorded estimate (the need-entry question). A dash
+  // when it was never answered, with the reason stated beneath the table —
+  // never the study-area figure. Mirrors report-doc.ts.
+  {
+    key: "affectedPopulation",
+    label: "Affected Pop.",
+    format: (r) =>
+      typeof r.affectedPopulation === "number"
+        ? r.affectedPopulation.toLocaleString("en-GB")
+        : "—",
+  },
+  { key: "confidence", label: "Confidence" },
+  { key: "equityFlag", label: "Equity" },
+  { key: "validResponseCount", label: "Responses" },
 ];
 
 // Summary status as a reserved status colour PLUS its written label — the
@@ -213,6 +281,31 @@ function EvidenceStatusBadge({ status }: { status: string }) {
     >
       {status.replace(/_/g, " ")}
     </span>
+  );
+}
+
+// The methodology's no-masking rule, made explicit for the reader who reads the
+// average column and stops there. Mirrors the "Domain Masking Alert" note the
+// PDF/Excel export emits (report-doc.ts) — a masking domain must be equally
+// visible on screen and in the exported file.
+function DomainMaskingAlert({ domains }: { domains: Dict[] }) {
+  const masked = domains.filter((d) => d.masksCriticalFinding === true);
+  if (masked.length === 0) return null;
+  return (
+    <div className="border-warning/40 bg-warning/10 text-foreground rounded-md border p-3 text-sm">
+      <p className="font-semibold">Domain Masking Alert</p>
+      <p className="mt-1 leading-relaxed">
+        {masked.length} domain(s) average a milder band than their worst KPI:{" "}
+        {masked
+          .map(
+            (d) =>
+              `${scalar(d.name)} (worst: ${scalar(d.maxKpiName)} at ${scalar(d.maxKpiSeverity)})`,
+          )
+          .join("; ")}
+        . Per the methodology, a critical need surfaces regardless of its domain average —
+        read the Max KPI Severity column, not the average, for these domains.
+      </p>
+    </div>
   );
 }
 
@@ -316,6 +409,12 @@ export function ReportContentView({ report }: { report: Report }) {
       isObjArray(c.scoringDistribution) ||
       isObjArray(c.requests) ||
       isObj(c.evidenceSection) ||
+      // RPT03/RPT09 Top-Priority and RPT10 Data-Quality. KEEP IN SYNC with the
+      // identical predicate in report-doc.ts — when the two disagree, a report
+      // renders as a structured document in one place and as a flat key-value
+      // dump in the other.
+      isObjArray(c.tierSummary) ||
+      isObjArray(c.completeness) ||
       isObj(c.geography));
 
   if (!isCore) {
@@ -477,6 +576,36 @@ export function ReportContentView({ report }: { report: Report }) {
             methodologyVersion: sv.methodologyVersion,
           }}
         />
+      ),
+    });
+  }
+
+  // What a study-scoped report actually read (RPT04). Study-scoped reports are
+  // built from ONE resolved survey; when the study has more, saying so up front
+  // changes how every figure below should be read.
+  if (isObj(c.scopeBasis)) {
+    const sb = c.scopeBasis as Dict;
+    sections.push({
+      title: "Scope Basis",
+      node: (
+        <div className="space-y-3">
+          <KeyValues
+            obj={{
+              survey: sb.surveyTitle,
+              surveysInStudy: sb.studySurveyCount,
+              selectedBy:
+                sb.resolution === "EXPLICIT_FILTER"
+                  ? "Explicit filter"
+                  : "Latest published survey",
+            }}
+          />
+          {typeof sb.partialScopeNote === "string" && sb.partialScopeNote ? (
+            <div className="border-warning/40 bg-warning/10 text-foreground rounded-md border p-3 text-sm">
+              <p className="font-semibold">Partial Scope</p>
+              <p className="mt-1 leading-relaxed">{sb.partialScopeNote}</p>
+            </div>
+          ) : null}
+        </div>
       ),
     });
   }
@@ -945,6 +1074,7 @@ export function ReportContentView({ report }: { report: Report }) {
             </div>
           </div>
           <DataTable rows={domains} columns={DOMAIN_COLUMNS} />
+          <DomainMaskingAlert domains={domains} />
         </div>
       ),
     });
@@ -1027,6 +1157,298 @@ export function ReportContentView({ report }: { report: Report }) {
     });
   }
 
+  // RPT03/RPT09 Top-Priority — tier distribution, then the domain rollup with
+  // the methodology's no-masking columns. Both sit above Priority Needs so the
+  // shape of the findings is read before the findings themselves.
+  if (isObjArray(c.tierSummary)) {
+    sections.push({
+      title: t("tierSummary"),
+      node: (
+        <DataTable
+          rows={c.tierSummary}
+          columns={[
+            { key: "tier", label: "Priority Tier" },
+            { key: "count", label: "Needs" },
+            { key: "sharePct", label: "Share %" },
+            { key: "equityFlagged", label: "Equity-flagged" },
+          ]}
+        />
+      ),
+    });
+  }
+
+  if (isObjArray(c.domainRollup)) {
+    const masking = c.domainRollup.filter((r) => r.masksCriticalFinding === true);
+    sections.push({
+      title: t("domainRollup"),
+      node: (
+        <div className="space-y-3">
+          <DataTable
+            rows={c.domainRollup}
+            columns={[
+              { key: "domain", label: "Domain" },
+              { key: "averageSeverity", label: "Avg Severity" },
+              // The no-masking column. A domain can average LOW while hiding a
+              // CRITICAL KPI, so the max is shown beside the average, never
+              // instead of it.
+              { key: "maxKpiSeverity", label: "Max KPI Severity" },
+              { key: "criticalKpiCount", label: "Critical KPIs" },
+              { key: "kpiCount", label: "KPIs Defined" },
+            ]}
+          />
+          {masking.length > 0 ? (
+            <p className="text-muted-foreground text-xs">
+              {t("noMaskingAlert")}: {masking.map((r) => scalar(r.domain)).join(", ")}
+            </p>
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // RPT10 Data-Quality — completeness tiles, per-domain confidence, then the
+  // flagged records themselves.
+  if (isObjArray(c.completeness)) {
+    sections.push({
+      title: t("completeness"),
+      node: (
+        <DataTable
+          rows={c.completeness}
+          columns={[
+            { key: "label", label: "Measure" },
+            { key: "value", label: "Value" },
+          ]}
+        />
+      ),
+    });
+  }
+
+  // Data-collection completeness — client Q14 answer (a), settled 24 Aug:
+  // unanswered required questions and the survey abandonment rate, with
+  // abandoned sittings counted INTO the invalid-response figure rather than
+  // reported as their own category. Mirrors report-doc.ts section for section;
+  // a block present in the export and absent here is the export-parity failure
+  // AC 2 exists to prevent.
+  if (isObj(c.dataCollection)) {
+    const dc = c.dataCollection as Dict;
+    const scope = isObj(dc.scope) ? (dc.scope as Dict) : null;
+    const ab = isObj(dc.abandonment) ? (dc.abandonment as Dict) : null;
+    const un = isObj(dc.unansweredRequired) ? (dc.unansweredRequired as Dict) : null;
+    const inv = isObj(dc.invalidResponses) ? (dc.invalidResponses as Dict) : null;
+
+    if (scope) {
+      sections.push({
+        title: t("dataCollectionScope"),
+        node: (
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-xs">{scalar(scope.note)}</p>
+            {isObjArray(scope.coveredSurveys) ? (
+              <DataTable
+                rows={scope.coveredSurveys}
+                columns={[
+                  { key: "title", label: "Survey" },
+                  { key: "version", label: "Version" },
+                  { key: "status", label: "Status" },
+                  { key: "responses", label: "Submitted Responses" },
+                ]}
+              />
+            ) : null}
+            {isObjArray(scope.excludedSurveys) ? (
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t("surveysNotCovered")}
+                </p>
+                <DataTable
+                  rows={scope.excludedSurveys}
+                  columns={[
+                    { key: "title", label: "Survey" },
+                    { key: "version", label: "Version" },
+                    { key: "status", label: "Status" },
+                    { key: "responses", label: "Submitted Responses" },
+                  ]}
+                />
+              </div>
+            ) : null}
+          </div>
+        ),
+      });
+    }
+
+    if (ab) {
+      sections.push({
+        title: t("abandonment"),
+        node: (
+          <div className="space-y-3">
+            <DataTable
+              rows={[
+                { measure: t("sessionsStarted"), value: scalar(ab.sessionsStarted) },
+                { measure: t("sessionsSubmitted"), value: scalar(ab.submitted) },
+                { measure: t("sessionsAbandoned"), value: scalar(ab.abandoned) },
+                { measure: t("sessionsInFlight"), value: scalar(ab.inFlight) },
+                {
+                  measure: t("abandonmentRate"),
+                  // The threshold travels with the rate — a percentage whose
+                  // definition is a config value must never be shown bare.
+                  value: `${scalar(ab.abandonmentRatePct)}% (${scalar(ab.resolvedSessions)} resolved, >${scalar(ab.idleThresholdMinutes)}m idle)`,
+                },
+                {
+                  measure: t("meanProgressWhenAbandoned"),
+                  value:
+                    ab.meanProgressPct === null ? "—" : `${scalar(ab.meanProgressPct)}%`,
+                },
+                { measure: t("remindersSent"), value: scalar(ab.remindersSent) },
+                {
+                  measure: t("responsesWithoutSession"),
+                  value: scalar(ab.responsesWithoutSession),
+                },
+              ]}
+              columns={[
+                { key: "measure", label: "Measure" },
+                { key: "value", label: "Value" },
+              ]}
+            />
+            <p className="text-muted-foreground text-xs">{scalar(ab.note)}</p>
+            {isObjArray(ab.byStage) ? (
+              <DataTable
+                rows={ab.byStage}
+                columns={[
+                  { key: "stageLabel", label: "Stopped at" },
+                  { key: "count", label: "Sessions" },
+                  {
+                    key: "sharePct",
+                    label: "Share",
+                    format: (r) => `${scalar(r.sharePct)}%`,
+                  },
+                ]}
+              />
+            ) : null}
+          </div>
+        ),
+      });
+    }
+
+    if (inv) {
+      sections.push({
+        title: t("invalidResponses"),
+        node: (
+          <div className="space-y-3">
+            <DataTable
+              rows={[
+                { measure: t("excludedSubmitted"), value: scalar(inv.excludedSubmitted) },
+                { measure: t("abandonedSessions"), value: scalar(inv.abandonedSessions) },
+                { measure: t("invalidTotal"), value: scalar(inv.total) },
+              ]}
+              columns={[
+                { key: "measure", label: "Measure" },
+                { key: "value", label: "Value" },
+              ]}
+            />
+            <p className="text-muted-foreground text-xs">{scalar(inv.basis)}</p>
+          </div>
+        ),
+      });
+    }
+
+    if (un) {
+      sections.push({
+        title: t("unansweredRequired"),
+        node: (
+          <div className="space-y-3">
+            <DataTable
+              rows={[
+                {
+                  measure: t("requiredQuestions"),
+                  value: scalar(un.requiredQuestionCount),
+                },
+                {
+                  measure: t("submittedResponses"),
+                  value: scalar(un.submittedResponses),
+                },
+                {
+                  measure: t("requiredAnswerSlots"),
+                  value: scalar(un.requiredAnswerSlots),
+                },
+                {
+                  measure: t("leftBlank"),
+                  value: `${scalar(un.unansweredCount)} (${scalar(un.unansweredRatePct)}%)`,
+                },
+              ]}
+              columns={[
+                { key: "measure", label: "Measure" },
+                { key: "value", label: "Value" },
+              ]}
+            />
+            <p className="text-muted-foreground text-xs">{scalar(un.note)}</p>
+            {isObjArray(un.byQuestion) ? (
+              <DataTable
+                rows={un.byQuestion}
+                columns={[
+                  { key: "questionText", label: "Required Question" },
+                  { key: "domain", label: "Domain" },
+                  { key: "surveyTitle", label: "Survey" },
+                  { key: "unanswered", label: "Left Blank" },
+                  { key: "ofResponses", label: "Of Responses" },
+                  {
+                    key: "unansweredPct",
+                    label: "Rate",
+                    format: (r) => `${scalar(r.unansweredPct)}%`,
+                  },
+                ]}
+              />
+            ) : null}
+          </div>
+        ),
+      });
+    }
+  }
+
+  if (isObjArray(c.domainConfidence)) {
+    sections.push({
+      title: t("domainConfidence"),
+      node: (
+        <DataTable
+          rows={c.domainConfidence}
+          columns={[
+            { key: "domain", label: "Domain" },
+            { key: "confidence", label: "Confidence" },
+            { key: "validResponseRatePct", label: "Valid-Response %" },
+            { key: "dontKnowRatePct", label: "Don't-Know %" },
+            { key: "kpiCount", label: "KPIs" },
+            { key: "reason", label: "Why this band" },
+          ]}
+        />
+      ),
+    });
+  }
+
+  // Array.isArray, NOT isObjArray — an EMPTY list must still render its
+  // section. A missing section reads as "quality was not checked" rather than
+  // "nothing was flagged", and under AC 6 those are opposite claims.
+  if (Array.isArray(c.flaggedRecords)) {
+    const flagged = c.flaggedRecords as Dict[];
+    sections.push({
+      title: t("flaggedRecords"),
+      node: (
+        <div className="space-y-3">
+          <p className="text-muted-foreground text-xs">
+            {flagged.length === 0 ? t("flaggedRecordsNone") : t("flaggedRecordsNote")}
+          </p>
+          {flagged.length > 0 ? (
+            <DataTable
+              rows={flagged}
+              columns={[
+                { key: "flag", label: "Flag" },
+                { key: "domain", label: "Domain" },
+                { key: "indicatorName", label: "Indicator" },
+                { key: "reason", label: "Reason" },
+              ]}
+            />
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
   // 5 — Priority Needs. Supersedes the flat Priority block below when present,
   // so the same figure never renders twice.
   if (isObj(c.priorityNeeds)) {
@@ -1040,7 +1462,16 @@ export function ReportContentView({ report }: { report: Report }) {
             <div className="space-y-2">
               <KeyValues
                 obj={{
-                  priorityScore: vp.priorityScore,
+                  // "Village Priority Score", not "Priority Score": this is the
+                  // VILLAGE-level performance figure (lower = more urgent),
+                  // while the Priority Needs table's Priority Score column is
+                  // the per-need ranking figure (higher = more urgent). Two
+                  // numbers running in opposite directions must not share a name
+                  // on one page. Mirrors report-doc.ts.
+                  villagePriorityScore:
+                    typeof vp.priorityScore === "number"
+                      ? vp.priorityScore.toFixed(2)
+                      : vp.priorityScore,
                   priorityStatus: vp.priorityStatus,
                   ...(vp.notCalculableReason
                     ? { notCalculable: vp.notCalculableReason }
@@ -1057,14 +1488,36 @@ export function ReportContentView({ report }: { report: Report }) {
             </div>
           ) : null}
           {isObjArray(pn.needs) ? (
-            <DataTable
-              rows={pn.needs}
-              columns={[
-                { key: "rank", label: "#" },
-                ...NEED_RECORD_COLUMNS,
-                { key: "relevanceScore", label: "Relevance" },
-              ]}
-            />
+            <div className="space-y-2">
+              <DataTable rows={pn.needs} columns={PRIORITY_NEED_COLUMNS} />
+              {/* How the order was arrived at, beneath the order itself. The
+                  methodology asks that a reader be able to RECOMPUTE the
+                  ranking, which a formula left in the payload does not allow. */}
+              {typeof pn.rankingBasis === "string" && pn.rankingBasis ? (
+                <p className="text-muted-foreground text-xs">
+                  {t("pn.rankingBasis", { basis: pn.rankingBasis })}
+                </p>
+              ) : null}
+              {/* Both granularity limits, stated on the table so neither column
+                  can be read as claiming more than it does. */}
+              {new Set((pn.needs as Dict[]).map(compactGeoLabel)).size === 1 ? (
+                <p className="text-muted-foreground text-xs">
+                  {t("pn.locationScope", {
+                    location: compactGeoLabel((pn.needs as Dict[])[0]!),
+                  })}
+                </p>
+              ) : null}
+              {/* Two different things to say about the same column, depending
+                  on whether an estimate was actually given — the export says
+                  the same two, chosen the same way. */}
+              <p className="text-muted-foreground text-xs">
+                {(pn.needs as Dict[]).every(
+                  (n) => typeof n.affectedPopulation !== "number",
+                )
+                  ? t("pn.affectedPopulationMissing")
+                  : t("pn.affectedPopulationScope")}
+              </p>
+            </div>
           ) : null}
           {isObjArray(pn.notMeasured) ? (
             <div className="space-y-2">
@@ -1093,6 +1546,62 @@ export function ReportContentView({ report }: { report: Report }) {
             >
               <p className="text-muted-foreground text-xs font-medium">{t("override")}</p>
               <p className="text-foreground">{scalar(priority.overrideReason)}</p>
+            </div>
+          ) : null}
+        </div>
+      ),
+    });
+  }
+
+  // The arithmetic behind the headline figures, with this report's own numbers.
+  //
+  // The block has always been built and was rendered NOWHERE — neither here nor
+  // in the PDF. The methodology's explainability requirement ("the components of
+  // every score are displayed") is about the report a person reads, not the
+  // payload behind it. Mirrors calculationBasisSections() in report-doc.ts.
+  if (isObj(c.calculationBasis)) {
+    const cb = c.calculationBasis as Dict;
+    const working = (key: string) =>
+      Array.isArray(cb[key]) ? (cb[key] as unknown[]).map(String) : [];
+    const needsIndex = working("needsIndexWorking");
+    const priorityScore = working("priorityScoreWorking");
+    sections.push({
+      title: t("calculationBasis"),
+      node: (
+        <div className="space-y-4">
+          <KeyValues
+            obj={{
+              needsIndexFormula: cb.needsIndexFormula,
+              priorityScoreFormula: cb.priorityScoreFormula,
+              severityBandingRule: cb.severityBandingRule,
+              confidenceRule: cb.confidenceRule,
+              equityRule: cb.equityRule,
+              gapTypeRule: cb.gapTypeRule,
+            }}
+          />
+          {[
+            { label: t("cb.needsIndexWorking"), items: needsIndex },
+            { label: t("cb.priorityScoreWorking"), items: priorityScore },
+          ]
+            .filter((b) => b.items.length > 0)
+            .map((b) => (
+              <div key={b.label} className="space-y-1">
+                <p className="text-muted-foreground text-xs font-medium">{b.label}</p>
+                <ul className="text-foreground space-y-1 text-sm">
+                  {b.items.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          {/* The trip points the rules above refer to — a rule that says "below
+              the minimum sample" is only checkable beside the number itself. */}
+          {isObj(cb.thresholds) ? (
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("cb.thresholds")}
+              </p>
+              <KeyValues obj={cb.thresholds as Dict} />
             </div>
           ) : null}
         </div>

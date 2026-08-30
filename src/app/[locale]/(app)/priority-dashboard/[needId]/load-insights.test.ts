@@ -15,7 +15,7 @@ vi.mock("@/services/needs/needs.service", () => ({
   needsService: { getById: vi.fn() },
 }));
 vi.mock("@/services/surveys/surveys.service", () => ({
-  surveysService: { getSurveyByNeedId: vi.fn() },
+  surveysService: { getPublishedSurveyByNeedId: vi.fn() },
 }));
 vi.mock("@/services/response-quality/response-quality.service", () => ({
   responseQualityService: { list: vi.fn() },
@@ -43,7 +43,7 @@ describe("loadPriorityInsights — stale-response guard", () => {
 
   beforeEach(() => {
     vi.mocked(needsService.getById).mockReset();
-    vi.mocked(surveysService.getSurveyByNeedId).mockReset();
+    vi.mocked(surveysService.getPublishedSurveyByNeedId).mockReset();
     vi.mocked(responseQualityService.list).mockReset();
     setters.setNeed.mockReset();
     setters.setSurvey.mockReset();
@@ -57,7 +57,7 @@ describe("loadPriorityInsights — stale-response guard", () => {
     vi.mocked(needsService.getById)
       .mockReturnValueOnce(requestA.promise as never)
       .mockReturnValueOnce(requestB.promise as never);
-    vi.mocked(surveysService.getSurveyByNeedId).mockResolvedValue(null);
+    vi.mocked(surveysService.getPublishedSurveyByNeedId).mockResolvedValue(null);
     vi.mocked(responseQualityService.list).mockResolvedValue([]);
 
     // Request A starts (needId changes to "need_a")...
@@ -87,7 +87,7 @@ describe("loadPriorityInsights — stale-response guard", () => {
     const requestA = deferred<unknown[]>();
     const requestB = deferred<unknown[]>();
     vi.mocked(needsService.getById).mockResolvedValue({ id: "need_1" } as never);
-    vi.mocked(surveysService.getSurveyByNeedId).mockResolvedValue(null);
+    vi.mocked(surveysService.getPublishedSurveyByNeedId).mockResolvedValue(null);
     vi.mocked(responseQualityService.list)
       .mockReturnValueOnce(requestA.promise as never)
       .mockReturnValueOnce(requestB.promise as never);
@@ -113,7 +113,7 @@ describe("loadPriorityInsights — stale-response guard", () => {
       id: "need_1",
       title: "Only Need",
     } as never);
-    vi.mocked(surveysService.getSurveyByNeedId).mockResolvedValue(null);
+    vi.mocked(surveysService.getPublishedSurveyByNeedId).mockResolvedValue(null);
     vi.mocked(responseQualityService.list).mockResolvedValue([]);
 
     loadPriorityInsights("need_1", undefined, () => false, setters);

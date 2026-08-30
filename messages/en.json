@@ -481,7 +481,8 @@
           "domains": "Domains & Sub-domains",
           "config": "Thresholds, Flags & Version",
           "questions": "Question Bank",
-          "scoring": "Scoring Lookups"
+          "scoring": "Scoring Lookups",
+          "consent": "Consent Policies"
         },
         "domains": {
           "domainsHeading": "Domains",
@@ -522,14 +523,26 @@
           "statusLabel": "Status",
           "status": {
             "draft": "Draft",
+            "pending_approval": "Pending approval",
+            "approved": "Approved",
             "published": "Published"
           },
           "publishedByLabel": "Published by",
           "publishedAtLabel": "Published date",
           "lastUpdatedLabel": "Last updated",
+          "versionNote": "This label is for reference only, not a switchable version — publishing new thresholds, weights, or scales below immediately affects every future score calculation. Past scores are not preserved under the version that produced them; see Change History for a record of what changed and when.",
+          "reviewerNoteLabel": "Reviewer note",
           "editVersion": "Edit version",
           "publish": "Publish",
           "publishing": "Publishing...",
+          "approve": "Approve",
+          "reject": "Reject",
+          "approveDialogTitle": "Approve methodology configuration",
+          "rejectDialogTitle": "Reject methodology configuration",
+          "reviewerNotesLabel": "Reviewer notes",
+          "reviewerNotesRequired": "Reviewer notes are required.",
+          "confirmApprove": "Confirm approval",
+          "confirmReject": "Confirm rejection",
           "thresholdsHeading": "Priority Thresholds",
           "thresholdsNote": "Severity cutoffs Priority Dashboard's placeholder scoring uses to classify Critical/High/Medium/Low — see scope.md §8.",
           "criticalSeverityLabel": "Critical severity (Health/Water only)",
@@ -540,6 +553,29 @@
           "factorWeightsNote": "The 9 configurable factors behind the placeholder priority score — adjust each factor's weight as a percentage of the total score; weights should total 100%.",
           "weightSumNote": "Total weight: {sum}% (should be 100%)",
           "weightSumError": "The total weight must equal exactly 100%.",
+          "factorScalesHeading": "Priority Factor Scales",
+          "factorScalesNote": "How a raw figure becomes the 0-100 value each factor weight above multiplies — e.g. what \"450 affected people\" is worth out of 100.",
+          "factorScalesRangesHeading": "Conversion ranges",
+          "factorScalesAffectedPopulationLabel": "Affected population",
+          "factorScalesGeographicCoverageLabel": "Geographic coverage",
+          "factorScalesFrequencyLabel": "Frequency of similar needs",
+          "factorScalesFloorLabel": "Floor",
+          "factorScalesCeilingLabel": "Ceiling",
+          "factorScalesToLabel": "to",
+          "factorScalesFloorAria": "{label} floor",
+          "factorScalesCeilingAria": "{label} ceiling",
+          "factorScalesRangeError": "The ceiling must be greater than the floor.",
+          "factorScalesUrgencyHeading": "Urgency scale",
+          "factorScalesUrgencyLevel": {
+            "immediate": "Immediate",
+            "this_cycle": "This cycle",
+            "next_cycle": "Next cycle",
+            "no_fixed_timeline": "No fixed timeline"
+          },
+          "factorScalesEquitySpreadLabel": "Equity spread threshold",
+          "factorScalesEquitySpreadNote": "How wide a spread between respondent segments (sex, age, disability) counts as inequity, on the same 0-100 scale as the spread itself.",
+          "factorScalesStrategicAxesHeading": "Strategic axes",
+          "factorScalesAxisValueAria": "{label} value",
           "flagsHeading": "Confidence Flags",
           "flagsNote": "When a study's responses trip either rule, its Response Quality confidence flag is set to \"low\".",
           "dontKnowRatioLabel": "\"Don't know\" ratio threshold (0–1)",
@@ -572,6 +608,8 @@
           "targetSectorsNote": "Configurable values offered when creating a Study, distinct from methodology Domain/Sub-domain. Interim placeholders — rename or replace them once the final list is confirmed.",
           "decisionTypesHeading": "Decision Types",
           "decisionTypesNote": "Configurable values offered when logging a Need decision (Intervention, Escalation, Follow-up by default). Add more as needed — e.g. Referral, Deferred, No Action Needed.",
+          "gapTypesHeading": "Gap Types",
+          "gapTypesNote": "Configurable values offered when classifying a Need's gap type on the Priority Dashboard (Acute, Chronic, Structural, Seasonal, Equity by default).",
           "noOptionsYet": "No values yet.",
           "optionActive": "Active",
           "optionInactive": "Inactive",
@@ -595,6 +633,8 @@
           "historyPageLabel": "Page {page} of {count}",
           "historyChangeType": {
             "edit": "Edited",
+            "approve": "Approved",
+            "reject": "Rejected",
             "publish": "Published"
           },
           "optionStatusLabel": "Status",
@@ -715,6 +755,71 @@
           "noLookups": "No scoring lookups have been uploaded for this methodology version yet.",
           "loading": "Loading lookups...",
           "genericError": "Something went wrong. Please try again."
+        },
+        "consent": {
+          "intro": "The Terms of Use and Data Sharing Policy shown during signup, and the consent notice shown to citizens during a survey. A System Admin drafts a new version and submits it; a System Reviewer approves it; the System Admin then publishes it. Every version is kept, and each consent stays tied to the version that was active when it was given.",
+          "kind": {
+            "use_policy": {
+              "heading": "Terms of Use",
+              "note": "Accepted by every account owner during registration."
+            },
+            "data_sharing": {
+              "heading": "Data Sharing Policy",
+              "note": "The separate consent to share the organization's data — versioned independently of the Terms of Use."
+            },
+            "citizen_consent": {
+              "heading": "Citizen Consent (Survey)",
+              "note": "The notice a citizen accepts before a public survey collects anything. Each response records the version its respondent read."
+            }
+          },
+          "status": {
+            "draft": "Draft",
+            "pending_approval": "Pending approval",
+            "approved": "Approved",
+            "published": "Published"
+          },
+          "liveVersionLabel": "Live at signup",
+          "noLiveVersion": "No published version",
+          "newVersion": "New version",
+          "activeBadge": "Live",
+          "lastUpdatedBy": "Last updated by {name}",
+          "unknownActor": "Unknown",
+          "versionLabel": "Version label",
+          "versionPlaceholder": "e.g. v2",
+          "versionHint": "Must be unique for this policy. Users' consent records reference it, so it can't be reused.",
+          "textLabel": "Policy text ({language})",
+          "textArHint": "No Arabic translation yet. Arabic readers will be shown the English wording, and their consent recorded as English, until one is added.",
+          "createDraft": "Create draft",
+          "saveDraft": "Save draft",
+          "saving": "Saving...",
+          "submitForApproval": "Submit for approval",
+          "approve": "Approve",
+          "reject": "Reject",
+          "publish": "Publish",
+          "publishing": "Publishing...",
+          "cancel": "Cancel",
+          "reviewerNoteLabel": "Reviewer note",
+          "reviewerNotesLabel": "Reviewer notes",
+          "reviewerNotesRequired": "Reviewer notes are required.",
+          "approveDialogTitle": "Approve consent policy version",
+          "rejectDialogTitle": "Reject consent policy version",
+          "confirmApprove": "Confirm approval",
+          "confirmReject": "Confirm rejection",
+          "historyHeading": "Version history",
+          "historyEmpty": "No versions yet.",
+          "loadError": "Couldn't load the consent policies. Please try again.",
+          "retry": "Retry",
+          "genericError": "Something went wrong. Please try again.",
+          "englishTextMissing": "The English wording is empty. Switch the application language to English to enter it — English is what readers fall back to when a translation is missing, so it cannot be left blank.",
+          "language": {
+            "en": "English",
+            "ar": "Arabic"
+          },
+          "closeText": "Close",
+          "showText": "Show policy text",
+          "showMore": "Show more",
+          "showLess": "Show less",
+          "textHeading": "Policy text"
         }
       },
       "organization": {
@@ -846,7 +951,7 @@
         },
         "grants": {
           "heading": "Permission Grants",
-          "note": "RIO-RBAC-002 — a Center/NCNP Supervisor is read-only everywhere by default. A grant here is the only way that role ever gets a specific write/create/approve action, optionally scoped to one entity and optionally time-limited.",
+          "note": "RIO-RBAC-002 — a Center/NCNP Supervisor is read-only everywhere by default. A grant here is the only way that role ever gets a specific write/create/approve action, applied across every entity, and optionally time-limited.",
           "newGrant": "New Grant",
           "granteeLabel": "Grantee",
           "granteePlaceholder": "Select a Center/NCNP Supervisor",
@@ -1063,7 +1168,8 @@
           "combined_report_summary": "Combined report summary",
           "ncnp_report": "NCNP Compiled Report",
           "question": "Question Bank item",
-          "need_decision": "Decision"
+          "need_decision": "Decision",
+          "consent_policy": "Consent policy"
         }
       }
     },
@@ -1158,8 +1264,10 @@
         "affectedPopulation": "Affected Population",
         "affectedPeopleValue": "{count, plural, one {# person} other {# people}}",
         "affectedHouseholdsValue": "{count, plural, one {# household} other {# households}}",
-        "needTypes": "Need Types"
-      }
+        "needTypes": "Need Types",
+        "domainSeverity": "Domain Severity"
+      },
+      "noDomainData": "Not yet scored"
     },
     "reports": {
       "title": "Reports",
@@ -1236,7 +1344,10 @@
         "generating": "Generating...",
         "genericError": "Something went wrong. Please try again.",
         "reportTypeSearchPlaceholder": "Search report types",
-        "reportTypeEmpty": "No matching report types."
+        "reportTypeEmpty": "No matching report types.",
+        "surveyScopeLabel": "Survey scope (optional)",
+        "surveyScopePlaceholder": "All surveys in this study",
+        "surveyScopeAll": "All surveys in this study"
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -1339,6 +1450,14 @@
         "summaryOfNeeds": "Summary of Needs",
         "needsByDomain": "Needs by Domain, Sub-domain and Indicator",
         "patternAnalysis": "Pattern & Intersection Analysis",
+        "tierSummary": "Needs by Priority Tier",
+        "domainRollup": "Domain Rollup",
+        "noMaskingAlert": "No-Masking Alert",
+        "completeness": "Completeness & Confidence",
+        "domainConfidence": "Confidence by Domain",
+        "flaggedRecords": "Flagged Records",
+        "flaggedRecordsNone": "No incomplete or unassessed records were found. Every indicator in scope produced a measurable score.",
+        "flaggedRecordsNote": "Records below are flagged, not removed. Each remains part of the dataset and is excluded only from severity averages, where noted.",
         "priorityNeeds": "Priority Needs",
         "dataQualityNotes": "Data Quality Notes",
         "needRecords": "All Need Records",
@@ -1370,7 +1489,11 @@
           "intersections": "Intersections (equity)"
         },
         "pn": {
-          "notMeasured": "Not measured — excluded from the ranking"
+          "notMeasured": "Not measured — excluded from the ranking",
+          "rankingBasis": "Ranked by {basis}. The Priority Score column is that calculation's output for each need.",
+          "locationScope": "Location is the same for every row ({location}) because a need is measured as an indicator-level aggregate across the whole assessed scope, not attributed to one village. The full scope is given under Geographic Scope.",
+          "affectedPopulationMissing": "Affected population was not recorded for these needs, so every row shows a dash. It is asked for on the need-entry form and cannot be filled in afterwards for needs recorded before the question existed. The population figure under Response Quality is the study AREA's population — it sizes the sample and is not the number of people affected by any individual need.",
+          "affectedPopulationScope": "Affected population is the estimate given when the need was recorded, in answer to “roughly how many people does this need affect?”. It describes the need as a whole, so it repeats across that need’s indicator rows rather than varying by indicator. A dash means no estimate was given, not zero people."
         },
         "dq": {
           "submitted": "Submitted",
@@ -1387,7 +1510,33 @@
         },
         "scale": {
           "severity": "0-100 · higher = worse"
-        }
+        },
+        "calculationBasis": "Calculation Basis",
+        "cb": {
+          "needsIndexWorking": "Needs Index — working",
+          "priorityScoreWorking": "Priority Score — working",
+          "thresholds": "Thresholds applied"
+        },
+        "dataCollectionScope": "Data-Collection Scope",
+        "surveysNotCovered": "Surveys NOT covered by these figures",
+        "abandonment": "Survey Abandonment",
+        "sessionsStarted": "Sessions started",
+        "sessionsSubmitted": "Submitted",
+        "sessionsAbandoned": "Abandoned",
+        "sessionsInFlight": "Still in progress",
+        "abandonmentRate": "Abandonment rate",
+        "meanProgressWhenAbandoned": "Mean progress when abandoned",
+        "remindersSent": "Reminders sent",
+        "responsesWithoutSession": "Responses with no session record",
+        "invalidResponses": "Invalid Responses",
+        "excludedSubmitted": "Excluded submitted responses",
+        "abandonedSessions": "Abandoned / incomplete sessions",
+        "invalidTotal": "Invalid responses (total)",
+        "unansweredRequired": "Unanswered Required Questions",
+        "requiredQuestions": "Required questions in scope",
+        "submittedResponses": "Submitted responses",
+        "requiredAnswerSlots": "Required answers expected",
+        "leftBlank": "Left blank"
       },
       "detail": {
         "title": "Report content",
@@ -1890,6 +2039,9 @@
       "form": {
         "createTitle": "New study",
         "createDescription": "Give the study a title — define its need and evidence afterward.",
+        "organizationLabel": "Organization",
+        "organizationPlaceholder": "Select the organization this study belongs to",
+        "organizationHint": "As System Admin, choose which organization this study belongs to — its Governorates/Centers below will match that organization's own scope.",
         "editTitle": "Edit study",
         "editDescription": "Title is the only field you can change here.",
         "titleLabel": "Study title",
@@ -1959,6 +2111,9 @@
         "villageLabel": "Village",
         "villageFreeTextHint": "Optional — type a village name and press Enter to add it.",
         "villageEmptyHint": "Type a village name to add it.",
+        "affectedPopulationLabel": "Affected population",
+        "affectedPopulationPlaceholder": "e.g. 450",
+        "affectedPopulationHint": "Roughly how many people does this need affect? Optional — an estimate is fine. Leave blank if you don’t know; reports show a dash rather than assuming a number. This can only be recorded here, so it cannot be added later for needs already saved without it.",
         "removeVillage": "Remove {village}",
         "affectedPeopleLabel": "Affected people (Optional)",
         "affectedPeoplePlaceholder": "Roughly how many people does this need affect?",
@@ -2647,18 +2802,6 @@
         "privacyNotice": "Your responses are used only in aggregate to understand community needs and inform planning. This is not a request or complaint system, and you will not be personally contacted about your answers.",
         "consentTitle": "Personal Information Consent",
         "consentVersionLine": "Version {version}",
-        "consentThisOrg": "this organisation",
-        "consentContactChannelPlaceholder": "[contact channel]",
-        "consentPurposeLabel": "Purpose",
-        "consentPurposeBody": "Your responses will be used to assess development needs in your village and to help plan community programs. Participation is entirely voluntary, and you may stop at any time.",
-        "consentCollectLabel": "What we collect",
-        "consentCollectBody": "Survey responses about household and community conditions. Contact details (name, mobile number, email) are collected only if you choose to provide them.",
-        "consentHandlingLabel": "How your data is handled",
-        "consentHandlingBody": "Your individual responses are kept confidential, stored securely within Saudi Arabia, and reported only in aggregated form. Your identity will not appear in any report.",
-        "consentRightsLabel": "Your rights",
-        "consentRightsBody": "Under the Saudi Personal Data Protection Law, you may request access to, correction of, or deletion of your personal data, and you may withdraw this consent at any time by contacting {contactChannel}.",
-        "consentRetentionLabel": "Retention",
-        "consentRetentionBody": "Personal data is kept only as long as needed for the study, then deleted or de-identified in line with the platform's retention policy.",
         "consentAgreeLabel": "I agree to the collection and use of my information as described above. (Date and time recorded automatically.)",
         "consentRequired": "You must agree to the consent notice before continuing.",
         "nameRequired": "Enter your name before continuing.",
@@ -2667,7 +2810,8 @@
         "ageBracketRequired": "Select your age bracket before continuing.",
         "submit": "Start Survey",
         "submitting": "Checking...",
-        "duplicateError": "You have already submitted a response for this survey."
+        "duplicateError": "You have already submitted a response for this survey.",
+        "consentUnavailable": "The consent notice could not be loaded, so this survey cannot accept a response right now. Please try again shortly."
       },
       "otp": {
         "title": "Enter your verification code",
@@ -2901,6 +3045,18 @@
         "weight": "Weight",
         "weightedContribution": "Weighted Contribution"
       },
+      "scoreComponents": {
+        "title": "Score Components",
+        "pendingNote": "Urgency and Theme show placeholder values until RIO-FR-003's scoring engine produces them — Severity and Affected Group Size are already live data.",
+        "severity": "Severity",
+        "urgency": "Urgency",
+        "affectedGroupSize": "Affected Group Size",
+        "theme": "Theme",
+        "placeholderBadge": "Placeholder",
+        "affectedGroupSizeEmpty": "Not recorded",
+        "people": "{count} people",
+        "households": "{count} households"
+      },
       "noAssessment": "No response quality assessment run yet. Click \"Run Quality Assessment\" above to run checks.",
       "noPublishedSurvey": "No published survey for this need yet.",
       "noPriorityCalculated": "No priority score calculated for this need yet. Click \"Recalculate Priority\" above to compute.",
@@ -2910,7 +3066,15 @@
       "domainList": "Domain: {domains}",
       "domainSingle": "Domain: {domain}",
       "descriptionFallback": "Comprehensive Severity Scoring, Priority Index, and AI Narrative Insights.",
-      "recalculateError": "Failed to recalculate priority score"
+      "recalculateError": "Failed to recalculate priority score",
+      "recalculateReason": {
+        "SURVEY_NOT_FOUND": "Recalculation could not run — the published survey for this need was not found.",
+        "NO_RESPONSES": "No survey responses have been submitted for this need yet, so there is nothing to score.",
+        "NO_METHODOLOGY_VERSION": "No methodology version is available for this survey, so priority could not be calculated.",
+        "NO_DOMAIN_PRIORITY_CONFIG": "Domain priority weights are not configured for this survey's methodology version, so priority could not be calculated.",
+        "NO_DOMAIN_ROLLUPS": "No domain-level severity scores matched the configured priority domains, so priority could not be calculated.",
+        "NO_RESULT": "Recalculation finished but produced no priority score."
+      }
     },
     "severityDashboard": {
       "filterLabel": "Governorate Filter",
@@ -3286,7 +3450,8 @@
         "temporaryPasswordEmailed": "A temporary password has been emailed to them. They'll be asked to set their own password the first time they sign in.",
         "temporaryPasswordNotEmailed": "Email delivery isn't configured yet, so here's their temporary password — share it with them securely:",
         "temporaryPasswordHint": "They'll be asked to set their own password the first time they sign in.",
-        "done": "Done"
+        "done": "Done",
+        "roleLoadError": "Couldn't load roles. Please close this dialog and try again."
       },
       "changeRoleDialog": {
         "title": "Change User Role",
@@ -3300,7 +3465,8 @@
         "submitting": "Updating...",
         "cancel": "Cancel",
         "successToast": "User role updated successfully",
-        "errorToast": "Failed to update user role"
+        "errorToast": "Failed to update user role",
+        "roleLoadError": "Couldn't load roles. Please close this dialog and try again."
       },
       "disableDialog": {
         "title": "Disable User Account?",

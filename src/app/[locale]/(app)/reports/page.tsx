@@ -113,8 +113,18 @@ function GenerateReportDialog({
 
   const requiresStudy =
     reportType !== null && REPORT_TYPE_META[reportType].requiresStudyId;
+  // Radix Select has no value for "nothing selected" other than the empty
+  // string, which it reserves — so the all-surveys choice needs a sentinel of
+  // its own, mapped back to "" (meaning study-wide) on the way out.
+  const ALL_SURVEYS = "__all__";
   const requiresSurvey =
     reportType !== null && REPORT_TYPE_META[reportType].requiresSurveyId;
+  // Optionally survey-scoped (RPT10): the picker appears, but "all surveys in
+  // the study" is a real, selectable choice rather than the silent default the
+  // provider used to fall back to.
+  const optionalSurvey =
+    reportType !== null && REPORT_TYPE_META[reportType].supportsSurveyId === true;
+  const showsSurvey = requiresSurvey || optionalSurvey;
   const requiresVillage = reportType === "RPT14";
 
   function handleOpenChange(next: boolean) {
@@ -142,7 +152,7 @@ function GenerateReportDialog({
   // have responses — generating from an unscored survey fails server-side with
   // STUDY_NOT_SCORED, so offering those would only produce a dead end.
   useEffect(() => {
-    if (!requiresSurvey || !studyId) return;
+    if (!showsSurvey || !studyId) return;
     let cancelled = false;
     // No synchronous reset here — the list is already cleared on dialog close
     // and in the study <Select>'s own onValueChange, and doing it in the effect
@@ -159,7 +169,7 @@ function GenerateReportDialog({
     return () => {
       cancelled = true;
     };
-  }, [requiresSurvey, studyId]);
+  }, [showsSurvey, studyId]);
 
   // Village dropdown is populated from the selected study's needs (each Need
   // carries its own village list), falling back to the study's own village set.
@@ -200,7 +210,9 @@ function GenerateReportDialog({
       await reportsService.create({
         reportType: reportType!,
         studyId: requiresStudy ? studyId : undefined,
-        surveyId: requiresSurvey ? surveyId : undefined,
+        // Empty string on an optional picker means "all surveys in the
+        // study" — sent as undefined so the report is genuinely study-scoped.
+        surveyId: showsSurvey && surveyId ? surveyId : undefined,
         filters: requiresVillage ? { villageId: villageId.trim() } : undefined,
       });
       handleOpenChange(false);
@@ -257,18 +269,29 @@ function GenerateReportDialog({
               </Select>
             </div>
           ) : null}
-          {requiresSurvey ? (
+          {showsSurvey ? (
             <div className="space-y-2">
-              <Label>{t("surveyLabel")}</Label>
+              <Label>{optionalSurvey ? t("surveyScopeLabel") : t("surveyLabel")}</Label>
               <Select
-                value={surveyId}
-                onValueChange={setSurveyId}
-                disabled={!studyId || !surveys || surveys.length === 0}
+                value={surveyId || (optionalSurvey ? ALL_SURVEYS : "")}
+                onValueChange={(v) => setSurveyId(v === ALL_SURVEYS ? "" : v)}
+                disabled={
+                  !studyId || (!optionalSurvey && (!surveys || surveys.length === 0))
+                }
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("surveyPlaceholder")} />
+                  <SelectValue
+                    placeholder={
+                      optionalSurvey
+                        ? t("surveyScopePlaceholder")
+                        : t("surveyPlaceholder")
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
+                  {optionalSurvey ? (
+                    <SelectItem value={ALL_SURVEYS}>{t("surveyScopeAll")}</SelectItem>
+                  ) : null}
                   {(surveys ?? []).map((survey) => (
                     <SelectItem key={survey.id} value={survey.id}>
                       {survey.title} — {survey.responseCount} {t("surveyResponsesSuffix")}
@@ -276,7 +299,7 @@ function GenerateReportDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {studyId && surveys?.length === 0 ? (
+              {studyId && surveys?.length === 0 && !optionalSurvey ? (
                 <p className="text-muted-foreground text-xs">{t("surveyEmpty")}</p>
               ) : null}
             </div>

@@ -14,6 +14,17 @@ export const methodologyConfigService = {
   async update(payload: UpdateMethodologyConfigPayload): Promise<MethodologyConfig> {
     return apiClient.patch<MethodologyConfig>(endpoints.methodologyConfig.get, payload);
   },
+  // System Reviewer only — required before System Admin can publish.
+  async approve(notes: string): Promise<MethodologyConfig> {
+    return apiClient.patch<MethodologyConfig>(endpoints.methodologyConfig.approve, {
+      notes,
+    });
+  },
+  async reject(notes: string): Promise<MethodologyConfig> {
+    return apiClient.patch<MethodologyConfig>(endpoints.methodologyConfig.reject, {
+      notes,
+    });
+  },
   async publish(): Promise<MethodologyConfig> {
     return apiClient.post<MethodologyConfig>(endpoints.methodologyConfig.publish);
   },

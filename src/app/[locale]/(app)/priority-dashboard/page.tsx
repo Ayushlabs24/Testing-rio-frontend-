@@ -29,7 +29,8 @@ import {
 import { PRIORITY_DASHBOARD_PAGE_SIZE } from "@/config/pagination";
 import { Link } from "@/i18n/navigation";
 import { priorityService } from "@/services/priority/priority.service";
-import { GAP_TYPES } from "@/services/priority/priority.types";
+import { studyConfigService } from "@/services/study-config/study-config.service";
+import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import type {
   PriorityDashboardEntry,
   PriorityScore,
@@ -56,6 +57,14 @@ export default function PriorityDashboardPage() {
     ALL,
   );
   const [gapTypeFilter, setGapTypeFilter] = useState<string>(ALL);
+  const [gapTypeOptions, setGapTypeOptions] = useState<StudyConfigOption[]>([]);
+
+  useEffect(() => {
+    studyConfigService
+      .listGapTypes()
+      .then((options) => setGapTypeOptions(options.filter((o) => o.isActive)))
+      .catch(() => undefined);
+  }, []);
   // RIO-FR-003 AC 6 — "the ability to filter/group needs by theme". The
   // options come from the loaded rows rather than a separate fetch, so the
   // list only ever offers themes that are actually in use.
@@ -193,9 +202,11 @@ export default function PriorityDashboardPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>{t("filterGapTypeAll")}</SelectItem>
-                  {GAP_TYPES.map((gapType) => (
-                    <SelectItem key={gapType} value={gapType}>
-                      {t(`gapType.${gapType}`)}
+                  {gapTypeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.name}>
+                      {t.has(`gapType.${option.name}`)
+                        ? t(`gapType.${option.name}` as Parameters<typeof t>[0])
+                        : option.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -285,7 +296,11 @@ export default function PriorityDashboardPage() {
                       </TableCell>
                       <TableCell>
                         {entry.gapType ? (
-                          <Badge variant="outline">{t(`gapType.${entry.gapType}`)}</Badge>
+                          <Badge variant="outline">
+                            {t.has(`gapType.${entry.gapType}`)
+                              ? t(`gapType.${entry.gapType}` as Parameters<typeof t>[0])
+                              : entry.gapType}
+                          </Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
                         )}

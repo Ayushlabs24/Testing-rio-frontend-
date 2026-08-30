@@ -34,8 +34,6 @@ import {
 } from "@/components/ui/table";
 import { PERMISSION_GRANTS_PAGE_SIZE } from "@/config/pagination";
 import { ApiError } from "@/services/api/types";
-import { organizationsService } from "@/services/organizations/organizations.service";
-import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { permissionGrantsService } from "@/services/permission-grants/permission-grants.service";
 import type { PermissionGrant } from "@/services/permission-grants/permission-grants.types";
 import { usersService } from "@/services/users/users.service";
@@ -51,24 +49,23 @@ const ACTIONS: PermissionAction[] = [
   "export",
   "share",
 ];
-const NONE = "none";
 
-// RIO-RBAC-002 (client-confirmed 2026-08-23) — the System Admin UI for the
-// runtime permission-grant mechanism. Every grant here is checked by
-// PermissionGuard as a fallback ONLY for center_supervisor requests the
-// static role matrix already denied — see permission.guard.ts.
+// RIO-RBAC-002 (client-confirmed 2026-08-23, reconfirmed 2026-08-24) — the
+// System Admin UI for the runtime permission-grant mechanism. Every grant
+// here is checked by PermissionGuard as a fallback ONLY for
+// center_supervisor requests the static role matrix already denied — see
+// permission.guard.ts. Deliberately no per-entity scope anywhere in this
+// screen: a grant always applies across every entity.
 export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
   const t = useTranslations("app.settings.roles.grants");
   const [grants, setGrants] = useState<PermissionGrant[] | null>(null);
   const [supervisors, setSupervisors] = useState<PlatformUser[]>([]);
-  const [orgs, setOrgs] = useState<OrganizationSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [addOpen, setAddOpen] = useState(false);
   const [granteeId, setGranteeId] = useState("");
   const [module, setModule] = useState<PermissionModule | "">("");
   const [action, setAction] = useState<PermissionAction | "">("");
-  const [targetOrgId, setTargetOrgId] = useState(NONE);
   const [reason, setReason] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [saving, setSaving] = useState(false);
@@ -97,10 +94,6 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
         setSupervisors(all.filter((u) => u.role.key === "center_supervisor")),
       )
       .catch(() => setSupervisors([]));
-    organizationsService
-      .listAll()
-      .then(setOrgs)
-      .catch(() => setOrgs([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,7 +101,6 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
     setGranteeId("");
     setModule("");
     setAction("");
-    setTargetOrgId(NONE);
     setReason("");
     setExpiresAt("");
     setFormError(null);
@@ -123,7 +115,6 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
         granteeId,
         module,
         action,
-        targetOrgId: targetOrgId === NONE ? undefined : targetOrgId,
         reason: reason.trim(),
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
       });
@@ -187,7 +178,6 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
               <TableRow>
                 <TableHead>{t("granteeLabel")}</TableHead>
                 <TableHead>{t("permissionLabel")}</TableHead>
-                <TableHead>{t("scopeLabel")}</TableHead>
                 <TableHead>{t("reasonLabel")}</TableHead>
                 <TableHead>{t("statusLabel")}</TableHead>
                 {canWrite ? (
@@ -199,7 +189,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
               {grants.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={canWrite ? 6 : 5}
+                    colSpan={canWrite ? 5 : 4}
                     className="text-muted-foreground text-center"
                   >
                     {t("empty")}
@@ -213,9 +203,6 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                     </TableCell>
                     <TableCell className="text-sm">
                       {grant.module}:{grant.action}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {grant.targetOrgName ?? t("scopeAllEntities")}
                     </TableCell>
                     <TableCell
                       className="text-muted-foreground max-w-xs truncate text-sm"
@@ -348,22 +335,6 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("scopeLabel")}</Label>
-              <Select value={targetOrgId} onValueChange={setTargetOrgId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>{t("scopeAllEntities")}</SelectItem>
-                  {orgs.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="grant-reason">{t("reasonLabel")}</Label>

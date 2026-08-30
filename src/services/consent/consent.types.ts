@@ -4,7 +4,7 @@
  * consent to share the organisation's data. They version independently, so an
  * org can be current on one and stale on the other.
  */
-export type ConsentKind = "use_policy" | "data_sharing";
+export type ConsentKind = "use_policy" | "data_sharing" | "citizen_consent";
 
 /**
  * The languages a consent can be read in — the subset of `routing.locales`
@@ -80,4 +80,64 @@ export interface ConsentAcceptanceInput {
    * from the client.
    */
   locale: ConsentLocale;
+}
+
+/**
+ * Where a version sits in the draft → review → publish workflow the client
+ * confirmed on 2026-08-27. Mirrors the Methodology Configuration status
+ * vocabulary deliberately — same governance gate, so the two admin tabs read
+ * and badge alike.
+ */
+export type ConsentPolicyStatus = "draft" | "pending_approval" | "approved" | "published";
+
+/**
+ * One policy version as the Consent Policies tab sees it: the full row,
+ * including workflow state and provenance. Distinct from
+ * `ActiveConsentPolicy`, which is the anonymous signup screen's minimal view
+ * of the one live version.
+ */
+export interface ConsentPolicyVersion {
+  id: string;
+  kind: ConsentKind;
+  version: string;
+  text: string;
+  textAr: string | null;
+  status: ConsentPolicyStatus;
+  /** True for the one version per kind currently shown at signup. */
+  active: boolean;
+  createdByName: string | null;
+  createdAt: string;
+  updatedByName: string | null;
+  updatedAt: string;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  publishedByName: string | null;
+  publishedAt: string | null;
+}
+
+/** Every version of every kind, newest first. */
+export interface ConsentPolicyVersionList {
+  usePolicy: ConsentPolicyVersion[];
+  dataSharing: ConsentPolicyVersion[];
+  /**
+   * The notice citizen respondents accept before a public survey collects
+   * anything (RIO-NFR-002) — same lifecycle and same admin tab as the two
+   * signup consents, but never shown at signup.
+   */
+  citizenConsent: ConsentPolicyVersion[];
+}
+
+export interface CreateConsentPolicyPayload {
+  kind: ConsentKind;
+  version: string;
+  text: string;
+  /** `null` clears a half-finished translation back to "not translated yet". */
+  textAr?: string | null;
+}
+
+export interface UpdateConsentPolicyPayload {
+  version?: string;
+  text?: string;
+  textAr?: string | null;
 }

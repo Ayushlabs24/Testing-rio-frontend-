@@ -12,10 +12,6 @@ export interface QuestionManagementItem {
   subDomain: string;
   indicator: string | null;
   kpi: string | null;
-  // RIO-FR-012/RIO-AI-002 (Round 4, client-confirmed 2026-08-24) — one of
-  // the configured Target Sector options, or null if untagged. Used only as
-  // a suggested-question ranking signal, never a hard filter.
-  targetSector: string | null;
   priorityWeight: number | null;
   questionText: string;
   answerType: string;
@@ -40,7 +36,6 @@ export interface UpdateQuestionPayload {
   subDomain?: string;
   indicator?: string | null;
   kpi?: string | null;
-  targetSector?: string | null;
 }
 
 export type QuestionAnswerType =
@@ -56,5 +51,4 @@ export interface CreateQuestionPayload {
   answerType: QuestionAnswerType;
   answerOptions?: string[];
   requiredOptional: "required" | "optional";
-  targetSector?: string;
 }

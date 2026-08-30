@@ -46,7 +46,6 @@ import {
 import { usePermission } from "@/hooks/use-permission";
 import { domainsService } from "@/services/domains/domains.service";
 import type { DomainWithSubDomains } from "@/services/domains/domains.types";
-import { studyConfigService } from "@/services/study-config/study-config.service";
 import { questionsService } from "@/services/questions/questions.service";
 import type {
   QuestionAnswerType,
@@ -55,15 +54,11 @@ import type {
 import { ApiError } from "@/services/api/types";
 
 const ALL = "all";
-// Radix Select items can't carry an empty-string value — this sentinel
-// stands in for "no Target Sector tag" in both dropdowns.
-const NONE = "__none__";
 
 interface EditFormState {
   questionText: string;
   indicator: string;
   kpi: string;
-  targetSector: string;
 }
 
 const ANSWER_OPTION_TYPES: QuestionAnswerType[] = ["select", "multiselect", "checklist"];
@@ -78,7 +73,6 @@ interface CreateFormState {
   answerType: QuestionAnswerType;
   answerOptionsText: string;
   requiredOptional: "required" | "optional";
-  targetSector: string;
 }
 
 const EMPTY_CREATE_FORM: CreateFormState = {
@@ -91,7 +85,6 @@ const EMPTY_CREATE_FORM: CreateFormState = {
   answerType: "select",
   answerOptionsText: "",
   requiredOptional: "required",
-  targetSector: NONE,
 };
 
 /**
@@ -127,7 +120,6 @@ export function QuestionsTab() {
   const [domainFilter, setDomainFilter] = useState<string>(ALL);
   const [subDomainFilter, setSubDomainFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
-  const [targetSectorFilter, setTargetSectorFilter] = useState<string>(ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(QUESTION_BANK_PAGE_SIZE);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -136,7 +128,6 @@ export function QuestionsTab() {
   );
 
   const [domainsTree, setDomainsTree] = useState<DomainWithSubDomains[]>([]);
-  const [targetSectorOptions, setTargetSectorOptions] = useState<string[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(EMPTY_CREATE_FORM);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -150,7 +141,6 @@ export function QuestionsTab() {
     questionText: "",
     indicator: "",
     kpi: "",
-    targetSector: NONE,
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -197,19 +187,6 @@ export function QuestionsTab() {
       .then(setDomainsTree)
       .catch(() => setDomainsTree([]));
   }, [canWrite]);
-
-  // Unlike domainsTree above (only needed for the create/edit forms, so
-  // gated on write access), Target Sector options also back the filter
-  // dropdown every viewer sees — fetched unconditionally, matching the
-  // backend route's own methodologyQuestionBank:read gate.
-  useEffect(() => {
-    studyConfigService
-      .listTargetSectors()
-      .then((options) =>
-        setTargetSectorOptions(options.filter((o) => o.isActive).map((o) => o.name)),
-      )
-      .catch(() => setTargetSectorOptions([]));
-  }, []);
 
   useEffect(() => {
     queueMicrotask(() => loadPending());
@@ -258,13 +235,6 @@ export function QuestionsTab() {
       if (subDomainFilter !== ALL && q.subDomain !== subDomainFilter) return false;
       if (statusFilter === "active" && !q.isActive) return false;
       if (statusFilter === "inactive" && q.isActive) return false;
-      if (targetSectorFilter === NONE && q.targetSector !== null) return false;
-      if (
-        targetSectorFilter !== ALL &&
-        targetSectorFilter !== NONE &&
-        q.targetSector !== targetSectorFilter
-      )
-        return false;
       if (!query) return true;
       return (
         q.questionId.toLowerCase().includes(query) ||
@@ -273,14 +243,7 @@ export function QuestionsTab() {
         (q.kpi ?? "").toLowerCase().includes(query)
       );
     });
-  }, [
-    questions,
-    searchQuery,
-    domainFilter,
-    subDomainFilter,
-    statusFilter,
-    targetSectorFilter,
-  ]);
+  }, [questions, searchQuery, domainFilter, subDomainFilter, statusFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredQuestions.length / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -295,7 +258,6 @@ export function QuestionsTab() {
       questionText: question.questionText,
       indicator: question.indicator ?? "",
       kpi: question.kpi ?? "",
-      targetSector: question.targetSector ?? NONE,
     });
     setFormError(null);
     setEditDialogOpen(true);
@@ -310,7 +272,6 @@ export function QuestionsTab() {
         questionText: editForm.questionText.trim(),
         indicator: editForm.indicator.trim() || null,
         kpi: editForm.kpi.trim() || null,
-        targetSector: editForm.targetSector === NONE ? null : editForm.targetSector,
       });
       setEditDialogOpen(false);
       setSuccessMessage(t("submittedForApproval"));
@@ -356,8 +317,6 @@ export function QuestionsTab() {
           ? answerOptions
           : undefined,
         requiredOptional: createForm.requiredOptional,
-        targetSector:
-          createForm.targetSector === NONE ? undefined : createForm.targetSector,
       });
       setCreateOpen(false);
       setSuccessMessage(t("submittedForApproval"));
@@ -587,26 +546,6 @@ export function QuestionsTab() {
                   <SelectItem value="inactive">{t("inactive")}</SelectItem>
                 </SelectContent>
               </Select>
-              <Select
-                value={targetSectorFilter}
-                onValueChange={(val) => {
-                  setTargetSectorFilter(val);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-48 text-xs">
-                  <SelectValue placeholder={t("filterTargetSector")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>{t("allTargetSectors")}</SelectItem>
-                  <SelectItem value={NONE}>{t("targetSectorNone")}</SelectItem>
-                  {targetSectorOptions.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="relative w-full sm:w-96">
@@ -812,28 +751,6 @@ export function QuestionsTab() {
                 onChange={(e) => setEditForm({ ...editForm, kpi: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="question-target-sector">{t("targetSectorLabel")}</Label>
-              <Select
-                value={editForm.targetSector}
-                onValueChange={(value) =>
-                  setEditForm({ ...editForm, targetSector: value })
-                }
-              >
-                <SelectTrigger id="question-target-sector">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>{t("targetSectorNone")}</SelectItem>
-                  {targetSectorOptions.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">{t("targetSectorHint")}</p>
-            </div>
             <p className="text-muted-foreground text-xs">{t("domainLockedHint")}</p>
             {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
           </div>
@@ -941,29 +858,6 @@ export function QuestionsTab() {
                   onChange={(e) => setCreateForm({ ...createForm, kpi: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="create-target-sector">{t("targetSectorLabel")}</Label>
-              <Select
-                value={createForm.targetSector}
-                onValueChange={(value) =>
-                  setCreateForm({ ...createForm, targetSector: value })
-                }
-              >
-                <SelectTrigger id="create-target-sector">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>{t("targetSectorNone")}</SelectItem>
-                  {targetSectorOptions.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">{t("targetSectorHint")}</p>
             </div>
 
             <div className="space-y-2">
@@ -1176,14 +1070,6 @@ export function QuestionsTab() {
                     {t("detail.kpi")}
                   </p>
                   <p className="text-foreground text-sm">{detailQuestion.kpi ?? "—"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    {t("targetSectorLabel")}
-                  </p>
-                  <p className="text-foreground text-sm">
-                    {detailQuestion.targetSector ?? "—"}
-                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-medium">

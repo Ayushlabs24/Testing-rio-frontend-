@@ -416,10 +416,15 @@ export default function PublicSurveyDetailPage({
     setCreating(true);
     setFormError(null);
     try {
-      await publicSurveysService.createLink(needId, {
-        label: label.trim(),
-        expiresInDays: expiryDays ?? undefined,
-      });
+      await publicSurveysService.createLink(
+        needId,
+        {
+          label: label.trim(),
+          expiresInDays: expiryDays ?? undefined,
+        },
+        // Always the Need's own org — see publicSurveysService.createLink's comment.
+        need?.orgId,
+      );
       handleCreateOpenChange(false);
       load();
     } catch (error) {

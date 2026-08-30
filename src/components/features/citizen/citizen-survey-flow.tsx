@@ -9,8 +9,8 @@ import {
   ShieldCheck,
   Star,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,8 +23,15 @@ import type {
   AgeBracket,
   Gender,
   ResolvedSurvey,
+  SurveySessionStep,
 } from "@/services/citizen/citizen.types";
 import { ApiError } from "@/services/api/types";
+import { consentService } from "@/services/consent/consent.service";
+import {
+  consentPolicyTextFor,
+  type ActiveConsentPolicy,
+  type ConsentLocale,
+} from "@/services/consent/consent.types";
 import {
   Select,
   SelectContent,
@@ -38,8 +45,13 @@ import {
 // common codes. A respondent whose country isn't listed can still pick the
 // closest match; the actual OTP delivery only cares that the combined
 // number is a valid phone shape.
-// Displayed consent copy version — tracks the legal text in messages/*.json.
-const CONSENT_COPY_VERSION = "1.0";
+// The consent notice is no longer copy in this bundle. It is a published,
+// versioned ConsentPolicy (kind `citizen_consent`) drafted by a System Admin
+// and approved by a System Reviewer under Methodology Configuration → Consent
+// Policies, fetched below and rendered verbatim. Its version travels with the
+// submission so each response records exactly which notice was accepted
+// (RIO-NFR-002) — the constant that used to live here could not do that,
+// since nothing ever sent it anywhere.
 
 const COUNTRY_DIAL_CODES = [
   { code: "SA", dialCode: "+966", label: "Saudi Arabia (+966)" },
@@ -138,6 +150,10 @@ function ScaleStars({ value, max }: { value: number; max: number }) {
 
 export function CitizenSurveyFlow({ token }: { token: string }) {
   const t = useTranslations("citizen.survey");
+  // Which language the notice is read in — recorded with the acceptance, for
+  // the same reason the version is: together they pin exactly what was
+  // agreed to. Narrowed exhaustively, as elsewhere.
+  const consentLocale: ConsentLocale = useLocale() === "ar" ? "ar" : "en";
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [survey, setSurvey] = useState<ResolvedSurvey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -169,7 +185,24 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
   // detail leaves the device. Same shape as the NGO Admin's own consent gate
   // (see ConsentGuard): notice, checkbox, explicit must-agree error.
   const [consented, setConsented] = useState(false);
+  // RIO-NFR-002 — the published citizen-consent notice. `null` while loading
+  // or unavailable; the checkbox stays disabled until it arrives, and the
+  // version below is what the submission is recorded against.
+  const [consentPolicy, setConsentPolicy] = useState<ActiveConsentPolicy | null>(null);
+  const [consentPolicyError, setConsentPolicyError] = useState(false);
+  // The wording actually rendered, falling back to English when the notice
+  // has no Arabic copy yet — an untranslated policy is a content gap, but a
+  // blank consent is a broken survey. The server independently re-derives the
+  // same choice when it records the acceptance's locale.
+  const consentPolicyText = consentPolicy
+    ? consentPolicyTextFor(consentPolicy, consentLocale)
+    : "";
   const [submitting, setSubmitting] = useState(false);
+
+  // Abandonment tracking (RPT10 Q-2, client answer 24 Aug). A ref, not state:
+  // the id is read inside callbacks and must never trigger a re-render, and a
+  // survey the respondent abandons must not have been kept alive by one.
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     citizenService
@@ -181,7 +214,49 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       .catch(() => setLoadState("notFound"));
   }, [token]);
 
-  const questions = survey?.questions ?? [];
+  // RIO-NFR-002 — the notice must be on screen before any personal detail is
+  // collected, so it is fetched on mount rather than when the details step is
+  // reached. Independent of the survey resolve: a citizen consents to the
+  // platform's notice, not to anything about this particular survey.
+  useEffect(() => {
+    consentService
+      .getActiveCitizenPolicy()
+      .then((policy) => {
+        setConsentPolicy(policy);
+        setConsentPolicyError(false);
+      })
+      .catch(() => {
+        // Left null on purpose — the checkbox stays disabled, so a submission
+        // can never be made against a notice that failed to load.
+        setConsentPolicy(null);
+        setConsentPolicyError(true);
+      });
+  }, []);
+
+  // Opens the session as soon as the survey resolves — the sitting starts when
+  // the respondent can see questions, not when they first type. Everything
+  // here is best-effort: a failed session write leaves sessionIdRef null and
+  // every later track() call becomes a no-op, so tracking can never block a
+  // respondent. Nothing about their answers is sent by any of it.
+  useEffect(() => {
+    if (loadState !== "ready") return;
+    let cancelled = false;
+    void citizenService.startSession(token).then((result) => {
+      // `result?.sessionId` rather than `result` — the backend answers with an
+      // empty body when it could not open a session, which the API client
+      // surfaces as undefined. Either way tracking stays off and the
+      // respondent notices nothing.
+      if (!cancelled && result?.sessionId) sessionIdRef.current = result.sessionId;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadState, token]);
+
+  // Memoised, not a fresh array each render: the answered-count memo below
+  // depends on it, and a new identity every render would recompute (and
+  // re-post) on every keystroke.
+  const questions = useMemo(() => survey?.questions ?? [], [survey]);
 
   // Fixed steps (details, otp) + one step per question + review.
   const totalSteps = 2 + questions.length + 1;
@@ -191,6 +266,23 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     if (phase === "questions") return 2 + questionIndex + 1;
     return totalSteps;
   }, [phase, questionIndex, totalSteps]);
+
+  // How many questions currently hold a value — a COUNT, which is the only
+  // thing about the answers that ever leaves the page for tracking purposes.
+  const answeredCount = useMemo(
+    () => questions.filter((q) => (answers[q.code] ?? "").trim().length > 0).length,
+    [questions, answers],
+  );
+
+  function track(step: SurveySessionStep, position = 0): void {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+    void citizenService.recordSessionEvent(token, sessionId, {
+      step,
+      position,
+      answeredCount,
+    });
+  }
 
   // Duplicate submission is checked as soon as the participant provides
   // their contact details — before any OTP challenge (or any other record)
@@ -215,8 +307,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       setError(t("details.ageBracketRequired"));
       return;
     }
-    if (!consented) {
-      setError(t("details.consentRequired"));
+    if (!consented || !consentPolicy) {
+      // Covers both "didn't tick the box" and "the notice never loaded" —
+      // there is no version to record consent against in the second case, so
+      // proceeding would produce an unconsented response.
+      setError(
+        t(consentPolicy ? "details.consentRequired" : "details.consentUnavailable"),
+      );
       return;
     }
     setSubmitting(true);
@@ -230,7 +327,14 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         setError(t("details.duplicateError"));
         return;
       }
-      const result = await citizenService.requestOtp(token, { contact, mobile });
+      // sessionId here is what gives the session a contact channel — the
+      // only thing that makes a completion reminder possible at all (see the
+      // backend's SurveyReminderService).
+      const result = await citizenService.requestOtp(token, {
+        contact,
+        mobile,
+        sessionId: sessionIdRef.current ?? undefined,
+      });
       setChallengeId(result.challengeId);
       setDevCode(result.codeTexted ? null : (result.code ?? null));
       setPhase("otp");
@@ -246,7 +350,11 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     setSubmitting(true);
     setError(null);
     try {
-      await citizenService.verifyOtp(token, { challengeId, code });
+      await citizenService.verifyOtp(token, {
+        challengeId,
+        code,
+        sessionId: sessionIdRef.current ?? undefined,
+      });
       setQuestionIndex(0);
       // A survey with zero questions has nothing to show on the "questions"
       // phase (which unconditionally renders `questions[questionIndex]`) —
@@ -270,8 +378,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     setError(null);
     if (questionIndex + 1 < questions.length) {
       setQuestionIndex(questionIndex + 1);
+      // Recorded on each advance, so an abandoned sitting says WHERE it
+      // stopped rather than only that it did.
+      track("ANSWERING", questionIndex + 1);
     } else {
       setPhase("review");
+      track("REVIEW", questions.length);
     }
   }
 
@@ -295,6 +407,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
     // disabled condition) — this guard is just for type-safety here, since
     // SubmitResponsePayload.ageBracket isn't optional.
     if (!challengeId || !ageBracket) return;
+    if (!consentPolicy) {
+      // Unreachable in practice (the details step already refused to advance
+      // without a loaded notice), but the submission is the point of no
+      // return: without a version there is nothing to record consent against.
+      setError(t("details.consentUnavailable"));
+      return;
+    }
     setSubmitting(true);
     setTerminal("submitting");
     setError(null);
@@ -305,6 +424,12 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
         gender: gender || undefined,
         ageBracket,
         answers,
+        sessionId: sessionIdRef.current ?? undefined,
+        // RIO-NFR-002 — the version and language of the notice this
+        // respondent actually read. Only the pointer travels, never the text:
+        // the server re-resolves the wording itself and rejects a version
+        // that is no longer live (CONSENT_VERSION_STALE).
+        consent: { version: consentPolicy.version, locale: consentLocale },
       });
       setTerminal("submitted");
     } catch (err) {
@@ -554,50 +679,42 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               <h2 className="text-foreground text-sm font-semibold">
                 {t("details.consentTitle")}
               </h2>
-              <p className="text-muted-foreground text-[11px]">
-                {t("details.consentVersionLine", { version: CONSENT_COPY_VERSION })}
-              </p>
+              {consentPolicy ? (
+                <p className="text-muted-foreground text-[11px]">
+                  {t("details.consentVersionLine", { version: consentPolicy.version })}
+                </p>
+              ) : null}
             </div>
-            <dl className="text-muted-foreground space-y-2.5 text-xs leading-relaxed">
-              <div>
-                <dt className="text-foreground font-medium">
-                  {t("details.consentPurposeLabel")}
-                </dt>
-                <dd>{t("details.consentPurposeBody")}</dd>
-              </div>
-              <div>
-                <dt className="text-foreground font-medium">
-                  {t("details.consentCollectLabel")}
-                </dt>
-                <dd>{t("details.consentCollectBody")}</dd>
-              </div>
-              <div>
-                <dt className="text-foreground font-medium">
-                  {t("details.consentHandlingLabel")}
-                </dt>
-                <dd>{t("details.consentHandlingBody")}</dd>
-              </div>
-              <div>
-                <dt className="text-foreground font-medium">
-                  {t("details.consentRightsLabel")}
-                </dt>
-                <dd>
-                  {t("details.consentRightsBody", {
-                    contactChannel: t("details.consentContactChannelPlaceholder"),
-                  })}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-foreground font-medium">
-                  {t("details.consentRetentionLabel")}
-                </dt>
-                <dd>{t("details.consentRetentionBody")}</dd>
-              </div>
-            </dl>
+            {consentPolicy ? (
+              // `whitespace-pre-line` because the policy body is plain text
+              // authored in a textarea — its paragraph breaks are newlines,
+              // and rendering it as HTML would let policy content inject
+              // markup into this page.
+              //
+              // Deliberately NOT height-capped, unlike the admin editor: the
+              // respondent scrolls the page itself and reaches the agree
+              // checkbox at the end of the notice. A scrollbox here would let
+              // someone tick the box with most of the notice never scrolled
+              // into view, which is the opposite of what a consent screen is
+              // for.
+              <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-line">
+                {consentPolicyText}
+              </p>
+            ) : consentPolicyError ? (
+              <p className="text-destructive text-xs">
+                {t("details.consentUnavailable")}
+              </p>
+            ) : (
+              <div className="bg-muted h-24 animate-pulse rounded-md" />
+            )}
             <div className="flex items-start gap-3">
               <Checkbox
                 id="citizen-consent"
                 checked={consented}
+                // Un-checkable until the notice is actually on screen: a
+                // respondent must not be able to agree to something that
+                // failed to load.
+                disabled={!consentPolicy}
                 aria-invalid={Boolean(error) && !consented}
                 onCheckedChange={(checked) => {
                   setConsented(checked === true);

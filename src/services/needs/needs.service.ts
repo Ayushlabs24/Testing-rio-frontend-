@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import type {
   BulkImportNeedItem,
   CreateNeedPayload,
@@ -19,8 +20,21 @@ export const needsService = {
     return apiClient.get<Need>(endpoints.needs.byId(needId));
   },
 
-  async create(studyId: string, payload: CreateNeedPayload): Promise<Need> {
-    return apiClient.post<Need>(endpoints.needs.forStudy(studyId), payload);
+  // `actAsOrgId` — pass the parent Study's own orgId here always, not just
+  // for System Admin: harmless for a regular tenant caller (their own org
+  // already matches, and a non-crossEntity caller's header is ignored
+  // server-side anyway — see act-as-org.ts), load-bearing for System Admin
+  // creating a Need under a Study it doesn't own.
+  async create(
+    studyId: string,
+    payload: CreateNeedPayload,
+    actAsOrgId?: string,
+  ): Promise<Need> {
+    return apiClient.post<Need>(
+      endpoints.needs.forStudy(studyId),
+      payload,
+      actAsOrgOptions(actAsOrgId),
+    );
   },
 
   async update(needId: string, payload: UpdateNeedPayload): Promise<Need> {

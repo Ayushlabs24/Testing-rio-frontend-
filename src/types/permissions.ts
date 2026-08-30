@@ -34,6 +34,15 @@ export const PERMISSION_MODULES = [
   // center_supervisor and data_analyst, and these rows carry stack traces,
   // internal paths and cross-tenant detail. System Admin only.
   "systemLogs",
+  // RIO-NFR-004 / RIO-FR-007 module-conflict fix: the Audit Log was split out
+  // of archiveSharingAudit into its own module. archiveSharingAudit is held
+  // read/create/approve by ngo_admin for Study/Report Sharing, which also gave
+  // it unintended read access to the raw audit trail. Granted to system_admin
+  // and center_supervisor only. Must stay in sync with the backend's
+  // PermissionModule enum (prisma/schema.prisma) and ROLE_MATRIX
+  // (src/rbac/role-matrix.ts) — every session response carries an entry per
+  // module, and apiSessionViewSchema rejects any module missing from this list.
+  "auditLog",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

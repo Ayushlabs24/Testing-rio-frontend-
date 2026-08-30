@@ -123,6 +123,17 @@ export const endpoints = {
   consentPolicy: {
     active: "/consent-policy/active",
     organizationStatus: "/consent-policy/organization-status",
+    // Public — the citizen survey notice (RIO-NFR-002).
+    citizen: "/consent-policy/citizen",
+    // Client-confirmed (2026-08-27) — consent text is versioned and managed
+    // through the app in V2 rather than hardcoded per release. System Admin
+    // drafts/edits/submits/publishes; System Reviewer approves or rejects.
+    versions: "/consent-policy/versions",
+    version: (id: string) => `/consent-policy/versions/${id}`,
+    submitVersion: (id: string) => `/consent-policy/versions/${id}/submit`,
+    approveVersion: (id: string) => `/consent-policy/versions/${id}/approve`,
+    rejectVersion: (id: string) => `/consent-policy/versions/${id}/reject`,
+    publishVersion: (id: string) => `/consent-policy/versions/${id}/publish`,
   },
   contact: {
     // Public enquiry form on the auth pages — unauthenticated on the backend.
@@ -218,6 +229,10 @@ export const endpoints = {
     activateDecisionType: (id: string) => `/study-config/decision-types/${id}/activate`,
     deactivateDecisionType: (id: string) =>
       `/study-config/decision-types/${id}/deactivate`,
+    gapTypes: "/study-config/gap-types",
+    gapTypeById: (id: string) => `/study-config/gap-types/${id}`,
+    activateGapType: (id: string) => `/study-config/gap-types/${id}/activate`,
+    deactivateGapType: (id: string) => `/study-config/gap-types/${id}/deactivate`,
     // RIO-FR-003 AC 6 — the theme vocabulary.
     needThemes: "/study-config/need-themes",
     needThemeById: (id: string) => `/study-config/need-themes/${id}`,
@@ -250,6 +265,12 @@ export const endpoints = {
     requestOtp: (token: string) => `/public/surveys/${token}/otp/request`,
     verifyOtp: (token: string) => `/public/surveys/${token}/otp/verify`,
     submitResponse: (token: string) => `/public/surveys/${token}/responses`,
+    // Abandonment tracking (RPT10 Q-2). Session metadata only — see the
+    // backend's RecordSessionEventBody, which has no field that could carry
+    // an answer.
+    startSession: (token: string) => `/public/surveys/${token}/sessions`,
+    sessionEvent: (token: string, sessionId: string) =>
+      `/public/surveys/${token}/sessions/${sessionId}/events`,
   },
   responseQuality: {
     assess: (needId: string) => `/needs/${needId}/response-quality/assess`,
@@ -341,6 +362,8 @@ export const endpoints = {
   },
   methodologyConfig: {
     get: "/methodology-config",
+    approve: "/methodology-config/approve",
+    reject: "/methodology-config/reject",
     publish: "/methodology-config/publish",
     versions: "/methodology-config/versions",
     history: "/methodology-config/history",

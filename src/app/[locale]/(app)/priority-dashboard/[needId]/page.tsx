@@ -36,7 +36,8 @@ import { responseQualityService } from "@/services/response-quality/response-qua
 import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
-import { GAP_TYPES } from "@/services/priority/priority.types";
+import { studyConfigService } from "@/services/study-config/study-config.service";
+import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import type { Survey } from "@/services/surveys/surveys.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SeverityDashboard } from "@/components/features/insights/severity-dashboard";
@@ -53,6 +54,18 @@ import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
 
 const CONSOLIDATED = "consolidated";
 const NONE = "none";
+
+// RIO-FR-005 criterion 1 (Score Components card, "priority" tab below) —
+// Urgency and Theme have no backend field yet: Urgency is part of
+// RIO-FR-003's scoring engine (not yet built — see the master clarification
+// log), and Theme is a separate, also-unbuilt AI capability ("Recurring
+// theme extraction", client-confirmed Round 1 Q24: free-text per Need, not a
+// score). These are the only two hardcoded values on this page — replace
+// both the instant real fields/endpoints exist; nothing else needs to
+// change, since Severity (`priorityV2.priorityStatus`) and Affected Group
+// Size (`need.affectedPeople`/`affectedHouseholds`) already read real data.
+const PLACEHOLDER_URGENCY = "High";
+const PLACEHOLDER_THEME = "Water access";
 
 export default function PriorityDetailInsightsPage({
   params,
@@ -71,6 +84,14 @@ export default function PriorityDetailInsightsPage({
   // backend's PATCH needs/:needId/gap-type route checks.
   const canEditGapType = usePermission("priorityScoring", "write");
   const [savingGapType, setSavingGapType] = useState(false);
+  const [gapTypeOptions, setGapTypeOptions] = useState<StudyConfigOption[]>([]);
+
+  useEffect(() => {
+    studyConfigService
+      .listGapTypes()
+      .then((options) => setGapTypeOptions(options.filter((o) => o.isActive)))
+      .catch(() => undefined);
+  }, []);
 
   async function handleGapTypeChange(value: string) {
     const nextGapType = value === NONE ? null : value;
@@ -162,11 +183,20 @@ export default function PriorityDetailInsightsPage({
   }
 
   async function handleScore() {
-    if (!survey) return;
+    // Unlike Tab 1, this button lives outside the `survey ? ... : ...` branch
+    // that hides the rest of the page when the Need has no PUBLISHED survey,
+    // so it is clickable with `survey === null`. Reporting that is the whole
+    // point — an early `return` here made the click a complete no-op: no
+    // spinner, no error, and the panel still reading "No priority score
+    // calculated for this need yet."
+    if (!survey) {
+      setError(t("noPublishedSurvey"));
+      return;
+    }
     setScoring(true);
     setError(null);
     try {
-      await severityScoringService.recalculate(survey.studyId, survey.id);
+      const outcome = await severityScoringService.recalculate(survey.studyId, survey.id);
       const result = await severityScoringService.getVillagePriority(
         survey.studyId,
         survey.id,
@@ -177,6 +207,16 @@ export default function PriorityDetailInsightsPage({
       // endpoint, so recalculating the rollups is not enough on its own.
       setNeedScore(await priorityService.score(needId));
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
+      // A run can succeed as an HTTP call and still compute nothing (no
+      // responses submitted yet, methodology reference data missing). Say
+      // which, rather than leaving the panel looking unchanged.
+      if (!result) {
+        setError(
+          outcome.reason
+            ? t(`recalculateReason.${outcome.reason}`)
+            : t("recalculateReason.NO_RESULT"),
+        );
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("recalculateError"));
     } finally {
@@ -421,6 +461,82 @@ export default function PriorityDetailInsightsPage({
                       </div>
                     </div>
 
+                    {/* RIO-FR-005 criterion 1 — individual score components,
+                        not just the aggregate priority score above. Severity
+                        and Affected Group Size are real data; Urgency and
+                        Theme are placeholders until RIO-FR-003's scoring
+                        engine and the separate Recurring Theme Extraction
+                        capability exist — see the constants above and the
+                        "Placeholder" badges below. */}
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold">
+                        {t("scoreComponents.title")}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <p className="text-muted-foreground text-xs font-semibold uppercase">
+                            {t("scoreComponents.severity")}
+                          </p>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {priorityV2.priorityStatus}
+                          </p>
+                        </div>
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-muted-foreground text-xs font-semibold uppercase">
+                              {t("scoreComponents.urgency")}
+                            </p>
+                            <Badge variant="outline" className="text-[10px]">
+                              {t("scoreComponents.placeholderBadge")}
+                            </Badge>
+                          </div>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {PLACEHOLDER_URGENCY}
+                          </p>
+                        </div>
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <p className="text-muted-foreground text-xs font-semibold uppercase">
+                            {t("scoreComponents.affectedGroupSize")}
+                          </p>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {need?.affectedPeople == null &&
+                            need?.affectedHouseholds == null
+                              ? t("scoreComponents.affectedGroupSizeEmpty")
+                              : [
+                                  need?.affectedPeople != null
+                                    ? t("scoreComponents.people", {
+                                        count: need.affectedPeople,
+                                      })
+                                    : null,
+                                  need?.affectedHouseholds != null
+                                    ? t("scoreComponents.households", {
+                                        count: need.affectedHouseholds,
+                                      })
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                          </p>
+                        </div>
+                        <div className="bg-muted/40 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-muted-foreground text-xs font-semibold uppercase">
+                              {t("scoreComponents.theme")}
+                            </p>
+                            <Badge variant="outline" className="text-[10px]">
+                              {t("scoreComponents.placeholderBadge")}
+                            </Badge>
+                          </div>
+                          <p className="text-foreground mt-1 text-lg font-bold">
+                            {PLACEHOLDER_THEME}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground mt-2 text-xs">
+                        {t("scoreComponents.pendingNote")}
+                      </p>
+                    </div>
+
                     {/* Critical Domain Override Alert */}
                     {criticalOverrides.length > 0 && (
                       <div className="border-destructive/40 bg-destructive/10 rounded-lg border p-4 text-xs">
@@ -553,9 +669,11 @@ export default function PriorityDetailInsightsPage({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={NONE}>{t("gapTypeNotSet")}</SelectItem>
-                    {GAP_TYPES.map((gapType) => (
-                      <SelectItem key={gapType} value={gapType}>
-                        {t(`gapType.${gapType}`)}
+                    {gapTypeOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.name}>
+                        {t.has(`gapType.${option.name}`)
+                          ? t(`gapType.${option.name}` as Parameters<typeof t>[0])
+                          : option.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

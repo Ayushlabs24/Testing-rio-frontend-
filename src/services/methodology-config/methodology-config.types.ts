@@ -37,7 +37,38 @@ export interface AiSummarySettings {
   maxSummaryChars: number;
 }
 
-export type MethodologyStatus = "draft" | "published";
+/** RIO-FR-003 — how a raw figure becomes the 0-100 value a factor weight
+ * multiplies. `priorityFactorWeights` says a factor is worth 12%; this says
+ * what "450 affected people" is worth out of 100. */
+export interface FactorRange {
+  floor: number;
+  ceiling: number;
+}
+
+/** One strategic axis from the methodology's Factors & Multipliers sheet —
+ * `value` (0-100) is the only field this screen lets a System Admin tune;
+ * `domains`/`questionIds` are the structural mapping set when the axis was
+ * defined, shown for context only. */
+export interface StrategicAxis {
+  key: string;
+  label: string;
+  value: number;
+  domains: string[];
+  questionIds: string[];
+}
+
+export interface PriorityFactorScales {
+  /** Urgency is a human-chosen level, so it maps by name rather than by range. */
+  urgency: Record<string, number>;
+  affectedPopulation: FactorRange;
+  geographicCoverage: FactorRange;
+  /** How many other needs share a theme with this one. */
+  frequency: FactorRange;
+  strategicAxes: StrategicAxis[];
+  equitySpreadThreshold: number;
+}
+
+export type MethodologyStatus = "draft" | "pending_approval" | "approved" | "published";
 
 export interface MethodologyConfig {
   id: string;
@@ -45,26 +76,31 @@ export interface MethodologyConfig {
   status: MethodologyStatus;
   publishedByName: string | null;
   publishedAt: string | null;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
   priorityThresholds: PriorityThresholds;
   priorityFactorWeights: PriorityFactorWeight[];
   confidenceFlagSettings: ConfidenceFlagSettings;
   aiClassificationSettings: AiClassificationSettings;
   aiSummarySettings: AiSummarySettings;
+  priorityFactorScales: PriorityFactorScales;
   updatedAt: string;
   updatedByName: string | null;
 }
 
-// RIO-NFR-017 — one immutable snapshot per edit/publish, newest first.
+// RIO-NFR-017 — one immutable snapshot per edit/approve/reject/publish, newest first.
 export interface MethodologyConfigHistoryEntry {
   id: string;
   version: string;
   status: MethodologyStatus;
-  changeType: "edit" | "publish";
+  changeType: "edit" | "approve" | "reject" | "publish";
   priorityThresholds: PriorityThresholds;
   priorityFactorWeights: PriorityFactorWeight[];
   confidenceFlagSettings: ConfidenceFlagSettings;
   aiClassificationSettings: AiClassificationSettings;
   aiSummarySettings: AiSummarySettings;
+  priorityFactorScales: PriorityFactorScales;
   changedByName: string | null;
   changedAt: string;
 }
@@ -76,6 +112,7 @@ export interface UpdateMethodologyConfigPayload {
   confidenceFlagSettings?: Partial<ConfidenceFlagSettings>;
   aiClassificationSettings?: Partial<AiClassificationSettings>;
   aiSummarySettings?: Partial<AiSummarySettings>;
+  priorityFactorScales?: Partial<PriorityFactorScales>;
 }
 
 /** TEMPORARY — see the MethodologyVersionOption model comment on the

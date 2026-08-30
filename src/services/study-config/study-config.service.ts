@@ -102,6 +102,37 @@ export const studyConfigService = {
     return apiClient.patch<StudyConfigOption>(path);
   },
 
+  // Gap Types — client correction (2026-08-27) superseding RIO-FR-005 Q12's
+  // "five fixed values, final". Seeded with the 5 original values
+  // (acute/chronic/structural/seasonal/equity), unlike Study Type/Target
+  // Sector which start empty — see the backend seed comment.
+  async listGapTypes(): Promise<StudyConfigOption[]> {
+    return apiClient.get<StudyConfigOption[]>(endpoints.studyConfig.gapTypes);
+  },
+
+  async createGapType(
+    payload: CreateStudyConfigOptionPayload,
+  ): Promise<StudyConfigOption> {
+    return apiClient.post<StudyConfigOption>(endpoints.studyConfig.gapTypes, payload);
+  },
+
+  async updateGapType(
+    id: string,
+    payload: UpdateStudyConfigOptionPayload,
+  ): Promise<StudyConfigOption> {
+    return apiClient.patch<StudyConfigOption>(
+      endpoints.studyConfig.gapTypeById(id),
+      payload,
+    );
+  },
+
+  async setGapTypeActive(id: string, isActive: boolean): Promise<StudyConfigOption> {
+    const path = isActive
+      ? endpoints.studyConfig.activateGapType(id)
+      : endpoints.studyConfig.deactivateGapType(id);
+    return apiClient.patch<StudyConfigOption>(path);
+  },
+
   // RIO-FR-003 AC 6 — the theme vocabulary the extractor may pick from.
   async listNeedThemes(): Promise<StudyConfigOption[]> {
     return apiClient.get<StudyConfigOption[]>(endpoints.studyConfig.needThemes);
