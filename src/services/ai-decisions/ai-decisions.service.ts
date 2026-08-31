@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import type { RequestOptions } from "@/services/api/types";
 import type {
   AiDecision,
   DomainSubDomainPair,
@@ -15,12 +16,16 @@ import type { Survey } from "@/services/surveys/surveys.service";
 export const aiDecisionsService = {
   /** Now the Retry action for a Need whose automatic classification failed —
    * classification itself runs automatically right after Need creation. */
-  async classify(needId: string): Promise<AiDecision> {
-    return apiClient.post<AiDecision>(endpoints.aiDecisions.classify(needId));
+  async classify(needId: string, options?: RequestOptions): Promise<AiDecision> {
+    return apiClient.post<AiDecision>(
+      endpoints.aiDecisions.classify(needId),
+      undefined,
+      options,
+    );
   },
 
-  async listByNeed(needId: string): Promise<AiDecision[]> {
-    return apiClient.get<AiDecision[]>(endpoints.aiDecisions.forNeed(needId));
+  async listByNeed(needId: string, options?: RequestOptions): Promise<AiDecision[]> {
+    return apiClient.get<AiDecision[]>(endpoints.aiDecisions.forNeed(needId), options);
   },
 
   async review(id: string, payload: ReviewDecisionPayload): Promise<AiDecision> {
@@ -39,12 +44,20 @@ export interface AiReviewApprovePayload {
  * once the Need reaches `reviewer_approved` (see
  * AiDecisionsService.approveAiReview on the backend). */
 export const aiReviewService = {
-  async approve(needId: string, payload: AiReviewApprovePayload): Promise<void> {
-    await apiClient.post(endpoints.aiReview.approve(needId), payload);
+  async approve(
+    needId: string,
+    payload: AiReviewApprovePayload,
+    options?: RequestOptions,
+  ): Promise<void> {
+    await apiClient.post(endpoints.aiReview.approve(needId), payload, options);
   },
 
-  async reject(needId: string, comments: string): Promise<void> {
-    await apiClient.post(endpoints.aiReview.reject(needId), { comments });
+  async reject(
+    needId: string,
+    comments: string,
+    options?: RequestOptions,
+  ): Promise<void> {
+    await apiClient.post(endpoints.aiReview.reject(needId), { comments }, options);
   },
 
   /** Preview only — does not write domain/subDomain onto the Need. Returns
@@ -57,15 +70,24 @@ export const aiReviewService = {
     needId: string,
     pairs: DomainSubDomainPair[],
     reason: string,
+    options?: RequestOptions,
   ): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.aiReview.overrideDomain(needId), {
-      pairs,
-      reason,
-    });
+    return apiClient.post<Survey>(
+      endpoints.aiReview.overrideDomain(needId),
+      { pairs, reason },
+      options,
+    );
   },
 
-  async retryClassification(needId: string): Promise<AiDecision> {
-    return apiClient.post<AiDecision>(endpoints.aiReview.retry(needId));
+  async retryClassification(
+    needId: string,
+    options?: RequestOptions,
+  ): Promise<AiDecision> {
+    return apiClient.post<AiDecision>(
+      endpoints.aiReview.retry(needId),
+      undefined,
+      options,
+    );
   },
 
   /** Researcher-driven manual classification — only reachable while the
@@ -87,10 +109,12 @@ export const aiReviewService = {
     domain: string,
     subDomain: string,
     reason: string,
+    options?: RequestOptions,
   ): Promise<void> {
-    await apiClient.post(endpoints.aiReview.manualClassify(needId), {
-      pairs: [{ domain, subDomain }],
-      reason,
-    });
+    await apiClient.post(
+      endpoints.aiReview.manualClassify(needId),
+      { pairs: [{ domain, subDomain }], reason },
+      options,
+    );
   },
 };

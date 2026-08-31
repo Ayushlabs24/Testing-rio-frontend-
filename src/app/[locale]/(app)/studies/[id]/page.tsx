@@ -63,6 +63,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import { useStudyCenters, useStudyGovernorates } from "@/hooks/use-study-geography";
 import { useRouter } from "@/i18n/navigation";
 import { aiDecisionsService } from "@/services/ai-decisions/ai-decisions.service";
@@ -245,21 +246,36 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
         );
         const [aiStatuses, surveyStatuses] = await Promise.all([
           Promise.all(
-            needs.map((need) =>
-              aiDecisionsService
-                .listByNeed(need.id)
+            needs.map((need) => {
+              // A Need whose automatic classification failed can be
+              // manually classified instead (AiDecisionsService.
+              // manualClassify) — that path updates the Need's own status
+              // directly and never creates an AiDecision row, by design.
+              // So "no AiDecision" only means "not started" while the Need
+              // itself is still at one of these pre-classification
+              // statuses; past that, the Need's status is the proof a
+              // human already classified it, AiDecision row or not.
+              const notYetClassified =
+                need.status === "draft" ||
+                need.status === "pending_ai_classification" ||
+                need.status === "ai_classification_failed";
+              return aiDecisionsService
+                .listByNeed(need.id, actAsOrgOptions(need.orgId))
                 .then((list): AiClassificationStatus => {
+                  if (notYetClassified) return "not_started";
                   const latest = list[0];
-                  if (!latest) return "not_started";
+                  if (!latest) return "reviewed";
                   return latest.humanDecision ? "reviewed" : "classified";
                 })
-                .catch((): AiClassificationStatus => "not_started"),
-            ),
+                .catch((): AiClassificationStatus =>
+                  notYetClassified ? "not_started" : "reviewed",
+                );
+            }),
           ),
           Promise.all(
             needs.map((need) =>
               surveysService
-                .getSurveyByNeedId(need.id)
+                .getSurveyByNeedId(need.id, actAsOrgOptions(need.orgId))
                 .then((survey): SurveyStatus => {
                   if (!survey) return "not_started";
                   switch (survey.status) {

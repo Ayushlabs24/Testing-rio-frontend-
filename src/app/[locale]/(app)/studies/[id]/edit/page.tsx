@@ -11,6 +11,7 @@ import {
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "@/i18n/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useOrgGovernorates } from "@/hooks/use-org-governorates";
 import { useOrgRegionName } from "@/hooks/use-org-region-name";
 import {
@@ -27,16 +28,22 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
   const t = useTranslations("app.studies.form");
   const tStudies = useTranslations("app.studies");
   const router = useRouter();
-  const orgGovernorates = useOrgGovernorates();
-  const regionName = useOrgRegionName();
+  const { session } = useAuth();
+  const [study, setStudy] = useState<Study | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  // System Admin has no org of its own (see useOrgGovernorates' doc
+  // comment) — editing a Study must resolve the STUDY'S org, same as the
+  // New Study page resolves whichever org was picked there. Every other
+  // role edits its own Study, so its own org context already matches.
+  const isCrossEntity = session?.role.crossEntity === true;
+  const actAsOrgId = isCrossEntity ? study?.orgId : undefined;
+  const orgGovernorates = useOrgGovernorates(actAsOrgId);
+  const regionName = useOrgRegionName(actAsOrgId);
   const [methodologyVersions, setMethodologyVersions] = useState<MethodologyVersion[]>(
     [],
   );
   const [studyTypes, setStudyTypes] = useState<StudyConfigOption[]>([]);
   const [targetSectors, setTargetSectors] = useState<StudyConfigOption[]>([]);
-
-  const [study, setStudy] = useState<Study | null>(null);
-  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     studiesService
@@ -111,6 +118,7 @@ export default function EditStudyPage({ params }: { params: Promise<{ id: string
                 study={study}
                 orgGovernorates={orgGovernorates}
                 regionName={regionName}
+                actAsOrgId={actAsOrgId}
                 methodologyVersions={methodologyVersions}
                 studyTypes={studyTypes}
                 targetSectors={targetSectors}

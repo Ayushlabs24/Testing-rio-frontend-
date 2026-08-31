@@ -202,7 +202,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                       {grant.granteeName ?? grant.granteeId}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {grant.module}:{grant.action}
+                      {t(`modules.${grant.module}`)} — {t(`actionNames.${grant.action}`)}
                     </TableCell>
                     <TableCell
                       className="text-muted-foreground max-w-xs truncate text-sm"
@@ -311,7 +311,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                   <SelectContent>
                     {PERMISSION_MODULES.map((m) => (
                       <SelectItem key={m} value={m}>
-                        {m}
+                        {t(`modules.${m}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -329,7 +329,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                   <SelectContent>
                     {ACTIONS.map((a) => (
                       <SelectItem key={a} value={a}>
-                        {a}
+                        {t(`actionNames.${a}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>

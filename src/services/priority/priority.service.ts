@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import type { RequestOptions } from "@/services/api/types";
 import type {
   PriorityDashboardEntry,
   PriorityScore,
@@ -7,13 +8,23 @@ import type {
 } from "@/services/priority/priority.types";
 
 export const priorityService = {
-  async score(needId: string, surveyLinkId?: string): Promise<PriorityScore> {
+  async score(
+    needId: string,
+    surveyLinkId?: string,
+    options?: RequestOptions,
+  ): Promise<PriorityScore> {
     return apiClient.post<PriorityScore>(endpoints.priority.score(needId), undefined, {
+      ...options,
       params: { surveyLinkId },
     });
   },
-  async getLatest(needId: string, surveyLinkId?: string): Promise<PriorityScore | null> {
+  async getLatest(
+    needId: string,
+    surveyLinkId?: string,
+    options?: RequestOptions,
+  ): Promise<PriorityScore | null> {
     return apiClient.get<PriorityScore | null>(endpoints.priority.score(needId), {
+      ...options,
       params: { surveyLinkId },
     });
   },

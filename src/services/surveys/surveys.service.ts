@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import type { RequestOptions } from "@/services/api/types";
 
 export interface QuestionOption {
   domain: string;
@@ -321,8 +322,11 @@ export const surveysService = {
     );
   },
 
-  async getSurveyByNeedId(needId: string): Promise<Survey | null> {
-    return apiClient.get<Survey | null>(endpoints.surveys.forNeed(needId));
+  async getSurveyByNeedId(
+    needId: string,
+    options?: RequestOptions,
+  ): Promise<Survey | null> {
+    return apiClient.get<Survey | null>(endpoints.surveys.forNeed(needId), options);
   },
 
   /** RIO-FR-011: the currently PUBLISHED version — not "latest" (which
@@ -331,8 +335,14 @@ export const surveysService = {
    * instead, or it silently flips to an unpublished draft the moment one is
    * created, even though the old version is still the one collecting
    * responses. */
-  async getPublishedSurveyByNeedId(needId: string): Promise<Survey | null> {
-    return apiClient.get<Survey | null>(endpoints.surveys.publishedForNeed(needId));
+  async getPublishedSurveyByNeedId(
+    needId: string,
+    options?: RequestOptions,
+  ): Promise<Survey | null> {
+    return apiClient.get<Survey | null>(
+      endpoints.surveys.publishedForNeed(needId),
+      options,
+    );
   },
 
   async listSurveyVersionsByNeedId(needId: string): Promise<SurveyVersionSummary[]> {
@@ -341,8 +351,12 @@ export const surveysService = {
     );
   },
 
-  async recommendQuestions(needId: string): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.surveys.recommendQuestions(needId));
+  async recommendQuestions(needId: string, options?: RequestOptions): Promise<Survey> {
+    return apiClient.post<Survey>(
+      endpoints.surveys.recommendQuestions(needId),
+      undefined,
+      options,
+    );
   },
 
   /** "Build Manually" path — an empty DRAFT survey with no questions yet, so
@@ -361,22 +375,33 @@ export const surveysService = {
     surveyId: string,
     questions: SaveSurveyQuestionInput[],
     removalReasons?: Record<string, string>,
+    options?: RequestOptions,
   ): Promise<Survey> {
-    return apiClient.patch<Survey>(endpoints.surveys.updateQuestions(surveyId), {
-      questions,
-      ...(removalReasons && Object.keys(removalReasons).length > 0
-        ? { removalReasons }
-        : {}),
-    });
+    return apiClient.patch<Survey>(
+      endpoints.surveys.updateQuestions(surveyId),
+      {
+        questions,
+        ...(removalReasons && Object.keys(removalReasons).length > 0
+          ? { removalReasons }
+          : {}),
+      },
+      options,
+    );
   },
 
   /** Researcher: picks the Methodology Version this survey will publish
    * under — mandatory before submitForApproval. Same editable-only window
    * as updateQuestions (DRAFT/REJECTED). The Approver never calls this. */
-  async setMethodologyVersion(surveyId: string, version: string): Promise<Survey> {
-    return apiClient.patch<Survey>(endpoints.surveys.setMethodologyVersion(surveyId), {
-      version,
-    });
+  async setMethodologyVersion(
+    surveyId: string,
+    version: string,
+    options?: RequestOptions,
+  ): Promise<Survey> {
+    return apiClient.patch<Survey>(
+      endpoints.surveys.setMethodologyVersion(surveyId),
+      { version },
+      options,
+    );
   },
 
   /** Researcher: the Sample Description step — one Save action for all four
@@ -391,17 +416,26 @@ export const surveysService = {
       selectionApproach: string;
       geographicCoverage: string;
     },
+    options?: RequestOptions,
   ): Promise<Survey> {
     return apiClient.patch<Survey>(
       endpoints.surveys.setSampleDescription(surveyId),
       input,
+      options,
     );
   },
 
   /** Researcher: hands the current content to the Approver. Valid from
    * DRAFT (first submission) or REJECTED (resubmission). */
-  async submitForApproval(surveyId: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.submit(surveyId));
+  async submitForApproval(
+    surveyId: string,
+    options?: RequestOptions,
+  ): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(
+      endpoints.surveys.submit(surveyId),
+      undefined,
+      options,
+    );
   },
 
   /** Approver-only. Client-confirmed (Aug 13 call): approve no longer
@@ -409,18 +443,28 @@ export const surveysService = {
    * hands it back to the Researcher, who calls publishSurvey below to
    * actually go live. `comments` (reviewer notes) is mandatory — enforced
    * both here (the approve dialog) and again on the backend. */
-  async approveSurvey(surveyId: string, comments: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.approve(surveyId), {
-      comments,
-    });
+  async approveSurvey(
+    surveyId: string,
+    comments: string,
+    options?: RequestOptions,
+  ): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(
+      endpoints.surveys.approve(surveyId),
+      { comments },
+      options,
+    );
   },
 
   /** Researcher (or anyone else holding surveyBuilder:write). The actual
    * go-live step, once the Approver has already approved — no notes
    * needed, that decision was already recorded by approveSurvey. Only
    * valid from APPROVED. */
-  async publishSurvey(surveyId: string): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.publish(surveyId));
+  async publishSurvey(surveyId: string, options?: RequestOptions): Promise<SurveyRecord> {
+    return apiClient.post<SurveyRecord>(
+      endpoints.surveys.publish(surveyId),
+      undefined,
+      options,
+    );
   },
 
   /** Approver-only. `reasonCode` and `comments` (reviewer notes) are both
@@ -430,11 +474,13 @@ export const surveysService = {
     surveyId: string,
     reasonCode: RejectionReasonCode,
     comments: string,
+    options?: RequestOptions,
   ): Promise<SurveyRecord> {
-    return apiClient.post<SurveyRecord>(endpoints.surveys.reject(surveyId), {
-      reasonCode,
-      comments,
-    });
+    return apiClient.post<SurveyRecord>(
+      endpoints.surveys.reject(surveyId),
+      { reasonCode, comments },
+      options,
+    );
   },
 
   /** Researcher: the only way to change a PUBLISHED survey — creates a new
@@ -443,8 +489,12 @@ export const surveysService = {
    * it) untouched. Idempotent — calling it again on the same published
    * survey returns the already-created draft rather than making a second
    * one. */
-  async createNewVersion(surveyId: string): Promise<Survey> {
-    return apiClient.post<Survey>(endpoints.surveys.newVersion(surveyId));
+  async createNewVersion(surveyId: string, options?: RequestOptions): Promise<Survey> {
+    return apiClient.post<Survey>(
+      endpoints.surveys.newVersion(surveyId),
+      undefined,
+      options,
+    );
   },
 
   async getPublicSurvey(id: string): Promise<Survey> {
