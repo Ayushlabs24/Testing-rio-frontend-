@@ -977,7 +977,33 @@
           "genericError": "Something went wrong. Please try again.",
           "cancel": "Cancel",
           "save": "Grant permission",
-          "saving": "Saving..."
+          "saving": "Saving...",
+          "modules": {
+            "entityTeam": "Entity & Team Management",
+            "rolesPermissions": "Roles & Permissions",
+            "onboardingConsent": "Onboarding & Consent",
+            "methodologyQuestionBank": "Methodology & Question Bank",
+            "studySurvey": "Study & Survey",
+            "dataCollection": "Data Collection",
+            "dataImport": "Data Import",
+            "citizenChannel": "Citizen Channel",
+            "aiReview": "AI Review",
+            "priorityScoring": "Priority Scoring",
+            "reportsDashboards": "Reports & Dashboards",
+            "archiveSharingAudit": "Archive & Sharing",
+            "surveyBuilder": "Survey Builder",
+            "ncnpReport": "NCNP Compiled Report",
+            "systemLogs": "System Logs",
+            "auditLog": "Audit Log"
+          },
+          "actionNames": {
+            "read": "Read",
+            "write": "Write",
+            "create": "Create",
+            "approve": "Approve",
+            "export": "Export",
+            "share": "Share"
+          }
         }
       },
       "users": {
@@ -2231,6 +2257,9 @@
         "overrideError": "Couldn't save this modification. Please try again.",
         "cancel": "Cancel",
         "viewSuggestedQuestions": "View Suggested Questions",
+        "regenerateSurvey": "Generate Suggested Questions",
+        "regenerateSurveyHint": "The survey wasn't generated automatically after classification — this will build it now from the current classification.",
+        "regenerateSurveyError": "Couldn't generate the survey. Please try again.",
         "approve": "Approve",
         "approveError": "Couldn't approve this classification. Please try again.",
         "modify": "Modify Classification",

@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import { ApiError } from "@/services/api/types";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
@@ -196,16 +197,22 @@ export default function PriorityDetailInsightsPage({
     setScoring(true);
     setError(null);
     try {
-      const outcome = await severityScoringService.recalculate(survey.studyId, survey.id);
+      const options = actAsOrgOptions(need?.orgId);
+      const outcome = await severityScoringService.recalculate(
+        survey.studyId,
+        survey.id,
+        options,
+      );
       const result = await severityScoringService.getVillagePriority(
         survey.studyId,
         survey.id,
         null,
+        options,
       );
       setPriorityV2(result);
       // RIO-FR-003 — the per-need explainable score is produced by its own
       // endpoint, so recalculating the rollups is not enough on its own.
-      setNeedScore(await priorityService.score(needId));
+      setNeedScore(await priorityService.score(needId, undefined, options));
       setSummaryKey((prev) => prev + 1); // trigger refresh of AI summary state
       // A run can succeed as an HTTP call and still compute nothing (no
       // responses submitted yet, methodology reference data missing). Say

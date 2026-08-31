@@ -3,6 +3,7 @@ import { publicSurveysService } from "@/services/public-surveys/public-surveys.s
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
 import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import {
   severityScoringService,
   type VillagePriorityResult,
@@ -42,48 +43,56 @@ export function loadPriorityInsights(
 ): void {
   const { setNeed, setSurvey, setPriorityV2, setQualityResults } = setters;
 
+  // Every call below is org-scoped (RLS) — System Admin has no org of its
+  // own, so this must resolve the Need first to learn which org to act as
+  // (see Need.orgId's doc comment). Without this, System Admin viewing any
+  // other org's Need always got an empty body back from each of these,
+  // silently reading as "no published survey" / "no priority score" no
+  // matter how much real data existed (RIO-AI-002/RIO-FR-005).
   needsService
     .getById(needId)
     .then((result) => {
       if (!isStale()) setNeed(result);
+      const options = actAsOrgOptions(result.orgId);
+
+      // RIO-FR-011: the PUBLISHED version, never "latest" — see
+      // surveysService.getPublishedSurveyByNeedId's own comment. This is a
+      // read-only screen, and the VillagePriorityAssessment rows are keyed
+      // on the PUBLISHED survey's id (that is the version whose responses
+      // were scored). Resolving "latest" here meant that the moment a new
+      // draft version was created for a Need, getVillagePriority() looked
+      // up an id that has no assessment and returned null — the page then
+      // showed no priority data at all, even though the list page still
+      // showed that Need's score. PriorityV2Service.listForOrg guards the
+      // same way.
+      surveysService
+        .getPublishedSurveyByNeedId(needId, options)
+        .then((srv) => {
+          if (isStale()) return;
+          setSurvey(srv);
+          if (srv) {
+            severityScoringService
+              .getVillagePriority(srv.studyId, srv.id, null, options)
+              .then((result) => {
+                if (!isStale()) setPriorityV2(result);
+              })
+              .catch(() => {
+                if (!isStale()) setPriorityV2(null);
+              });
+          }
+        })
+        .catch(() => undefined);
+
+      responseQualityService
+        .list(needId, surveyLinkId, options)
+        .then((result) => {
+          if (!isStale()) setQualityResults(result);
+        })
+        .catch(() => {
+          if (!isStale()) setQualityResults([]);
+        });
     })
     .catch(() => undefined);
-
-  // RIO-FR-011: the PUBLISHED version, never "latest" — see
-  // surveysService.getPublishedSurveyByNeedId's own comment. This is a
-  // read-only screen, and the VillagePriorityAssessment rows are keyed on
-  // the PUBLISHED survey's id (that is the version whose responses were
-  // scored). Resolving "latest" here meant that the moment a new draft
-  // version was created for a Need, getVillagePriority() looked up an id
-  // that has no assessment and returned null — the page then showed no
-  // priority data at all, even though the list page still showed that
-  // Need's score. PriorityV2Service.listForOrg guards the same way.
-  surveysService
-    .getPublishedSurveyByNeedId(needId)
-    .then((srv) => {
-      if (isStale()) return;
-      setSurvey(srv);
-      if (srv) {
-        severityScoringService
-          .getVillagePriority(srv.studyId, srv.id, null)
-          .then((result) => {
-            if (!isStale()) setPriorityV2(result);
-          })
-          .catch(() => {
-            if (!isStale()) setPriorityV2(null);
-          });
-      }
-    })
-    .catch(() => undefined);
-
-  responseQualityService
-    .list(needId, surveyLinkId)
-    .then((result) => {
-      if (!isStale()) setQualityResults(result);
-    })
-    .catch(() => {
-      if (!isStale()) setQualityResults([]);
-    });
 }
 
 export function loadSurveyLinks(

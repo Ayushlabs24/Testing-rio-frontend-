@@ -977,7 +977,33 @@
           "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
           "cancel": "إلغاء",
           "save": "منح الصلاحية",
-          "saving": "جارٍ الحفظ..."
+          "saving": "جارٍ الحفظ...",
+          "modules": {
+            "entityTeam": "إدارة الكيانات والفرق",
+            "rolesPermissions": "الأدوار والصلاحيات",
+            "onboardingConsent": "التسجيل والموافقة",
+            "methodologyQuestionBank": "المنهجية وبنك الأسئلة",
+            "studySurvey": "الدراسة والاستبيان",
+            "dataCollection": "جمع البيانات",
+            "dataImport": "استيراد البيانات",
+            "citizenChannel": "قناة المواطن",
+            "aiReview": "مراجعة الذكاء الاصطناعي",
+            "priorityScoring": "تقييم الأولوية",
+            "reportsDashboards": "التقارير ولوحات المعلومات",
+            "archiveSharingAudit": "الأرشفة والمشاركة",
+            "surveyBuilder": "منشئ الاستبيانات",
+            "ncnpReport": "تقرير المركز المجمّع",
+            "systemLogs": "سجلات النظام",
+            "auditLog": "سجل التدقيق"
+          },
+          "actionNames": {
+            "read": "قراءة",
+            "write": "كتابة",
+            "create": "إنشاء",
+            "approve": "موافقة",
+            "export": "تصدير",
+            "share": "مشاركة"
+          }
         }
       },
       "users": {
@@ -2241,6 +2267,9 @@
         "overrideError": "تعذّر حفظ هذا التعديل. يرجى المحاولة مرة أخرى.",
         "cancel": "إلغاء",
         "viewSuggestedQuestions": "عرض الأسئلة المقترحة",
+        "regenerateSurvey": "إنشاء الأسئلة المقترحة",
+        "regenerateSurveyHint": "لم يتم إنشاء الاستبيان تلقائيًا بعد التصنيف — سيقوم هذا بإنشائه الآن استنادًا إلى التصنيف الحالي.",
+        "regenerateSurveyError": "تعذّر إنشاء الاستبيان. يرجى المحاولة مرة أخرى.",
         "approve": "اعتماد",
         "approveError": "تعذّر اعتماد هذا التصنيف. يرجى المحاولة مرة أخرى.",
         "modify": "تعديل التصنيف",

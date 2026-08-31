@@ -1,5 +1,6 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
+import type { RequestOptions } from "@/services/api/types";
 import type {
   AiSummary,
   ResponseQualityResult,
@@ -15,10 +16,15 @@ export const responseQualityService = {
       },
     );
   },
-  async list(needId: string, surveyLinkId?: string): Promise<ResponseQualityResult[]> {
+  async list(
+    needId: string,
+    surveyLinkId?: string,
+    options?: RequestOptions,
+  ): Promise<ResponseQualityResult[]> {
     return apiClient.get<ResponseQualityResult[]>(
       endpoints.responseQuality.list(needId),
       {
+        ...options,
         params: { surveyLinkId },
       },
     );

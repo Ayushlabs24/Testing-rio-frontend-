@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import { cn } from "@/lib/utils";
 import {
   confidenceBadgeVariant,
@@ -133,11 +134,12 @@ export function AiClassificationSection({
       : null;
 
   const [survey, setSurvey] = useState<Survey | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     aiDecisionsService
-      .listByNeed(need.id)
+      .listByNeed(need.id, actAsOrgOptions(need.orgId))
       .then((list) => {
         if (!cancelled) setLatest(list[0] ?? null);
       })
@@ -146,6 +148,12 @@ export function AiClassificationSection({
       cancelled = true;
     };
   }, [need.id, need.status]);
+
+  const refreshSurvey = () =>
+    surveysService
+      .getSurveyByNeedId(need.id, actAsOrgOptions(need.orgId))
+      .then((s) => setSurvey(s))
+      .catch(() => setSurvey(null));
 
   // A rejected Need sits at `pending_ai_classification` too — same status
   // value a fresh Need starts at — but nothing is actually running here:
@@ -160,11 +168,21 @@ export function AiClassificationSection({
     latest?.humanDecision?.decision === "rejected";
 
   const isReadyForReview = need.status === "ai_classified" && !latest?.humanDecision;
-  const hasSurvey =
-    isReadyForReview ||
-    need.status === "reviewer_approved" ||
-    need.status === "survey_created" ||
-    need.status === "survey_published";
+  // Classification always attempts to generate the survey's suggested
+  // questions immediately (see AiDecisionsService.runAndPersistClassification)
+  // but that's best-effort — e.g. no methodology version was PUBLISHED at
+  // that exact moment — so a Need can genuinely sit at ai_classified (or
+  // later) with no Survey row at all. This must reflect that a Survey
+  // actually exists, not just infer one from the Need's own status, or
+  // "View Suggested Questions" sends the user to a page with nothing on it.
+  const hasSurvey = survey !== null;
+  const canRegenerateSurvey =
+    !hasSurvey &&
+    (need.status === "ai_classified" ||
+      need.status === "reviewer_approved" ||
+      need.status === "survey_created" ||
+      need.status === "survey_published") &&
+    (need.domain || need.aiSuggestedDomain || need.allDomainsSelected);
 
   // Survey.status is tracked separately from Need.status — submitting a
   // survey for approval doesn't require the Need's own classification to be
@@ -176,7 +194,7 @@ export function AiClassificationSection({
   useEffect(() => {
     let cancelled = false;
     surveysService
-      .getSurveyByNeedId(need.id)
+      .getSurveyByNeedId(need.id, actAsOrgOptions(need.orgId))
       .then((result) => {
         if (!cancelled) setSurvey(result);
       })
@@ -222,7 +240,9 @@ export function AiClassificationSection({
     if (need.status !== "draft") return;
     if (draftKickedOffRef.current === need.id) return;
     draftKickedOffRef.current = need.id;
-    aiDecisionsService.classify(need.id).catch(() => undefined);
+    aiDecisionsService
+      .classify(need.id, actAsOrgOptions(need.orgId))
+      .catch(() => undefined);
   }, [need.id, need.status]);
 
   // Poll while classification is in flight (or about to be, for a "draft"
@@ -371,7 +391,7 @@ export function AiClassificationSection({
     setError(null);
     setRetrying(true);
     try {
-      await aiDecisionsService.classify(need.id);
+      await aiDecisionsService.classify(need.id, actAsOrgOptions(need.orgId));
       const updated = await needsService.getById(need.id);
       onNeedUpdated?.(updated);
     } catch (err) {
@@ -434,7 +454,7 @@ export function AiClassificationSection({
     setError(null);
     setApproving(true);
     try {
-      await aiReviewService.approve(need.id, {});
+      await aiReviewService.approve(need.id, {}, actAsOrgOptions(need.orgId));
       await reloadAfterDecision();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("approveError"));
@@ -453,7 +473,11 @@ export function AiClassificationSection({
     setError(null);
     setDecidingModify(true);
     try {
-      await aiReviewService.approve(need.id, { domainOverride: { pairs, reason } });
+      await aiReviewService.approve(
+        need.id,
+        { domainOverride: { pairs, reason } },
+        actAsOrgOptions(need.orgId),
+      );
       setOverriding(false);
       await reloadAfterDecision();
     } catch (err) {
@@ -472,7 +496,7 @@ export function AiClassificationSection({
     setError(null);
     setRejecting(true);
     try {
-      await aiReviewService.reject(need.id, comments);
+      await aiReviewService.reject(need.id, comments, actAsOrgOptions(need.orgId));
       setRejectOpen(false);
       setRejectComments("");
       setRejectCommentsError(null);
@@ -481,6 +505,22 @@ export function AiClassificationSection({
       setError(err instanceof ApiError ? err.message : t("rejectError"));
     } finally {
       setRejecting(false);
+    }
+  }
+
+  async function regenerateSurvey() {
+    setError(null);
+    setRegenerating(true);
+    try {
+      const created = await surveysService.recommendQuestions(
+        need.id,
+        actAsOrgOptions(need.orgId),
+      );
+      setSurvey(created);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("regenerateSurveyError"));
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -496,7 +536,12 @@ export function AiClassificationSection({
       // (proposedDomains/proposedReason) — nothing is written to the
       // authoritative domain/subDomain until Approve, but the proposal is
       // now visible to whoever reviews next, in any session.
-      await aiReviewService.overrideDomainPreview(need.id, pairs, reason);
+      await aiReviewService.overrideDomainPreview(
+        need.id,
+        pairs,
+        reason,
+        actAsOrgOptions(need.orgId),
+      );
       const updated = await needsService.getById(need.id);
       onNeedUpdated?.(updated);
       setOverriding(false);
@@ -982,6 +1027,26 @@ export function AiClassificationSection({
                         : t("openSurveyBuilder")}
                     </Button>
                   </div>
+                ) : canRegenerateSurvey ? (
+                  <div className="space-y-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2 font-medium"
+                      onClick={regenerateSurvey}
+                      disabled={regenerating}
+                    >
+                      {regenerating ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <ClipboardList className="size-4" />
+                      )}
+                      {t("regenerateSurvey")}
+                    </Button>
+                    <p className="text-muted-foreground text-xs">
+                      {t("regenerateSurveyHint")}
+                    </p>
+                  </div>
                 ) : null}
 
                 {pendingOverride ? (
@@ -1020,6 +1085,25 @@ export function AiClassificationSection({
                 {isReadyForReview ? t("viewSuggestedQuestions") : t("openSurveyBuilder")}
               </Link>
             </Button>
+          </div>
+        ) : canRegenerateSurvey && !canReview ? (
+          <div className="space-y-1.5 pt-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2 font-medium"
+              onClick={regenerateSurvey}
+              disabled={regenerating}
+            >
+              {regenerating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ClipboardList className="size-4" />
+              )}
+              {t("regenerateSurvey")}
+            </Button>
+            <p className="text-muted-foreground text-xs">{t("regenerateSurveyHint")}</p>
           </div>
         ) : null}
       </div>

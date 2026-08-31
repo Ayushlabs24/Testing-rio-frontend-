@@ -49,6 +49,10 @@ function VillageCard({
   t: ReturnType<typeof useTranslations>;
 }) {
   const hasAffected = entry.affectedPeople !== null || entry.affectedHouseholds !== null;
+  // Reuses the main Priority Dashboard's own level labels (`level.critical`
+  // etc.) rather than duplicating them here — the API sends this field
+  // upper-cased ("HIGH"), same as statusVariant above normalizes for.
+  const tLevel = useTranslations("app.priorityDashboard");
   return (
     <Card className="flex flex-col">
       <CardHeader className="gap-3 pb-3">
@@ -58,7 +62,7 @@ function VillageCard({
           </h3>
           {entry.priorityStatus ? (
             <Badge variant={statusVariant(entry.priorityStatus)} className="shrink-0">
-              {entry.priorityStatus}
+              {tLevel(`level.${entry.priorityStatus.toLowerCase()}`)}
             </Badge>
           ) : null}
         </div>

@@ -185,7 +185,7 @@ export function StudyForm({
     if (methodologyVersionId) return;
     const mostRecentlyPublished = methodologyVersions[0];
     if (!mostRecentlyPublished) return;
-    setValue("methodologyVersionId", mostRecentlyPublished.id);
+    setValue("methodologyVersionId", mostRecentlyPublished.id, { shouldValidate: true });
   }, [methodologyVersions, methodologyVersionId, setValue]);
 
   const submit = handleSubmit(async (values) => {
@@ -232,12 +232,22 @@ export function StudyForm({
             }
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
+              {/* Methodology version names are authored in English only,
+                  regardless of UI locale. The truncation edge for the
+                  trigger's line-clamped value is decided by ITS OWN `dir`,
+                  not the inner text's — without this, RTL silently clips the
+                  start of the name with no ellipsis marker (found testing
+                  RIO-NFR-007). Only set once a real value is selected, so
+                  the (Arabic) placeholder keeps its normal RTL alignment. */}
+              <SelectValue
+                placeholder={t("methodologyVersionPlaceholder")}
+                dir={methodologyVersionId ? "ltr" : undefined}
+              />
             </SelectTrigger>
             <SelectContent>
               {methodologyVersions.map((mv) => (
                 <SelectItem key={mv.id} value={mv.id}>
-                  {mv.name}
+                  <span dir="ltr">{mv.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>

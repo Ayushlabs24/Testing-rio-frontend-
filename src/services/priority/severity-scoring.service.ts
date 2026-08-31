@@ -1,4 +1,5 @@
 import { apiClient } from "@/services/api/client";
+import type { RequestOptions } from "@/services/api/types";
 
 export interface MethodologyVersion {
   id: string;
@@ -180,10 +181,12 @@ export const severityScoringService = {
     studyId: string,
     surveyId: string,
     villageId: string | null = null,
+    options?: RequestOptions,
   ): Promise<VillagePriorityResult | null> {
     const query = villageId ? `?villageId=${encodeURIComponent(villageId)}` : "";
     return apiClient.get<VillagePriorityResult | null>(
       `/studies/${studyId}/surveys/${surveyId}/village-priority${query}`,
+      options,
     );
   },
 
@@ -193,10 +196,15 @@ export const severityScoringService = {
    * for the survey's version, no domain rollups matching the configured
    * domains) and reports which one it hit so the caller can say so instead
    * of leaving the Priority Score panel unchanged with no explanation. */
-  async recalculate(studyId: string, surveyId: string): Promise<RecalculateResult> {
+  async recalculate(
+    studyId: string,
+    surveyId: string,
+    options?: RequestOptions,
+  ): Promise<RecalculateResult> {
     return apiClient.post<RecalculateResult>(
       `/studies/${studyId}/surveys/${surveyId}/recalculate`,
       {},
+      options,
     );
   },
 };

@@ -45,6 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
+import { actAsOrgOptions } from "@/lib/act-as-org";
 import { cn, formatDomainSummary, titleCase } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
 import { aiReviewService } from "@/services/ai-decisions/ai-decisions.service";
@@ -340,11 +341,15 @@ export default function SurveyBuilderDetailPage({
   }
 
   function load() {
-    Promise.all([needsService.getById(needId), surveysService.getSurveyByNeedId(needId)])
-      .then(([needResult, surveyResult]) => {
+    // Survey is org-scoped (RLS) — System Admin has no org of its own, so
+    // this must resolve the Need first to learn which org to act as (see
+    // Need.orgId's doc comment). Fetching both in parallel off `needId`
+    // alone silently returned an empty body for System Admin on every
+    // other Study's Need, always reading as "no survey" (RIO-AI-002).
+    needsService
+      .getById(needId)
+      .then((needResult) => {
         setNeed(needResult);
-        setSurvey(surveyResult);
-        loadDraftFromSurvey(surveyResult);
         const pairs = questionBankPairsFor(needResult);
         if (pairs !== null) {
           surveysService
@@ -354,6 +359,14 @@ export default function SurveyBuilderDetailPage({
             })
             .catch(() => setEligibleQuestions([]));
         }
+        return surveysService.getSurveyByNeedId(
+          needId,
+          actAsOrgOptions(needResult.orgId),
+        );
+      })
+      .then((surveyResult) => {
+        setSurvey(surveyResult);
+        loadDraftFromSurvey(surveyResult);
       })
       .catch(() => undefined)
       .finally(() => setLoaded(true));
@@ -430,6 +443,7 @@ export default function SurveyBuilderDetailPage({
         manualDomain,
         manualSubDomain,
         manualReason.trim(),
+        actAsOrgOptions(need?.orgId),
       );
       load();
     } catch (err) {
@@ -444,7 +458,11 @@ export default function SurveyBuilderDetailPage({
     setSavingMethodologyVersion(true);
     setError(null);
     try {
-      const updated = await surveysService.setMethodologyVersion(survey.id, version);
+      const updated = await surveysService.setMethodologyVersion(
+        survey.id,
+        version,
+        actAsOrgOptions(need?.orgId),
+      );
       setSurvey(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -473,12 +491,16 @@ export default function SurveyBuilderDetailPage({
     setSampleDescriptionError(null);
     setError(null);
     try {
-      const updated = await surveysService.setSampleDescription(survey.id, {
-        targetGroup: trimmedTargetGroup,
-        expectedSampleSize: sampleSize,
-        selectionApproach: trimmedSelectionApproach,
-        geographicCoverage: trimmedGeographicCoverage,
-      });
+      const updated = await surveysService.setSampleDescription(
+        survey.id,
+        {
+          targetGroup: trimmedTargetGroup,
+          expectedSampleSize: sampleSize,
+          selectionApproach: trimmedSelectionApproach,
+          geographicCoverage: trimmedGeographicCoverage,
+        },
+        actAsOrgOptions(need?.orgId),
+      );
       setSurvey(updated);
       setMessage(t("saved"));
     } catch (err) {
@@ -679,6 +701,8 @@ export default function SurveyBuilderDetailPage({
       const updated = await surveysService.updateQuestions(
         survey.id,
         buildQuestionsPayload(),
+        undefined,
+        actAsOrgOptions(need?.orgId),
       );
       setSurvey(updated);
       loadDraftFromSurvey(updated);
@@ -702,7 +726,10 @@ export default function SurveyBuilderDetailPage({
     setSubmitting(true);
     setError(null);
     try {
-      const updated = await surveysService.submitForApproval(survey.id);
+      const updated = await surveysService.submitForApproval(
+        survey.id,
+        actAsOrgOptions(need?.orgId),
+      );
       setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -721,7 +748,10 @@ export default function SurveyBuilderDetailPage({
     setCreatingNewVersion(true);
     setError(null);
     try {
-      const updated = await surveysService.createNewVersion(survey.id);
+      const updated = await surveysService.createNewVersion(
+        survey.id,
+        actAsOrgOptions(need?.orgId),
+      );
       setSurvey(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("genericError"));
@@ -772,7 +802,11 @@ export default function SurveyBuilderDetailPage({
         ? { pairs: fresh.proposedDomains, reason: fresh.proposedReason }
         : undefined;
     try {
-      await aiReviewService.approve(needId, { domainOverride });
+      await aiReviewService.approve(
+        needId,
+        { domainOverride },
+        actAsOrgOptions(fresh.orgId),
+      );
     } catch (err) {
       if (err instanceof ApiError && err.code === "AI_DECISION_NOT_FOUND") return;
       throw err;
@@ -794,11 +828,20 @@ export default function SurveyBuilderDetailPage({
       const saved = await surveysService.updateQuestions(
         survey.id,
         buildQuestionsPayload(),
+        undefined,
+        actAsOrgOptions(need.orgId),
       );
-      const submitted = await surveysService.submitForApproval(saved.id);
-      await surveysService.approveSurvey(submitted.id, comments);
+      const submitted = await surveysService.submitForApproval(
+        saved.id,
+        actAsOrgOptions(need.orgId),
+      );
+      await surveysService.approveSurvey(
+        submitted.id,
+        comments,
+        actAsOrgOptions(need.orgId),
+      );
       const [approved, updatedNeed] = await Promise.all([
-        surveysService.getSurveyByNeedId(needId),
+        surveysService.getSurveyByNeedId(needId, actAsOrgOptions(need.orgId)),
         needsService.getById(needId),
       ]);
       setSurvey(approved);
@@ -838,10 +881,15 @@ export default function SurveyBuilderDetailPage({
         survey.id,
         buildQuestionsPayload(),
         removalReasons,
+        actAsOrgOptions(need.orgId),
       );
-      await surveysService.approveSurvey(survey.id, comments);
+      await surveysService.approveSurvey(
+        survey.id,
+        comments,
+        actAsOrgOptions(need.orgId),
+      );
       const [approved, updatedNeed] = await Promise.all([
-        surveysService.getSurveyByNeedId(needId),
+        surveysService.getSurveyByNeedId(needId, actAsOrgOptions(need.orgId)),
         needsService.getById(needId),
       ]);
       setSurvey(approved);
@@ -867,8 +915,11 @@ export default function SurveyBuilderDetailPage({
     setError(null);
     setMessage(null);
     try {
-      await surveysService.publishSurvey(survey.id);
-      const published = await surveysService.getSurveyByNeedId(needId);
+      await surveysService.publishSurvey(survey.id, actAsOrgOptions(need?.orgId));
+      const published = await surveysService.getSurveyByNeedId(
+        needId,
+        actAsOrgOptions(need?.orgId),
+      );
       setSurvey(published);
       loadDraftFromSurvey(published);
       setMessage(t("publishedMessage"));
@@ -934,13 +985,14 @@ export default function SurveyBuilderDetailPage({
           survey.id,
           reasonCode as RejectionReasonCode,
           trimmed,
+          actAsOrgOptions(need?.orgId),
         );
       } else {
         // Rejecting the classification decision itself — the Need resets to
         // pending_ai_classification for a fresh reclassification. The
         // backend clears proposedDomains/proposedReason itself (see
         // AiDecisionsService.review's rejected branch).
-        await aiReviewService.reject(needId, trimmed);
+        await aiReviewService.reject(needId, trimmed, actAsOrgOptions(need?.orgId));
       }
       setRejectOpen(false);
       load();
@@ -1340,12 +1392,25 @@ export default function SurveyBuilderDetailPage({
                       disabled={!isEditable || savingMethodologyVersion}
                     >
                       <SelectTrigger id="methodology-version" className="w-full sm:w-96">
-                        <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
+                        {/* Methodology version names are authored in English
+                            only, regardless of UI locale. The truncation
+                            edge for the trigger's line-clamped value is
+                            decided by ITS OWN `dir`, not the inner text's —
+                            without this, RTL silently clips the start of the
+                            name (e.g. "Village Needs..." became just "s...")
+                            with no ellipsis marker (found testing
+                            RIO-NFR-007). Only set once a real value is
+                            selected, so the (Arabic) placeholder keeps its
+                            normal RTL alignment. */}
+                        <SelectValue
+                          placeholder={t("methodologyVersionPlaceholder")}
+                          dir={survey.methodologyVersion ? "ltr" : undefined}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {methodologyOptions.map((option) => (
                           <SelectItem key={option.id} value={option.version}>
-                            {option.name}
+                            <span dir="ltr">{option.name}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
