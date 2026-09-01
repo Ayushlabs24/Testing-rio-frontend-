@@ -1011,6 +1011,18 @@ export function AiClassificationSection({
                   </div>
                 ) : null}
 
+                {/* RIO-NFR-012 — the reason Modify is unavailable used to live
+                    only in the button's `title`. A disabled button does not
+                    reliably fire hover, and a touch user never sees a tooltip
+                    at all, so the explanation was invisible to exactly the
+                    people who needed it. State it in the layout instead; the
+                    `title` stays for pointer users who hover the button. */}
+                {isReadyForReview && overrideDisabledForResearcher ? (
+                  <p className="text-muted-foreground mt-2.5 text-xs">
+                    {t("overrideDisabledSurveySubmitted")}
+                  </p>
+                ) : null}
+
                 {/* Navigation, deliberately on its own row below the
                     decision — it is not one of the three decisions. */}
                 {hasSurvey ? (

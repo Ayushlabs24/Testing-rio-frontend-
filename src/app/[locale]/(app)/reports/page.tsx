@@ -196,11 +196,18 @@ function GenerateReportDialog({
     };
   }, [requiresVillage, studyId, studies]);
 
-  const incomplete =
-    !reportType ||
-    (requiresStudy && !studyId) ||
-    (requiresSurvey && !surveyId) ||
-    (requiresVillage && !villageId.trim());
+  // RIO-NFR-012 — a greyed-out Generate button with no explanation is the
+  // single most common complaint in a usability session. Name what is still
+  // missing rather than leaving the reviewer to guess which of four selects
+  // it is waiting on.
+  const missingFields = [
+    !reportType ? t("reportTypeLabel") : null,
+    requiresStudy && !studyId ? t("studyLabel") : null,
+    requiresSurvey && !surveyId ? t("surveyLabel") : null,
+    requiresVillage && !villageId.trim() ? t("villageLabel") : null,
+  ].filter((label): label is string => label !== null);
+
+  const incomplete = missingFields.length > 0;
 
   async function submit() {
     if (incomplete) return;
@@ -329,6 +336,11 @@ function GenerateReportDialog({
             </div>
           ) : null}
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          {!error && incomplete ? (
+            <p className="text-muted-foreground text-xs">
+              {t("stillNeeded", { fields: missingFields.join(", ") })}
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
@@ -421,6 +433,9 @@ export default function ReportsPage() {
   }
 
   const loading = reports === null || consolidatedReviews === null;
+  // Counted before the filters below, so the empty state can tell "nothing
+  // generated yet" apart from "nothing matches these filters".
+  const totalRowCount = (reports ?? []).length + (consolidatedReviews ?? []).length;
   const unified: UnifiedRow[] = [
     ...(reports ?? []).map((report): UnifiedRow => ({
       category: "ngo",
@@ -601,7 +616,13 @@ export default function ReportsPage() {
                         <div className="bg-muted flex size-10 items-center justify-center rounded-full">
                           <BarChart3 className="size-5" />
                         </div>
-                        <p>{loadFailed ? t("loadError") : t("noReports")}</p>
+                        <p>
+                          {loadFailed
+                            ? t("loadError")
+                            : totalRowCount === 0
+                              ? t("noReports")
+                              : t("noFilterMatches")}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
