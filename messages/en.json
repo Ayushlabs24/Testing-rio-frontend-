@@ -673,6 +673,11 @@
           "questionTextLabel": "Question text",
           "indicatorLabel": "Indicator",
           "kpiLabel": "KPI",
+          "targetSectorLabel": "Target Sector",
+          "targetSectorNone": "No tag",
+          "targetSectorHint": "Optional. A tagged question is surfaced first when a Survey's Study matches this sector — every question stays selectable either way.",
+          "filterTargetSector": "Target Sector",
+          "allTargetSectors": "All Target Sectors",
           "domainLockedHint": "Domain and sub-domain aren't editable here — they determine which surveys and AI recommendations this question matches, so changing them could break existing survey linkage.",
           "cancel": "Cancel",
           "save": "Save changes",
@@ -958,6 +963,8 @@
           "modulePlaceholder": "Select a module",
           "actionLabel": "Action",
           "actionPlaceholder": "Select an action",
+          "scopeLabel": "Entity scope",
+          "scopeAllEntities": "All entities",
           "reasonLabel": "Reason",
           "reasonPlaceholder": "Why is this grant needed?",
           "expiryLabel": "Expires on (optional)",
@@ -1259,7 +1266,9 @@
         "overrideConfirm": "Save override",
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again."
-      }
+      },
+      "noFilterMatches": "No needs match these filters. Clear them to see everything that has been scored.",
+      "needColumn": "Need"
     },
     "villageComparison": {
       "title": "Village Comparison",
@@ -1367,7 +1376,8 @@
         "reportTypeEmpty": "No matching report types.",
         "surveyScopeLabel": "Survey scope (optional)",
         "surveyScopePlaceholder": "All surveys in this study",
-        "surveyScopeAll": "All surveys in this study"
+        "surveyScopeAll": "All surveys in this study",
+        "stillNeeded": "Still needed: {fields}"
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -1582,7 +1592,8 @@
         "exportExcel": "Export Excel",
         "reviewError": "Something went wrong. Please try again.",
         "exportError": "Something went wrong exporting this report."
-      }
+      },
+      "noFilterMatches": "No reports match these filters. Clear them to see everything that has been generated."
     },
     "archive": {
       "title": "Archive",
@@ -2901,7 +2912,8 @@
         "in_progress": "In Progress",
         "completed": "Completed",
         "cancelled": "Cancelled"
-      }
+      },
+      "loading": "Loading decisions…"
     },
     "generateModal": {
       "title": "Generate AI Summary",
