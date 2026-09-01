@@ -227,7 +227,17 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
 
         {loadError ? <p className="text-destructive text-sm">{loadError}</p> : null}
 
-        {decisions === null ? null : decisions.length === 0 ? (
+        {decisions === null ? (
+          <div className="space-y-3" aria-busy="true" aria-live="polite">
+            <span className="sr-only">{t("loading")}</span>
+            {[0, 1].map((i) => (
+              <div key={i} className="space-y-2 rounded-md border p-3">
+                <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                <div className="bg-muted h-3 w-56 animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+        ) : decisions.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("noDecisions")}</p>
         ) : (
           <ul className="space-y-3">

@@ -50,7 +50,7 @@ const LEVEL_VARIANT: Record<
 
 export default function PriorityDashboardPage() {
   const t = useTranslations("app.priorityDashboard");
-  const tTheme = useTranslations("app.studies.themes");
+  // const tTheme = useTranslations("app.studies.themes");  // hidden with the theme filter
   const [entries, setEntries] = useState<PriorityDashboardEntry[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [levelFilter, setLevelFilter] = useState<PriorityScore["level"] | typeof ALL>(
@@ -68,7 +68,9 @@ export default function PriorityDashboardPage() {
   // RIO-FR-003 AC 6 — "the ability to filter/group needs by theme". The
   // options come from the loaded rows rather than a separate fetch, so the
   // list only ever offers themes that are actually in use.
-  const [themeFilter, setThemeFilter] = useState<string>(ALL);
+  // Kept (not deleted) so the hidden theme filter is one block to restore.
+  // `themeFilter` still reads ALL, so the row filter below is a no-op.
+  const [themeFilter] = useState<string>(ALL);
   // Pagination (Aug 14) — this list has no upper bound (every scored Need
   // across every Study), so it needs paging like every other list page.
   const [page, setPage] = useState(1);
@@ -88,15 +90,7 @@ export default function PriorityDashboardPage() {
 
   // AC 6's grouping — every theme in use with how many needs carry it,
   // ordered so the most widespread problem reads first.
-  const themeCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const entry of entries ?? []) {
-      for (const theme of entry.themes) counts.set(theme, (counts.get(theme) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .map(([theme, needCount]) => ({ theme, needCount }))
-      .sort((a, b) => b.needCount - a.needCount || a.theme.localeCompare(b.theme));
-  }, [entries]);
+  // const themeCounts = useMemo(...)  // hidden with the theme filter below
 
   const summary = useMemo(() => {
     const counts = { critical: 0, high: 0, medium: 0, low: 0, unscored: 0 };
@@ -211,6 +205,15 @@ export default function PriorityDashboardPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {/* Theme filter — hidden pending confirmation of the theme
+                  vocabulary itself. "Theme" appears nowhere in the approved
+                  methodology workbook (zero occurrences across all 33 sheets);
+                  the 25 seeded values are our proposal, not a client-approved
+                  list, and open question A8 asking for one is unanswered.
+                  Showing a filter over an unapproved vocabulary would present
+                  it as settled. Backend extraction and the recurrence factor
+                  keep running, so nothing is lost by hiding this. */}
+              {/*
               <Select
                 value={themeFilter}
                 onValueChange={(v) => {
@@ -233,12 +236,13 @@ export default function PriorityDashboardPage() {
                   ))}
                 </SelectContent>
               </Select>
+              */}
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("studyColumn")}</TableHead>
+                  <TableHead>{t("needColumn")}</TableHead>
                   <TableHead className="w-28">{t("scoreColumn")}</TableHead>
                   <TableHead className="w-28">{t("levelColumn")}</TableHead>
                   <TableHead className="w-32">{t("gapTypeColumn")}</TableHead>
@@ -252,7 +256,7 @@ export default function PriorityDashboardPage() {
                     <TableRow key={index}>
                       {Array.from({ length: 6 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
-                          <div className="bg-muted h-4 w-24 rounded" />
+                          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
                         </TableCell>
                       ))}
                     </TableRow>
@@ -267,7 +271,13 @@ export default function PriorityDashboardPage() {
                         <div className="bg-muted flex size-10 items-center justify-center rounded-full">
                           <Gauge className="size-5" />
                         </div>
-                        <p>{loadFailed ? t("loadError") : t("noScores")}</p>
+                        <p>
+                          {loadFailed
+                            ? t("loadError")
+                            : entries.length === 0
+                              ? t("noScores")
+                              : t("noFilterMatches")}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -275,12 +285,18 @@ export default function PriorityDashboardPage() {
                   pagedEntries.map((entry) => (
                     <TableRow key={entry.needId}>
                       <TableCell className="py-4 text-sm font-medium">
+                        {/* The Need is what this row is about. Showing only
+                            the Study repeated the same title down every row —
+                            a reviewer scanning for one need could not find it. */}
                         <Link
                           href={`/priority-dashboard/${entry.needId}`}
                           className="text-primary hover:underline"
                         >
-                          {entry.studyTitle}
+                          {entry.needTitle}
                         </Link>
+                        <span className="text-muted-foreground block text-xs font-normal">
+                          {entry.studyTitle}
+                        </span>
                       </TableCell>
                       <TableCell className="text-sm tabular-nums">
                         {entry.score ? Math.round(entry.score.overallScore) : "—"}

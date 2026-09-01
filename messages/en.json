@@ -1131,9 +1131,6 @@
           "SYSTEM_ADMIN_VIEWED_SURVEY": "Viewed Survey",
           "SYSTEM_ADMIN_VIEWED_REPORT": "Viewed Report",
           "SYSTEM_ADMIN_DOWNLOADED_REPORT": "Downloaded Report",
-          "SUPERVISOR_VIEWED_STUDIES": "Supervisor Viewed Studies",
-          "SUPERVISOR_VIEWED_REPORT": "Supervisor Viewed Report",
-          "SUPERVISOR_DOWNLOADED_REPORT": "Supervisor Downloaded Report",
           "SYSTEM_ADMIN_VIEWED_ARCHIVED_REPORT": "Viewed Archived Report",
           "STUDY_ARCHIVED": "Archived Study",
           "STUDY_RESTORED": "Restored Study",
@@ -1239,7 +1236,9 @@
         "overrideConfirm": "Save override",
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again."
-      }
+      },
+      "noFilterMatches": "No needs match these filters. Clear them to see everything that has been scored.",
+      "needColumn": "Need"
     },
     "villageComparison": {
       "title": "Village Comparison",
@@ -1347,7 +1346,8 @@
         "reportTypeEmpty": "No matching report types.",
         "surveyScopeLabel": "Survey scope (optional)",
         "surveyScopePlaceholder": "All surveys in this study",
-        "surveyScopeAll": "All surveys in this study"
+        "surveyScopeAll": "All surveys in this study",
+        "stillNeeded": "Still needed: {fields}"
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -1562,7 +1562,8 @@
         "exportExcel": "Export Excel",
         "reviewError": "Something went wrong. Please try again.",
         "exportError": "Something went wrong exporting this report."
-      }
+      },
+      "noFilterMatches": "No reports match these filters. Clear them to see everything that has been generated."
     },
     "archive": {
       "title": "Archive",
@@ -2873,7 +2874,8 @@
         "in_progress": "In Progress",
         "completed": "Completed",
         "cancelled": "Cancelled"
-      }
+      },
+      "loading": "Loading decisions…"
     },
     "generateModal": {
       "title": "Generate AI Summary",

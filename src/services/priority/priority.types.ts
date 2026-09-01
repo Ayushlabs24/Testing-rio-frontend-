@@ -62,6 +62,9 @@ export interface PriorityDashboardEntry {
   studyId: string;
   studyTitle: string;
   needId: string;
+  /** The Need's own title. Every Need under a Study shares that Study's name,
+   *  so a table keyed only on studyTitle repeats one string down every row. */
+  needTitle: string;
   // RIO-FR-005 (Q12) — the Need's own analyst-entered Gap Type
   // classification (acute/chronic/structural/seasonal/equity), distinct
   // from `score.overrideReason` below.

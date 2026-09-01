@@ -1,10 +1,8 @@
 "use client";
 
-import { AlertTriangle, Loader2, RotateCw, Tags } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react"; // RotateCw, Tags — with the hidden themes block
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -23,14 +21,17 @@ import {
 import type { Need } from "@/services/needs/needs.types";
 
 /**
- * RIO-FR-003 AC 1 and AC 6 — the two inputs the priority score needs that
+ * RIO-FR-003 AC 1 — urgency, the one input the priority score needs that
  * nothing else in the app collects.
  *
- * They sit together because they answer the same reviewer question in two
- * halves: *how soon* does this matter (urgency), and *how widely* does it
- * matter (themes, via the recurrence factor). Both feed the score, and both
- * are visible here rather than buried in the scoring screen, so the reviewer
- * fixes them where they are looking at the need itself.
+ * It is visible here rather than on the scoring screen so the reviewer sets it
+ * where they are already looking at the need itself.
+ *
+ * The themes half of this panel is commented out below. Urgency is approved
+ * methodology — BRD "Priority Scoring" names it as factor 4, "Approved
+ * baseline - configurable during implementation" — whereas "theme" does not
+ * appear anywhere in the workbook (zero occurrences across all 33 sheets), so
+ * the 25 seeded values are our proposal rather than an agreed vocabulary.
  *
  * Urgency is never inferred. The methodology names it as a factor but gives no
  * measurement rule, so deriving it from severity or gap type would be
@@ -45,11 +46,10 @@ export function NeedPriorityInputs({
   onNeedUpdated: (next: Need) => void;
 }) {
   const tU = useTranslations("app.studies.urgency");
-  const tT = useTranslations("app.studies.themes");
+  // const tT = useTranslations("app.studies.themes");  // with the hidden themes block
   const canEdit = usePermission("priorityScoring", "write");
 
   const [saving, setSaving] = useState(false);
-  const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -68,22 +68,11 @@ export function NeedPriorityInputs({
     }
   }
 
-  async function reExtract() {
-    setExtracting(true);
-    setError(null);
-    try {
-      const themes = await needThemesService.extract(need.id);
-      onNeedUpdated({ ...need, themes });
-    } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : tT("genericError"));
-    } finally {
-      setExtracting(false);
-    }
-  }
+  // async function reExtract() — hidden with the themes block below.
 
   return (
     <section
-      className="border-border bg-card grid gap-5 rounded-lg border p-5 lg:grid-cols-2"
+      className="border-border bg-card grid gap-5 rounded-lg border p-5"
       aria-labelledby="need-priority-inputs-heading"
     >
       <div className="space-y-2">
@@ -126,6 +115,10 @@ export function NeedPriorityInputs({
         ) : null}
       </div>
 
+      {/* Recurring themes — hidden until the vocabulary is confirmed. See this
+          component's header comment for why urgency stays and this does not.
+          Extraction and the recurrence factor keep running behind it. */}
+      {/*
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Tags className="text-muted-foreground size-4" aria-hidden />
@@ -154,8 +147,9 @@ export function NeedPriorityInputs({
           </Button>
         ) : null}
       </div>
+      */}
 
-      {error ? <p className="text-destructive text-sm lg:col-span-2">{error}</p> : null}
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
     </section>
   );
 }

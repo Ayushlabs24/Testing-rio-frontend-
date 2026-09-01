@@ -152,7 +152,7 @@ function VersionCard({
                     ? "bg-badge-info text-badge-info-foreground border-transparent"
                     : config.status === "pending_approval"
                       ? "bg-badge-warning text-badge-warning-foreground border-transparent"
-                  : undefined
+                      : undefined
               }
             >
               {t(`status.${config.status}`)}
@@ -213,11 +213,11 @@ function VersionCard({
         <div className="mt-4 flex flex-wrap gap-2">
           {canApprove && config.status === "pending_approval" ? (
             <>
-          <Button
-            size="sm"
+              <Button
+                size="sm"
                 className="gap-1.5"
                 onClick={() => setReviewDialogMode("approve")}
-          >
+              >
                 <ShieldCheck className="size-3.5" />
                 {t("approve")}
               </Button>
@@ -235,10 +235,10 @@ function VersionCard({
 
           {canWrite && config.status === "approved" ? (
             <Button size="sm" className="gap-1.5" onClick={publish} disabled={publishing}>
-            <CheckCircle2 className="size-3.5" />
-            {publishing ? t("publishing") : t("publish")}
-          </Button>
-        ) : null}
+              <CheckCircle2 className="size-3.5" />
+              {publishing ? t("publishing") : t("publish")}
+            </Button>
+          ) : null}
         </div>
       </CardContent>
 
@@ -1452,8 +1452,15 @@ export function MethodologyConfigTab() {
         setActive={studyConfigService.setGapTypeActive}
       />
 
-      {/* RIO-FR-003 AC 6 — editing this list changes what needs get filed
-          under, and therefore what the recurrence factor counts. */}
+      {/* Need Themes — hidden pending confirmation of the vocabulary itself.
+          "Theme" appears nowhere in the approved methodology workbook (zero
+          occurrences across all 33 sheets), so the 25 seeded values are our
+          proposal rather than an approved list, and open question A8 asking
+          the client to supply one is still unanswered. Offering an admin
+          screen to curate an unapproved vocabulary would present it as
+          settled. The table, its API and the extraction all remain — this is
+          two lines to restore once the list is agreed. */}
+      {/*
       <ConfigurableOptionsCard
         heading={t("needThemesHeading")}
         note={t("needThemesNote")}
@@ -1463,6 +1470,7 @@ export function MethodologyConfigTab() {
         update={studyConfigService.updateNeedTheme}
         setActive={studyConfigService.setNeedThemeActive}
       />
+      */}
     </div>
   );
 }

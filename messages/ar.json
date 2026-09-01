@@ -1131,9 +1131,6 @@
           "SYSTEM_ADMIN_VIEWED_SURVEY": "عرض الاستبيان",
           "SYSTEM_ADMIN_VIEWED_REPORT": "عرض التقرير",
           "SYSTEM_ADMIN_DOWNLOADED_REPORT": "تنزيل التقرير",
-          "SUPERVISOR_VIEWED_STUDIES": "المشرف اطّلع على الدراسات",
-          "SUPERVISOR_VIEWED_REPORT": "المشرف اطّلع على التقرير",
-          "SUPERVISOR_DOWNLOADED_REPORT": "المشرف نزّل التقرير",
           "SYSTEM_ADMIN_VIEWED_ARCHIVED_REPORT": "عرض التقرير المؤرشف",
           "STUDY_ARCHIVED": "أرشفة الدراسة",
           "STUDY_RESTORED": "استعادة الدراسة",
@@ -1249,7 +1246,9 @@
         "overrideConfirm": "حفظ التعديل",
         "cancel": "إلغاء",
         "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
-      }
+      },
+      "noFilterMatches": "لا توجد احتياجات مطابقة لعوامل التصفية. أزل التصفية لعرض كل ما تم تقييمه.",
+      "needColumn": "الاحتياج"
     },
     "villageComparison": {
       "title": "مقارنة القرى",
@@ -1357,7 +1356,8 @@
         "reportTypeEmpty": "لا توجد أنواع تقارير مطابقة.",
         "surveyScopeLabel": "نطاق الاستبيان (اختياري)",
         "surveyScopePlaceholder": "جميع استبيانات هذه الدراسة",
-        "surveyScopeAll": "جميع استبيانات هذه الدراسة"
+        "surveyScopeAll": "جميع استبيانات هذه الدراسة",
+        "stillNeeded": "ما زال مطلوبًا: {fields}"
       },
       "content": {
         "reportLabel": "تقييم احتياجات المجتمع",
@@ -1572,7 +1572,8 @@
         "exportExcel": "تصدير Excel",
         "reviewError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
         "exportError": "حدث خطأ أثناء تصدير هذا التقرير."
-      }
+      },
+      "noFilterMatches": "لا توجد تقارير مطابقة لعوامل التصفية. أزل التصفية لعرض كل ما تم إنشاؤه."
     },
     "archive": {
       "title": "الأرشيف",
@@ -2893,7 +2894,8 @@
         "in_progress": "قيد التنفيذ",
         "completed": "مكتمل",
         "cancelled": "ملغى"
-      }
+      },
+      "loading": "جارٍ تحميل القرارات…"
     },
     "generateModal": {
       "title": "إنشاء ملخص الذكاء الاصطناعي",
