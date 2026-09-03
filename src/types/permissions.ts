@@ -43,6 +43,10 @@ export const PERMISSION_MODULES = [
   // (src/rbac/role-matrix.ts) — every session response carries an entry per
   // module, and apiSessionViewSchema rejects any module missing from this list.
   "auditLog",
+  // RIO-FR-009 — Initiative records and their linkage to Needs. Added to the
+  // backend's role-matrix.ts but missing here, which made apiSessionViewSchema
+  // reject every login response (every role carries an `initiatives` entry).
+  "initiatives",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

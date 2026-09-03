@@ -259,6 +259,7 @@
       "ncnpReport": "NCNP Compiled Report",
       "archive": "Archive",
       "sharing": "Sharing",
+      "initiatives": "Initiatives",
       "reportSharing": "Report Sharing",
       "reviewerSla": "Reviewer Alerts",
       "surveyBuilder": "Survey Builder",
@@ -1661,7 +1662,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "expired": "Expired"
+        "expired": "Expired",
+        "withdrawn": "Withdrawn"
       },
       "approve": "Approve",
       "reject": "Reject",
@@ -1701,7 +1703,11 @@
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
-      "decisionNoteLabel": "Decision note"
+      "decisionNoteLabel": "Decision note",
+      "withdraw": "Withdraw",
+      "expiryColumn": "Expires",
+      "noExpiry": "No expiry",
+      "expiryInputLabel": "Optional expiry date"
     },
     "reportSharing": {
       "title": "Report Sharing",
@@ -1737,7 +1743,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "expired": "Expired"
+        "expired": "Expired",
+        "withdrawn": "Withdrawn"
       },
       "approve": "Approve",
       "reject": "Reject",
@@ -1786,7 +1793,55 @@
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
-      "decisionNoteLabel": "Decision note"
+      "decisionNoteLabel": "Decision note",
+      "withdraw": "Withdraw",
+      "expiryColumn": "Expires",
+      "noExpiry": "No expiry",
+      "expiryInputLabel": "Optional expiry date"
+    },
+    "initiatives": {
+      "title": "Initiatives",
+      "description": "Track ongoing initiatives and link them to the Needs they address.",
+      "newInitiative": "New Initiative",
+      "nameColumn": "Name",
+      "orgColumn": "Organisation",
+      "domainColumn": "Domain",
+      "statusColumn": "Status",
+      "statusValues": {
+        "active": "Active",
+        "completed": "Completed"
+      },
+      "linkedNeedsColumn": "Linked Needs",
+      "visibilityColumn": "Visibility",
+      "visibilityOpen": "Open to other entities",
+      "visibilityOwnerOnly": "Owner only",
+      "noInitiatives": "No initiatives recorded yet.",
+      "loadError": "Couldn't load initiatives. Please try again.",
+      "edit": "Edit",
+      "create": {
+        "title": "New Initiative",
+        "editTitle": "Edit Initiative",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Well rehabilitation programme",
+        "nameRequired": "Name is required.",
+        "domainLabel": "Domain",
+        "domainPlaceholder": "Select a domain (optional)",
+        "geographyLabel": "Geography",
+        "geographyPlaceholder": "e.g. Ad-Dawadmi governorate, 6 villages",
+        "startDateLabel": "Start date",
+        "expectedEndDateLabel": "Expected end date",
+        "statusLabel": "Status",
+        "fundingSourceLabel": "Funding source",
+        "descriptionLabel": "Description",
+        "budgetLabel": "Budget (optional)",
+        "openToOtherEntitiesLabel": "Visible to other entities (read-only)",
+        "openToOtherEntitiesHint": "Off by default. Other organisations can view but never edit this initiative.",
+        "cancel": "Cancel",
+        "submit": "Save",
+        "submitting": "Saving...",
+        "genericError": "Something went wrong. Please try again.",
+        "invalidDateRange": "Expected end date cannot be before the start date."
+      }
     },
     "reviewerSla": {
       "title": "Reviewer Alerts",
@@ -2171,6 +2226,33 @@
           "reviewer_approved": "A reviewer has approved this need's classification — it can no longer be edited.",
           "survey_created": "A survey has been created for this need — it can no longer be edited.",
           "survey_published": "This need's survey has been published — it can no longer be edited."
+        },
+        "analyticalStatus": {
+          "observed": "Observed",
+          "under_analysis": "Under analysis",
+          "documented_in_study": "Documented in study",
+          "linked_to_initiative": "Linked to initiative",
+          "open_gap": "Open gap"
+        },
+        "initiativeLink": {
+          "heading": "Linked Initiatives",
+          "linkAction": "Link to Initiative",
+          "unlinkAction": "Unlink",
+          "unlinking": "Unlinking...",
+          "noLinks": "Not linked to any initiative yet.",
+          "loadError": "Couldn't load linked initiatives. Please try again.",
+          "genericError": "Something went wrong. Please try again."
+        },
+        "linkInitiative": {
+          "title": "Link to Initiative",
+          "selectPlaceholder": "Select an initiative",
+          "searchPlaceholder": "Search initiatives...",
+          "loading": "Loading initiatives...",
+          "noOptions": "No initiatives available to link.",
+          "cancel": "Cancel",
+          "link": "Link",
+          "linking": "Linking...",
+          "genericError": "Something went wrong. Please try again."
         },
         "genericError": "Couldn't save the need. Please try again.",
         "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",

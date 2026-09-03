@@ -10,6 +10,7 @@ import { AiClassificationSection } from "@/components/features/studies/ai-classi
 import { NeedSummarySection } from "@/components/features/studies/need-summary-section";
 // Commented out with its usage below — see the note at the mount site.
 import { NeedPriorityInputs } from "@/components/features/studies/need-priority-inputs";
+import { NeedInitiativeLinkSection } from "@/components/features/studies/need-initiative-link-section";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
@@ -124,14 +125,14 @@ function WorkflowStep({
 }) {
   return (
     <div className="border-border overflow-hidden rounded-xl border">
-      <div className="bg-primary/5 border-border flex items-center justify-between gap-3 border-b px-5 py-3.5">
-        <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-          <span className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-full">
+      <div className="bg-primary/5 border-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
+        <h2 className="text-foreground flex min-w-0 items-center gap-2 text-sm font-semibold">
+          <span className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-full">
             {icon}
           </span>
-          {title}
+          <span className="truncate">{title}</span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge className={cn("border-transparent", STEP_BADGE_CLASS[state])}>
             {stateLabel}
           </Badge>
@@ -265,11 +266,11 @@ function NeedDetailsCard({
   return (
     <Card className="shadow-md">
       <CardContent className="space-y-4 p-6">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-foreground min-w-0 truncate text-sm font-semibold">
             {need.title}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <NeedStatusBadge status={need.status} />
             {canEdit && !locked && !editing ? (
               <Button
@@ -589,6 +590,8 @@ export default function NeedWorkspacePage({
   const router = useRouter();
   const canEdit = usePermission("dataCollection", "write");
   const canViewEvidence = usePermission("dataCollection", "read");
+  const canViewInitiatives = usePermission("initiatives", "read");
+  const canManageInitiativeLinks = usePermission("initiatives", "write");
 
   const [need, setNeed] = useState<Need | null>(null);
   const [study, setStudy] = useState<Study | null>(null);
@@ -770,6 +773,14 @@ export default function NeedWorkspacePage({
               implementation"), unlike themes, which appear nowhere in it.
               The themes half of this panel stays hidden — see the component. */}
           <NeedPriorityInputs need={need} onNeedUpdated={setNeed} />
+
+          {canViewInitiatives ? (
+            <NeedInitiativeLinkSection
+              need={need}
+              canManage={canManageInitiativeLinks}
+              onNeedUpdated={setNeed}
+            />
+          ) : null}
 
           <NeedSummarySection key={need.id} needId={need.id} />
 

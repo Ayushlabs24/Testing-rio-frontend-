@@ -259,6 +259,7 @@
       "ncnpReport": "التقرير المجمّع لـ NCNP",
       "archive": "الأرشيف",
       "sharing": "المشاركة",
+      "initiatives": "المبادرات",
       "reportSharing": "مشاركة التقارير",
       "reviewerSla": "تنبيهات المراجع",
       "surveyBuilder": "منشئ الاستبيانات",
@@ -1671,7 +1672,8 @@
         "pending": "معلّق",
         "approved": "معتمد",
         "rejected": "مرفوض",
-        "expired": "منتهي الصلاحية"
+        "expired": "منتهي الصلاحية",
+        "withdrawn": "مسحوب"
       },
       "approve": "اعتماد",
       "reject": "رفض",
@@ -1711,7 +1713,11 @@
         "cancel": "إلغاء",
         "confirm": "رفض الطلب"
       },
-      "decisionNoteLabel": "ملاحظة القرار"
+      "decisionNoteLabel": "ملاحظة القرار",
+      "withdraw": "سحب",
+      "expiryColumn": "تنتهي في",
+      "noExpiry": "بدون انتهاء",
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
     },
     "reportSharing": {
       "title": "مشاركة التقارير",
@@ -1747,7 +1753,8 @@
         "pending": "معلّق",
         "approved": "معتمد",
         "rejected": "مرفوض",
-        "expired": "منتهي الصلاحية"
+        "expired": "منتهي الصلاحية",
+        "withdrawn": "مسحوب"
       },
       "approve": "اعتماد",
       "reject": "رفض",
@@ -1796,7 +1803,55 @@
         "cancel": "إلغاء",
         "confirm": "رفض الطلب"
       },
-      "decisionNoteLabel": "ملاحظة القرار"
+      "decisionNoteLabel": "ملاحظة القرار",
+      "withdraw": "سحب",
+      "expiryColumn": "تنتهي في",
+      "noExpiry": "بدون انتهاء",
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
+    },
+    "initiatives": {
+      "title": "المبادرات",
+      "description": "تتبّع المبادرات الجارية وربطها بالاحتياجات التي تعالجها.",
+      "newInitiative": "مبادرة جديدة",
+      "nameColumn": "الاسم",
+      "orgColumn": "الجهة",
+      "domainColumn": "المجال",
+      "statusColumn": "الحالة",
+      "statusValues": {
+        "active": "نشط",
+        "completed": "مكتملة"
+      },
+      "linkedNeedsColumn": "الاحتياجات المرتبطة",
+      "visibilityColumn": "الظهور",
+      "visibilityOpen": "مرئية للجهات الأخرى",
+      "visibilityOwnerOnly": "للمالك فقط",
+      "noInitiatives": "لا توجد مبادرات مسجلة بعد.",
+      "loadError": "تعذّر تحميل المبادرات. يرجى المحاولة مرة أخرى.",
+      "edit": "تعديل",
+      "create": {
+        "title": "مبادرة جديدة",
+        "editTitle": "تعديل المبادرة",
+        "nameLabel": "الاسم",
+        "namePlaceholder": "مثال: برنامج إعادة تأهيل الآبار",
+        "nameRequired": "الاسم مطلوب.",
+        "domainLabel": "المجال",
+        "domainPlaceholder": "اختر مجالاً (اختياري)",
+        "geographyLabel": "النطاق الجغرافي",
+        "geographyPlaceholder": "مثال: محافظة الدوادمي، 6 قرى",
+        "startDateLabel": "تاريخ البدء",
+        "expectedEndDateLabel": "تاريخ الانتهاء المتوقع",
+        "statusLabel": "الحالة",
+        "fundingSourceLabel": "مصدر التمويل",
+        "descriptionLabel": "الوصف",
+        "budgetLabel": "الميزانية (اختياري)",
+        "openToOtherEntitiesLabel": "مرئية للجهات الأخرى (للقراءة فقط)",
+        "openToOtherEntitiesHint": "غير مفعّلة افتراضياً. يمكن للجهات الأخرى الاطلاع عليها دون تعديلها.",
+        "cancel": "إلغاء",
+        "submit": "حفظ",
+        "submitting": "جارٍ الحفظ...",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+        "invalidDateRange": "لا يمكن أن يكون تاريخ الانتهاء المتوقع قبل تاريخ البدء."
+      }
     },
     "reviewerSla": {
       "title": "تنبيهات المراجع",
@@ -2181,6 +2236,33 @@
           "reviewer_approved": "اعتمد أحد المراجعين تصنيف هذا الاحتياج — لم يعد بالإمكان تعديله.",
           "survey_created": "تم إنشاء استبيان لهذا الاحتياج — لم يعد بالإمكان تعديله.",
           "survey_published": "تم نشر استبيان هذا الاحتياج — لم يعد بالإمكان تعديله."
+        },
+        "analyticalStatus": {
+          "observed": "تمت ملاحظته",
+          "under_analysis": "قيد التحليل",
+          "documented_in_study": "موثّق في الدراسة",
+          "linked_to_initiative": "مرتبط بمبادرة",
+          "open_gap": "فجوة مفتوحة"
+        },
+        "initiativeLink": {
+          "heading": "المبادرات المرتبطة",
+          "linkAction": "ربط بمبادرة",
+          "unlinkAction": "إلغاء الربط",
+          "unlinking": "جارٍ إلغاء الربط...",
+          "noLinks": "لم يتم ربطها بأي مبادرة بعد.",
+          "loadError": "تعذّر تحميل المبادرات المرتبطة. يرجى المحاولة مرة أخرى.",
+          "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        },
+        "linkInitiative": {
+          "title": "ربط بمبادرة",
+          "selectPlaceholder": "اختر مبادرة",
+          "searchPlaceholder": "ابحث عن المبادرات...",
+          "loading": "جارٍ تحميل المبادرات...",
+          "noOptions": "لا توجد مبادرات متاحة للربط.",
+          "cancel": "إلغاء",
+          "link": "ربط",
+          "linking": "جارٍ الربط...",
+          "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
         },
         "genericError": "تعذّر حفظ الاحتياج. يرجى المحاولة مرة أخرى.",
         "studyNotFound": "لم تعد هذه الدراسة موجودة. ربما تمت إزالتها. عد إلى قائمة الدراسات للمتابعة.",

@@ -57,6 +57,7 @@ const STATUS_VARIANT: Record<
   approved: "default",
   rejected: "destructive",
   expired: "outline",
+  withdrawn: "outline",
 };
 
 function CreateReportSharingRequestDialog({
@@ -228,6 +229,7 @@ export function ReportSharingPanel({
   const [createOpen, setCreateOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
+  const [expiryDrafts, setExpiryDrafts] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<SharingInnerTab>(initialTab ?? "incoming");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(SHARING_PAGE_SIZE);
@@ -269,10 +271,32 @@ export function ReportSharingPanel({
   async function handleApprove(id: string) {
     setActionError(null);
     try {
-      await reportSharingService.approve(id);
+      const expiresAtDraft = expiryDrafts[id];
+      await reportSharingService.approve(id, {
+        expiresAt: expiresAtDraft ? new Date(expiresAtDraft).toISOString() : undefined,
+      });
+      setExpiryDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : t("create.genericError"));
+      setActionError(
+        err instanceof ApiError && err.code ? err.message : t("create.genericError"),
+      );
+    }
+  }
+
+  async function handleWithdraw(id: string) {
+    setActionError(null);
+    try {
+      await reportSharingService.withdraw(id);
+      load();
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError && err.code ? err.message : t("create.genericError"),
+      );
     }
   }
 
@@ -283,7 +307,9 @@ export function ReportSharingPanel({
       setRejectTargetId(null);
       load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : t("create.genericError"));
+      setActionError(
+        err instanceof ApiError && err.code ? err.message : t("create.genericError"),
+      );
     }
   }
 
@@ -296,13 +322,16 @@ export function ReportSharingPanel({
       showView?: boolean;
       showPurpose?: boolean;
       showRejectReason?: boolean;
+      showWithdraw?: boolean;
+      showExpiry?: boolean;
     },
   ) {
     const columnCount =
       5 +
       (options.showRole ? 1 : 0) +
       (options.showPurpose ? 1 : 0) +
-      (options.showRejectReason ? 1 : 0);
+      (options.showRejectReason ? 1 : 0) +
+      (options.showExpiry ? 1 : 0);
     const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
     const currentPage = Math.min(page, pageCount);
     const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -322,6 +351,9 @@ export function ReportSharingPanel({
                 ) : null}
                 {options.showRejectReason ? (
                   <TableHead className="w-56">{t("rejectReasonColumn")}</TableHead>
+                ) : null}
+                {options.showExpiry ? (
+                  <TableHead className="w-36">{t("expiryColumn")}</TableHead>
                 ) : null}
                 <TableHead className="w-28">{t("statusColumn")}</TableHead>
                 <TableHead className="w-40">{t("requestedColumn")}</TableHead>
@@ -379,6 +411,17 @@ export function ReportSharingPanel({
                           {request.decisionNote ?? "—"}
                         </TableCell>
                       ) : null}
+                      {options.showExpiry ? (
+                        <TableCell className="text-muted-foreground text-sm">
+                          {request.status === "withdrawn" && request.withdrawnAt ? (
+                            <FormattedDate value={request.withdrawnAt} withTime />
+                          ) : request.expiresAt ? (
+                            <FormattedDate value={request.expiresAt} />
+                          ) : (
+                            t("noExpiry")
+                          )}
+                        </TableCell>
+                      ) : null}
                       <TableCell>
                         <Badge variant={STATUS_VARIANT[request.status]}>
                           {t(`status.${request.status}`)}
@@ -388,33 +431,64 @@ export function ReportSharingPanel({
                         <FormattedDate value={request.requestedAt} withTime />
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-col items-end gap-1.5">
                           {options.showDecision && isOwnerView && canApprove ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleApprove(request.id)}
-                              >
-                                {t("approve")}
-                              </Button>
+                            <input
+                              type="date"
+                              aria-label={t("expiryInputLabel")}
+                              title={t("expiryInputLabel")}
+                              className="border-input h-8 w-full max-w-40 rounded-md border bg-transparent px-2 text-sm"
+                              value={expiryDrafts[request.id] ?? ""}
+                              min={new Date().toISOString().slice(0, 10)}
+                              onChange={(e) =>
+                                setExpiryDrafts((prev) => ({
+                                  ...prev,
+                                  [request.id]: e.target.value,
+                                }))
+                              }
+                            />
+                          ) : null}
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {options.showDecision && isOwnerView && canApprove ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleApprove(request.id)}
+                                >
+                                  {t("approve")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive"
+                                  onClick={() => setRejectTargetId(request.id)}
+                                >
+                                  {t("reject")}
+                                </Button>
+                              </>
+                            ) : null}
+                            {options.showWithdraw &&
+                            isOwnerView &&
+                            canApprove &&
+                            request.status === "approved" ? (
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 className="text-destructive"
-                                onClick={() => setRejectTargetId(request.id)}
+                                onClick={() => handleWithdraw(request.id)}
                               >
-                                {t("reject")}
+                                {t("withdraw")}
                               </Button>
-                            </>
-                          ) : null}
-                          {options.showView ? (
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/sharing/reports/${request.id}`}>
-                                {t("view")}
-                              </Link>
-                            </Button>
-                          ) : null}
+                            ) : null}
+                            {options.showView ? (
+                              <Button size="sm" variant="outline" asChild>
+                                <Link href={`/sharing/reports/${request.id}`}>
+                                  {t("view")}
+                                </Link>
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -506,7 +580,11 @@ export function ReportSharingPanel({
           {renderTable(outgoing, t("noOutgoing"), { showPurpose: true })}
         </TabsContent>
         <TabsContent value="approved" className="mt-6">
-          {renderTable(approved, t("noApproved"), { showRole: true })}
+          {renderTable(approved, t("noApproved"), {
+            showRole: true,
+            showWithdraw: true,
+            showExpiry: true,
+          })}
         </TabsContent>
         <TabsContent value="rejected" className="mt-6">
           {renderTable(rejected, t("noRejected"), {

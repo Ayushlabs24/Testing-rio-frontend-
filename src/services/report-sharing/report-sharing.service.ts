@@ -39,6 +39,12 @@ export const reportSharingService = {
       payload,
     );
   },
+  async withdraw(id: string): Promise<ReportSharingRequest> {
+    return apiClient.patch<ReportSharingRequest>(
+      endpoints.reportSharing.withdraw(id),
+      {},
+    );
+  },
   async getSharedReport(id: string): Promise<SharedReportSnapshot> {
     return apiClient.get<SharedReportSnapshot>(endpoints.reportSharing.sharedReport(id));
   },

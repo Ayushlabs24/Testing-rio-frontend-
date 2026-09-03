@@ -17,6 +17,10 @@ export interface ReportSharingRequest {
   decidedAt: string | null;
   note: string | null;
   decisionNote: string | null;
+  /** Optional expiry the owner set at approval time; null = never expires on its own. */
+  expiresAt: string | null;
+  withdrawnBy: string | null;
+  withdrawnAt: string | null;
 }
 
 export interface CreateReportSharingRequestPayload {
@@ -28,6 +32,8 @@ export interface CreateReportSharingRequestPayload {
 
 export interface DecideReportSharingRequestPayload {
   note?: string;
+  /** Only meaningful on approve. */
+  expiresAt?: string;
 }
 
 export interface SharedReportSnapshot {

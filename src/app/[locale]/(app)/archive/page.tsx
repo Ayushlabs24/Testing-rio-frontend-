@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { ARCHIVE_PAGE_SIZE } from "@/config/pagination";
 import { useRouter } from "@/i18n/navigation";
-import { useSectorOptions } from "@/hooks/use-sector-options";
+import { studyConfigService } from "@/services/study-config/study-config.service";
 import { archiveService } from "@/services/archive/archive.service";
 import type { ArchiveEntry, ArchiveEntryKind } from "@/services/archive/archive.types";
 
@@ -37,8 +37,13 @@ const ALL = "all";
 
 export default function ArchivePage() {
   const t = useTranslations("app.archive");
-  const tSectors = useTranslations("app.settings.organization.sectors");
-  const sectorOptions = useSectorOptions();
+  // RIO-FR-013 (client Q26): "sector" here is the study's own subject
+  // (Target Sector, chosen at Study creation), not the owning entity's
+  // sector — someone filtering for "Health" wants health studies, not
+  // studies from health-sector organisations. Sourced live from the
+  // Methodology Configuration's Target Sector list, same pattern as every
+  // other configurable-list dropdown in the app.
+  const [sectorOptions, setSectorOptions] = useState<string[]>([]);
   const router = useRouter();
   const { session } = useAuth();
   const isCrossEntity = session?.role.crossEntity ?? false;
@@ -69,6 +74,15 @@ export default function ArchivePage() {
         setAllRegions(Array.from(new Set(rows.flatMap((r) => r.region))).sort());
         setAllVillages(Array.from(new Set(rows.flatMap((r) => r.villages))).sort());
       })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    studyConfigService
+      .listTargetSectors()
+      .then((options) =>
+        setSectorOptions(options.filter((o) => o.isActive).map((o) => o.name)),
+      )
       .catch(() => undefined);
   }, []);
 
@@ -218,7 +232,6 @@ export default function ArchivePage() {
                         {s}
                       </SelectItem>
                     ))}
-                    <SelectItem value="other">{tSectors("other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
