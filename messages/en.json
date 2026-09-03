@@ -262,7 +262,8 @@
       "reportSharing": "Report Sharing",
       "reviewerSla": "Reviewer Alerts",
       "surveyBuilder": "Survey Builder",
-      "systemLogs": "System Logs"
+      "systemLogs": "System Logs",
+      "dataQuality": "Data Quality"
     },
     "topbar": {
       "menu": "Menu",
@@ -1167,7 +1168,12 @@
           "confirm_need_summary": "Need summary confirmed",
           "extract_need_themes": "Need themes extracted",
           "override_priority_score": "Priority score overridden",
-          "export": "Exported"
+          "export": "Exported",
+          "review_cleaning_flag": "Data quality decision",
+          "apply_standardization": "Data correction applied",
+          "review_duplicate_candidate": "Duplicate decision",
+          "merge_needs": "Needs merged",
+          "undo_need_merge": "Merge undone"
         },
         "entities": {
           "organization": "Organisation",
@@ -2769,6 +2775,197 @@
         "previous": "Previous",
         "next": "Next",
         "label": "Page {page} of {count}"
+      }
+    },
+    "dataQuality": {
+      "title": "Data Quality",
+      "description": "Findings from cleaning across manually entered needs, survey responses and imported files. Nothing is corrected until you decide.",
+      "loadError": "Couldn't load the data quality queue. Please try again.",
+      "decisionError": "Couldn't record that decision. Please try again.",
+      "noteRequired": "A note is required when rejecting a proposed correction.",
+      "empty": "Nothing to review.",
+      "refresh": "Refresh",
+      "readOnly": "View only",
+      "noValue": "empty",
+      "redacted": "hidden",
+      "redactedExplainer": "This is a respondent's contact detail, so it is masked here and the corrected value is not stored in this queue. Accepting recalculates it from the response itself.",
+      "recomputedOnAccept": "Calculated when you accept",
+      "fixOnRecord": "Fix on the record",
+      "confidence": "{value}% match",
+      "candidates": "Closest matches in the geographic reference",
+      "ambiguousDate": "This date reads as {dayFirst} day-first, or {monthFirst} month-first. Accepting takes the day-first reading.",
+      "wrongDomain": "This sub-domain is filed under {filedUnder} but belongs to {belongsTo}. Change it on the need itself.",
+      "note": "Note",
+      "notePlaceholder": "Required when rejecting — say why the stored value is correct.",
+      "columns": {
+        "record": "Record",
+        "field": "Field",
+        "finding": "Finding",
+        "current": "Stored now",
+        "proposed": "Proposed",
+        "action": "Action"
+      },
+      "filters": {
+        "status": "Status",
+        "source": "Source",
+        "severity": "Type",
+        "allSources": "All sources",
+        "allSeverities": "All types"
+      },
+      "actions": {
+        "review": "Review",
+        "accept": "Accept",
+        "reject": "Reject",
+        "cancel": "Cancel",
+        "acceptAll": "Accept all",
+        "applying": "Applying…"
+      },
+      "summary": {
+        "openTotal": "Open findings",
+        "lastRun": "Last checked",
+        "byRule": "By finding"
+      },
+      "source": {
+        "manual_entry": "Entered needs",
+        "survey_response": "Survey responses",
+        "file_upload": "Imported files"
+      },
+      "status": {
+        "pending": "Awaiting review",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "superseded": "No longer applies"
+      },
+      "severity": {
+        "missing": "Missing",
+        "non_standard": "Not standardised",
+        "out_of_vocabulary": "Unrecognised value"
+      },
+      "rule": {
+        "MISSING_REQUIRED": "Required field is empty",
+        "DATE_FORMAT": "Date not in standard format",
+        "DATE_AMBIGUOUS": "Date could be read two ways",
+        "DATE_UNPARSEABLE": "Date cannot be read",
+        "PHONE_FORMAT": "Mobile number not in international format",
+        "PHONE_UNPARSEABLE": "Mobile number cannot be read",
+        "NUMBER_FORMAT": "Number not in standard format",
+        "NUMBER_UNPARSEABLE": "Number cannot be read",
+        "NUMBER_OUT_OF_RANGE": "Number outside the expected range",
+        "UNIT_MISMATCH": "Different unit from the one the question asks for",
+        "DOMAIN_NOT_IN_METHODOLOGY": "Domain is not on the approved list",
+        "SUBDOMAIN_NOT_IN_METHODOLOGY": "Sub-domain is not on the approved list",
+        "SUBDOMAIN_WRONG_DOMAIN": "Sub-domain belongs to a different domain",
+        "VILLAGE_NEAR_MATCH": "Village name close to a place in the reference",
+        "VILLAGE_AMBIGUOUS": "Village name matches more than one place",
+        "VILLAGE_UNMATCHED": "Village name not in the geographic reference",
+        "IMPORT_ROW_REJECTED": "Row could not be imported",
+        "IMPORT_DUPLICATE_ROW": "Row repeats a need already recorded"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
+      "tabs": {
+        "findings": "Findings",
+        "duplicates": "Possible duplicates",
+        "merges": "Merge history"
+      },
+      "duplicates": {
+        "empty": "No possible duplicates to review.",
+        "decisionError": "Couldn't record that decision. Please try again.",
+        "noteRequired": "A note is required when dismissing a proposed duplicate.",
+        "similarity": "{value}% similar",
+        "note": "Note",
+        "notePlaceholder": "Required when dismissing — say why these are different needs.",
+        "reviewerNote": "Reviewer note",
+        "readOnly": "View only — deciding on duplicates needs the data quality approve permission.",
+        "showMore": "Show full statements",
+        "showLess": "Show less",
+        "actions": {
+          "confirmDuplicate": "Confirm duplicate",
+          "notDuplicate": "Not a duplicate",
+          "merge": "Merge…"
+        },
+        "method": {
+          "literal": "Matching words",
+          "semantic": "Matching meaning"
+        },
+        "scope": {
+          "within_study": "Same study",
+          "within_org": "Same entity",
+          "cross_org": "Across entities"
+        },
+        "status": {
+          "pending": "Awaiting review",
+          "confirmed_duplicate": "Confirmed duplicate",
+          "not_duplicate": "Not a duplicate",
+          "merged": "Merged",
+          "dismissed": "Dismissed"
+        },
+        "fields": {
+          "study": "Study",
+          "domain": "Domain",
+          "village": "Village",
+          "referenceId": "Reference"
+        },
+        "confirmThenMerge": "Confirming records that these are the same need. Merging them is a separate step.",
+        "readyToMerge": "Confirmed as duplicates — ready to merge."
+      },
+      "merge": {
+        "title": "Merge these two needs",
+        "description": "Choose which need survives. Everything attached to the other moves onto it.",
+        "chooseSurvivor": "Which need should survive?",
+        "outcome": "<strong>{retired}</strong> will be retired and merged into <strong>{survivor}</strong>.",
+        "movesLabel": "{count} item(s) move to the surviving need",
+        "movesNothing": "Nothing is attached to the retired need, so only the need itself is retired.",
+        "guarantee": {
+          "alias": "{reference} keeps working — it will resolve to the surviving need, so older links and reports still open.",
+          "notDeleted": "The retired need is not deleted. Its history stays intact and the merge can be undone.",
+          "frozenReports": "{count} published report(s) stay exactly as they were published.",
+          "rescore": "Priority scores for the surviving need will need recalculating.",
+          "undo": "You can undo this later, with a note explaining why."
+        },
+        "note": "Note",
+        "notePlaceholder": "Optional — why these are the same need.",
+        "previewError": "Couldn't work out what this merge would do. Please try again.",
+        "mergeError": "Couldn't merge these needs. Please try again.",
+        "cancel": "Cancel",
+        "confirm": "Merge",
+        "merging": "Merging…",
+        "entity": {
+          "SurveyResponse": "Survey responses",
+          "Evidence": "Evidence files",
+          "AiDecision": "AI classification decisions",
+          "AiSuggestion": "AI suggestions",
+          "AiSummary": "AI summaries",
+          "NeedStatementSummary": "Statement summaries",
+          "NeedDecision": "Decisions and follow-ups",
+          "Survey": "Surveys",
+          "PublicSurveyLink": "Published survey links",
+          "SurveySession": "Survey sessions",
+          "ResponseQualityResult": "Response quality results"
+        }
+      },
+      "mergeHistory": {
+        "empty": "No needs have been merged yet.",
+        "summary": "<strong>{retired}</strong> merged into <strong>{survivor}</strong>",
+        "decided": "Merged by {name}",
+        "itemsMoved": "{count} item(s) moved",
+        "note": "Note",
+        "active": "In effect",
+        "undone": "Undone",
+        "undoneBy": "Undone by {name}",
+        "undoNote": "Reason",
+        "undo": "Undo merge",
+        "undoNoteLabel": "Why are you undoing this?",
+        "undoNotePlaceholder": "Required — say why these are not the same need after all.",
+        "undoKeepsAlias": "The retired reference will keep resolving to the surviving need, because a report published while they were merged may still cite it.",
+        "noteRequired": "A note is required when undoing a merge.",
+        "undoError": "Couldn't undo this merge. Please try again.",
+        "confirmUndo": "Undo merge",
+        "undoing": "Undoing…",
+        "cancel": "Cancel"
       }
     }
   },

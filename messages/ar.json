@@ -262,7 +262,8 @@
       "reportSharing": "مشاركة التقارير",
       "reviewerSla": "تنبيهات المراجع",
       "surveyBuilder": "منشئ الاستبيانات",
-      "systemLogs": "سجلات النظام"
+      "systemLogs": "سجلات النظام",
+      "dataQuality": "جودة البيانات"
     },
     "topbar": {
       "menu": "القائمة",
@@ -1177,7 +1178,12 @@
           "SYSTEM_ADMIN_RESTORED_STUDY": "استعادة الدراسة",
           "SYSTEM_ADMIN_CREATED_ORGANIZATION": "إنشاء الكيان",
           "SYSTEM_ADMIN_DEACTIVATED_ORGANIZATION": "إلغاء تفعيل الكيان",
-          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل الكيان"
+          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل الكيان",
+          "review_cleaning_flag": "قرار على جودة البيانات",
+          "apply_standardization": "تطبيق تصحيح على البيانات",
+          "review_duplicate_candidate": "قرار على تكرار محتمل",
+          "merge_needs": "دمج احتياجات",
+          "undo_need_merge": "التراجع عن الدمج"
         },
         "entities": {
           "organization": "الكيان",
@@ -2777,6 +2783,197 @@
         "previous": "السابق",
         "next": "التالي",
         "label": "صفحة {page} من {count}"
+      }
+    },
+    "dataQuality": {
+      "title": "جودة البيانات",
+      "description": "نتائج التدقيق على الاحتياجات المُدخلة يدويًا واستجابات الاستبيانات والملفات المستوردة. لا يتم تصحيح أي قيمة قبل قرارك.",
+      "loadError": "تعذّر تحميل قائمة جودة البيانات. يرجى المحاولة مرة أخرى.",
+      "decisionError": "تعذّر تسجيل القرار. يرجى المحاولة مرة أخرى.",
+      "noteRequired": "الملاحظة مطلوبة عند رفض التصحيح المقترح.",
+      "empty": "لا يوجد ما يستدعي المراجعة.",
+      "refresh": "تحديث",
+      "readOnly": "عرض فقط",
+      "noValue": "فارغ",
+      "redacted": "مخفي",
+      "redactedExplainer": "هذه بيانات تواصل خاصة بالمستجيب، لذلك تظهر مخفية هنا ولا تُحفظ القيمة المصححة في هذه القائمة. عند القبول يُعاد احتسابها من الاستجابة نفسها.",
+      "recomputedOnAccept": "تُحتسب عند القبول",
+      "fixOnRecord": "يُصحّح في السجل نفسه",
+      "confidence": "تطابق {value}%",
+      "candidates": "أقرب التطابقات في المرجع الجغرافي",
+      "ambiguousDate": "يمكن قراءة هذا التاريخ بصيغة {dayFirst} (اليوم أولًا) أو {monthFirst} (الشهر أولًا). القبول يعتمد قراءة اليوم أولًا.",
+      "wrongDomain": "هذا المجال الفرعي مُدرج ضمن {filedUnder} لكنه يتبع {belongsTo}. عدّله في الاحتياج نفسه.",
+      "note": "ملاحظة",
+      "notePlaceholder": "مطلوبة عند الرفض — وضّح لماذا القيمة المحفوظة صحيحة.",
+      "columns": {
+        "record": "السجل",
+        "field": "الحقل",
+        "finding": "الملاحظة",
+        "current": "المحفوظ حاليًا",
+        "proposed": "المقترح",
+        "action": "الإجراء"
+      },
+      "filters": {
+        "status": "الحالة",
+        "source": "المصدر",
+        "severity": "النوع",
+        "allSources": "كل المصادر",
+        "allSeverities": "كل الأنواع"
+      },
+      "actions": {
+        "review": "مراجعة",
+        "accept": "قبول",
+        "reject": "رفض",
+        "cancel": "إلغاء",
+        "acceptAll": "قبول الكل",
+        "applying": "جارٍ التطبيق…"
+      },
+      "summary": {
+        "openTotal": "ملاحظات مفتوحة",
+        "lastRun": "آخر فحص",
+        "byRule": "حسب الملاحظة"
+      },
+      "source": {
+        "manual_entry": "احتياجات مُدخلة",
+        "survey_response": "استجابات الاستبيانات",
+        "file_upload": "ملفات مستوردة"
+      },
+      "status": {
+        "pending": "بانتظار المراجعة",
+        "accepted": "مقبول",
+        "rejected": "مرفوض",
+        "superseded": "لم يعد ينطبق"
+      },
+      "severity": {
+        "missing": "ناقص",
+        "non_standard": "غير موحّد",
+        "out_of_vocabulary": "قيمة غير معروفة"
+      },
+      "rule": {
+        "MISSING_REQUIRED": "حقل مطلوب فارغ",
+        "DATE_FORMAT": "التاريخ ليس بالصيغة الموحّدة",
+        "DATE_AMBIGUOUS": "التاريخ يحتمل قراءتين",
+        "DATE_UNPARSEABLE": "تعذّر قراءة التاريخ",
+        "PHONE_FORMAT": "رقم الجوال ليس بالصيغة الدولية",
+        "PHONE_UNPARSEABLE": "تعذّر قراءة رقم الجوال",
+        "NUMBER_FORMAT": "الرقم ليس بالصيغة الموحّدة",
+        "NUMBER_UNPARSEABLE": "تعذّر قراءة الرقم",
+        "NUMBER_OUT_OF_RANGE": "الرقم خارج النطاق المتوقع",
+        "UNIT_MISMATCH": "وحدة مختلفة عن الوحدة المطلوبة في السؤال",
+        "DOMAIN_NOT_IN_METHODOLOGY": "المجال غير مُدرج في القائمة المعتمدة",
+        "SUBDOMAIN_NOT_IN_METHODOLOGY": "المجال الفرعي غير مُدرج في القائمة المعتمدة",
+        "SUBDOMAIN_WRONG_DOMAIN": "المجال الفرعي يتبع مجالًا آخر",
+        "VILLAGE_NEAR_MATCH": "اسم القرية قريب من موقع في المرجع",
+        "VILLAGE_AMBIGUOUS": "اسم القرية يطابق أكثر من موقع",
+        "VILLAGE_UNMATCHED": "اسم القرية غير موجود في المرجع الجغرافي",
+        "IMPORT_ROW_REJECTED": "تعذّر استيراد الصف",
+        "IMPORT_DUPLICATE_ROW": "الصف يكرّر احتياجًا مسجّلًا مسبقًا"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      },
+      "tabs": {
+        "findings": "الملاحظات",
+        "duplicates": "تكرارات محتملة",
+        "merges": "سجل الدمج"
+      },
+      "duplicates": {
+        "empty": "لا توجد تكرارات محتملة للمراجعة.",
+        "decisionError": "تعذّر تسجيل القرار. يرجى المحاولة مرة أخرى.",
+        "noteRequired": "الملاحظة مطلوبة عند استبعاد التكرار المقترح.",
+        "similarity": "تشابه {value}%",
+        "note": "ملاحظة",
+        "notePlaceholder": "مطلوبة عند الاستبعاد — وضّح لماذا الاحتياجان مختلفان.",
+        "reviewerNote": "ملاحظة المراجع",
+        "readOnly": "عرض فقط — البتّ في التكرارات يتطلب صلاحية الاعتماد في جودة البيانات.",
+        "showMore": "عرض النص كاملًا",
+        "showLess": "عرض أقل",
+        "actions": {
+          "confirmDuplicate": "تأكيد التكرار",
+          "notDuplicate": "ليسا تكرارًا",
+          "merge": "دمج…"
+        },
+        "method": {
+          "literal": "تطابق الألفاظ",
+          "semantic": "تطابق المعنى"
+        },
+        "scope": {
+          "within_study": "نفس الدراسة",
+          "within_org": "نفس الجهة",
+          "cross_org": "بين الجهات"
+        },
+        "status": {
+          "pending": "بانتظار المراجعة",
+          "confirmed_duplicate": "تكرار مؤكد",
+          "not_duplicate": "ليسا تكرارًا",
+          "merged": "مدموج",
+          "dismissed": "مستبعد"
+        },
+        "fields": {
+          "study": "الدراسة",
+          "domain": "المجال",
+          "village": "القرية",
+          "referenceId": "المرجع"
+        },
+        "confirmThenMerge": "التأكيد يسجّل أنهما الاحتياج نفسه. أما دمجهما فخطوة منفصلة.",
+        "readyToMerge": "مؤكد أنهما تكرار — جاهزان للدمج."
+      },
+      "merge": {
+        "title": "دمج الاحتياجين",
+        "description": "اختر الاحتياج الذي سيبقى. كل ما يرتبط بالآخر سيُنقل إليه.",
+        "chooseSurvivor": "أي احتياج يجب أن يبقى؟",
+        "outcome": "سيتم تقاعد <strong>{retired}</strong> ودمجه في <strong>{survivor}</strong>.",
+        "movesLabel": "{count} عنصر سيُنقل إلى الاحتياج الباقي",
+        "movesNothing": "لا يرتبط بالاحتياج المتقاعد أي عنصر، لذا سيتم تقاعد الاحتياج نفسه فقط.",
+        "guarantee": {
+          "alias": "سيظل {reference} صالحًا — سيشير إلى الاحتياج الباقي، فتبقى الروابط والتقارير القديمة تعمل.",
+          "notDeleted": "لا يُحذف الاحتياج المتقاعد. يبقى سجله كاملًا ويمكن التراجع عن الدمج.",
+          "frozenReports": "يبقى {count} تقرير منشور كما نُشر تمامًا.",
+          "rescore": "ستحتاج درجات الأولوية للاحتياج الباقي إلى إعادة احتساب.",
+          "undo": "يمكنك التراجع عن ذلك لاحقًا مع ذكر السبب."
+        },
+        "note": "ملاحظة",
+        "notePlaceholder": "اختيارية — لماذا هما الاحتياج نفسه.",
+        "previewError": "تعذّر تحديد نتيجة هذا الدمج. يرجى المحاولة مرة أخرى.",
+        "mergeError": "تعذّر دمج الاحتياجين. يرجى المحاولة مرة أخرى.",
+        "cancel": "إلغاء",
+        "confirm": "دمج",
+        "merging": "جارٍ الدمج…",
+        "entity": {
+          "SurveyResponse": "استجابات الاستبيانات",
+          "Evidence": "ملفات الأدلة",
+          "AiDecision": "قرارات التصنيف الآلي",
+          "AiSuggestion": "اقتراحات الذكاء الاصطناعي",
+          "AiSummary": "ملخصات الذكاء الاصطناعي",
+          "NeedStatementSummary": "ملخصات الوصف",
+          "NeedDecision": "القرارات والمتابعات",
+          "Survey": "الاستبيانات",
+          "PublicSurveyLink": "روابط الاستبيانات المنشورة",
+          "SurveySession": "جلسات الاستبيان",
+          "ResponseQualityResult": "نتائج جودة الاستجابات"
+        }
+      },
+      "mergeHistory": {
+        "empty": "لم يتم دمج أي احتياجات بعد.",
+        "summary": "تم دمج <strong>{retired}</strong> في <strong>{survivor}</strong>",
+        "decided": "دمجه {name}",
+        "itemsMoved": "نُقل {count} عنصر",
+        "note": "ملاحظة",
+        "active": "ساري",
+        "undone": "تم التراجع",
+        "undoneBy": "تراجع عنه {name}",
+        "undoNote": "السبب",
+        "undo": "التراجع عن الدمج",
+        "undoNoteLabel": "لماذا تتراجع عن هذا الدمج؟",
+        "undoNotePlaceholder": "مطلوبة — وضّح لماذا ليسا الاحتياج نفسه.",
+        "undoKeepsAlias": "سيظل المرجع المتقاعد يشير إلى الاحتياج الباقي، لأن تقريرًا نُشر أثناء الدمج قد يستشهد به.",
+        "noteRequired": "الملاحظة مطلوبة عند التراجع عن الدمج.",
+        "undoError": "تعذّر التراجع عن الدمج. يرجى المحاولة مرة أخرى.",
+        "confirmUndo": "تأكيد التراجع",
+        "undoing": "جارٍ التراجع…",
+        "cancel": "إلغاء"
       }
     }
   },

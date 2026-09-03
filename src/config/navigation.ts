@@ -94,6 +94,15 @@ export const appNav: NavItem[] = [
     module: "archiveSharingAudit",
   },
   {
+    // RIO-FR-002. Gated on `dataQuality` rather than `dataImport`: the queue
+    // is a reviewer surface, and dataImport is held by the roles that create
+    // the data rather than the ones the client put decisions with (Q23).
+    labelKey: "dataQuality",
+    href: "/data-quality",
+    icon: ShieldCheck,
+    module: "dataQuality",
+  },
+  {
     labelKey: "reviewerSla",
     href: "/reviewer-sla",
     icon: AlarmClock,
@@ -180,6 +189,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "archive",
     "sharing",
+    "dataQuality",
     "reviewerSla",
     "audit",
     // Client-confirmed (2026-08-20): Methodology Configuration belongs at
@@ -205,6 +215,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "publicSurveys",
     "priorityDashboard",
     "reports",
+    "dataQuality",
     "reviewerSla",
     "methodologyConfig",
   ],
@@ -216,6 +227,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "surveyBuilder",
     "publicSurveys",
     "reports",
+    "dataQuality",
     "reviewerSla",
     "methodologyConfig",
   ],
@@ -239,6 +251,9 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "publicSurveys",
     "surveyBuilder",
     "priorityDashboard",
+    // RIO-FR-002 Q23 puts data-quality decisions and threshold tuning with
+    // this role, so it sits with the analytical screens rather than last.
+    "dataQuality",
     "reports",
     "methodologyConfig",
   ],
@@ -254,6 +269,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "archive",
     "sharing",
+    "dataQuality",
     "reviewerSla",
     "audit",
     "systemLogs",
@@ -269,6 +285,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "priorityDashboard",
     "reports",
     "methodologyConfig",
+    "dataQuality",
   ],
   // Center Supervisor (NCNP Supervisor) — RIO-RBAC-001 (client-confirmed):
   // this is now the single combined role for what was previously two
@@ -290,6 +307,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "sharing",
     "audit",
     "methodologyConfig",
+    "dataQuality",
   ],
   // System Reviewer — reviews the NCNP Compiled Report (approve/reject with
   // mandatory notes) via the unified /reports page (Category: Consolidated),
@@ -306,5 +324,6 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "priorityDashboard",
     "reports",
     "methodologyConfig",
+    "dataQuality",
   ],
 };

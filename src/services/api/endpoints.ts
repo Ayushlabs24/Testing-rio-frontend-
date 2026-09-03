@@ -326,6 +326,21 @@ export const endpoints = {
     lookupReportsForOrg: (orgId: string) =>
       `/report-sharing-requests/lookup/organizations/${orgId}/reports`,
   },
+  // RIO-FR-002 — the Data Quality reviewer queue.
+  dataQuality: {
+    flags: "/data-quality/flags",
+    summary: "/data-quality/summary",
+    review: (flagId: string) => `/data-quality/flags/${flagId}/review`,
+    bulkAccept: "/data-quality/flags/bulk-accept",
+    duplicates: "/data-quality/duplicates",
+    decideDuplicate: (candidateId: string) =>
+      `/data-quality/duplicates/${candidateId}/decide`,
+    // RIO-AI-004 — merge. `merges` is both the history (GET) and the act
+    // (POST); the backend gates them on read and approve respectively.
+    merges: "/data-quality/merges",
+    mergePreview: "/data-quality/merges/preview",
+    undoMerge: (mergeId: string) => `/data-quality/merges/${mergeId}/undo`,
+  },
   reviewerSla: {
     config: "/reviewer-sla/config",
     alerts: "/reviewer-sla/alerts",

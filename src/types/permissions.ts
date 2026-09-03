@@ -43,6 +43,18 @@ export const PERMISSION_MODULES = [
   // (src/rbac/role-matrix.ts) — every session response carries an entry per
   // module, and apiSessionViewSchema rejects any module missing from this list.
   "auditLog",
+  // RIO-FR-002 — the Data Quality reviewer queue. Deliberately not a reuse of
+  // dataImport, whose grants run the opposite way to the client's ruling on
+  // who owns cleaning decisions (system_admin holds dataImport read-only,
+  // while ngo_admin and ngo_research_officer hold write). `approve` decides a
+  // flag, which WRITES the correction onto the record; `write` tunes the
+  // rule set's thresholds; `read` sees the queue and the per-source report.
+  //
+  // Must stay in sync with the backend, per the note above: every session
+  // response carries an entry per module and apiSessionViewSchema rejects any
+  // module missing from this list, so omitting this would break sign-in for
+  // every user the moment the backend starts sending it.
+  "dataQuality",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
