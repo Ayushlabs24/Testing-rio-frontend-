@@ -263,7 +263,8 @@
       "reviewerSla": "تنبيهات المراجع",
       "surveyBuilder": "منشئ الاستبيانات",
       "systemLogs": "سجلات النظام",
-      "dataQuality": "جودة البيانات"
+      "dataQuality": "جودة البيانات",
+      "backups": "النسخ الاحتياطية"
     },
     "topbar": {
       "menu": "القائمة",
@@ -995,7 +996,8 @@
             "surveyBuilder": "منشئ الاستبيانات",
             "ncnpReport": "تقرير المركز المجمّع",
             "systemLogs": "سجلات النظام",
-            "auditLog": "سجل التدقيق"
+            "auditLog": "سجل التدقيق",
+            "backups": "النسخ الاحتياطية"
           },
           "actionNames": {
             "read": "قراءة",
@@ -1183,7 +1185,9 @@
           "apply_standardization": "تطبيق تصحيح على البيانات",
           "review_duplicate_candidate": "قرار على تكرار محتمل",
           "merge_needs": "دمج احتياجات",
-          "undo_need_merge": "التراجع عن الدمج"
+          "undo_need_merge": "التراجع عن الدمج",
+          "run_backup": "تشغيل نسخ احتياطي",
+          "prune_backups": "تطبيق سياسة الاحتفاظ بالنسخ"
         },
         "entities": {
           "organization": "الكيان",
@@ -4392,6 +4396,79 @@
           "next": "التالي",
           "label": "الصفحة {page} من {count}"
         }
+      }
+    },
+    "backups": {
+      "title": "النسخ الاحتياطية",
+      "description": "كل محاولة نسخ احتياطي مع حجمها ومدتها وبصمتها. السؤال الذي تجيب عنه هذه الشاشة ليس هل تمت النسخ، بل هل يمكن الاستعادة.",
+      "loadError": "تعذر تحميل سجل النسخ الاحتياطية.",
+      "empty": "لا توجد عمليات نسخ مسجّلة بعد.",
+      "running": "جارٍ التنفيذ…",
+      "runDatabase": "نسخ قاعدة البيانات",
+      "runAttachments": "نسخ المرفقات",
+      "runSucceeded": "اكتمل نسخ {kind}.",
+      "runFailed": "فشلت عملية النسخ: {error}",
+      "runError": "تعذر إكمال الطلب.",
+      "verify": "تحقق",
+      "prune": "تطبيق سياسة الاحتفاظ",
+      "pruned": "تم حذف {count} من العمليات. يُحتفظ دائمًا بأحدث نسخة ناجحة من كل نوع.",
+      "summary": {
+        "lastDatabase": "آخر نسخ لقاعدة البيانات",
+        "lastAttachments": "آخر نسخ للمرفقات",
+        "failures": "حالات الفشل خلال 7 أيام",
+        "stored": "المخزّن على القرص",
+        "never": "لم يحدث"
+      },
+      "noDatabaseBackup": {
+        "title": "لم تنجح أي نسخة لقاعدة البيانات إطلاقًا.",
+        "detail": "لا يستطيع pg_dump قراءة قاعدة البيانات بدور التطبيق — فأمن الصفوف مفروض على 43 جدولًا ولا يجوز لأي دور تطبيق تجاوزه. يجب أن يشغّل مسؤول قاعدة البيانات الملف scripts/sql/nfr010-backup-role.sql لإنشاء الدور cnap_backup، ثم يُضبط BACKUP_DATABASE_URL عليه. حتى ذلك الحين تُنسخ المرفقات فقط."
+      },
+      "kind": {
+        "database": "قاعدة البيانات",
+        "attachments": "المرفقات"
+      },
+      "status": {
+        "running": "قيد التنفيذ",
+        "succeeded": "نجحت",
+        "failed": "فشلت"
+      },
+      "trigger": {
+        "schedule": "مجدولة",
+        "manual": "يدوية"
+      },
+      "table": {
+        "started": "البداية",
+        "kind": "النوع",
+        "status": "الحالة",
+        "size": "الحجم",
+        "duration": "المدة",
+        "trigger": "المصدر",
+        "retention": "يُحتفظ حتى",
+        "integrity": "السلامة",
+        "files": "{count} ملف",
+        "pruned": "تم الحذف"
+      },
+      "integrity": {
+        "ok": "البصمة مطابقة",
+        "CHECKSUM_MISMATCH": "البصمة غير مطابقة — الملف تالف",
+        "SIZE_CHANGED": "تغيّر الحجم منذ كتابته",
+        "FILE_MISSING": "الملف غير موجود على القرص",
+        "FILE_PRUNED": "تم حذف الملف",
+        "RUN_DID_NOT_SUCCEED": "لم تنجح هذه العملية",
+        "NO_ARTEFACT_RECORDED": "لا يوجد ملف مسجل",
+        "RUN_NOT_FOUND": "العملية غير موجودة",
+        "unknown": "تعذر التحقق"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      },
+      "filters": {
+        "kind": "النوع",
+        "allKinds": "كل الأنواع",
+        "status": "الحالة",
+        "allStatuses": "كل الحالات"
       }
     }
   },

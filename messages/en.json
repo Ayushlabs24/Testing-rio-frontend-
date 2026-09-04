@@ -263,7 +263,8 @@
       "reviewerSla": "Reviewer Alerts",
       "surveyBuilder": "Survey Builder",
       "systemLogs": "System Logs",
-      "dataQuality": "Data Quality"
+      "dataQuality": "Data Quality",
+      "backups": "Backups"
     },
     "topbar": {
       "menu": "Menu",
@@ -995,7 +996,8 @@
             "surveyBuilder": "Survey Builder",
             "ncnpReport": "NCNP Compiled Report",
             "systemLogs": "System Logs",
-            "auditLog": "Audit Log"
+            "auditLog": "Audit Log",
+            "backups": "Backups"
           },
           "actionNames": {
             "read": "Read",
@@ -1173,7 +1175,9 @@
           "apply_standardization": "Data correction applied",
           "review_duplicate_candidate": "Duplicate decision",
           "merge_needs": "Needs merged",
-          "undo_need_merge": "Merge undone"
+          "undo_need_merge": "Merge undone",
+          "run_backup": "Backup run",
+          "prune_backups": "Backup retention applied"
         },
         "entities": {
           "organization": "Organisation",
@@ -4384,6 +4388,79 @@
           "next": "Next",
           "label": "Page {page} of {count}"
         }
+      }
+    },
+    "backups": {
+      "title": "Backups",
+      "description": "Every backup attempt, with its size, duration and checksum. The question this screen answers is not whether a backup ran, but whether one can be restored.",
+      "loadError": "Couldn't load the backup history.",
+      "empty": "No backup runs recorded yet.",
+      "running": "Working…",
+      "runDatabase": "Back up database",
+      "runAttachments": "Back up attachments",
+      "runSucceeded": "{kind} backup completed.",
+      "runFailed": "The backup failed: {error}",
+      "runError": "The request could not be completed.",
+      "verify": "Verify",
+      "prune": "Apply retention",
+      "pruned": "{count} run(s) pruned. The newest successful backup of each kind is always kept.",
+      "summary": {
+        "lastDatabase": "Database last backed up",
+        "lastAttachments": "Attachments last backed up",
+        "failures": "Failures in the last 7 days",
+        "stored": "Stored on disk",
+        "never": "Never"
+      },
+      "noDatabaseBackup": {
+        "title": "No database backup has ever succeeded.",
+        "detail": "pg_dump cannot read this database as an application role — row-level security is forced on 43 tables, and no application role may bypass it. A superuser must run scripts/sql/nfr010-backup-role.sql to create the cnap_backup role, and BACKUP_DATABASE_URL must point at it. Until then only attachments are being backed up."
+      },
+      "kind": {
+        "database": "Database",
+        "attachments": "Attachments"
+      },
+      "status": {
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed"
+      },
+      "trigger": {
+        "schedule": "Scheduled",
+        "manual": "Manual"
+      },
+      "table": {
+        "started": "Started",
+        "kind": "Kind",
+        "status": "Status",
+        "size": "Size",
+        "duration": "Duration",
+        "trigger": "Trigger",
+        "retention": "Keep until",
+        "integrity": "Integrity",
+        "files": "{count} file(s)",
+        "pruned": "Pruned"
+      },
+      "integrity": {
+        "ok": "Checksum matches",
+        "CHECKSUM_MISMATCH": "Checksum does NOT match — this file is corrupt",
+        "SIZE_CHANGED": "Size has changed since it was written",
+        "FILE_MISSING": "File is missing from disk",
+        "FILE_PRUNED": "File was pruned",
+        "RUN_DID_NOT_SUCCEED": "This run did not succeed",
+        "NO_ARTEFACT_RECORDED": "No artefact recorded",
+        "RUN_NOT_FOUND": "Run not found",
+        "unknown": "Could not be verified"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
+      "filters": {
+        "kind": "Kind",
+        "allKinds": "All kinds",
+        "status": "Status",
+        "allStatuses": "All statuses"
       }
     }
   },

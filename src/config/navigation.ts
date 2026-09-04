@@ -16,6 +16,7 @@ import {
   Terminal,
   ShieldCheck,
   Users2,
+  DatabaseBackup,
 } from "lucide-react";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
 
@@ -159,6 +160,17 @@ export const appNav: NavItem[] = [
     module: "systemLogs",
     scope: "crossEntity",
   },
+  // RIO-NFR-010 — backups. Its own item next to System Logs and for the same
+  // reasons: platform infrastructure rather than tenant data, and its own
+  // permission module (`backups`, not `systemLogs`, which has no write action
+  // for anyone by design).
+  {
+    labelKey: "backups",
+    href: "/system-admin/backups",
+    icon: DatabaseBackup,
+    module: "backups",
+    scope: "crossEntity",
+  },
 ];
 
 /**
@@ -273,6 +285,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reviewerSla",
     "audit",
     "systemLogs",
+    "backups",
     "methodologyConfig",
   ],
   read_only_viewer: [
@@ -325,5 +338,6 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "methodologyConfig",
     "dataQuality",
+    "backups",
   ],
 };

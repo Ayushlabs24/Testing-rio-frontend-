@@ -113,6 +113,15 @@ export const endpoints = {
   // business-event governance trail (RIO-FR-007); these are system
   // diagnostics (errors, failed integrations, slow requests, job outcomes),
   // gated on the System-Admin-only `systemLogs` permission.
+  // RIO-NFR-010 — backup administration. Platform-scoped: a dump spans every
+  // entity, so nothing here takes an org.
+  backups: {
+    list: "/backups",
+    summary: "/backups/summary",
+    run: "/backups/run",
+    prune: "/backups/prune",
+    verify: (runId: string) => `/backups/${runId}/verify`,
+  },
   systemLogs: {
     list: "/system-logs",
     summary: "/system-logs/summary",

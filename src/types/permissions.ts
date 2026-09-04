@@ -34,6 +34,10 @@ export const PERMISSION_MODULES = [
   // center_supervisor and data_analyst, and these rows carry stack traces,
   // internal paths and cross-tenant detail. System Admin only.
   "systemLogs",
+  // RIO-NFR-010 — backup administration. Its own module rather than a
+  // systemLogs grant: that one is read-and-export by design and has no write
+  // action for anyone, and triggering a backup needs one.
+  "backups",
   // RIO-NFR-004 / RIO-FR-007 module-conflict fix: the Audit Log was split out
   // of archiveSharingAudit into its own module. archiveSharingAudit is held
   // read/create/approve by ngo_admin for Study/Report Sharing, which also gave
