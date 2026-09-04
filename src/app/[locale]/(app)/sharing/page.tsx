@@ -15,6 +15,7 @@ const INNER_TABS: SharingInnerTab[] = [
   "approved",
   "rejected",
   "sharedReports",
+  "allOrganizations",
 ];
 
 // Study-sharing (StudySharingPanel, an outer Studies/Reports tab here) is
@@ -38,10 +39,16 @@ function SharingPageContent() {
   const t = useTranslations("app.reportSharing");
   const searchParams = useSearchParams();
 
+  // `undefined` when the URL doesn't name a valid tab — NOT a hardcoded
+  // "incoming" default, which would override ReportSharingPanel's own
+  // role-aware default (cross-entity roles land on "allOrganizations";
+  // everyone else lands on "incoming") every time this page mounts.
   const tabParam = searchParams.get("tab");
-  const initialTab: SharingInnerTab = INNER_TABS.includes(tabParam as SharingInnerTab)
+  const initialTab: SharingInnerTab | undefined = INNER_TABS.includes(
+    tabParam as SharingInnerTab,
+  )
     ? (tabParam as SharingInnerTab)
-    : "incoming";
+    : undefined;
 
   return (
     <PermissionGuard module="archiveSharingAudit" action="read">

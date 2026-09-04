@@ -1053,7 +1053,13 @@
         "statusColumn": "الحالة",
         "status": {
           "active": "نشط",
-          "invited": "مدعو"
+          "invited": "مدعو",
+          "disabled": "معطّل"
+        },
+        "statusBadges": {
+          "active": "نشط",
+          "invited": "مدعو",
+          "disabled": "معطّل"
         },
         "permissionsHeading": "صلاحية الوصول إلى الوحدات",
         "pagination": {
@@ -1614,6 +1620,7 @@
       "filterKindAll": "الكل",
       "filterKindStudy": "الدراسات",
       "filterKindReport": "التقارير",
+      "filterKindHistorical": "دراسات سابقة",
       "filterEntityLabel": "الجهة",
       "filterEntityAll": "جميع الكيانات",
       "filterSectorLabel": "القطاع",
@@ -1624,11 +1631,14 @@
       "statusColumn": "الحالة",
       "villagesColumn": "المحافظات",
       "dateColumn": "التاريخ",
+      "previewFile": "معاينة",
+      "downloadFile": "تنزيل",
       "noResults": "لا يوجد شيء مؤرشف بعد.",
       "loadError": "تعذّر تحميل الأرشيف. يرجى المحاولة مرة أخرى.",
       "kind": {
         "study": "دراسة",
-        "report": "تقرير"
+        "report": "تقرير",
+        "historical": "دراسة سابقة"
       },
       "filterRegionLabel": "المنطقة",
       "filterRegionAll": "جميع المناطق",
@@ -1640,6 +1650,30 @@
         "previous": "السابق",
         "next": "التالي",
         "label": "صفحة {page} من {count}"
+      },
+      "uploadHistorical": {
+        "trigger": "رفع دراسة سابقة",
+        "title": "رفع دراسة سابقة",
+        "studyTitleLabel": "عنوان الدراسة",
+        "studyTitlePlaceholder": "مثال: دراسة أساسية لإمكانية الوصول للمياه في الروضة (2022)",
+        "regionLabel": "المنطقة",
+        "regionPlaceholder": "اختر منطقة",
+        "selectRegionFirst": "اختر المنطقة أولاً",
+        "subjectLabel": "الموضوع",
+        "subjectPlaceholder": "اختر موضوعًا (اختياري)",
+        "studyDateLabel": "تاريخ الدراسة",
+        "authorLabel": "المؤلف",
+        "authorPlaceholder": "مثال: د. فاطمة الزهراني",
+        "methodologyVersionLabel": "إصدار المنهجية",
+        "methodologyVersionPlaceholder": "مثال: تقييم يدوي داخلي، الإصدار 1",
+        "fileLabel": "المستند",
+        "chooseFile": "انقر لاختيار ملف",
+        "fileHint": "بصيغة PDF أو DOC أو DOCX، بحد أقصى 10 ميغابايت.",
+        "cancel": "إلغاء",
+        "submit": "رفع",
+        "submitting": "جارٍ الرفع...",
+        "missingFields": "يرجى تعبئة عنوان الدراسة والتاريخ والمؤلف وإصدار المنهجية وإرفاق ملف.",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
       }
     },
     "sharing": {
@@ -1728,6 +1762,13 @@
       "tabApproved": "المعتمدة",
       "tabRejected": "المرفوضة",
       "tabSharedReports": "التقارير المشتركة",
+      "tabAllOrganizations": "جميع الجهات",
+      "noAllOrganizations": "لا يوجد نشاط مشاركة مسجل بعد.",
+      "organizationFilterLabel": "الجهة",
+      "allOrganizationsOption": "جميع الجهات",
+      "allStatusesOption": "جميع الحالات",
+      "ownerOrgColumn": "المالك",
+      "requestingOrgColumn": "الجهة الطالبة",
       "noIncoming": "لا توجد طلبات بانتظار قرارك.",
       "noOutgoing": "لم تطلب الوصول إلى أي تقارير.",
       "noApproved": "لا توجد طلبات مشاركة معتمدة بعد.",

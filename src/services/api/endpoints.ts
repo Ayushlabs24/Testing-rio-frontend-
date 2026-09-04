@@ -302,6 +302,11 @@ export const endpoints = {
     list: "/archive",
     byId: (id: string) => `/archive/${id}`,
   },
+  historicalStudies: {
+    list: "/historical-studies",
+    create: "/historical-studies",
+    file: (id: string) => `/historical-studies/${id}/file`,
+  },
   sharing: {
     list: "/sharing-requests",
     create: "/sharing-requests",

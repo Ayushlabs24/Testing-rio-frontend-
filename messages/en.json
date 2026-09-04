@@ -1053,7 +1053,13 @@
         "statusColumn": "Status",
         "status": {
           "active": "Active",
-          "invited": "Invited"
+          "invited": "Invited",
+          "disabled": "Disabled"
+        },
+        "statusBadges": {
+          "active": "Active",
+          "invited": "Invited",
+          "disabled": "Disabled"
         },
         "permissionsHeading": "Module access",
         "pagination": {
@@ -1604,6 +1610,7 @@
       "filterKindAll": "All",
       "filterKindStudy": "Studies",
       "filterKindReport": "Reports",
+      "filterKindHistorical": "Historical Studies",
       "filterEntityLabel": "Entity",
       "filterEntityAll": "All organisations",
       "filterSectorLabel": "Sector",
@@ -1614,11 +1621,14 @@
       "statusColumn": "Status",
       "villagesColumn": "Governorates",
       "dateColumn": "Date",
+      "previewFile": "Preview",
+      "downloadFile": "Download",
       "noResults": "Nothing archived yet.",
       "loadError": "Couldn't load the archive. Please try again.",
       "kind": {
         "study": "Study",
-        "report": "Report"
+        "report": "Report",
+        "historical": "Historical Study"
       },
       "filterRegionLabel": "Region",
       "filterRegionAll": "All regions",
@@ -1630,6 +1640,30 @@
         "previous": "Previous",
         "next": "Next",
         "label": "Page {page} of {count}"
+      },
+      "uploadHistorical": {
+        "trigger": "Upload Historical Study",
+        "title": "Upload Historical Study",
+        "studyTitleLabel": "Study title",
+        "studyTitlePlaceholder": "e.g. Al Rawdah Water Access Baseline (2022)",
+        "regionLabel": "Region",
+        "regionPlaceholder": "Select a region",
+        "selectRegionFirst": "Select a region first",
+        "subjectLabel": "Subject",
+        "subjectPlaceholder": "Select a subject (optional)",
+        "studyDateLabel": "Study date",
+        "authorLabel": "Author",
+        "authorPlaceholder": "e.g. Dr. Fatima Al-Zahrani",
+        "methodologyVersionLabel": "Methodology version",
+        "methodologyVersionPlaceholder": "e.g. Internal manual scoring, v1",
+        "fileLabel": "Document",
+        "chooseFile": "Click to choose a file",
+        "fileHint": "PDF, DOC, or DOCX, up to 10MB.",
+        "cancel": "Cancel",
+        "submit": "Upload",
+        "submitting": "Uploading...",
+        "missingFields": "Please fill in the study title, date, author, methodology version, and attach a file.",
+        "genericError": "Something went wrong. Please try again."
       }
     },
     "sharing": {
@@ -1718,6 +1752,13 @@
       "tabApproved": "Approved",
       "tabRejected": "Rejected",
       "tabSharedReports": "Shared Reports",
+      "tabAllOrganizations": "All Organizations",
+      "noAllOrganizations": "No sharing activity recorded yet.",
+      "organizationFilterLabel": "Organization",
+      "allOrganizationsOption": "All organizations",
+      "allStatusesOption": "All statuses",
+      "ownerOrgColumn": "Owner",
+      "requestingOrgColumn": "Requester",
       "noIncoming": "No requests awaiting your decision.",
       "noOutgoing": "You haven't requested access to any reports.",
       "noApproved": "No approved sharing requests yet.",

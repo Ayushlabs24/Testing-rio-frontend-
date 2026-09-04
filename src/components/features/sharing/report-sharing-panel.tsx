@@ -216,6 +216,8 @@ function CreateReportSharingRequestDialog({
   );
 }
 
+const ALL_ORGS = "all";
+
 export function ReportSharingPanel({
   initialTab,
 }: { initialTab?: SharingInnerTab } = {}) {
@@ -223,6 +225,14 @@ export function ReportSharingPanel({
   const { session } = useAuth();
   const canCreate = usePermission("archiveSharingAudit", "create");
   const canApprove = usePermission("archiveSharingAudit", "approve");
+  // RIO-FR-014 (Center informed as supervisory party) — Center Supervisor/
+  // System Admin/System Reviewer already get every request back from
+  // reportSharingService.list() unfiltered (see the backend's isCrossEntity()
+  // branch); this just gives that existing visibility a proper screen —
+  // every organization's activity in one place, filterable by org, rather
+  // than requiring them to read it out of the Incoming/Outgoing/Approved/
+  // Rejected tabs designed around a single entity's own perspective.
+  const isCrossEntity = session?.role.crossEntity ?? false;
 
   const [requests, setRequests] = useState<ReportSharingRequest[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -230,12 +240,25 @@ export function ReportSharingPanel({
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   const [expiryDrafts, setExpiryDrafts] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<SharingInnerTab>(initialTab ?? "incoming");
+  // `session` (and so `isCrossEntity`) isn't known yet on first render — it
+  // loads asynchronously from useAuth() — so the right default tab for a
+  // cross-entity role can't be picked once and stored: that would lock in
+  // "incoming" from that first, still-loading render and never update.
+  // Tracking "has the user manually picked a tab" separately and falling
+  // back to the role-appropriate default at render time (rather than
+  // syncing it via an effect) keeps this correct without an extra render
+  // pass once the session arrives.
+  const [manualTab, setManualTab] = useState<SharingInnerTab | null>(initialTab ?? null);
+  const activeTab: SharingInnerTab =
+    manualTab ?? (isCrossEntity ? "allOrganizations" : "incoming");
+  const [statusFilter, setStatusFilter] = useState<SharingStatus | typeof ALL_ORGS>(
+    ALL_ORGS,
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(SHARING_PAGE_SIZE);
 
   function handleTabChange(next: string) {
-    setActiveTab(next as SharingInnerTab);
+    setManualTab(next as SharingInnerTab);
     setPage(1);
   }
 
@@ -267,6 +290,17 @@ export function ReportSharingPanel({
   const sharedReports = all.filter(
     (r) => r.status === "approved" && r.requestingOrgId === myOrgId,
   );
+
+  const allOrganizationsRows = all.filter(
+    (r) => statusFilter === ALL_ORGS || r.status === statusFilter,
+  );
+  const STATUS_FILTER_OPTIONS: SharingStatus[] = [
+    "pending",
+    "approved",
+    "rejected",
+    "withdrawn",
+    "expired",
+  ];
 
   async function handleApprove(id: string) {
     setActionError(null);
@@ -324,6 +358,11 @@ export function ReportSharingPanel({
       showRejectReason?: boolean;
       showWithdraw?: boolean;
       showExpiry?: boolean;
+      /** Cross-entity oversight view (RIO-FR-014, "Center informed as
+       * supervisory party") — replaces the single, perspective-dependent
+       * Organisation column with separate Owner/Requester columns, since
+       * a caller here isn't "the" org on either side of the request. */
+      showBothOrgs?: boolean;
     },
   ) {
     const columnCount =
@@ -331,172 +370,195 @@ export function ReportSharingPanel({
       (options.showRole ? 1 : 0) +
       (options.showPurpose ? 1 : 0) +
       (options.showRejectReason ? 1 : 0) +
-      (options.showExpiry ? 1 : 0);
+      (options.showExpiry ? 1 : 0) +
+      (options.showBothOrgs ? 1 : 0);
     const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
     const currentPage = Math.min(page, pageCount);
     const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     return (
       <Card>
         <CardContent className="p-0">
-          <Table className="table-fixed">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-64">{t("reportColumn")}</TableHead>
-                <TableHead className="w-40">{t("orgColumn")}</TableHead>
-                {options.showRole ? (
-                  <TableHead className="w-28">{t("roleColumn")}</TableHead>
-                ) : null}
-                {options.showPurpose ? (
-                  <TableHead className="w-56">{t("purposeColumn")}</TableHead>
-                ) : null}
-                {options.showRejectReason ? (
-                  <TableHead className="w-56">{t("rejectReasonColumn")}</TableHead>
-                ) : null}
-                {options.showExpiry ? (
-                  <TableHead className="w-36">{t("expiryColumn")}</TableHead>
-                ) : null}
-                <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                <TableHead className="w-40">{t("requestedColumn")}</TableHead>
-                <TableHead className="w-56" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requests === null ? (
-                Array.from({ length: 2 }).map((_, index) => (
-                  <TableRow key={index}>
-                    {Array.from({ length: columnCount }).map((__, cell) => (
-                      <TableCell key={cell} className="py-4">
-                        <div className="bg-muted h-4 w-24 rounded" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : rows.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table className="table-fixed">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={columnCount}
-                    className="text-muted-foreground h-32 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-2.5">
-                      <div className="bg-muted flex size-10 items-center justify-center rounded-full">
-                        <Share2 className="size-5" />
-                      </div>
-                      <p>{loadFailed ? t("loadError") : emptyLabel}</p>
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-64">{t("reportColumn")}</TableHead>
+                  {options.showBothOrgs ? (
+                    <>
+                      <TableHead className="w-40">{t("ownerOrgColumn")}</TableHead>
+                      <TableHead className="w-40">{t("requestingOrgColumn")}</TableHead>
+                    </>
+                  ) : (
+                    <TableHead className="w-40">{t("orgColumn")}</TableHead>
+                  )}
+                  {options.showRole ? (
+                    <TableHead className="w-28">{t("roleColumn")}</TableHead>
+                  ) : null}
+                  {options.showPurpose ? (
+                    <TableHead className="w-56">{t("purposeColumn")}</TableHead>
+                  ) : null}
+                  {options.showRejectReason ? (
+                    <TableHead className="w-56">{t("rejectReasonColumn")}</TableHead>
+                  ) : null}
+                  {options.showExpiry ? (
+                    <TableHead className="w-44">{t("expiryColumn")}</TableHead>
+                  ) : null}
+                  <TableHead className="w-28">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-40">{t("requestedColumn")}</TableHead>
+                  <TableHead className="w-56" />
                 </TableRow>
-              ) : (
-                pagedRows.map((request) => {
-                  const isOwnerView = request.ownerOrgId === myOrgId;
-                  return (
-                    <TableRow key={request.id}>
-                      <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                        {request.reportTitle}
-                      </TableCell>
-                      <TableCell className="py-4 text-sm break-words whitespace-normal">
-                        {isOwnerView ? request.requestingOrgName : request.ownerOrgName}
-                      </TableCell>
-                      {options.showRole ? (
-                        <TableCell className="text-sm">
-                          {isOwnerView ? t("roleOwner") : t("roleRequester")}
+              </TableHeader>
+              <TableBody>
+                {requests === null ? (
+                  Array.from({ length: 2 }).map((_, index) => (
+                    <TableRow key={index}>
+                      {Array.from({ length: columnCount }).map((__, cell) => (
+                        <TableCell key={cell} className="py-4">
+                          <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
-                      ) : null}
-                      {options.showPurpose ? (
-                        <TableCell className="max-w-64 text-sm break-words whitespace-normal">
-                          {request.note ?? "—"}
+                      ))}
+                    </TableRow>
+                  ))
+                ) : rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columnCount}
+                      className="text-muted-foreground h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center gap-2.5">
+                        <div className="bg-muted flex size-10 items-center justify-center rounded-full">
+                          <Share2 className="size-5" />
+                        </div>
+                        <p>{loadFailed ? t("loadError") : emptyLabel}</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedRows.map((request) => {
+                    const isOwnerView = request.ownerOrgId === myOrgId;
+                    return (
+                      <TableRow key={request.id}>
+                        <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
+                          {request.reportTitle}
                         </TableCell>
-                      ) : null}
-                      {options.showRejectReason ? (
-                        <TableCell className="max-w-64 text-sm break-words whitespace-normal">
-                          {request.decisionNote ?? "—"}
+                        {options.showBothOrgs ? (
+                          <>
+                            <TableCell className="py-4 text-sm break-words whitespace-normal">
+                              {request.ownerOrgName}
+                            </TableCell>
+                            <TableCell className="py-4 text-sm break-words whitespace-normal">
+                              {request.requestingOrgName}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <TableCell className="py-4 text-sm break-words whitespace-normal">
+                            {isOwnerView
+                              ? request.requestingOrgName
+                              : request.ownerOrgName}
+                          </TableCell>
+                        )}
+                        {options.showRole ? (
+                          <TableCell className="text-sm">
+                            {isOwnerView ? t("roleOwner") : t("roleRequester")}
+                          </TableCell>
+                        ) : null}
+                        {options.showPurpose ? (
+                          <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                            {request.note ?? "—"}
+                          </TableCell>
+                        ) : null}
+                        {options.showRejectReason ? (
+                          <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                            {request.decisionNote ?? "—"}
+                          </TableCell>
+                        ) : null}
+                        {options.showExpiry ? (
+                          <TableCell className="text-muted-foreground text-sm break-words whitespace-normal">
+                            {request.status === "withdrawn" && request.withdrawnAt ? (
+                              <FormattedDate value={request.withdrawnAt} withTime />
+                            ) : request.expiresAt ? (
+                              <FormattedDate value={request.expiresAt} />
+                            ) : (
+                              t("noExpiry")
+                            )}
+                          </TableCell>
+                        ) : null}
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[request.status]}>
+                            {t(`status.${request.status}`)}
+                          </Badge>
                         </TableCell>
-                      ) : null}
-                      {options.showExpiry ? (
                         <TableCell className="text-muted-foreground text-sm">
-                          {request.status === "withdrawn" && request.withdrawnAt ? (
-                            <FormattedDate value={request.withdrawnAt} withTime />
-                          ) : request.expiresAt ? (
-                            <FormattedDate value={request.expiresAt} />
-                          ) : (
-                            t("noExpiry")
-                          )}
+                          <FormattedDate value={request.requestedAt} withTime />
                         </TableCell>
-                      ) : null}
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[request.status]}>
-                          {t(`status.${request.status}`)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        <FormattedDate value={request.requestedAt} withTime />
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex flex-col items-end gap-1.5">
-                          {options.showDecision && isOwnerView && canApprove ? (
-                            <input
-                              type="date"
-                              aria-label={t("expiryInputLabel")}
-                              title={t("expiryInputLabel")}
-                              className="border-input h-8 w-full max-w-40 rounded-md border bg-transparent px-2 text-sm"
-                              value={expiryDrafts[request.id] ?? ""}
-                              min={new Date().toISOString().slice(0, 10)}
-                              onChange={(e) =>
-                                setExpiryDrafts((prev) => ({
-                                  ...prev,
-                                  [request.id]: e.target.value,
-                                }))
-                              }
-                            />
-                          ) : null}
-                          <div className="flex flex-wrap justify-end gap-2">
+                        <TableCell className="py-4">
+                          <div className="flex flex-col items-end gap-1.5">
                             {options.showDecision && isOwnerView && canApprove ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleApprove(request.id)}
-                                >
-                                  {t("approve")}
-                                </Button>
+                              <input
+                                type="date"
+                                aria-label={t("expiryInputLabel")}
+                                title={t("expiryInputLabel")}
+                                className="border-input h-8 w-full max-w-40 rounded-md border bg-transparent px-2 text-sm"
+                                value={expiryDrafts[request.id] ?? ""}
+                                min={new Date().toISOString().slice(0, 10)}
+                                onChange={(e) =>
+                                  setExpiryDrafts((prev) => ({
+                                    ...prev,
+                                    [request.id]: e.target.value,
+                                  }))
+                                }
+                              />
+                            ) : null}
+                            <div className="flex flex-wrap justify-end gap-2">
+                              {options.showDecision && isOwnerView && canApprove ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleApprove(request.id)}
+                                  >
+                                    {t("approve")}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive"
+                                    onClick={() => setRejectTargetId(request.id)}
+                                  >
+                                    {t("reject")}
+                                  </Button>
+                                </>
+                              ) : null}
+                              {options.showWithdraw &&
+                              isOwnerView &&
+                              canApprove &&
+                              request.status === "approved" ? (
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   className="text-destructive"
-                                  onClick={() => setRejectTargetId(request.id)}
+                                  onClick={() => handleWithdraw(request.id)}
                                 >
-                                  {t("reject")}
+                                  {t("withdraw")}
                                 </Button>
-                              </>
-                            ) : null}
-                            {options.showWithdraw &&
-                            isOwnerView &&
-                            canApprove &&
-                            request.status === "approved" ? (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive"
-                                onClick={() => handleWithdraw(request.id)}
-                              >
-                                {t("withdraw")}
-                              </Button>
-                            ) : null}
-                            {options.showView ? (
-                              <Button size="sm" variant="outline" asChild>
-                                <Link href={`/sharing/reports/${request.id}`}>
-                                  {t("view")}
-                                </Link>
-                              </Button>
-                            ) : null}
+                              ) : null}
+                              {options.showView ? (
+                                <Button size="sm" variant="outline" asChild>
+                                  <Link href={`/sharing/reports/${request.id}`}>
+                                    {t("view")}
+                                  </Link>
+                                </Button>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {rows.length > 0 ? (
             <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -539,7 +601,37 @@ export function ReportSharingPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {isCrossEntity ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <Label
+                htmlFor="report-sharing-status-filter"
+                className="text-muted-foreground text-sm"
+              >
+                {t("statusColumn")}
+              </Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as SharingStatus)}
+              >
+                <SelectTrigger id="report-sharing-status-filter" className="h-8 w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_ORGS}>{t("allStatusesOption")}</SelectItem>
+                  {STATUS_FILTER_OPTIONS.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {t(`status.${status}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ) : (
+          <div />
+        )}
         {canCreate ? (
           <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="size-4" />
@@ -553,6 +645,11 @@ export function ReportSharingPanel({
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="overflow-x-auto">
           <TabsList variant="line" size="lg">
+            {isCrossEntity ? (
+              <TabsTrigger value="allOrganizations" size="lg">
+                {t("tabAllOrganizations")}
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger value="incoming" size="lg">
               {t("tabIncoming")}
             </TabsTrigger>
@@ -570,6 +667,14 @@ export function ReportSharingPanel({
             </TabsTrigger>
           </TabsList>
         </div>
+        {isCrossEntity ? (
+          <TabsContent value="allOrganizations" className="mt-6">
+            {renderTable(allOrganizationsRows, t("noAllOrganizations"), {
+              showBothOrgs: true,
+              showExpiry: true,
+            })}
+          </TabsContent>
+        ) : null}
         <TabsContent value="incoming" className="mt-6">
           {renderTable(incoming, t("noIncoming"), {
             showDecision: true,

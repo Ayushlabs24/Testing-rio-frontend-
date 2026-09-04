@@ -1,4 +1,6 @@
-export type ArchiveEntryKind = "study" | "report";
+// "historical" — RIO-FR-013 (client Q25) — a study conducted before the
+// platform existed, uploaded as a reference document.
+export type ArchiveEntryKind = "study" | "report" | "historical";
 
 export interface ArchiveEntry {
   id: string;
