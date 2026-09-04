@@ -146,7 +146,8 @@ export interface MergePreview {
   /** Published reports that stay frozen as historical record (Q24). */
   frozenReportCount: number;
   scoresToRecalculate: number;
-  warnings: string[];
+  /** Codes, not prose — translated on this side so Arabic is not left out. */
+  warnings: { code: string; count?: number }[];
 }
 
 export interface MergeResult {
@@ -172,4 +173,28 @@ export interface MergeHistoryItem {
 export interface MergeHistoryPage {
   items: MergeHistoryItem[];
   total: number;
+}
+
+// ─── Q23: the rule set's own thresholds ────────────────────────────────────
+
+/** Which comparisons the duplicate detector is allowed to make (Q9). */
+export interface DuplicateScopes {
+  withinStudy?: boolean;
+  withinOrg?: boolean;
+  crossOrg?: boolean;
+}
+
+export interface CleaningSettings {
+  ruleSetVersion?: string;
+  dontKnowTreatment?: "excluded_answer" | "missing_value";
+  requiredNeedFields?: string[];
+  softNeedFields?: string[];
+  villageMatchAcceptThreshold?: number;
+  villageMatchProposeThreshold?: number;
+  villageMatchMaxCandidates?: number;
+  literalDuplicateThreshold?: number;
+  classificationNearMatchThreshold?: number;
+  duplicateScopes?: DuplicateScopes;
+  /** Which methodology version these belong to — shown, not editable. */
+  methodologyVersion?: string;
 }

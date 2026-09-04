@@ -2869,7 +2869,8 @@
       "tabs": {
         "findings": "Findings",
         "duplicates": "Possible duplicates",
-        "merges": "Merge history"
+        "merges": "Merge history",
+        "crossEntity": "Cross-entity"
       },
       "duplicates": {
         "empty": "No possible duplicates to review.",
@@ -2945,6 +2946,10 @@
           "PublicSurveyLink": "Published survey links",
           "SurveySession": "Survey sessions",
           "ResponseQualityResult": "Response quality results"
+        },
+        "warning": {
+          "DIFFERENT_STUDIES": "These needs belong to different studies. Everything attached moves into the surviving need's study, which changes what each study's totals contain.",
+          "RETIRED_HAS_SCORES": "The retired need has {count} computed score(s). The methodology does not transfer these — the surviving need is recalculated instead."
         }
       },
       "mergeHistory": {
@@ -2966,6 +2971,72 @@
         "confirmUndo": "Undo merge",
         "undoing": "Undoing…",
         "cancel": "Cancel"
+      },
+      "settings": {
+        "title": "Data quality — detection thresholds",
+        "description": "How alike two pieces of text must be before the system proposes anything. Every value is a similarity score from 0 (nothing in common) to 1 (identical). Start conservative and tune once real field data exists.",
+        "version": "Stored with methodology {version}",
+        "loadError": "Couldn't load the thresholds.",
+        "saveError": "Couldn't save. Check the values and try again.",
+        "saved": "Saved.",
+        "save": "Save thresholds",
+        "saving": "Saving…",
+        "readOnly": "View only — changing thresholds needs the data quality write permission.",
+        "retuneNote": "Changing a threshold affects what is proposed from now on. Findings and duplicate pairs already in the queue keep the threshold they were raised under, so nothing already decided is rewritten.",
+        "dk": {
+          "excluded_answer": "A real answer, excluded from scoring",
+          "missing_value": "A missing value"
+        },
+        "fields": {
+          "villageMatchAcceptThreshold": {
+            "label": "Village name — offer one match at or above",
+            "help": "At or above this score a single place is offered as the correction, for the reviewer to accept or reject. Raise it and more names go to a shortlist instead; lower it and more get a one-click fix. Cannot be lower than the shortlist value."
+          },
+          "villageMatchProposeThreshold": {
+            "label": "Village name — offer a shortlist at or above",
+            "help": "Between this and the single-match value the reviewer picks from up to five candidates. Below it nothing is offered at all and the name is reported as unmatched. Cannot be higher than the single-match value."
+          },
+          "literalDuplicateThreshold": {
+            "label": "Duplicate needs — propose a pair at or above",
+            "help": "How alike two needs must read, taking the higher of their title and statement similarity. Lower it to catch more duplicates and review more false alarms. Nothing is ever merged automatically."
+          },
+          "classificationNearMatchThreshold": {
+            "label": "Domain and sub-domain — suggest a correction at or above",
+            "help": "How close an unrecognised domain must be to an approved one before a correction is proposed rather than left for a person."
+          },
+          "dontKnowTreatment": {
+            "label": "“Don’t know” and “Prefer not to answer” responses",
+            "help": "The client's own position (LIV-21) is that these are real answers excluded from scoring, not gaps. Awaiting their written confirmation."
+          },
+          "crossOrg": {
+            "label": "Cross-entity duplicate matching",
+            "help": "When on, the cross-entity scan compares needs recorded by different entities and proposes matches for Center and NCNP review. Nothing is merged across entities — matches are recorded as findings. Off by default."
+          }
+        }
+      },
+      "crossEntity": {
+        "title": "Cross-entity matches",
+        "description": "Needs recorded by two different entities that look like the same need. Visible to Center and NCNP oversight only. These are recorded as findings, not merged — one entity's data is never moved into another's.",
+        "scan": "Run cross-entity scan",
+        "scanning": "Scanning…",
+        "scanError": "The cross-entity scan could not be completed.",
+        "empty": "No cross-entity matches proposed.",
+        "off": "Cross-entity matching is switched off, so nothing has been compared. Turn it on above to run a scan.",
+        "toggleError": "Couldn't change that setting. You may not have permission to enable cross-entity matching."
+      },
+      "thresholdsMoved": "Detection thresholds",
+      "semantic": {
+        "title": "Meaning-based duplicate scan",
+        "description": "Compares what needs mean rather than how they are spelled, so a reworded duplicate — or the same need recorded in Arabic and English — is proposed. Results appear in the queue below, marked “Matching meaning”.",
+        "scan": "Run semantic scan",
+        "scanning": "Scanning…",
+        "result": "{embedded} need(s) embedded, {compared} pair(s) compared, {proposed} proposed.",
+        "error": "The semantic scan could not be completed.",
+        "skipped": {
+          "SEMANTIC_PROVIDER_DISABLED": "Semantic matching is switched off for this deployment. Nothing was sent anywhere.",
+          "NO_NEEDS_IN_SCOPE": "There are no needs in your entity to compare. Sign in as a user of the entity whose needs you want to scan.",
+          "NOT_ENOUGH_NEEDS_TO_COMPARE": "Only one need is available, so there is no pair to compare."
+        }
       }
     }
   },

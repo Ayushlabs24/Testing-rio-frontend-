@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE } from "@/config/pagination";
+import { CleaningSettingsPanel } from "@/components/features/data-quality/cleaning-settings-panel";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api/types";
@@ -653,6 +654,9 @@ function ConfigurableOptionsCard({
 }
 
 export function MethodologyConfigTab() {
+  // Q23 puts data-cleaning tuning with System Admin and Data Analyst, which is
+  // a DIFFERENT grant from this page's own write permission.
+  const canTuneCleaning = usePermission("dataQuality", "write");
   const t = useTranslations("app.settings.methodology.config");
   const canWrite = usePermission("methodologyQuestionBank", "write");
   const canApprove = usePermission("methodologyQuestionBank", "approve");
@@ -1462,6 +1466,26 @@ export function MethodologyConfigTab() {
         create={studyConfigService.createNeedTheme}
         update={studyConfigService.updateNeedTheme}
         setActive={studyConfigService.setNeedThemeActive}
+      />
+
+      {/* RIO-FR-002 / Q23 — the data-cleaning thresholds. They live HERE
+          rather than on the Data Quality screen because that is where they are
+          actually stored: methodology_configs.data_cleaning_settings, versioned
+          in methodology_config_history alongside the priority thresholds above,
+          and reported by the panel as "stored with methodology vN".
+
+          It keeps its own Save button on purpose. The card writes through
+          PATCH /data-quality/settings under `dataQuality:write`, not the
+          methodology write permission this page's other cards use — Q23 gives
+          this tuning to System Admin and Data Analyst, and Data Analyst has no
+          methodology write. Folding it into the page-level Save would silently
+          widen or narrow who can move these dials. */}
+      <CleaningSettingsPanel
+        canTune={canTuneCleaning}
+        // Nothing on this page derives from the cleaning settings, so there is
+        // nothing to reload — unlike the Data Quality screen, where a changed
+        // threshold changes the queue below it.
+        onSaved={() => undefined}
       />
     </div>
   );

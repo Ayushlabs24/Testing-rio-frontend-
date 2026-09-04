@@ -93,7 +93,11 @@ export function DataQualitySummaryCards({
         <Card>
           <CardContent className="space-y-2 pt-6">
             <p className="text-muted-foreground text-xs">{t("summary.byRule")}</p>
-            <ul className="divide-y">
+            {/* Capped width on purpose. `justify-between` across a full-width
+                card threw the count ~900px from the label it belongs to, so a
+                reader had to track across empty space to pair them — found in
+                the Arabic visual pass, and equally bad in English. */}
+            <ul className="max-w-2xl divide-y">
               {summary.byRule.map((row) => (
                 <li
                   key={`${row.ruleCode}-${row.source}`}

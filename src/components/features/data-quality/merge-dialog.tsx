@@ -195,8 +195,11 @@ export function MergeDialog({ candidate, onClose, onMerged }: MergeDialogProps) 
               </ul>
 
               {preview.warnings.map((warning) => (
-                <p key={warning} className="text-sm text-amber-600 dark:text-amber-500">
-                  {warning}
+                <p
+                  key={warning.code}
+                  className="text-sm text-amber-600 dark:text-amber-500"
+                >
+                  {t(`warning.${warning.code}`, { count: warning.count ?? 0 })}
                 </p>
               ))}
             </div>

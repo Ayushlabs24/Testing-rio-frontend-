@@ -8,6 +8,7 @@ import type {
   FlagPage,
   ListDuplicatesParams,
   ListFlagsParams,
+  CleaningSettings,
   MergeHistoryPage,
   MergePreview,
   MergeResult,
@@ -43,6 +44,35 @@ export const dataQualityService = {
       params: { ...params },
       signal,
     });
+  },
+  async listCrossEntityDuplicates(
+    params: { page?: number; pageSize?: number },
+    signal?: AbortSignal,
+  ): Promise<DuplicatePage> {
+    return apiClient.get<DuplicatePage>(endpoints.dataQuality.crossEntityDuplicates, {
+      params: { ...params },
+      signal,
+    });
+  },
+  async scanCrossEntity(): Promise<{ scanned: number; proposed: number }> {
+    return apiClient.post<{ scanned: number; proposed: number }>(
+      endpoints.dataQuality.scanCrossEntity,
+    );
+  },
+  /**
+   * RIO-AI-004 — the meaning-based pass over this entity's needs.
+   *
+   * Reports `skippedReason` rather than failing when the provider is off:
+   * "not switched on" is a normal state until Q10 is answered, and the screen
+   * has to say which of the two an empty result means.
+   */
+  async scanSemantic(): Promise<{
+    embedded: number;
+    compared: number;
+    proposed: number;
+    skippedReason: string | null;
+  }> {
+    return apiClient.post(endpoints.dataQuality.scanSemantic);
   },
   async decideDuplicate(
     candidateId: string,
@@ -94,6 +124,13 @@ export const dataQualityService = {
         note,
       },
     );
+  },
+
+  async getSettings(signal?: AbortSignal): Promise<CleaningSettings> {
+    return apiClient.get<CleaningSettings>(endpoints.dataQuality.settings, { signal });
+  },
+  async updateSettings(patch: CleaningSettings): Promise<CleaningSettings> {
+    return apiClient.patch<CleaningSettings>(endpoints.dataQuality.settings, patch);
   },
 
   async bulkAccept(

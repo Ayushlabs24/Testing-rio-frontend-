@@ -335,10 +335,16 @@ export const endpoints = {
     duplicates: "/data-quality/duplicates",
     decideDuplicate: (candidateId: string) =>
       `/data-quality/duplicates/${candidateId}/decide`,
+    // RIO-AI-004 / Q9 — Center/NCNP only. Returns an empty page for anyone
+    // else, so an entity reviewer never learns the queue exists.
+    crossEntityDuplicates: "/data-quality/duplicates/cross-entity",
+    scanCrossEntity: "/data-quality/duplicates/cross-entity/scan",
+    scanSemantic: "/data-quality/duplicates/semantic/scan",
     // RIO-AI-004 — merge. `merges` is both the history (GET) and the act
     // (POST); the backend gates them on read and approve respectively.
     merges: "/data-quality/merges",
     mergePreview: "/data-quality/merges/preview",
+    settings: "/data-quality/settings",
     undoMerge: (mergeId: string) => `/data-quality/merges/${mergeId}/undo`,
   },
   reviewerSla: {
