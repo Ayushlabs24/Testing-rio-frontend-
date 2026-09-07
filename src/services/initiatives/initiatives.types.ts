@@ -5,6 +5,10 @@ export type AnalyticalStatus =
   | "linked_to_initiative"
   | "open_gap";
 
+// Client feedback 2026-09-07 — mirrors the backend's SUPPORTED_CURRENCIES.
+export const SUPPORTED_CURRENCIES = ["SAR", "USD", "EUR", "GBP"] as const;
+export type Currency = (typeof SUPPORTED_CURRENCIES)[number];
+
 export interface Initiative {
   id: string;
   orgId: string;
@@ -18,6 +22,7 @@ export interface Initiative {
   fundingSource: string | null;
   description: string | null;
   budget: string | null;
+  currency: string;
   /** Owner-controlled (RIO-FR-009, Q15) — off by default. When true, every
    * other entity can see this initiative (read-only); only the owning
    * organisation can ever edit it regardless of this flag. */
@@ -38,6 +43,8 @@ export interface CreateInitiativePayload {
   fundingSource?: string;
   description?: string;
   budget?: number;
+  /** Defaults to SAR server-side when omitted. */
+  currency?: Currency;
   openToOtherEntities?: boolean;
 }
 

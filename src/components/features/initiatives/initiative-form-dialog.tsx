@@ -26,8 +26,10 @@ import { ApiError } from "@/services/api/types";
 import { initiativesService } from "@/services/initiatives/initiatives.service";
 import type {
   CreateInitiativePayload,
+  Currency,
   Initiative,
 } from "@/services/initiatives/initiatives.types";
+import { SUPPORTED_CURRENCIES } from "@/services/initiatives/initiatives.types";
 
 const NONE = "__none__";
 
@@ -60,9 +62,10 @@ export function InitiativeFormDialog({
           fundingSource: editing.fundingSource ?? undefined,
           description: editing.description ?? undefined,
           budget: editing.budget ? Number(editing.budget) : undefined,
+          currency: editing.currency as Currency,
           openToOtherEntities: editing.openToOtherEntities,
         }
-      : { name: "" },
+      : { name: "", currency: "SAR" },
   );
   const [nameError, setNameError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -213,18 +216,41 @@ export function InitiativeFormDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="initiative-budget">{t("budgetLabel")}</Label>
-              <Input
-                id="initiative-budget"
-                type="number"
-                min={0}
-                value={form.budget ?? ""}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    budget: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={form.currency ?? "SAR"}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, currency: v as Currency }))
+                  }
+                >
+                  <SelectTrigger
+                    className="w-24 shrink-0"
+                    aria-label={t("currencyLabel")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="initiative-budget"
+                  type="number"
+                  min={0}
+                  className="min-w-0 flex-1"
+                  value={form.budget ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      budget: e.target.value ? Number(e.target.value) : undefined,
+                    }))
+                  }
+                />
+              </div>
             </div>
           </div>
 

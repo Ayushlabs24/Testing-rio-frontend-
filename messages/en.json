@@ -1901,6 +1901,7 @@
         "fundingSourceLabel": "Funding source",
         "descriptionLabel": "Description",
         "budgetLabel": "Budget (optional)",
+        "currencyLabel": "Currency",
         "openToOtherEntitiesLabel": "Visible to other entities (read-only)",
         "openToOtherEntitiesHint": "Off by default. Other organisations can view but never edit this initiative.",
         "cancel": "Cancel",

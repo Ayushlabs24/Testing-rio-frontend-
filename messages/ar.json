@@ -1911,6 +1911,7 @@
         "fundingSourceLabel": "مصدر التمويل",
         "descriptionLabel": "الوصف",
         "budgetLabel": "الميزانية (اختياري)",
+        "currencyLabel": "العملة",
         "openToOtherEntitiesLabel": "مرئية للجهات الأخرى (للقراءة فقط)",
         "openToOtherEntitiesHint": "غير مفعّلة افتراضياً. يمكن للجهات الأخرى الاطلاع عليها دون تعديلها.",
         "cancel": "إلغاء",
