@@ -388,10 +388,10 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
                     <TableHead className="w-28">{t("roleColumn")}</TableHead>
                   ) : null}
                   {options.showPurpose ? (
-                    <TableHead className="w-64">{t("purposeColumn")}</TableHead>
+                    <TableHead className="w-56">{t("purposeColumn")}</TableHead>
                   ) : null}
                   {options.showRejectReason ? (
-                    <TableHead className="w-64">{t("rejectReasonColumn")}</TableHead>
+                    <TableHead className="w-56">{t("rejectReasonColumn")}</TableHead>
                   ) : null}
                   {options.showExpiry ? (
                     <TableHead className="w-44">{t("expiryColumn")}</TableHead>
@@ -443,12 +443,18 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
                           </TableCell>
                         ) : null}
                         {options.showPurpose ? (
-                          <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          <TableCell
+                            className="max-w-56 truncate text-sm"
+                            title={request.note ?? undefined}
+                          >
                             {request.note ?? "—"}
                           </TableCell>
                         ) : null}
                         {options.showRejectReason ? (
-                          <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          <TableCell
+                            className="max-w-56 truncate text-sm"
+                            title={request.decisionNote ?? undefined}
+                          >
                             {request.decisionNote ?? "—"}
                           </TableCell>
                         ) : null}

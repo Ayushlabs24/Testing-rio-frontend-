@@ -1,6 +1,13 @@
 "use client";
 
-import { Archive as ArchiveIcon, Download, Eye, Plus, Search } from "lucide-react";
+import {
+  Archive as ArchiveIcon,
+  Download,
+  ExternalLink,
+  Eye,
+  Plus,
+  Search,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -315,13 +322,15 @@ export default function ArchivePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("titleColumn")}</TableHead>
-                  {isCrossEntity ? <TableHead>{t("entityColumn")}</TableHead> : null}
+                  <TableHead className="w-64">{t("titleColumn")}</TableHead>
+                  {isCrossEntity ? (
+                    <TableHead className="w-56">{t("entityColumn")}</TableHead>
+                  ) : null}
                   <TableHead className="w-28">{t("kindColumn")}</TableHead>
                   <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                  <TableHead>{t("villagesColumn")}</TableHead>
+                  <TableHead className="w-52">{t("villagesColumn")}</TableHead>
                   <TableHead className="w-40">{t("dateColumn")}</TableHead>
-                  <TableHead className="w-24" />
+                  <TableHead className="w-32" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -370,11 +379,11 @@ export default function ArchivePage() {
                         }
                         className="hover:bg-accent/50 cursor-pointer"
                       >
-                        <TableCell className="py-4 text-sm font-medium">
+                        <TableCell className="max-w-64 py-4 text-sm font-medium break-words whitespace-normal">
                           {entry.title}
                         </TableCell>
                         {isCrossEntity ? (
-                          <TableCell className="text-muted-foreground max-w-[180px] text-sm break-words whitespace-normal">
+                          <TableCell className="text-muted-foreground max-w-56 text-sm break-words whitespace-normal">
                             {entry.organizationName}
                           </TableCell>
                         ) : null}
@@ -382,39 +391,69 @@ export default function ArchivePage() {
                           <Badge variant="outline">{t(`kind.${entry.kind}`)}</Badge>
                         </TableCell>
                         <TableCell className="text-sm">{entry.status}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {entry.villages.join(", ") || "—"}
+                        <TableCell className="text-muted-foreground max-w-52 text-sm break-words whitespace-normal">
+                          {entry.villages.length === 0 ? (
+                            "—"
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span>{entry.villages.slice(0, 2).join(", ")}</span>
+                              {entry.villages.length > 2 ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                  title={entry.villages.slice(2).join(", ")}
+                                >
+                                  +{entry.villages.length - 2}
+                                </Badge>
+                              ) : null}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           <FormattedDate value={entry.date} />
                         </TableCell>
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
-                          {isHistorical ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                className="size-8"
-                                title={t("previewFile")}
-                                aria-label={t("previewFile")}
-                                onClick={() => previewHistoricalFile(entry)}
-                              >
-                                <Eye className="size-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                className="size-8"
-                                title={t("downloadFile")}
-                                aria-label={t("downloadFile")}
-                                onClick={() => downloadHistoricalFile(entry)}
-                              >
-                                <Download className="size-4" />
-                              </Button>
-                            </div>
-                          ) : null}
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8"
+                              title={t("viewDetails")}
+                              aria-label={t("viewDetails")}
+                              onClick={() =>
+                                isHistorical ? setDetailEntry(entry) : openEntry(entry)
+                              }
+                            >
+                              <Eye className="size-4" />
+                            </Button>
+                            {isHistorical ? (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-8"
+                                  title={t("previewFile")}
+                                  aria-label={t("previewFile")}
+                                  onClick={() => previewHistoricalFile(entry)}
+                                >
+                                  <ExternalLink className="size-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-8"
+                                  title={t("downloadFile")}
+                                  aria-label={t("downloadFile")}
+                                  onClick={() => downloadHistoricalFile(entry)}
+                                >
+                                  <Download className="size-4" />
+                                </Button>
+                              </>
+                            ) : null}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

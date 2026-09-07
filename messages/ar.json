@@ -1020,7 +1020,8 @@
             "surveyBuilder": "منشئ الاستبيانات",
             "ncnpReport": "تقرير المركز المجمّع",
             "systemLogs": "سجلات النظام",
-            "auditLog": "سجل التدقيق"
+            "auditLog": "سجل التدقيق",
+            "initiatives": "المبادرات"
           },
           "actionNames": {
             "read": "قراءة",
@@ -1649,6 +1650,7 @@
       "statusColumn": "الحالة",
       "villagesColumn": "المحافظات",
       "dateColumn": "التاريخ",
+      "viewDetails": "عرض التفاصيل",
       "previewFile": "معاينة",
       "downloadFile": "تنزيل",
       "noResults": "لا يوجد شيء مؤرشف بعد.",

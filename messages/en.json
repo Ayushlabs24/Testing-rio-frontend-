@@ -1020,7 +1020,8 @@
             "surveyBuilder": "Survey Builder",
             "ncnpReport": "NCNP Compiled Report",
             "systemLogs": "System Logs",
-            "auditLog": "Audit Log"
+            "auditLog": "Audit Log",
+            "initiatives": "Initiatives"
           },
           "actionNames": {
             "read": "Read",
@@ -1639,6 +1640,7 @@
       "statusColumn": "Status",
       "villagesColumn": "Governorates",
       "dateColumn": "Date",
+      "viewDetails": "View details",
       "previewFile": "Preview",
       "downloadFile": "Download",
       "noResults": "Nothing archived yet.",

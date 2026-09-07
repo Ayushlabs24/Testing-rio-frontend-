@@ -463,12 +463,18 @@ export function ReportSharingPanel({
                           </TableCell>
                         ) : null}
                         {options.showPurpose ? (
-                          <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          <TableCell
+                            className="max-w-56 truncate text-sm"
+                            title={request.note ?? undefined}
+                          >
                             {request.note ?? "—"}
                           </TableCell>
                         ) : null}
                         {options.showRejectReason ? (
-                          <TableCell className="max-w-64 text-sm break-words whitespace-normal">
+                          <TableCell
+                            className="max-w-56 truncate text-sm"
+                            title={request.decisionNote ?? undefined}
+                          >
                             {request.decisionNote ?? "—"}
                           </TableCell>
                         ) : null}
