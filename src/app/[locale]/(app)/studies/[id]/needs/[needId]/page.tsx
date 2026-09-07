@@ -9,7 +9,7 @@ import { z } from "zod";
 import { AiClassificationSection } from "@/components/features/studies/ai-classification-section";
 import { NeedSummarySection } from "@/components/features/studies/need-summary-section";
 // Commented out with its usage below — see the note at the mount site.
-// import { NeedPriorityInputs } from "@/components/features/studies/need-priority-inputs";
+import { NeedPriorityInputs } from "@/components/features/studies/need-priority-inputs";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
@@ -764,13 +764,12 @@ export default function NeedWorkspacePage({
               enough not to be summarised, which is the common case.
               Keyed on the need id so moving to another need mounts a fresh
               panel rather than briefly showing the previous need's summary. */}
-          {/* RIO-FR-003 AC 1 + AC 6 — urgency and themes. Commented out at
-              Ayush's request (27 Aug) pending a decision on where these two
-              inputs belong; the panel, its service and its backend routes are
-              all intact, so restoring it is uncommenting these two lines.
-              NOTE: while this is hidden there is no way to SET urgency in the
-              UI, so the urgency factor scores as unmeasured on every need. */}
-          {/* <NeedPriorityInputs need={need} onNeedUpdated={setNeed} /> */}
+          {/* RIO-FR-003 AC 1 — urgency. Restored 31 Aug after checking the
+              workbook: urgency IS approved methodology (BRD - Priority
+              Scoring, factor 4, "Approved baseline - configurable during
+              implementation"), unlike themes, which appear nowhere in it.
+              The themes half of this panel stays hidden — see the component. */}
+          <NeedPriorityInputs need={need} onNeedUpdated={setNeed} />
 
           <NeedSummarySection key={need.id} needId={need.id} />
 
