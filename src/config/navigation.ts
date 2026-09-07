@@ -16,7 +16,7 @@ import {
   Terminal,
   ShieldCheck,
   Users2,
-  DatabaseBackup,
+  // DatabaseBackup, // RIO-NFR-010 nav item hidden — see below
 } from "lucide-react";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
 
@@ -164,13 +164,17 @@ export const appNav: NavItem[] = [
   // reasons: platform infrastructure rather than tenant data, and its own
   // permission module (`backups`, not `systemLogs`, which has no write action
   // for anyone by design).
-  {
-    labelKey: "backups",
-    href: "/system-admin/backups",
-    icon: DatabaseBackup,
-    module: "backups",
-    scope: "crossEntity",
-  },
+  // Hidden on request — commented out here rather than in NAV_ORDER_BY_ROLE
+  // because the mobile nav (app-topbar.tsx) filters `appNav` by permission
+  // alone and never consults the per-role order, so this is the one place that
+  // hides the item on every surface. Uncomment to restore.
+  // {
+  //   labelKey: "backups",
+  //   href: "/system-admin/backups",
+  //   icon: DatabaseBackup,
+  //   module: "backups",
+  //   scope: "crossEntity",
+  // },
 ];
 
 /**
@@ -285,7 +289,10 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reviewerSla",
     "audit",
     "systemLogs",
-    "backups",
+    // RIO-NFR-010 — "backups" hidden from the sidebar on request. The screen,
+    // its service and its permission module are untouched; restore the entry
+    // here (and in system_reviewer below) to bring it back.
+    // "backups",
     "methodologyConfig",
   ],
   read_only_viewer: [
@@ -338,6 +345,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "methodologyConfig",
     "dataQuality",
-    "backups",
+    // RIO-NFR-010 — hidden from the sidebar; see the note in system_admin.
+    // "backups",
   ],
 };

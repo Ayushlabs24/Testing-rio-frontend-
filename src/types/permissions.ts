@@ -59,6 +59,12 @@ export const PERMISSION_MODULES = [
   // module missing from this list, so omitting this would break sign-in for
   // every user the moment the backend starts sending it.
   "dataQuality",
+  // RIO-FR-009 — Initiative records and their linkage to Needs. The backend's
+  // ROLE_MATRIX grants this to every role (read-only for most), so it is in
+  // EVERY session response: leaving it out of this list made
+  // apiSessionViewSchema reject the response and broke sign-in for everyone,
+  // with "The server returned an unexpected session response shape."
+  "initiatives",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

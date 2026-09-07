@@ -51,3 +51,27 @@ export interface BackupVerifyResult {
    */
   reason: string | null;
 }
+
+/**
+ * RIO-NFR-010 AC 1 — "can this be restored", which `verify` does not answer.
+ *
+ * A checksum proves the bytes did not change. It cannot prove they were ever
+ * restorable: a dump carrying schema and no data, or an archive missing half
+ * its evidence, both checksum perfectly. This is the result of opening the
+ * artefact and reading its structure.
+ */
+export interface BackupRecoverability {
+  ok: boolean;
+  /** The cheap half — so the UI can say WHICH check failed. */
+  checksumOk: boolean;
+  /** NO_TABLE_DATA, MANIFEST_MISMATCH, ARCHIVE_UNREADABLE, ... */
+  reason: string | null;
+  checkedAt: string;
+  durationMs: number;
+  detail: {
+    tocEntries?: number;
+    tableDataEntries?: number;
+    filesVerified?: number;
+    filesExpected?: number;
+  };
+}

@@ -2,6 +2,7 @@ import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type {
   BackupKind,
+  BackupRecoverability,
   BackupRunPage,
   BackupSummary,
   BackupVerifyResult,
@@ -41,6 +42,16 @@ export const backupsService = {
    */
   async verify(runId: string): Promise<BackupVerifyResult> {
     return apiClient.post<BackupVerifyResult>(endpoints.backups.verify(runId));
+  },
+
+  /**
+   * Open the artefact and check it could actually be restored — the dump's
+   * table of contents, or the archive's manifest, depending on the kind.
+   * Slower than `verify` and worth it: it catches the backup that was never
+   * usable, which is the one a checksum will happily call intact.
+   */
+  async checkRecoverability(runId: string): Promise<BackupRecoverability> {
+    return apiClient.post<BackupRecoverability>(endpoints.backups.recoverability(runId));
   },
 
   /** Delete files past their retention date. Never the newest successful run. */

@@ -121,6 +121,9 @@ export const endpoints = {
     run: "/backups/run",
     prune: "/backups/prune",
     verify: (runId: string) => `/backups/${runId}/verify`,
+    // Deeper than verify: opens the artefact and checks it parses as something
+    // a restore could consume. See BackupController.checkRecoverability.
+    recoverability: (runId: string) => `/backups/${runId}/recoverability`,
   },
   systemLogs: {
     list: "/system-logs",

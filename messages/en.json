@@ -2978,7 +2978,7 @@
       },
       "settings": {
         "title": "Data quality — detection thresholds",
-        "description": "How alike two pieces of text must be before the system proposes anything. Every value is a similarity score from 0 (nothing in common) to 1 (identical). Start conservative and tune once real field data exists.",
+        "description": "How similar two pieces of text must be before the system suggests anything. 0 means nothing in common, 1 means identical.",
         "version": "Stored with methodology {version}",
         "loadError": "Couldn't load the thresholds.",
         "saveError": "Couldn't save. Check the values and try again.",
@@ -2986,41 +2986,41 @@
         "save": "Save thresholds",
         "saving": "Saving…",
         "readOnly": "View only — changing thresholds needs the data quality write permission.",
-        "retuneNote": "Changing a threshold affects what is proposed from now on. Findings and duplicate pairs already in the queue keep the threshold they were raised under, so nothing already decided is rewritten.",
+        "retuneNote": "Changes apply to new findings only. Anything already in the queue keeps the score it was raised under.",
         "dk": {
           "excluded_answer": "A real answer, excluded from scoring",
           "missing_value": "A missing value"
         },
         "fields": {
           "villageMatchAcceptThreshold": {
-            "label": "Village name — offer one match at or above",
-            "help": "At or above this score a single place is offered as the correction, for the reviewer to accept or reject. Raise it and more names go to a shortlist instead; lower it and more get a one-click fix. Cannot be lower than the shortlist value."
+            "label": "Village name — single match",
+            "help": "At or above this score, one place is suggested for you to accept or reject. Must not be lower than the shortlist score."
           },
           "villageMatchProposeThreshold": {
-            "label": "Village name — offer a shortlist at or above",
-            "help": "Between this and the single-match value the reviewer picks from up to five candidates. Below it nothing is offered at all and the name is reported as unmatched. Cannot be higher than the single-match value."
+            "label": "Village name — shortlist",
+            "help": "Between this and the single-match score, you pick from up to five places. Below it, the name is marked unmatched. Must not be higher than the single-match score."
           },
           "literalDuplicateThreshold": {
-            "label": "Duplicate needs — propose a pair at or above",
-            "help": "How alike two needs must read, taking the higher of their title and statement similarity. Lower it to catch more duplicates and review more false alarms. Nothing is ever merged automatically."
+            "label": "Duplicate needs",
+            "help": "How similar two needs must be before the pair is proposed. Lower it to catch more duplicates and more false alarms. Nothing is ever merged automatically."
           },
           "classificationNearMatchThreshold": {
-            "label": "Domain and sub-domain — suggest a correction at or above",
-            "help": "How close an unrecognised domain must be to an approved one before a correction is proposed rather than left for a person."
+            "label": "Domain and sub-domain",
+            "help": "How close an unrecognised domain must be to an approved one before a correction is suggested."
           },
           "dontKnowTreatment": {
             "label": "“Don’t know” and “Prefer not to answer” responses",
-            "help": "The client's own position (LIV-21) is that these are real answers excluded from scoring, not gaps. Awaiting their written confirmation."
+            "help": "The client’s position (LIV-21) is that these are real answers excluded from scoring, not gaps. Written confirmation pending."
           },
           "crossOrg": {
             "label": "Cross-entity duplicate matching",
-            "help": "When on, the cross-entity scan compares needs recorded by different entities and proposes matches for Center and NCNP review. Nothing is merged across entities — matches are recorded as findings. Off by default."
+            "help": "Compares needs recorded by different entities and proposes matches for Center and NCNP review. Nothing is merged across entities. Off by default."
           }
         }
       },
       "crossEntity": {
         "title": "Cross-entity matches",
-        "description": "Needs recorded by two different entities that look like the same need. Visible to Center and NCNP oversight only. These are recorded as findings, not merged — one entity's data is never moved into another's.",
+        "description": "Needs recorded by two different entities that look like the same need. Visible to Center and NCNP only. Recorded as findings — never merged.",
         "scan": "Run cross-entity scan",
         "scanning": "Scanning…",
         "scanError": "The cross-entity scan could not be completed.",
@@ -3031,14 +3031,14 @@
       "thresholdsMoved": "Detection thresholds",
       "semantic": {
         "title": "Meaning-based duplicate scan",
-        "description": "Compares what needs mean rather than how they are spelled, so a reworded duplicate — or the same need recorded in Arabic and English — is proposed. Results appear in the queue below, marked “Matching meaning”.",
+        "description": "Finds duplicates by meaning rather than spelling — a reworded need, or the same need written in Arabic and English. Scans your own entity only. Results appear below, marked “Matching meaning”.",
         "scan": "Run semantic scan",
         "scanning": "Scanning…",
         "result": "{embedded} need(s) embedded, {compared} pair(s) compared, {proposed} proposed.",
         "error": "The semantic scan could not be completed.",
         "skipped": {
           "SEMANTIC_PROVIDER_DISABLED": "Semantic matching is switched off for this deployment. Nothing was sent anywhere.",
-          "NO_NEEDS_IN_SCOPE": "There are no needs in your entity to compare. Sign in as a user of the entity whose needs you want to scan.",
+          "NO_NEEDS_IN_SCOPE": "This scan covers only your own entity, which has no needs to compare — the counts above may include other entities. Sign in as a user of the entity whose needs you want to scan.",
           "NOT_ENOUGH_NEEDS_TO_COMPARE": "Only one need is available, so there is no pair to compare."
         }
       }
@@ -4168,7 +4168,25 @@
         "failed": "The export could not be completed. Please try again."
       },
       "noResults": "No system log entries match the current filters.",
-      "loadFailed": "System logs could not be loaded."
+      "loadFailed": "System logs could not be loaded.",
+      "backup": {
+        "run": "Run Data Backup",
+        "running": "Backing up {kind}...",
+        "note": "Creates a verified backup of the database and evidence files, then confirms both can be restored.",
+        "resultTitle": "Data backup",
+        "kind": {
+          "database": "database",
+          "attachments": "attachments"
+        },
+        "succeeded": "The {kind} backup completed",
+        "failed": "The {kind} backup failed",
+        "recoverable": "Recoverable — the artefact was opened and checked. {evidence}",
+        "notRecoverable": "NOT recoverable — {reason}. Do not rely on this backup.",
+        "evidenceTables": "{count} tables carry data.",
+        "evidenceFiles": "{verified} of {expected} files verified against the manifest.",
+        "checkUnavailable": "the recoverability check could not be completed",
+        "runError": "The backup could not be started."
+      }
     },
     "governance": {
       "title": "Platform Governance & Security Alerts",
