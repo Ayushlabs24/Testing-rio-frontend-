@@ -643,7 +643,24 @@
           "optionStatusLabel": "Status",
           "optionActionsLabel": "Actions",
           "needThemesHeading": "Need Themes",
-          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring."
+          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring.",
+          "priorityFactorLabels": {
+            "severity": "Severity",
+            "affected_population": "Affected population",
+            "service_availability_gap": "Service availability gap",
+            "urgency": "Urgency",
+            "data_confidence": "Data confidence",
+            "frequency": "Frequency of similar needs",
+            "geographic_coverage": "Geographic coverage",
+            "vulnerable_groups": "Vulnerable groups (equity)",
+            "strategic_alignment": "Strategic alignment"
+          },
+          "strategicAxisLabels": {
+            "non_profit_empowerment": "Non-profit sector empowerment",
+            "diversified_economy": "Diversified local economy",
+            "human_capability": "Human capability and empowerment",
+            "essential_services": "Essential services"
+          }
         },
         "questions": {
           "filterDomain": "Domain",
@@ -706,7 +723,8 @@
             "title": "Question Details",
             "subDomain": "Sub-domain",
             "kpi": "KPI",
-            "answerType": "Answer Type"
+            "answerType": "Answer Type",
+            "answerOptions": "Answer Options"
           },
           "create": {
             "addQuestion": "Add Question",
@@ -1640,6 +1658,14 @@
         "previous": "Previous",
         "next": "Next",
         "label": "Page {page} of {count}"
+      },
+      "detail": {
+        "title": "Historical Study Details",
+        "entityLabel": "Entity",
+        "uploadedByLabel": "Uploaded by",
+        "uploadedAtLabel": "Uploaded on",
+        "notAvailable": "—",
+        "close": "Close"
       },
       "uploadHistorical": {
         "trigger": "Upload Historical Study",

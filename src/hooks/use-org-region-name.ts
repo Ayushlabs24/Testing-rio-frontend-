@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { geographyService } from "@/services/geography/geography.service";
 import { organizationsService } from "@/services/organizations/organizations.service";
 
@@ -11,6 +14,7 @@ import { organizationsService } from "@/services/organizations/organizations.ser
  * region instead of the caller's own — see act-as-org.ts and the sibling
  * useOrgGovernorates hook. Re-fetches whenever it changes. */
 export function useOrgRegionName(actAsOrgId?: string): string {
+  const locale = useLocale() as AppLocale;
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -20,7 +24,8 @@ export function useOrgRegionName(actAsOrgId?: string): string {
       .then(async (org) => {
         if (!org.regionId) return "";
         const regions = await geographyService.listRegions();
-        return regions.find((r) => r.id === org.regionId)?.name ?? "";
+        const region = regions.find((r) => r.id === org.regionId);
+        return region ? localizedName(region, locale) : "";
       })
       .then((resolved) => {
         if (!cancelled) setName(resolved);
@@ -31,7 +36,7 @@ export function useOrgRegionName(actAsOrgId?: string): string {
     return () => {
       cancelled = true;
     };
-  }, [actAsOrgId]);
+  }, [actAsOrgId, locale]);
 
   return name;
 }

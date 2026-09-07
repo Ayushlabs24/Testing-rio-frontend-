@@ -1,7 +1,9 @@
 "use client";
 
 import { ListTree, MoreVertical, Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,10 @@ import { ApiError } from "@/services/api/types";
 
 interface EntityFormState {
   code: string;
+  // Locale-scoped, not a bilingual pair of fields: this single "Name" input
+  // edits `name` while the app is in English and `nameAr` while it's in
+  // Arabic (see openEditDomain/submitDomain) — one visible field per client
+  // preference, not English/Arabic shown side by side.
   name: string;
   displayOrder: string;
 }
@@ -134,6 +140,7 @@ function EntityRow({
 export function DomainsTab() {
   const t = useTranslations("app.settings.methodology.domains");
   const canWrite = usePermission("methodologyQuestionBank", "write");
+  const locale = useLocale() as AppLocale;
 
   const [domains, setDomains] = useState<Domain[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -194,7 +201,7 @@ export function DomainsTab() {
     setEditingDomain(domain);
     setDomainForm({
       code: domain.code,
-      name: domain.name,
+      name: locale === "ar" ? (domain.nameAr ?? "") : domain.name,
       displayOrder: String(domain.displayOrder),
     });
     setFormError(null);
@@ -205,15 +212,22 @@ export function DomainsTab() {
     setSaving(true);
     setFormError(null);
     try {
-      const payload = {
-        code: domainForm.code.trim(),
-        name: domainForm.name.trim(),
-        displayOrder: Number(domainForm.displayOrder) || 0,
-      };
+      const code = domainForm.code.trim();
+      const name = domainForm.name.trim();
+      const displayOrder = Number(domainForm.displayOrder) || 0;
       if (editingDomain) {
-        await domainsService.update(editingDomain.id, payload);
+        // Editing follows the current locale — see EntityFormState's comment.
+        await domainsService.update(
+          editingDomain.id,
+          locale === "ar"
+            ? { code, nameAr: name, displayOrder }
+            : { code, name, displayOrder },
+        );
       } else {
-        await domainsService.create(payload);
+        // A brand-new option always sets the English name, regardless of UI
+        // language — its Arabic value is added later via Edit while
+        // viewing in Arabic.
+        await domainsService.create({ code, name, displayOrder });
       }
       setDomainDialogOpen(false);
       loadDomains();
@@ -244,7 +258,7 @@ export function DomainsTab() {
     setEditingSubDomain(sub);
     setSubForm({
       code: sub.code,
-      name: sub.name,
+      name: locale === "ar" ? (sub.nameAr ?? "") : sub.name,
       displayOrder: String(sub.displayOrder),
     });
     setFormError(null);
@@ -256,19 +270,25 @@ export function DomainsTab() {
     setSaving(true);
     setFormError(null);
     try {
-      const payload = {
-        code: subForm.code.trim(),
-        name: subForm.name.trim(),
-        displayOrder: Number(subForm.displayOrder) || 0,
-      };
+      const code = subForm.code.trim();
+      const name = subForm.name.trim();
+      const displayOrder = Number(subForm.displayOrder) || 0;
       if (editingSubDomain) {
+        // Editing follows the current locale — see EntityFormState's comment.
         await domainsService.updateSubDomain(
           selectedDomainId,
           editingSubDomain.id,
-          payload,
+          locale === "ar"
+            ? { code, nameAr: name, displayOrder }
+            : { code, name, displayOrder },
         );
       } else {
-        await domainsService.createSubDomain(selectedDomainId, payload);
+        // A brand-new option always sets the English name — see submitDomain.
+        await domainsService.createSubDomain(selectedDomainId, {
+          code,
+          name,
+          displayOrder,
+        });
       }
       setSubDialogOpen(false);
       loadSubDomains(selectedDomainId);
@@ -318,7 +338,7 @@ export function DomainsTab() {
               domains.map((domain) => (
                 <EntityRow
                   key={domain.id}
-                  name={domain.name}
+                  name={localizedName(domain, locale)}
                   isActive={domain.isActive}
                   selected={selectedDomainId === domain.id}
                   onClick={() => setSelectedDomainId(domain.id)}
@@ -337,7 +357,7 @@ export function DomainsTab() {
             <div className="flex items-center justify-between px-1 pb-2">
               <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 {t("subDomainsHeading")}
-                {selectedDomain ? ` — ${selectedDomain.name}` : ""}
+                {selectedDomain ? ` — ${localizedName(selectedDomain, locale)}` : ""}
               </h2>
               {canWrite && selectedDomainId ? (
                 <Button
@@ -372,7 +392,7 @@ export function DomainsTab() {
                 {subDomains.map((sub) => (
                   <EntityRow
                     key={sub.id}
-                    name={sub.name}
+                    name={localizedName(sub, locale)}
                     isActive={sub.isActive}
                     onEdit={() => openEditSubDomain(sub)}
                     onToggleActive={(next) => toggleSubDomainActive(sub, next)}
@@ -396,6 +416,7 @@ export function DomainsTab() {
               <Label htmlFor="domain-name">{t("nameLabel")}</Label>
               <Input
                 id="domain-name"
+                dir={editingDomain && locale === "ar" ? "rtl" : undefined}
                 value={domainForm.name}
                 onChange={(e) => setDomainForm({ ...domainForm, name: e.target.value })}
               />
@@ -452,12 +473,16 @@ export function DomainsTab() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t("parentDomainLabel")}</Label>
-              <Input value={selectedDomain?.name ?? ""} disabled />
+              <Input
+                value={selectedDomain ? localizedName(selectedDomain, locale) : ""}
+                disabled
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="sub-name">{t("nameLabel")}</Label>
               <Input
                 id="sub-name"
+                dir={editingSubDomain && locale === "ar" ? "rtl" : undefined}
                 value={subForm.name}
                 onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
               />

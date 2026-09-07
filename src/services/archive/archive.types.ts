@@ -14,6 +14,14 @@ export interface ArchiveEntry {
   region: string[];
   sector: string | null;
   villages: string[];
+  // Historical-only detail — undefined for kind "study"/"report". Backs the
+  // Archive row-detail popup (client feedback 2026-09-04).
+  governorateNames?: string[];
+  centerNames?: string[];
+  author?: string;
+  methodologyVersionLabel?: string;
+  uploadedByName?: string | null;
+  uploadedAt?: string;
 }
 
 export interface ListArchiveParams {

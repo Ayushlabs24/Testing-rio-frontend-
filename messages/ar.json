@@ -643,7 +643,24 @@
           "optionStatusLabel": "الحالة",
           "optionActionsLabel": "الإجراءات",
           "needThemesHeading": "مواضيع الاحتياجات",
-          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية."
+          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية.",
+          "priorityFactorLabels": {
+            "severity": "الشدة",
+            "affected_population": "السكان المتضررون",
+            "service_availability_gap": "فجوة توفر الخدمة",
+            "urgency": "الإلحاح",
+            "data_confidence": "مستوى الثقة في البيانات",
+            "frequency": "تكرار الاحتياجات المماثلة",
+            "geographic_coverage": "التغطية الجغرافية",
+            "vulnerable_groups": "الفئات الضعيفة (الإنصاف)",
+            "strategic_alignment": "المواءمة الاستراتيجية"
+          },
+          "strategicAxisLabels": {
+            "non_profit_empowerment": "تمكين القطاع غير الربحي",
+            "diversified_economy": "تنويع الاقتصاد المحلي",
+            "human_capability": "القدرات البشرية والتمكين",
+            "essential_services": "الخدمات الأساسية"
+          }
         },
         "questions": {
           "filterDomain": "المجال",
@@ -706,7 +723,8 @@
             "title": "تفاصيل السؤال",
             "subDomain": "المجال الفرعي",
             "kpi": "مؤشر الأداء الرئيسي",
-            "answerType": "نوع الإجابة"
+            "answerType": "نوع الإجابة",
+            "answerOptions": "خيارات الإجابة"
           },
           "create": {
             "addQuestion": "إضافة سؤال",
@@ -1650,6 +1668,14 @@
         "previous": "السابق",
         "next": "التالي",
         "label": "صفحة {page} من {count}"
+      },
+      "detail": {
+        "title": "تفاصيل الدراسة التاريخية",
+        "entityLabel": "الجهة",
+        "uploadedByLabel": "تم الرفع بواسطة",
+        "uploadedAtLabel": "تاريخ الرفع",
+        "notAvailable": "—",
+        "close": "إغلاق"
       },
       "uploadHistorical": {
         "trigger": "رفع دراسة سابقة",

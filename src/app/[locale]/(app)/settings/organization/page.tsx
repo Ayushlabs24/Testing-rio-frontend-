@@ -40,6 +40,8 @@ import { PermissionGuard } from "@/components/layout/permission-guard";
 import { OrganizationConsentCard } from "@/components/features/settings/organization-consent-card";
 import { useSectorOptions } from "@/hooks/use-sector-options";
 import { usePermission } from "@/hooks/use-permission";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { geographyService } from "@/services/geography/geography.service";
 import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 import { organizationsService } from "@/services/organizations/organizations.service";
@@ -116,7 +118,7 @@ export default function OrganizationSettingsPage() {
   const t = useTranslations("app.settings.organization");
   const tSectors = useTranslations("app.settings.organization.sectors");
   const sectorOptions = useSectorOptions();
-  const locale = useLocale();
+  const locale = useLocale() as AppLocale;
   const { session, setSession } = useAuth();
   const canWrite = usePermission("entityTeam", "write");
   const [editing, setEditing] = useState(false);
@@ -433,7 +435,10 @@ export default function OrganizationSettingsPage() {
                       </Label>
                       <Combobox
                         aria-label={t("administrativeRegionLabel")}
-                        items={regions.map((r) => ({ value: r.id, label: r.name }))}
+                        items={regions.map((r) => ({
+                          value: r.id,
+                          label: localizedName(r, locale),
+                        }))}
                         value={regionId}
                         onSelect={(value) =>
                           setValue("regionId", value, { shouldValidate: true })
@@ -449,7 +454,7 @@ export default function OrganizationSettingsPage() {
                       <MultiSelect
                         options={governorates.map((g) => ({
                           value: g.id,
-                          label: g.name,
+                          label: localizedName(g, locale),
                         }))}
                         values={governorateIds}
                         onChange={(next) =>
@@ -470,7 +475,10 @@ export default function OrganizationSettingsPage() {
                     <div className="space-y-2">
                       <Label>{t("centerLabel")}</Label>
                       <MultiSelect
-                        options={centers.map((c) => ({ value: c.id, label: c.name }))}
+                        options={centers.map((c) => ({
+                          value: c.id,
+                          label: localizedName(c, locale),
+                        }))}
                         values={centerIds}
                         onChange={(next) =>
                           setValue("centerIds", next, { shouldValidate: true })
@@ -559,8 +567,14 @@ export default function OrganizationSettingsPage() {
                     label={t("administrativeRegionLabel")}
                     value={
                       organization.regionId
-                        ? (regions.find((r) => r.id === organization.regionId)?.name ??
-                          organization.regionId)
+                        ? (() => {
+                            const region = regions.find(
+                              (r) => r.id === organization.regionId,
+                            );
+                            return region
+                              ? localizedName(region, locale)
+                              : organization.regionId;
+                          })()
                         : "—"
                     }
                   />
@@ -570,11 +584,14 @@ export default function OrganizationSettingsPage() {
                     value={
                       organization.governorateIds.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
-                          {organization.governorateIds.map((id) => (
-                            <Badge key={id} variant="secondary">
-                              {governorates.find((g) => g.id === id)?.name ?? id}
-                            </Badge>
-                          ))}
+                          {organization.governorateIds.map((id) => {
+                            const governorate = governorates.find((g) => g.id === id);
+                            return (
+                              <Badge key={id} variant="secondary">
+                                {governorate ? localizedName(governorate, locale) : id}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       ) : (
                         "—"
@@ -587,11 +604,14 @@ export default function OrganizationSettingsPage() {
                     value={
                       organization.centerIds.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
-                          {organization.centerIds.map((id) => (
-                            <Badge key={id} variant="secondary">
-                              {centers.find((c) => c.id === id)?.name ?? id}
-                            </Badge>
-                          ))}
+                          {organization.centerIds.map((id) => {
+                            const center = centers.find((c) => c.id === id);
+                            return (
+                              <Badge key={id} variant="secondary">
+                                {center ? localizedName(center, locale) : id}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       ) : (
                         "—"

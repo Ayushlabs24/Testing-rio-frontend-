@@ -52,12 +52,20 @@ vi.mock("@/services/auth/auth.service", () => ({
   authService: { signup: vi.fn(), verifyRegistrationNumber: vi.fn() },
 }));
 
-const REGION = { id: "r1", code: 1, name: "Riyadh", isoCode: "SA-01", capital: "Riyadh" };
+const REGION = {
+  id: "r1",
+  code: 1,
+  name: "Riyadh",
+  nameAr: null,
+  isoCode: "SA-01",
+  capital: "Riyadh",
+};
 const GOVERNORATE = {
   id: "g1",
   code: "G1",
   regionId: "r1",
   name: "Riyadh Governorate",
+  nameAr: null,
   category: "urban",
 };
 const CENTER = {
@@ -65,6 +73,7 @@ const CENTER = {
   code: "C1",
   governorateId: "g1",
   name: "Central Center",
+  nameAr: null,
   category: "urban",
 };
 

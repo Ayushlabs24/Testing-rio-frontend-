@@ -12,6 +12,13 @@ import { HistoricalStudyUploadDialog } from "@/components/features/archive/histo
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -41,6 +48,9 @@ const ALL = "all";
 
 export default function ArchivePage() {
   const t = useTranslations("app.archive");
+  const tDetail = useTranslations("app.archive.detail");
+  const tUpload = useTranslations("app.archive.uploadHistorical");
+  const tGeo = useTranslations("app.geography");
   // RIO-FR-013 (client Q26): "sector" here is the study's own subject
   // (Target Sector, chosen at Study creation), not the owning entity's
   // sector — someone filtering for "Health" wants health studies, not
@@ -63,6 +73,13 @@ export default function ArchivePage() {
   const [page, setPage] = useState(1);
   const canUploadHistorical = usePermission("archiveSharingAudit", "write");
   const [uploadOpen, setUploadOpen] = useState(false);
+  // RIO-FR-013 (client feedback 2026-09-04) — a historical row's own detail
+  // popup: with the row click no longer auto-downloading (replaced by the
+  // Preview/Download icons), a click still needs to do *something* useful —
+  // show the full metadata that doesn't fit in the table's columns
+  // (Governorates/Centers, Subject, Author, Methodology Version, uploaded
+  // by/at).
+  const [detailEntry, setDetailEntry] = useState<ArchiveEntry | null>(null);
 
   // Filter option lists (Entity/Region/Village) are derived from a single
   // unfiltered baseline fetch, same idea as the existing Entity-options
@@ -346,16 +363,18 @@ export default function ArchivePage() {
                     return (
                       <TableRow
                         key={`${entry.kind}-${entry.id}`}
-                        onClick={isHistorical ? undefined : () => openEntry(entry)}
-                        className={
-                          isHistorical ? undefined : "hover:bg-accent/50 cursor-pointer"
+                        onClick={
+                          isHistorical
+                            ? () => setDetailEntry(entry)
+                            : () => openEntry(entry)
                         }
+                        className="hover:bg-accent/50 cursor-pointer"
                       >
                         <TableCell className="py-4 text-sm font-medium">
                           {entry.title}
                         </TableCell>
                         {isCrossEntity ? (
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="text-muted-foreground max-w-[180px] text-sm break-words whitespace-normal">
                             {entry.organizationName}
                           </TableCell>
                         ) : null}
@@ -369,7 +388,7 @@ export default function ArchivePage() {
                         <TableCell className="text-muted-foreground text-sm">
                           <FormattedDate value={entry.date} />
                         </TableCell>
-                        <TableCell className="py-2">
+                        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           {isHistorical ? (
                             <div className="flex items-center justify-end gap-1">
                               <Button
@@ -427,6 +446,121 @@ export default function ArchivePage() {
             onUploaded={loadEntries}
           />
         ) : null}
+
+        <Dialog
+          open={detailEntry !== null}
+          onOpenChange={(open) => !open && setDetailEntry(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{tDetail("title")}</DialogTitle>
+            </DialogHeader>
+            {detailEntry ? (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("titleColumn")}
+                  </p>
+                  <p dir="auto" className="text-foreground text-sm break-words">
+                    {detailEntry.title}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tDetail("entityLabel")}
+                    </p>
+                    <p className="text-foreground text-sm break-words">
+                      {detailEntry.organizationName}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tUpload("regionLabel")}
+                    </p>
+                    <p className="text-foreground text-sm">
+                      {detailEntry.region.join(", ") || tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tGeo("governorateLabel")}
+                    </p>
+                    <p className="text-foreground text-sm">
+                      {detailEntry.governorateNames?.join(", ") ||
+                        tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tGeo("centerLabel")}
+                    </p>
+                    <p className="text-foreground text-sm">
+                      {detailEntry.centerNames?.join(", ") || tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tUpload("subjectLabel")}
+                    </p>
+                    <p className="text-foreground text-sm">
+                      {detailEntry.sector ?? tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tUpload("studyDateLabel")}
+                    </p>
+                    <p className="text-foreground text-sm">
+                      <FormattedDate value={detailEntry.date} />
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tUpload("authorLabel")}
+                    </p>
+                    <p className="text-foreground text-sm break-words">
+                      {detailEntry.author ?? tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tUpload("methodologyVersionLabel")}
+                    </p>
+                    <p className="text-foreground text-sm break-words">
+                      {detailEntry.methodologyVersionLabel ?? tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tDetail("uploadedByLabel")}
+                    </p>
+                    <p className="text-foreground text-sm break-words">
+                      {detailEntry.uploadedByName ?? tDetail("notAvailable")}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {tDetail("uploadedAtLabel")}
+                    </p>
+                    <p className="text-foreground text-sm">
+                      {detailEntry.uploadedAt ? (
+                        <FormattedDate value={detailEntry.uploadedAt} withTime />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDetailEntry(null)}>
+                {tDetail("close")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageContainer>
     </PermissionGuard>
   );

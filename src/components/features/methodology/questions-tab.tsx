@@ -1,8 +1,10 @@
 "use client";
 
 import { MoreVertical, Plus, Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName, localizedText } from "@/lib/bilingual";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -111,6 +113,7 @@ const EMPTY_CREATE_FORM: CreateFormState = {
  */
 export function QuestionsTab() {
   const t = useTranslations("app.settings.methodology.questions");
+  const locale = useLocale() as AppLocale;
   const canWrite = usePermission("methodologyQuestionBank", "write");
   const canApprove = usePermission("methodologyQuestionBank", "approve");
 
@@ -180,13 +183,34 @@ export function QuestionsTab() {
     loadQuestions();
   }, []);
 
+  // Fetched regardless of canWrite now — the create form's Domain/Sub-domain
+  // pickers need it (write-only), but so does everyone's read-only Arabic
+  // display below (domainNameToAr/subDomainNameToAr), since Question.domain/
+  // subDomain are denormalized English strings with no Arabic of their own
+  // (see the Question model's schema comment) and have to be resolved
+  // against the Domain/SubDomain master list's own nameAr instead.
   useEffect(() => {
-    if (!canWrite) return;
     domainsService
       .listWithSubDomains()
       .then(setDomainsTree)
       .catch(() => setDomainsTree([]));
-  }, [canWrite]);
+  }, []);
+
+  const domainNameToAr = useMemo(
+    () => new Map(domainsTree.map((d) => [d.name, d.nameAr])),
+    [domainsTree],
+  );
+  const subDomainNameToAr = useMemo(
+    () =>
+      new Map(domainsTree.flatMap((d) => d.subDomains.map((sd) => [sd.name, sd.nameAr]))),
+    [domainsTree],
+  );
+  function localizedDomain(name: string): string {
+    return localizedText(name, domainNameToAr.get(name), locale);
+  }
+  function localizedSubDomain(name: string): string {
+    return localizedText(name, subDomainNameToAr.get(name), locale);
+  }
 
   useEffect(() => {
     queueMicrotask(() => loadPending());
@@ -430,9 +454,13 @@ export function QuestionsTab() {
                         <div className="flex items-center gap-2">
                           <span
                             className="text-foreground truncate text-xs"
-                            title={q.questionText}
+                            title={localizedText(
+                              q.questionText,
+                              q.questionTextAr,
+                              locale,
+                            )}
                           >
-                            {q.questionText}
+                            {localizedText(q.questionText, q.questionTextAr, locale)}
                           </span>
                           {!q.isActive ? (
                             <Badge variant="outline" className="shrink-0 text-[10px]">
@@ -506,7 +534,7 @@ export function QuestionsTab() {
                   <SelectItem value={ALL}>{t("allDomains")}</SelectItem>
                   {domainOptions.map((name) => (
                     <SelectItem key={name} value={name}>
-                      {name}
+                      {localizedDomain(name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -525,7 +553,7 @@ export function QuestionsTab() {
                   <SelectItem value={ALL}>{t("allSubDomains")}</SelectItem>
                   {subDomainOptions.map((name) => (
                     <SelectItem key={name} value={name}>
-                      {name}
+                      {localizedSubDomain(name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -612,16 +640,16 @@ export function QuestionsTab() {
                     <TableCell
                       dir="auto"
                       className="text-foreground max-w-xs truncate text-xs"
-                      title={q.questionText}
+                      title={localizedText(q.questionText, q.questionTextAr, locale)}
                     >
-                      {q.questionText}
+                      {localizedText(q.questionText, q.questionTextAr, locale)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      <div>{q.domain}</div>
-                      <div className="text-[10px]">{q.subDomain}</div>
+                      <div>{localizedDomain(q.domain)}</div>
+                      <div className="text-[10px]">{localizedSubDomain(q.subDomain)}</div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {q.indicator ?? "—"}
+                      {localizedText(q.indicator ?? "—", q.indicatorAr, locale)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -807,7 +835,7 @@ export function QuestionsTab() {
                   <SelectContent>
                     {domainsTree.map((d) => (
                       <SelectItem key={d.id} value={d.name}>
-                        {d.name}
+                        {localizedName(d, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -833,7 +861,7 @@ export function QuestionsTab() {
                       []
                     ).map((sd) => (
                       <SelectItem key={sd.id} value={sd.name}>
-                        {sd.name}
+                        {localizedName(sd, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1043,7 +1071,11 @@ export function QuestionsTab() {
                   {t("columns.question")}
                 </p>
                 <p dir="auto" className="text-foreground text-sm">
-                  {detailQuestion.questionText}
+                  {localizedText(
+                    detailQuestion.questionText,
+                    detailQuestion.questionTextAr,
+                    locale,
+                  )}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1051,27 +1083,41 @@ export function QuestionsTab() {
                   <p className="text-muted-foreground text-xs font-medium">
                     {t("columns.domain")}
                   </p>
-                  <p className="text-foreground text-sm">{detailQuestion.domain}</p>
+                  <p className="text-foreground text-sm">
+                    {localizedDomain(detailQuestion.domain)}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-medium">
                     {t("detail.subDomain")}
                   </p>
-                  <p className="text-foreground text-sm">{detailQuestion.subDomain}</p>
+                  <p className="text-foreground text-sm">
+                    {localizedSubDomain(detailQuestion.subDomain)}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-medium">
                     {t("columns.indicator")}
                   </p>
                   <p className="text-foreground text-sm">
-                    {detailQuestion.indicator ?? "—"}
+                    {localizedText(
+                      detailQuestion.indicator ?? "—",
+                      detailQuestion.indicatorAr,
+                      locale,
+                    )}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-medium">
                     {t("detail.kpi")}
                   </p>
-                  <p className="text-foreground text-sm">{detailQuestion.kpi ?? "—"}</p>
+                  <p className="text-foreground text-sm">
+                    {localizedText(
+                      detailQuestion.kpi ?? "—",
+                      detailQuestion.kpiAr,
+                      locale,
+                    )}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-medium">
@@ -1088,6 +1134,27 @@ export function QuestionsTab() {
                   </p>
                 </div>
               </div>
+              {detailQuestion.answerOptions && detailQuestion.answerOptions.length > 0 ? (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("detail.answerOptions")}
+                  </p>
+                  <ul
+                    dir="auto"
+                    className="text-foreground list-inside list-disc text-sm"
+                  >
+                    {detailQuestion.answerOptions.map((option, index) => (
+                      <li key={option}>
+                        {localizedText(
+                          option,
+                          detailQuestion.answerOptionsAr?.[index] ?? null,
+                          locale,
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ) : null}
           <DialogFooter>

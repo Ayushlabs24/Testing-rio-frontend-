@@ -2,7 +2,9 @@
 
 import { FileText, UploadCloud } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +59,7 @@ export function HistoricalStudyUploadDialog({
 }) {
   const t = useTranslations("app.archive.uploadHistorical");
   const tGeo = useTranslations("app.geography");
+  const locale = useLocale() as AppLocale;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -197,7 +200,7 @@ export function HistoricalStudyUploadDialog({
                   <SelectItem value={NONE}>{t("regionPlaceholder")}</SelectItem>
                   {regions.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name}
+                      {localizedName(r, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -206,7 +209,10 @@ export function HistoricalStudyUploadDialog({
             <div className="space-y-2">
               <Label>{tGeo("governorateLabel")}</Label>
               <MultiSelect
-                options={governorateOptions.map((g) => ({ value: g.id, label: g.name }))}
+                options={governorateOptions.map((g) => ({
+                  value: g.id,
+                  label: localizedName(g, locale),
+                }))}
                 values={governorateIds}
                 onChange={(next) => {
                   setGovernorateIds(next);
@@ -226,12 +232,17 @@ export function HistoricalStudyUploadDialog({
                 removeAriaLabel={(g) =>
                   tGeo("removeGovernorateSelection", { governorate: g })
                 }
+                singleLine
+                maxVisibleChips={1}
               />
             </div>
             <div className="space-y-2">
               <Label>{tGeo("centerLabel")}</Label>
               <MultiSelect
-                options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
+                options={centerOptions.map((c) => ({
+                  value: c.id,
+                  label: localizedName(c, locale),
+                }))}
                 values={centerIds}
                 onChange={setCenterIds}
                 placeholder={
@@ -243,6 +254,8 @@ export function HistoricalStudyUploadDialog({
                 emptyText={tGeo("centerEmpty")}
                 disabled={governorateIds.length === 0}
                 removeAriaLabel={(c) => tGeo("removeCenterSelection", { center: c })}
+                singleLine
+                maxVisibleChips={1}
               />
             </div>
           </div>
