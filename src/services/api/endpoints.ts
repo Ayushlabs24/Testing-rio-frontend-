@@ -314,12 +314,18 @@ export const endpoints = {
     list: "/archive",
     byId: (id: string) => `/archive/${id}`,
   },
+  historicalStudies: {
+    list: "/historical-studies",
+    create: "/historical-studies",
+    file: (id: string) => `/historical-studies/${id}/file`,
+  },
   sharing: {
     list: "/sharing-requests",
     create: "/sharing-requests",
     byId: (id: string) => `/sharing-requests/${id}`,
     approve: (id: string) => `/sharing-requests/${id}/approve`,
     reject: (id: string) => `/sharing-requests/${id}/reject`,
+    withdraw: (id: string) => `/sharing-requests/${id}/withdraw`,
     sharedStudy: (id: string) => `/sharing-requests/${id}/shared-study`,
     lookupOrganizations: (query: string) =>
       `/sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
@@ -332,6 +338,7 @@ export const endpoints = {
     byId: (id: string) => `/report-sharing-requests/${id}`,
     approve: (id: string) => `/report-sharing-requests/${id}/approve`,
     reject: (id: string) => `/report-sharing-requests/${id}/reject`,
+    withdraw: (id: string) => `/report-sharing-requests/${id}/withdraw`,
     sharedReport: (id: string) => `/report-sharing-requests/${id}/shared-report`,
     lookupOrganizations: (query: string) =>
       `/report-sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
@@ -358,6 +365,18 @@ export const endpoints = {
     mergePreview: "/data-quality/merges/preview",
     settings: "/data-quality/settings",
     undoMerge: (mergeId: string) => `/data-quality/merges/${mergeId}/undo`,
+  },
+  initiatives: {
+    list: "/initiatives",
+    create: "/initiatives",
+    byId: (id: string) => `/initiatives/${id}`,
+    update: (id: string) => `/initiatives/${id}`,
+    linkedByNeed: (needId: string) => `/needs/${needId}/initiatives`,
+    linkNeed: (needId: string, initiativeId: string) =>
+      `/needs/${needId}/initiatives/${initiativeId}`,
+    unlinkNeed: (needId: string, initiativeId: string) =>
+      `/needs/${needId}/initiatives/${initiativeId}/unlink`,
+    statusHistory: (needId: string) => `/needs/${needId}/initiatives/status-history`,
   },
   reviewerSla: {
     config: "/reviewer-sla/config",

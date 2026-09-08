@@ -31,6 +31,9 @@ export const sharingService = {
   ): Promise<SharingRequest> {
     return apiClient.patch<SharingRequest>(endpoints.sharing.reject(id), payload);
   },
+  async withdraw(id: string): Promise<SharingRequest> {
+    return apiClient.patch<SharingRequest>(endpoints.sharing.withdraw(id), {});
+  },
   async getSharedStudy(id: string): Promise<SharedStudySnapshot> {
     return apiClient.get<SharedStudySnapshot>(endpoints.sharing.sharedStudy(id));
   },

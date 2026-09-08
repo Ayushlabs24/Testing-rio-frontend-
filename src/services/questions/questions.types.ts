@@ -14,6 +14,15 @@ export interface QuestionManagementItem {
   kpi: string | null;
   priorityWeight: number | null;
   questionText: string;
+  // RIO Arabic Localization — Approach 3 (Hybrid, client-confirmed
+  // 2026-09-04). Loaded from the client-supplied Question_Bank.xlsx "QB
+  // Arabic" sheet — null for any question added since that import until
+  // its Arabic text is supplied. `answerOptionsAr` is positionally
+  // parallel to `answerOptions`.
+  questionTextAr: string | null;
+  indicatorAr: string | null;
+  kpiAr: string | null;
+  answerOptionsAr: string[] | null;
   answerType: string;
   answerOptions: string[] | null;
   requiredOptional: string;

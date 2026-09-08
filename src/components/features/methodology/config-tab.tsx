@@ -1,8 +1,10 @@
 "use client";
 
 import { CheckCircle2, Info, Pencil, Plus, ShieldCheck, XCircle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -449,6 +451,7 @@ function ConfigurableOptionsCard({
   setActive: (id: string, isActive: boolean) => Promise<StudyConfigOption>;
 }) {
   const t = useTranslations("app.settings.methodology.config");
+  const locale = useLocale() as AppLocale;
   const [options, setOptions] = useState<StudyConfigOption[] | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -457,6 +460,13 @@ function ConfigurableOptionsCard({
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
 
+  // Editing a name is locale-scoped, not a bilingual form: viewing the app
+  // in Arabic edits `nameAr` (leaving `name` untouched), viewing it in
+  // English edits `name` (leaving `nameAr` untouched) — one visible "Name"
+  // field per client preference, not two side by side. Adding a brand-new
+  // option still always sets the English `name` (backend requires it —
+  // Study.studyType/etc. validate against it), regardless of UI language;
+  // its Arabic value is added later via Edit while viewing in Arabic.
   const [editing, setEditing] = useState<StudyConfigOption | null>(null);
   const [editName, setEditName] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -504,7 +514,7 @@ function ConfigurableOptionsCard({
 
   function openEdit(option: StudyConfigOption) {
     setEditing(option);
-    setEditName(option.name);
+    setEditName(locale === "ar" ? (option.nameAr ?? "") : option.name);
   }
 
   async function saveEdit() {
@@ -512,7 +522,10 @@ function ConfigurableOptionsCard({
     setSavingEdit(true);
     setError(null);
     try {
-      await update(editing.id, { name: editName.trim() });
+      await update(
+        editing.id,
+        locale === "ar" ? { nameAr: editName.trim() } : { name: editName.trim() },
+      );
       setEditing(null);
       load();
     } catch (err) {
@@ -564,7 +577,7 @@ function ConfigurableOptionsCard({
                 options.map((option) => (
                   <TableRow key={option.id}>
                     <TableCell className="text-foreground font-medium">
-                      {option.name}
+                      {localizedName(option, locale)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -635,6 +648,7 @@ function ConfigurableOptionsCard({
             <Label htmlFor="option-name-input">{t("optionNameLabel")}</Label>
             <Input
               id="option-name-input"
+              dir={locale === "ar" ? "rtl" : undefined}
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
             />
@@ -1029,7 +1043,15 @@ export function MethodologyConfigTab() {
                     key={factor.key}
                     className="flex items-center justify-between gap-4 py-2.5"
                   >
-                    <span className="text-foreground text-sm">{factor.label}</span>
+                    <span className="text-foreground text-sm">
+                      {t.has(`priorityFactorLabels.${factor.key}`)
+                        ? t(
+                            `priorityFactorLabels.${factor.key}` as Parameters<
+                              typeof t
+                            >[0],
+                          )
+                        : factor.label}
+                    </span>
                     <div className="relative w-24">
                       <Input
                         type="number"
@@ -1213,33 +1235,38 @@ export function MethodologyConfigTab() {
               {t("factorScalesStrategicAxesHeading")}
             </h3>
             <div className="divide-border divide-y">
-              {factorScales.strategicAxes.map((axis, index) => (
-                <div
-                  key={axis.key}
-                  className="flex items-center justify-between gap-4 py-2.5"
-                >
-                  <div>
-                    <span className="text-foreground text-sm">{axis.label}</span>
-                    <p className="text-muted-foreground text-xs">
-                      {axis.domains.join(", ")}
-                    </p>
+              {factorScales.strategicAxes.map((axis, index) => {
+                const axisLabel = t.has(`strategicAxisLabels.${axis.key}`)
+                  ? t(`strategicAxisLabels.${axis.key}` as Parameters<typeof t>[0])
+                  : axis.label;
+                return (
+                  <div
+                    key={axis.key}
+                    className="flex items-center justify-between gap-4 py-2.5"
+                  >
+                    <div>
+                      <span className="text-foreground text-sm">{axisLabel}</span>
+                      <p className="text-muted-foreground text-xs">
+                        {axis.domains.join(", ")}
+                      </p>
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="w-24 text-right"
+                      aria-label={t("factorScalesAxisValueAria", { label: axisLabel })}
+                      value={axis.value}
+                      onChange={(e) => {
+                        const next = [...factorScales.strategicAxes];
+                        next[index] = { ...axis, value: e.target.value };
+                        setFactorScalesDirty({ ...factorScales, strategicAxes: next });
+                      }}
+                      disabled={!canWrite}
+                    />
                   </div>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="w-24 text-right"
-                    aria-label={t("factorScalesAxisValueAria", { label: axis.label })}
-                    value={axis.value}
-                    onChange={(e) => {
-                      const next = [...factorScales.strategicAxes];
-                      next[index] = { ...axis, value: e.target.value };
-                      setFactorScalesDirty({ ...factorScales, strategicAxes: next });
-                    }}
-                    disabled={!canWrite}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </CardContent>
@@ -1456,8 +1483,15 @@ export function MethodologyConfigTab() {
         setActive={studyConfigService.setGapTypeActive}
       />
 
-      {/* RIO-FR-003 AC 6 — editing this list changes what needs get filed
-          under, and therefore what the recurrence factor counts. */}
+      {/* Need Themes — hidden pending confirmation of the vocabulary itself.
+          "Theme" appears nowhere in the approved methodology workbook (zero
+          occurrences across all 33 sheets), so the 25 seeded values are our
+          proposal rather than an approved list, and open question A8 asking
+          the client to supply one is still unanswered. Offering an admin
+          screen to curate an unapproved vocabulary would present it as
+          settled. The table, its API and the extraction all remain — this is
+          two lines to restore once the list is agreed. */}
+      {/*
       <ConfigurableOptionsCard
         heading={t("needThemesHeading")}
         note={t("needThemesNote")}
@@ -1467,6 +1501,7 @@ export function MethodologyConfigTab() {
         update={studyConfigService.updateNeedTheme}
         setActive={studyConfigService.setNeedThemeActive}
       />
+      */}
 
       {/* RIO-FR-002 / Q23 — the data-cleaning thresholds. They live HERE
           rather than on the Data Quality screen because that is where they are

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +53,7 @@ interface NeedDecisionsPanelProps {
 
 export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProps) {
   const t = useTranslations("PriorityDashboard.decisions");
+  const locale = useLocale() as AppLocale;
   const [decisions, setDecisions] = useState<NeedDecision[] | null>(null);
   const [decisionTypes, setDecisionTypes] = useState<StudyConfigOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -162,7 +165,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
                       <SelectContent>
                         {decisionTypes.map((option) => (
                           <SelectItem key={option.id} value={option.name}>
-                            {option.name}
+                            {localizedName(option, locale)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -227,7 +230,17 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
 
         {loadError ? <p className="text-destructive text-sm">{loadError}</p> : null}
 
-        {decisions === null ? null : decisions.length === 0 ? (
+        {decisions === null ? (
+          <div className="space-y-3" aria-busy="true" aria-live="polite">
+            <span className="sr-only">{t("loading")}</span>
+            {[0, 1].map((i) => (
+              <div key={i} className="space-y-2 rounded-md border p-3">
+                <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                <div className="bg-muted h-3 w-56 animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
+        ) : decisions.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("noDecisions")}</p>
         ) : (
           <ul className="space-y-3">
@@ -236,7 +249,14 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-foreground text-sm font-medium">
-                      {decision.decisionType}
+                      {(() => {
+                        const option = decisionTypes.find(
+                          (o) => o.name === decision.decisionType,
+                        );
+                        return option
+                          ? localizedName(option, locale)
+                          : decision.decisionType;
+                      })()}
                     </p>
                     <p className="text-muted-foreground text-xs">
                       {t("responsiblePartyLabel")}: {decision.responsibleParty}

@@ -3,6 +3,10 @@ export interface Domain {
   id: string;
   code: string;
   name: string;
+  // RIO Arabic Localization — Approach 3 (Hybrid, client-confirmed
+  // 2026-09-04). Null until an admin supplies it — display falls back to
+  // `name` (see localizedName() in @/lib/bilingual).
+  nameAr: string | null;
   displayOrder: number;
   isActive: boolean;
 }
@@ -12,6 +16,7 @@ export interface SubDomain {
   domainId: string;
   code: string;
   name: string;
+  nameAr: string | null;
   displayOrder: number;
   isActive: boolean;
 }
@@ -32,23 +37,27 @@ export interface PublicDomainOption {
 export interface CreateDomainPayload {
   code: string;
   name: string;
+  nameAr?: string;
   displayOrder?: number;
 }
 
 export interface UpdateDomainPayload {
   code?: string;
   name?: string;
+  nameAr?: string;
   displayOrder?: number;
 }
 
 export interface CreateSubDomainPayload {
   code: string;
   name: string;
+  nameAr?: string;
   displayOrder?: number;
 }
 
 export interface UpdateSubDomainPayload {
   code?: string;
   name?: string;
+  nameAr?: string;
   displayOrder?: number;
 }

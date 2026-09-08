@@ -65,6 +65,10 @@ export const PERMISSION_MODULES = [
   // apiSessionViewSchema reject the response and broke sign-in for everyone,
   // with "The server returned an unexpected session response shape."
   "initiatives",
+  // RIO-FR-009 — Initiative records and their linkage to Needs. Added to the
+  // backend's role-matrix.ts but missing here, which made apiSessionViewSchema
+  // reject every login response (every role carries an `initiatives` entry).
+  "initiatives",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

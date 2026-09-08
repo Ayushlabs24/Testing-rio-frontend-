@@ -259,6 +259,7 @@
       "ncnpReport": "التقرير المجمّع لـ NCNP",
       "archive": "الأرشيف",
       "sharing": "المشاركة",
+      "initiatives": "المبادرات",
       "reportSharing": "مشاركة التقارير",
       "reviewerSla": "تنبيهات المراجع",
       "surveyBuilder": "منشئ الاستبيانات",
@@ -644,7 +645,24 @@
           "optionStatusLabel": "الحالة",
           "optionActionsLabel": "الإجراءات",
           "needThemesHeading": "مواضيع الاحتياجات",
-          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية."
+          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية.",
+          "priorityFactorLabels": {
+            "severity": "الشدة",
+            "affected_population": "السكان المتضررون",
+            "service_availability_gap": "فجوة توفر الخدمة",
+            "urgency": "الإلحاح",
+            "data_confidence": "مستوى الثقة في البيانات",
+            "frequency": "تكرار الاحتياجات المماثلة",
+            "geographic_coverage": "التغطية الجغرافية",
+            "vulnerable_groups": "الفئات الضعيفة (الإنصاف)",
+            "strategic_alignment": "المواءمة الاستراتيجية"
+          },
+          "strategicAxisLabels": {
+            "non_profit_empowerment": "تمكين القطاع غير الربحي",
+            "diversified_economy": "تنويع الاقتصاد المحلي",
+            "human_capability": "القدرات البشرية والتمكين",
+            "essential_services": "الخدمات الأساسية"
+          }
         },
         "questions": {
           "filterDomain": "المجال",
@@ -675,6 +693,11 @@
           "questionTextLabel": "نص السؤال",
           "indicatorLabel": "المؤشر",
           "kpiLabel": "مؤشر الأداء الرئيسي",
+          "targetSectorLabel": "القطاع المستهدف",
+          "targetSectorNone": "بدون وسم",
+          "targetSectorHint": "اختياري. يُعرض السؤال الموسوم أولًا عندما تتطابق دراسة الاستبيان مع هذا القطاع — يبقى كل سؤال قابلاً للاختيار في الحالتين.",
+          "filterTargetSector": "القطاع المستهدف",
+          "allTargetSectors": "كل القطاعات المستهدفة",
           "domainLockedHint": "لا يمكن تعديل المجال والمجال الفرعي من هنا — فهما يحددان الاستبيانات وتوصيات الذكاء الاصطناعي التي يتطابق معها هذا السؤال، وتغييرهما قد يُخل بربط الاستبيانات الحالية.",
           "cancel": "إلغاء",
           "save": "حفظ التغييرات",
@@ -702,7 +725,8 @@
             "title": "تفاصيل السؤال",
             "subDomain": "المجال الفرعي",
             "kpi": "مؤشر الأداء الرئيسي",
-            "answerType": "نوع الإجابة"
+            "answerType": "نوع الإجابة",
+            "answerOptions": "خيارات الإجابة"
           },
           "create": {
             "addQuestion": "إضافة سؤال",
@@ -960,6 +984,8 @@
           "modulePlaceholder": "اختر وحدة",
           "actionLabel": "الإجراء",
           "actionPlaceholder": "اختر إجراءً",
+          "scopeLabel": "نطاق الكيان",
+          "scopeAllEntities": "جميع الكيانات",
           "reasonLabel": "السبب",
           "reasonPlaceholder": "ما سبب الحاجة إلى هذا الإذن؟",
           "expiryLabel": "تاريخ الانتهاء (اختياري)",
@@ -997,7 +1023,8 @@
             "ncnpReport": "تقرير المركز المجمّع",
             "systemLogs": "سجلات النظام",
             "auditLog": "سجل التدقيق",
-            "backups": "النسخ الاحتياطية"
+            "backups": "النسخ الاحتياطية",
+            "initiatives": "المبادرات"
           },
           "actionNames": {
             "read": "قراءة",
@@ -1048,7 +1075,13 @@
         "statusColumn": "الحالة",
         "status": {
           "active": "نشط",
-          "invited": "مدعو"
+          "invited": "مدعو",
+          "disabled": "معطّل"
+        },
+        "statusBadges": {
+          "active": "نشط",
+          "invited": "مدعو",
+          "disabled": "معطّل"
         },
         "permissionsHeading": "صلاحية الوصول إلى الوحدات",
         "pagination": {
@@ -1279,7 +1312,9 @@
         "overrideConfirm": "حفظ التعديل",
         "cancel": "إلغاء",
         "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
-      }
+      },
+      "noFilterMatches": "لا توجد احتياجات مطابقة لعوامل التصفية. أزل التصفية لعرض كل ما تم تقييمه.",
+      "needColumn": "الاحتياج"
     },
     "villageComparison": {
       "title": "مقارنة القرى",
@@ -1387,7 +1422,8 @@
         "reportTypeEmpty": "لا توجد أنواع تقارير مطابقة.",
         "surveyScopeLabel": "نطاق الاستبيان (اختياري)",
         "surveyScopePlaceholder": "جميع استبيانات هذه الدراسة",
-        "surveyScopeAll": "جميع استبيانات هذه الدراسة"
+        "surveyScopeAll": "جميع استبيانات هذه الدراسة",
+        "stillNeeded": "ما زال مطلوبًا: {fields}"
       },
       "content": {
         "reportLabel": "تقييم احتياجات المجتمع",
@@ -1602,7 +1638,8 @@
         "exportExcel": "تصدير Excel",
         "reviewError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
         "exportError": "حدث خطأ أثناء تصدير هذا التقرير."
-      }
+      },
+      "noFilterMatches": "لا توجد تقارير مطابقة لعوامل التصفية. أزل التصفية لعرض كل ما تم إنشاؤه."
     },
     "archive": {
       "title": "الأرشيف",
@@ -1612,6 +1649,7 @@
       "filterKindAll": "الكل",
       "filterKindStudy": "الدراسات",
       "filterKindReport": "التقارير",
+      "filterKindHistorical": "دراسات سابقة",
       "filterEntityLabel": "الجهة",
       "filterEntityAll": "جميع الكيانات",
       "filterSectorLabel": "القطاع",
@@ -1622,11 +1660,15 @@
       "statusColumn": "الحالة",
       "villagesColumn": "المحافظات",
       "dateColumn": "التاريخ",
+      "viewDetails": "عرض التفاصيل",
+      "previewFile": "معاينة",
+      "downloadFile": "تنزيل",
       "noResults": "لا يوجد شيء مؤرشف بعد.",
       "loadError": "تعذّر تحميل الأرشيف. يرجى المحاولة مرة أخرى.",
       "kind": {
         "study": "دراسة",
-        "report": "تقرير"
+        "report": "تقرير",
+        "historical": "دراسة سابقة"
       },
       "filterRegionLabel": "المنطقة",
       "filterRegionAll": "جميع المناطق",
@@ -1638,6 +1680,38 @@
         "previous": "السابق",
         "next": "التالي",
         "label": "صفحة {page} من {count}"
+      },
+      "detail": {
+        "title": "تفاصيل الدراسة التاريخية",
+        "entityLabel": "الجهة",
+        "uploadedByLabel": "تم الرفع بواسطة",
+        "uploadedAtLabel": "تاريخ الرفع",
+        "notAvailable": "—",
+        "close": "إغلاق"
+      },
+      "uploadHistorical": {
+        "trigger": "رفع دراسة سابقة",
+        "title": "رفع دراسة سابقة",
+        "studyTitleLabel": "عنوان الدراسة",
+        "studyTitlePlaceholder": "مثال: دراسة أساسية لإمكانية الوصول للمياه في الروضة (2022)",
+        "regionLabel": "المنطقة",
+        "regionPlaceholder": "اختر منطقة",
+        "selectRegionFirst": "اختر المنطقة أولاً",
+        "subjectLabel": "الموضوع",
+        "subjectPlaceholder": "اختر موضوعًا (اختياري)",
+        "studyDateLabel": "تاريخ الدراسة",
+        "authorLabel": "المؤلف",
+        "authorPlaceholder": "مثال: د. فاطمة الزهراني",
+        "methodologyVersionLabel": "إصدار المنهجية",
+        "methodologyVersionPlaceholder": "مثال: تقييم يدوي داخلي، الإصدار 1",
+        "fileLabel": "المستند",
+        "chooseFile": "انقر لاختيار ملف",
+        "fileHint": "بصيغة PDF أو DOC أو DOCX، بحد أقصى 10 ميغابايت.",
+        "cancel": "إلغاء",
+        "submit": "رفع",
+        "submitting": "جارٍ الرفع...",
+        "missingFields": "يرجى تعبئة عنوان الدراسة والتاريخ والمؤلف وإصدار المنهجية وإرفاق ملف.",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
       }
     },
     "sharing": {
@@ -1670,7 +1744,8 @@
         "pending": "معلّق",
         "approved": "معتمد",
         "rejected": "مرفوض",
-        "expired": "منتهي الصلاحية"
+        "expired": "منتهي الصلاحية",
+        "withdrawn": "مسحوب"
       },
       "approve": "اعتماد",
       "reject": "رفض",
@@ -1710,7 +1785,11 @@
         "cancel": "إلغاء",
         "confirm": "رفض الطلب"
       },
-      "decisionNoteLabel": "ملاحظة القرار"
+      "decisionNoteLabel": "ملاحظة القرار",
+      "withdraw": "سحب",
+      "expiryColumn": "تنتهي في",
+      "noExpiry": "بدون انتهاء",
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
     },
     "reportSharing": {
       "title": "مشاركة التقارير",
@@ -1721,6 +1800,13 @@
       "tabApproved": "المعتمدة",
       "tabRejected": "المرفوضة",
       "tabSharedReports": "التقارير المشتركة",
+      "tabAllOrganizations": "جميع الجهات",
+      "noAllOrganizations": "لا يوجد نشاط مشاركة مسجل بعد.",
+      "organizationFilterLabel": "الجهة",
+      "allOrganizationsOption": "جميع الجهات",
+      "allStatusesOption": "جميع الحالات",
+      "ownerOrgColumn": "المالك",
+      "requestingOrgColumn": "الجهة الطالبة",
       "noIncoming": "لا توجد طلبات بانتظار قرارك.",
       "noOutgoing": "لم تطلب الوصول إلى أي تقارير.",
       "noApproved": "لا توجد طلبات مشاركة معتمدة بعد.",
@@ -1746,7 +1832,8 @@
         "pending": "معلّق",
         "approved": "معتمد",
         "rejected": "مرفوض",
-        "expired": "منتهي الصلاحية"
+        "expired": "منتهي الصلاحية",
+        "withdrawn": "مسحوب"
       },
       "approve": "اعتماد",
       "reject": "رفض",
@@ -1795,7 +1882,56 @@
         "cancel": "إلغاء",
         "confirm": "رفض الطلب"
       },
-      "decisionNoteLabel": "ملاحظة القرار"
+      "decisionNoteLabel": "ملاحظة القرار",
+      "withdraw": "سحب",
+      "expiryColumn": "تنتهي في",
+      "noExpiry": "بدون انتهاء",
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
+    },
+    "initiatives": {
+      "title": "المبادرات",
+      "description": "تتبّع المبادرات الجارية وربطها بالاحتياجات التي تعالجها.",
+      "newInitiative": "مبادرة جديدة",
+      "nameColumn": "الاسم",
+      "orgColumn": "الجهة",
+      "domainColumn": "المجال",
+      "statusColumn": "الحالة",
+      "statusValues": {
+        "active": "نشط",
+        "completed": "مكتملة"
+      },
+      "linkedNeedsColumn": "الاحتياجات المرتبطة",
+      "visibilityColumn": "الظهور",
+      "visibilityOpen": "مرئية للجهات الأخرى",
+      "visibilityOwnerOnly": "للمالك فقط",
+      "noInitiatives": "لا توجد مبادرات مسجلة بعد.",
+      "loadError": "تعذّر تحميل المبادرات. يرجى المحاولة مرة أخرى.",
+      "edit": "تعديل",
+      "create": {
+        "title": "مبادرة جديدة",
+        "editTitle": "تعديل المبادرة",
+        "nameLabel": "الاسم",
+        "namePlaceholder": "مثال: برنامج إعادة تأهيل الآبار",
+        "nameRequired": "الاسم مطلوب.",
+        "domainLabel": "المجال",
+        "domainPlaceholder": "اختر مجالاً (اختياري)",
+        "geographyLabel": "النطاق الجغرافي",
+        "geographyPlaceholder": "مثال: محافظة الدوادمي، 6 قرى",
+        "startDateLabel": "تاريخ البدء",
+        "expectedEndDateLabel": "تاريخ الانتهاء المتوقع",
+        "statusLabel": "الحالة",
+        "fundingSourceLabel": "مصدر التمويل",
+        "descriptionLabel": "الوصف",
+        "budgetLabel": "الميزانية (اختياري)",
+        "currencyLabel": "العملة",
+        "openToOtherEntitiesLabel": "مرئية للجهات الأخرى (للقراءة فقط)",
+        "openToOtherEntitiesHint": "غير مفعّلة افتراضياً. يمكن للجهات الأخرى الاطلاع عليها دون تعديلها.",
+        "cancel": "إلغاء",
+        "submit": "حفظ",
+        "submitting": "جارٍ الحفظ...",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+        "invalidDateRange": "لا يمكن أن يكون تاريخ الانتهاء المتوقع قبل تاريخ البدء."
+      }
     },
     "reviewerSla": {
       "title": "تنبيهات المراجع",
@@ -2180,6 +2316,33 @@
           "reviewer_approved": "اعتمد أحد المراجعين تصنيف هذا الاحتياج — لم يعد بالإمكان تعديله.",
           "survey_created": "تم إنشاء استبيان لهذا الاحتياج — لم يعد بالإمكان تعديله.",
           "survey_published": "تم نشر استبيان هذا الاحتياج — لم يعد بالإمكان تعديله."
+        },
+        "analyticalStatus": {
+          "observed": "تمت ملاحظته",
+          "under_analysis": "قيد التحليل",
+          "documented_in_study": "موثّق في الدراسة",
+          "linked_to_initiative": "مرتبط بمبادرة",
+          "open_gap": "فجوة مفتوحة"
+        },
+        "initiativeLink": {
+          "heading": "المبادرات المرتبطة",
+          "linkAction": "ربط بمبادرة",
+          "unlinkAction": "إلغاء الربط",
+          "unlinking": "جارٍ إلغاء الربط...",
+          "noLinks": "لم يتم ربطها بأي مبادرة بعد.",
+          "loadError": "تعذّر تحميل المبادرات المرتبطة. يرجى المحاولة مرة أخرى.",
+          "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        },
+        "linkInitiative": {
+          "title": "ربط بمبادرة",
+          "selectPlaceholder": "اختر مبادرة",
+          "searchPlaceholder": "ابحث عن المبادرات...",
+          "loading": "جارٍ تحميل المبادرات...",
+          "noOptions": "لا توجد مبادرات متاحة للربط.",
+          "cancel": "إلغاء",
+          "link": "ربط",
+          "linking": "جارٍ الربط...",
+          "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
         },
         "genericError": "تعذّر حفظ الاحتياج. يرجى المحاولة مرة أخرى.",
         "studyNotFound": "لم تعد هذه الدراسة موجودة. ربما تمت إزالتها. عد إلى قائمة الدراسات للمتابعة.",
@@ -2578,6 +2741,7 @@
         "domainLabel": "المجال",
         "subDomainLabel": "المجال الفرعي",
         "kpiLabel": "مؤشر الأداء الرئيسي",
+        "weightLabel": "الوزن",
         "questionLabel": "السؤال",
         "answerTypeLabel": "نوع الإجابة",
         "optionsLabel": "الخيارات",
@@ -2718,6 +2882,7 @@
         "domainLabel": "المجال",
         "subDomainLabel": "المجال الفرعي",
         "kpiLabel": "مؤشر الأداء الرئيسي",
+        "weightLabel": "الوزن",
         "requiredLabel": "مطلوب",
         "approveAndPublish": "اعتماد ونشر",
         "approving": "جارٍ الاعتماد...",
@@ -3110,6 +3275,18 @@
         "privacyNotice": "تُستخدم إجاباتك بشكل مجمّع فقط لفهم احتياجات المجتمع وتوجيه التخطيط. هذا ليس نظام طلبات أو شكاوى، ولن يتم التواصل معك شخصيًا بشأن إجاباتك.",
         "consentTitle": "الموافقة على جمع ومعالجة البيانات الشخصية",
         "consentVersionLine": "الإصدار {version}",
+        "consentThisOrg": "هذا الكيان",
+        "consentContactChannelPlaceholder": "[جهة التواصل]",
+        "consentPurposeLabel": "الغرض",
+        "consentPurposeBody": "تُستخدم إجاباتك لتقييم الاحتياجات التنموية في قريتك وللمساعدة في تخطيط البرامج المجتمعية. المشاركة طوعية بالكامل، ويمكنك التوقف في أي وقت.",
+        "consentCollectLabel": "ما نجمعه",
+        "consentCollectBody": "إجابات الاستبيان حول أوضاع الأسرة والمجتمع. ولا تُجمع بيانات التواصل (الاسم، رقم الجوال، البريد الإلكتروني) إلا إذا اخترت تقديمها.",
+        "consentHandlingLabel": "كيفية التعامل مع بياناتك",
+        "consentHandlingBody": "تُحفظ إجاباتك الفردية بسرية، وتُخزَّن بشكل آمن داخل المملكة العربية السعودية، ولا تُعرض في التقارير إلا بصورة مجمّعة، ولن تظهر هويتك في أي تقرير.",
+        "consentRightsLabel": "حقوقك",
+        "consentRightsBody": "وفقاً لنظام حماية البيانات الشخصية، يحق لك طلب الاطلاع على بياناتك الشخصية أو تصحيحها أو حذفها، كما يحق لك سحب هذه الموافقة في أي وقت عبر التواصل مع {contactChannel}.",
+        "consentRetentionLabel": "الاحتفاظ بالبيانات",
+        "consentRetentionBody": "تُحفظ البيانات الشخصية للمدة اللازمة للدراسة فقط، ثم تُحذف أو تُخفى هوية أصحابها وفق سياسة الاحتفاظ المعتمدة في المنصة.",
         "consentAgreeLabel": "أوافق على جمع معلوماتي واستخدامها على النحو الموضح أعلاه. (يُسجَّل التاريخ والوقت تلقائياً)",
         "consentRequired": "يجب أن توافق على إشعار الموافقة قبل المتابعة.",
         "nameRequired": "أدخل اسمك قبل المتابعة.",
@@ -3181,7 +3358,8 @@
         "in_progress": "قيد التنفيذ",
         "completed": "مكتمل",
         "cancelled": "ملغى"
-      }
+      },
+      "loading": "جارٍ تحميل القرارات…"
     },
     "generateModal": {
       "title": "إنشاء ملخص الذكاء الاصطناعي",

@@ -259,6 +259,7 @@
       "ncnpReport": "NCNP Compiled Report",
       "archive": "Archive",
       "sharing": "Sharing",
+      "initiatives": "Initiatives",
       "reportSharing": "Report Sharing",
       "reviewerSla": "Reviewer Alerts",
       "surveyBuilder": "Survey Builder",
@@ -644,7 +645,24 @@
           "optionStatusLabel": "Status",
           "optionActionsLabel": "Actions",
           "needThemesHeading": "Need Themes",
-          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring."
+          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring.",
+          "priorityFactorLabels": {
+            "severity": "Severity",
+            "affected_population": "Affected population",
+            "service_availability_gap": "Service availability gap",
+            "urgency": "Urgency",
+            "data_confidence": "Data confidence",
+            "frequency": "Frequency of similar needs",
+            "geographic_coverage": "Geographic coverage",
+            "vulnerable_groups": "Vulnerable groups (equity)",
+            "strategic_alignment": "Strategic alignment"
+          },
+          "strategicAxisLabels": {
+            "non_profit_empowerment": "Non-profit sector empowerment",
+            "diversified_economy": "Diversified local economy",
+            "human_capability": "Human capability and empowerment",
+            "essential_services": "Essential services"
+          }
         },
         "questions": {
           "filterDomain": "Domain",
@@ -675,6 +693,11 @@
           "questionTextLabel": "Question text",
           "indicatorLabel": "Indicator",
           "kpiLabel": "KPI",
+          "targetSectorLabel": "Target Sector",
+          "targetSectorNone": "No tag",
+          "targetSectorHint": "Optional. A tagged question is surfaced first when a Survey's Study matches this sector — every question stays selectable either way.",
+          "filterTargetSector": "Target Sector",
+          "allTargetSectors": "All Target Sectors",
           "domainLockedHint": "Domain and sub-domain aren't editable here — they determine which surveys and AI recommendations this question matches, so changing them could break existing survey linkage.",
           "cancel": "Cancel",
           "save": "Save changes",
@@ -702,7 +725,8 @@
             "title": "Question Details",
             "subDomain": "Sub-domain",
             "kpi": "KPI",
-            "answerType": "Answer Type"
+            "answerType": "Answer Type",
+            "answerOptions": "Answer Options"
           },
           "create": {
             "addQuestion": "Add Question",
@@ -960,6 +984,8 @@
           "modulePlaceholder": "Select a module",
           "actionLabel": "Action",
           "actionPlaceholder": "Select an action",
+          "scopeLabel": "Entity scope",
+          "scopeAllEntities": "All entities",
           "reasonLabel": "Reason",
           "reasonPlaceholder": "Why is this grant needed?",
           "expiryLabel": "Expires on (optional)",
@@ -997,7 +1023,8 @@
             "ncnpReport": "NCNP Compiled Report",
             "systemLogs": "System Logs",
             "auditLog": "Audit Log",
-            "backups": "Backups"
+            "backups": "Backups",
+            "initiatives": "Initiatives"
           },
           "actionNames": {
             "read": "Read",
@@ -1048,7 +1075,13 @@
         "statusColumn": "Status",
         "status": {
           "active": "Active",
-          "invited": "Invited"
+          "invited": "Invited",
+          "disabled": "Disabled"
+        },
+        "statusBadges": {
+          "active": "Active",
+          "invited": "Invited",
+          "disabled": "Disabled"
         },
         "permissionsHeading": "Module access",
         "pagination": {
@@ -1269,7 +1302,9 @@
         "overrideConfirm": "Save override",
         "cancel": "Cancel",
         "genericError": "Something went wrong. Please try again."
-      }
+      },
+      "noFilterMatches": "No needs match these filters. Clear them to see everything that has been scored.",
+      "needColumn": "Need"
     },
     "villageComparison": {
       "title": "Village Comparison",
@@ -1377,7 +1412,8 @@
         "reportTypeEmpty": "No matching report types.",
         "surveyScopeLabel": "Survey scope (optional)",
         "surveyScopePlaceholder": "All surveys in this study",
-        "surveyScopeAll": "All surveys in this study"
+        "surveyScopeAll": "All surveys in this study",
+        "stillNeeded": "Still needed: {fields}"
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -1592,7 +1628,8 @@
         "exportExcel": "Export Excel",
         "reviewError": "Something went wrong. Please try again.",
         "exportError": "Something went wrong exporting this report."
-      }
+      },
+      "noFilterMatches": "No reports match these filters. Clear them to see everything that has been generated."
     },
     "archive": {
       "title": "Archive",
@@ -1602,6 +1639,7 @@
       "filterKindAll": "All",
       "filterKindStudy": "Studies",
       "filterKindReport": "Reports",
+      "filterKindHistorical": "Historical Studies",
       "filterEntityLabel": "Entity",
       "filterEntityAll": "All organisations",
       "filterSectorLabel": "Sector",
@@ -1612,11 +1650,15 @@
       "statusColumn": "Status",
       "villagesColumn": "Governorates",
       "dateColumn": "Date",
+      "viewDetails": "View details",
+      "previewFile": "Preview",
+      "downloadFile": "Download",
       "noResults": "Nothing archived yet.",
       "loadError": "Couldn't load the archive. Please try again.",
       "kind": {
         "study": "Study",
-        "report": "Report"
+        "report": "Report",
+        "historical": "Historical Study"
       },
       "filterRegionLabel": "Region",
       "filterRegionAll": "All regions",
@@ -1628,6 +1670,38 @@
         "previous": "Previous",
         "next": "Next",
         "label": "Page {page} of {count}"
+      },
+      "detail": {
+        "title": "Historical Study Details",
+        "entityLabel": "Entity",
+        "uploadedByLabel": "Uploaded by",
+        "uploadedAtLabel": "Uploaded on",
+        "notAvailable": "—",
+        "close": "Close"
+      },
+      "uploadHistorical": {
+        "trigger": "Upload Historical Study",
+        "title": "Upload Historical Study",
+        "studyTitleLabel": "Study title",
+        "studyTitlePlaceholder": "e.g. Al Rawdah Water Access Baseline (2022)",
+        "regionLabel": "Region",
+        "regionPlaceholder": "Select a region",
+        "selectRegionFirst": "Select a region first",
+        "subjectLabel": "Subject",
+        "subjectPlaceholder": "Select a subject (optional)",
+        "studyDateLabel": "Study date",
+        "authorLabel": "Author",
+        "authorPlaceholder": "e.g. Dr. Fatima Al-Zahrani",
+        "methodologyVersionLabel": "Methodology version",
+        "methodologyVersionPlaceholder": "e.g. Internal manual scoring, v1",
+        "fileLabel": "Document",
+        "chooseFile": "Click to choose a file",
+        "fileHint": "PDF, DOC, or DOCX, up to 10MB.",
+        "cancel": "Cancel",
+        "submit": "Upload",
+        "submitting": "Uploading...",
+        "missingFields": "Please fill in the study title, date, author, methodology version, and attach a file.",
+        "genericError": "Something went wrong. Please try again."
       }
     },
     "sharing": {
@@ -1660,7 +1734,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "expired": "Expired"
+        "expired": "Expired",
+        "withdrawn": "Withdrawn"
       },
       "approve": "Approve",
       "reject": "Reject",
@@ -1700,7 +1775,11 @@
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
-      "decisionNoteLabel": "Decision note"
+      "decisionNoteLabel": "Decision note",
+      "withdraw": "Withdraw",
+      "expiryColumn": "Expires",
+      "noExpiry": "No expiry",
+      "expiryInputLabel": "Optional expiry date"
     },
     "reportSharing": {
       "title": "Report Sharing",
@@ -1711,6 +1790,13 @@
       "tabApproved": "Approved",
       "tabRejected": "Rejected",
       "tabSharedReports": "Shared Reports",
+      "tabAllOrganizations": "All Organizations",
+      "noAllOrganizations": "No sharing activity recorded yet.",
+      "organizationFilterLabel": "Organization",
+      "allOrganizationsOption": "All organizations",
+      "allStatusesOption": "All statuses",
+      "ownerOrgColumn": "Owner",
+      "requestingOrgColumn": "Requester",
       "noIncoming": "No requests awaiting your decision.",
       "noOutgoing": "You haven't requested access to any reports.",
       "noApproved": "No approved sharing requests yet.",
@@ -1736,7 +1822,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "expired": "Expired"
+        "expired": "Expired",
+        "withdrawn": "Withdrawn"
       },
       "approve": "Approve",
       "reject": "Reject",
@@ -1785,7 +1872,56 @@
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
-      "decisionNoteLabel": "Decision note"
+      "decisionNoteLabel": "Decision note",
+      "withdraw": "Withdraw",
+      "expiryColumn": "Expires",
+      "noExpiry": "No expiry",
+      "expiryInputLabel": "Optional expiry date"
+    },
+    "initiatives": {
+      "title": "Initiatives",
+      "description": "Track ongoing initiatives and link them to the Needs they address.",
+      "newInitiative": "New Initiative",
+      "nameColumn": "Name",
+      "orgColumn": "Organisation",
+      "domainColumn": "Domain",
+      "statusColumn": "Status",
+      "statusValues": {
+        "active": "Active",
+        "completed": "Completed"
+      },
+      "linkedNeedsColumn": "Linked Needs",
+      "visibilityColumn": "Visibility",
+      "visibilityOpen": "Open to other entities",
+      "visibilityOwnerOnly": "Owner only",
+      "noInitiatives": "No initiatives recorded yet.",
+      "loadError": "Couldn't load initiatives. Please try again.",
+      "edit": "Edit",
+      "create": {
+        "title": "New Initiative",
+        "editTitle": "Edit Initiative",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Well rehabilitation programme",
+        "nameRequired": "Name is required.",
+        "domainLabel": "Domain",
+        "domainPlaceholder": "Select a domain (optional)",
+        "geographyLabel": "Geography",
+        "geographyPlaceholder": "e.g. Ad-Dawadmi governorate, 6 villages",
+        "startDateLabel": "Start date",
+        "expectedEndDateLabel": "Expected end date",
+        "statusLabel": "Status",
+        "fundingSourceLabel": "Funding source",
+        "descriptionLabel": "Description",
+        "budgetLabel": "Budget (optional)",
+        "currencyLabel": "Currency",
+        "openToOtherEntitiesLabel": "Visible to other entities (read-only)",
+        "openToOtherEntitiesHint": "Off by default. Other organisations can view but never edit this initiative.",
+        "cancel": "Cancel",
+        "submit": "Save",
+        "submitting": "Saving...",
+        "genericError": "Something went wrong. Please try again.",
+        "invalidDateRange": "Expected end date cannot be before the start date."
+      }
     },
     "reviewerSla": {
       "title": "Reviewer Alerts",
@@ -2170,6 +2306,33 @@
           "reviewer_approved": "A reviewer has approved this need's classification — it can no longer be edited.",
           "survey_created": "A survey has been created for this need — it can no longer be edited.",
           "survey_published": "This need's survey has been published — it can no longer be edited."
+        },
+        "analyticalStatus": {
+          "observed": "Observed",
+          "under_analysis": "Under analysis",
+          "documented_in_study": "Documented in study",
+          "linked_to_initiative": "Linked to initiative",
+          "open_gap": "Open gap"
+        },
+        "initiativeLink": {
+          "heading": "Linked Initiatives",
+          "linkAction": "Link to Initiative",
+          "unlinkAction": "Unlink",
+          "unlinking": "Unlinking...",
+          "noLinks": "Not linked to any initiative yet.",
+          "loadError": "Couldn't load linked initiatives. Please try again.",
+          "genericError": "Something went wrong. Please try again."
+        },
+        "linkInitiative": {
+          "title": "Link to Initiative",
+          "selectPlaceholder": "Select an initiative",
+          "searchPlaceholder": "Search initiatives...",
+          "loading": "Loading initiatives...",
+          "noOptions": "No initiatives available to link.",
+          "cancel": "Cancel",
+          "link": "Link",
+          "linking": "Linking...",
+          "genericError": "Something went wrong. Please try again."
         },
         "genericError": "Couldn't save the need. Please try again.",
         "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",
@@ -3173,7 +3336,8 @@
         "in_progress": "In Progress",
         "completed": "Completed",
         "cancelled": "Cancelled"
-      }
+      },
+      "loading": "Loading decisions…"
     },
     "generateModal": {
       "title": "Generate AI Summary",

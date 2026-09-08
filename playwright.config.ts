@@ -38,6 +38,14 @@ export default defineConfig({
             // reference to prove cleaning fires and a correction is written.
             testMatch: /(auth-flows|data-quality)\.spec\.ts/,
           },
+          // RIO-NFR-012 — the usability fixes are assertions about what a
+          // person sees, so they need the real app with real seeded data
+          // behind it. Same E2E_BACKEND opt-in as the flow specs above.
+          {
+            name: "chromium-usability",
+            use: { ...devices["Desktop Chrome"] },
+            testMatch: /nfr012-usability\.spec\.ts/,
+          },
         ]
       : []),
   ],
