@@ -1,4 +1,5 @@
 import type { ConfidenceBand } from "@/services/ai-decisions/ai-decisions.types";
+import type { AnalyticalStatus } from "@/services/initiatives/initiatives.types";
 
 export type NeedStatus =
   | "draft"
@@ -83,6 +84,9 @@ export interface Need {
    *  says why rather than substituting the study-area population. */
   affectedPopulation: number | null;
   status: NeedStatus;
+  /** RIO-FR-009 (client Q17) — a second, independent status tracking the
+   * Need's analytical/actionability lifecycle, alongside `status` above. */
+  analyticalStatus: AnalyticalStatus;
   /** The Approver's final ("Approved") Domain/Sub-Domain — written only by
    * AiDecisionsService.review when a classification is approved/overridden.
    * Distinct from aiSuggestedDomain below, which never changes once set. */

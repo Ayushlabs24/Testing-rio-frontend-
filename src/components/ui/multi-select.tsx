@@ -39,6 +39,14 @@ interface MultiSelectProps {
    * than every individual toggle inside `onChange` (e.g. running an
    * expensive query only once selection is finished, not per checkbox). */
   onOpenChange?: (open: boolean) => void;
+  /** Pins the trigger to a single fixed-height row instead of letting
+   * selected chips wrap onto additional lines as more are picked — for a
+   * caller placed in a row alongside other fixed-height fields (e.g. a
+   * Region Select) where a growing height would break the row's alignment.
+   * Overflow beyond `maxVisibleChips` is simply clipped rather than
+   * expandable in place; the full selection is always still visible/
+   * editable in the popover itself. */
+  singleLine?: boolean;
 }
 
 const DEFAULT_MAX_VISIBLE_CHIPS = 4;
@@ -67,6 +75,7 @@ export function MultiSelect({
   maxVisibleChips = DEFAULT_MAX_VISIBLE_CHIPS,
   doneLabel,
   onOpenChange,
+  singleLine = false,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -124,7 +133,7 @@ export function MultiSelect({
   // place; the dropdown itself always shows every selection checked
   // regardless of this collapsed state).
   const visibleValues =
-    chipsExpanded || values.length <= maxVisibleChips
+    (chipsExpanded && !singleLine) || values.length <= maxVisibleChips
       ? values
       : values.slice(0, maxVisibleChips);
   const hiddenCount = values.length - visibleValues.length;
@@ -153,7 +162,8 @@ export function MultiSelect({
             }
           }}
           className={cn(
-            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 text-muted-foreground flex min-h-8 w-full flex-wrap items-center gap-1.5 rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none select-none focus-visible:ring-3",
+            "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 text-muted-foreground flex w-full items-center gap-1.5 rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none select-none focus-visible:ring-3",
+            singleLine ? "h-8 flex-nowrap overflow-hidden" : "min-h-8 flex-wrap",
             disabled
               ? "pointer-events-none cursor-not-allowed opacity-50"
               : "cursor-pointer",
@@ -178,7 +188,7 @@ export function MultiSelect({
                 <Badge
                   key={value}
                   variant="secondary"
-                  className="max-w-full min-w-0 gap-1"
+                  className={cn("max-w-full min-w-0 gap-1", singleLine && "shrink")}
                 >
                   <span className="min-w-0 truncate">{byValue.get(value) ?? value}</span>
                   <span
@@ -205,16 +215,20 @@ export function MultiSelect({
               {hiddenCount > 0 ? (
                 <Badge
                   variant="outline"
-                  className="hover:bg-accent cursor-pointer"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setChipsExpanded(true);
-                  }}
+                  className={singleLine ? undefined : "hover:bg-accent cursor-pointer"}
+                  onClick={
+                    singleLine
+                      ? undefined
+                      : (event) => {
+                          event.stopPropagation();
+                          setChipsExpanded(true);
+                        }
+                  }
                 >
                   {moreLabel ? moreLabel(hiddenCount) : `+${hiddenCount} more`}
                 </Badge>
               ) : null}
-              {chipsExpanded && values.length > maxVisibleChips ? (
+              {!singleLine && chipsExpanded && values.length > maxVisibleChips ? (
                 <Badge
                   variant="outline"
                   className="hover:bg-accent cursor-pointer"

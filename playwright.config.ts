@@ -33,7 +33,10 @@ export default defineConfig({
           {
             name: "chromium-app-flows",
             use: { ...devices["Desktop Chrome"] },
-            testMatch: /auth-flows\.spec\.ts/,
+            // RIO-FR-002's reviewer queue joins the same opt-in project: it
+            // needs the real backend, the seeded accounts and the geographic
+            // reference to prove cleaning fires and a correction is written.
+            testMatch: /(auth-flows|data-quality)\.spec\.ts/,
           },
           // RIO-NFR-012 — the usability fixes are assertions about what a
           // person sees, so they need the real app with real seeded data

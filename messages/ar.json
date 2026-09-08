@@ -259,10 +259,13 @@
       "ncnpReport": "التقرير المجمّع لـ NCNP",
       "archive": "الأرشيف",
       "sharing": "المشاركة",
+      "initiatives": "المبادرات",
       "reportSharing": "مشاركة التقارير",
       "reviewerSla": "تنبيهات المراجع",
       "surveyBuilder": "منشئ الاستبيانات",
-      "systemLogs": "سجلات النظام"
+      "systemLogs": "سجلات النظام",
+      "dataQuality": "جودة البيانات",
+      "backups": "النسخ الاحتياطية"
     },
     "topbar": {
       "menu": "القائمة",
@@ -642,7 +645,24 @@
           "optionStatusLabel": "الحالة",
           "optionActionsLabel": "الإجراءات",
           "needThemesHeading": "مواضيع الاحتياجات",
-          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية."
+          "needThemesNote": "قائمة المواضيع المغلقة التي يختار منها مستخرج المواضيع. تُستخدم المواضيع في العرض حسب الموضوع وفي عامل التكرار ضمن احتساب الأولوية.",
+          "priorityFactorLabels": {
+            "severity": "الشدة",
+            "affected_population": "السكان المتضررون",
+            "service_availability_gap": "فجوة توفر الخدمة",
+            "urgency": "الإلحاح",
+            "data_confidence": "مستوى الثقة في البيانات",
+            "frequency": "تكرار الاحتياجات المماثلة",
+            "geographic_coverage": "التغطية الجغرافية",
+            "vulnerable_groups": "الفئات الضعيفة (الإنصاف)",
+            "strategic_alignment": "المواءمة الاستراتيجية"
+          },
+          "strategicAxisLabels": {
+            "non_profit_empowerment": "تمكين القطاع غير الربحي",
+            "diversified_economy": "تنويع الاقتصاد المحلي",
+            "human_capability": "القدرات البشرية والتمكين",
+            "essential_services": "الخدمات الأساسية"
+          }
         },
         "questions": {
           "filterDomain": "المجال",
@@ -705,7 +725,8 @@
             "title": "تفاصيل السؤال",
             "subDomain": "المجال الفرعي",
             "kpi": "مؤشر الأداء الرئيسي",
-            "answerType": "نوع الإجابة"
+            "answerType": "نوع الإجابة",
+            "answerOptions": "خيارات الإجابة"
           },
           "create": {
             "addQuestion": "إضافة سؤال",
@@ -1001,7 +1022,9 @@
             "surveyBuilder": "منشئ الاستبيانات",
             "ncnpReport": "تقرير المركز المجمّع",
             "systemLogs": "سجلات النظام",
-            "auditLog": "سجل التدقيق"
+            "auditLog": "سجل التدقيق",
+            "backups": "النسخ الاحتياطية",
+            "initiatives": "المبادرات"
           },
           "actionNames": {
             "read": "قراءة",
@@ -1052,7 +1075,13 @@
         "statusColumn": "الحالة",
         "status": {
           "active": "نشط",
-          "invited": "مدعو"
+          "invited": "مدعو",
+          "disabled": "معطّل"
+        },
+        "statusBadges": {
+          "active": "نشط",
+          "invited": "مدعو",
+          "disabled": "معطّل"
         },
         "permissionsHeading": "صلاحية الوصول إلى الوحدات",
         "pagination": {
@@ -1184,7 +1213,14 @@
           "SYSTEM_ADMIN_RESTORED_STUDY": "استعادة الدراسة",
           "SYSTEM_ADMIN_CREATED_ORGANIZATION": "إنشاء الكيان",
           "SYSTEM_ADMIN_DEACTIVATED_ORGANIZATION": "إلغاء تفعيل الكيان",
-          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل الكيان"
+          "SYSTEM_ADMIN_REACTIVATED_ORGANIZATION": "إعادة تفعيل الكيان",
+          "review_cleaning_flag": "قرار على جودة البيانات",
+          "apply_standardization": "تطبيق تصحيح على البيانات",
+          "review_duplicate_candidate": "قرار على تكرار محتمل",
+          "merge_needs": "دمج احتياجات",
+          "undo_need_merge": "التراجع عن الدمج",
+          "run_backup": "تشغيل نسخ احتياطي",
+          "prune_backups": "تطبيق سياسة الاحتفاظ بالنسخ"
         },
         "entities": {
           "organization": "الكيان",
@@ -1613,6 +1649,7 @@
       "filterKindAll": "الكل",
       "filterKindStudy": "الدراسات",
       "filterKindReport": "التقارير",
+      "filterKindHistorical": "دراسات سابقة",
       "filterEntityLabel": "الجهة",
       "filterEntityAll": "جميع الكيانات",
       "filterSectorLabel": "القطاع",
@@ -1623,11 +1660,15 @@
       "statusColumn": "الحالة",
       "villagesColumn": "المحافظات",
       "dateColumn": "التاريخ",
+      "viewDetails": "عرض التفاصيل",
+      "previewFile": "معاينة",
+      "downloadFile": "تنزيل",
       "noResults": "لا يوجد شيء مؤرشف بعد.",
       "loadError": "تعذّر تحميل الأرشيف. يرجى المحاولة مرة أخرى.",
       "kind": {
         "study": "دراسة",
-        "report": "تقرير"
+        "report": "تقرير",
+        "historical": "دراسة سابقة"
       },
       "filterRegionLabel": "المنطقة",
       "filterRegionAll": "جميع المناطق",
@@ -1639,6 +1680,38 @@
         "previous": "السابق",
         "next": "التالي",
         "label": "صفحة {page} من {count}"
+      },
+      "detail": {
+        "title": "تفاصيل الدراسة التاريخية",
+        "entityLabel": "الجهة",
+        "uploadedByLabel": "تم الرفع بواسطة",
+        "uploadedAtLabel": "تاريخ الرفع",
+        "notAvailable": "—",
+        "close": "إغلاق"
+      },
+      "uploadHistorical": {
+        "trigger": "رفع دراسة سابقة",
+        "title": "رفع دراسة سابقة",
+        "studyTitleLabel": "عنوان الدراسة",
+        "studyTitlePlaceholder": "مثال: دراسة أساسية لإمكانية الوصول للمياه في الروضة (2022)",
+        "regionLabel": "المنطقة",
+        "regionPlaceholder": "اختر منطقة",
+        "selectRegionFirst": "اختر المنطقة أولاً",
+        "subjectLabel": "الموضوع",
+        "subjectPlaceholder": "اختر موضوعًا (اختياري)",
+        "studyDateLabel": "تاريخ الدراسة",
+        "authorLabel": "المؤلف",
+        "authorPlaceholder": "مثال: د. فاطمة الزهراني",
+        "methodologyVersionLabel": "إصدار المنهجية",
+        "methodologyVersionPlaceholder": "مثال: تقييم يدوي داخلي، الإصدار 1",
+        "fileLabel": "المستند",
+        "chooseFile": "انقر لاختيار ملف",
+        "fileHint": "بصيغة PDF أو DOC أو DOCX، بحد أقصى 10 ميغابايت.",
+        "cancel": "إلغاء",
+        "submit": "رفع",
+        "submitting": "جارٍ الرفع...",
+        "missingFields": "يرجى تعبئة عنوان الدراسة والتاريخ والمؤلف وإصدار المنهجية وإرفاق ملف.",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
       }
     },
     "sharing": {
@@ -1671,7 +1744,8 @@
         "pending": "معلّق",
         "approved": "معتمد",
         "rejected": "مرفوض",
-        "expired": "منتهي الصلاحية"
+        "expired": "منتهي الصلاحية",
+        "withdrawn": "مسحوب"
       },
       "approve": "اعتماد",
       "reject": "رفض",
@@ -1711,7 +1785,11 @@
         "cancel": "إلغاء",
         "confirm": "رفض الطلب"
       },
-      "decisionNoteLabel": "ملاحظة القرار"
+      "decisionNoteLabel": "ملاحظة القرار",
+      "withdraw": "سحب",
+      "expiryColumn": "تنتهي في",
+      "noExpiry": "بدون انتهاء",
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
     },
     "reportSharing": {
       "title": "مشاركة التقارير",
@@ -1722,6 +1800,13 @@
       "tabApproved": "المعتمدة",
       "tabRejected": "المرفوضة",
       "tabSharedReports": "التقارير المشتركة",
+      "tabAllOrganizations": "جميع الجهات",
+      "noAllOrganizations": "لا يوجد نشاط مشاركة مسجل بعد.",
+      "organizationFilterLabel": "الجهة",
+      "allOrganizationsOption": "جميع الجهات",
+      "allStatusesOption": "جميع الحالات",
+      "ownerOrgColumn": "المالك",
+      "requestingOrgColumn": "الجهة الطالبة",
       "noIncoming": "لا توجد طلبات بانتظار قرارك.",
       "noOutgoing": "لم تطلب الوصول إلى أي تقارير.",
       "noApproved": "لا توجد طلبات مشاركة معتمدة بعد.",
@@ -1747,7 +1832,8 @@
         "pending": "معلّق",
         "approved": "معتمد",
         "rejected": "مرفوض",
-        "expired": "منتهي الصلاحية"
+        "expired": "منتهي الصلاحية",
+        "withdrawn": "مسحوب"
       },
       "approve": "اعتماد",
       "reject": "رفض",
@@ -1796,7 +1882,56 @@
         "cancel": "إلغاء",
         "confirm": "رفض الطلب"
       },
-      "decisionNoteLabel": "ملاحظة القرار"
+      "decisionNoteLabel": "ملاحظة القرار",
+      "withdraw": "سحب",
+      "expiryColumn": "تنتهي في",
+      "noExpiry": "بدون انتهاء",
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
+    },
+    "initiatives": {
+      "title": "المبادرات",
+      "description": "تتبّع المبادرات الجارية وربطها بالاحتياجات التي تعالجها.",
+      "newInitiative": "مبادرة جديدة",
+      "nameColumn": "الاسم",
+      "orgColumn": "الجهة",
+      "domainColumn": "المجال",
+      "statusColumn": "الحالة",
+      "statusValues": {
+        "active": "نشط",
+        "completed": "مكتملة"
+      },
+      "linkedNeedsColumn": "الاحتياجات المرتبطة",
+      "visibilityColumn": "الظهور",
+      "visibilityOpen": "مرئية للجهات الأخرى",
+      "visibilityOwnerOnly": "للمالك فقط",
+      "noInitiatives": "لا توجد مبادرات مسجلة بعد.",
+      "loadError": "تعذّر تحميل المبادرات. يرجى المحاولة مرة أخرى.",
+      "edit": "تعديل",
+      "create": {
+        "title": "مبادرة جديدة",
+        "editTitle": "تعديل المبادرة",
+        "nameLabel": "الاسم",
+        "namePlaceholder": "مثال: برنامج إعادة تأهيل الآبار",
+        "nameRequired": "الاسم مطلوب.",
+        "domainLabel": "المجال",
+        "domainPlaceholder": "اختر مجالاً (اختياري)",
+        "geographyLabel": "النطاق الجغرافي",
+        "geographyPlaceholder": "مثال: محافظة الدوادمي، 6 قرى",
+        "startDateLabel": "تاريخ البدء",
+        "expectedEndDateLabel": "تاريخ الانتهاء المتوقع",
+        "statusLabel": "الحالة",
+        "fundingSourceLabel": "مصدر التمويل",
+        "descriptionLabel": "الوصف",
+        "budgetLabel": "الميزانية (اختياري)",
+        "currencyLabel": "العملة",
+        "openToOtherEntitiesLabel": "مرئية للجهات الأخرى (للقراءة فقط)",
+        "openToOtherEntitiesHint": "غير مفعّلة افتراضياً. يمكن للجهات الأخرى الاطلاع عليها دون تعديلها.",
+        "cancel": "إلغاء",
+        "submit": "حفظ",
+        "submitting": "جارٍ الحفظ...",
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+        "invalidDateRange": "لا يمكن أن يكون تاريخ الانتهاء المتوقع قبل تاريخ البدء."
+      }
     },
     "reviewerSla": {
       "title": "تنبيهات المراجع",
@@ -2181,6 +2316,33 @@
           "reviewer_approved": "اعتمد أحد المراجعين تصنيف هذا الاحتياج — لم يعد بالإمكان تعديله.",
           "survey_created": "تم إنشاء استبيان لهذا الاحتياج — لم يعد بالإمكان تعديله.",
           "survey_published": "تم نشر استبيان هذا الاحتياج — لم يعد بالإمكان تعديله."
+        },
+        "analyticalStatus": {
+          "observed": "تمت ملاحظته",
+          "under_analysis": "قيد التحليل",
+          "documented_in_study": "موثّق في الدراسة",
+          "linked_to_initiative": "مرتبط بمبادرة",
+          "open_gap": "فجوة مفتوحة"
+        },
+        "initiativeLink": {
+          "heading": "المبادرات المرتبطة",
+          "linkAction": "ربط بمبادرة",
+          "unlinkAction": "إلغاء الربط",
+          "unlinking": "جارٍ إلغاء الربط...",
+          "noLinks": "لم يتم ربطها بأي مبادرة بعد.",
+          "loadError": "تعذّر تحميل المبادرات المرتبطة. يرجى المحاولة مرة أخرى.",
+          "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        },
+        "linkInitiative": {
+          "title": "ربط بمبادرة",
+          "selectPlaceholder": "اختر مبادرة",
+          "searchPlaceholder": "ابحث عن المبادرات...",
+          "loading": "جارٍ تحميل المبادرات...",
+          "noOptions": "لا توجد مبادرات متاحة للربط.",
+          "cancel": "إلغاء",
+          "link": "ربط",
+          "linking": "جارٍ الربط...",
+          "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
         },
         "genericError": "تعذّر حفظ الاحتياج. يرجى المحاولة مرة أخرى.",
         "studyNotFound": "لم تعد هذه الدراسة موجودة. ربما تمت إزالتها. عد إلى قائمة الدراسات للمتابعة.",
@@ -2790,6 +2952,268 @@
         "previous": "السابق",
         "next": "التالي",
         "label": "صفحة {page} من {count}"
+      }
+    },
+    "dataQuality": {
+      "title": "جودة البيانات",
+      "description": "نتائج التدقيق على الاحتياجات المُدخلة يدويًا واستجابات الاستبيانات والملفات المستوردة. لا يتم تصحيح أي قيمة قبل قرارك.",
+      "loadError": "تعذّر تحميل قائمة جودة البيانات. يرجى المحاولة مرة أخرى.",
+      "decisionError": "تعذّر تسجيل القرار. يرجى المحاولة مرة أخرى.",
+      "noteRequired": "الملاحظة مطلوبة عند رفض التصحيح المقترح.",
+      "empty": "لا يوجد ما يستدعي المراجعة.",
+      "refresh": "تحديث",
+      "readOnly": "عرض فقط",
+      "noValue": "فارغ",
+      "redacted": "مخفي",
+      "redactedExplainer": "هذه بيانات تواصل خاصة بالمستجيب، لذلك تظهر مخفية هنا ولا تُحفظ القيمة المصححة في هذه القائمة. عند القبول يُعاد احتسابها من الاستجابة نفسها.",
+      "recomputedOnAccept": "تُحتسب عند القبول",
+      "fixOnRecord": "يُصحّح في السجل نفسه",
+      "confidence": "تطابق {value}%",
+      "candidates": "أقرب التطابقات في المرجع الجغرافي",
+      "ambiguousDate": "يمكن قراءة هذا التاريخ بصيغة {dayFirst} (اليوم أولًا) أو {monthFirst} (الشهر أولًا). القبول يعتمد قراءة اليوم أولًا.",
+      "wrongDomain": "هذا المجال الفرعي مُدرج ضمن {filedUnder} لكنه يتبع {belongsTo}. عدّله في الاحتياج نفسه.",
+      "note": "ملاحظة",
+      "notePlaceholder": "مطلوبة عند الرفض — وضّح لماذا القيمة المحفوظة صحيحة.",
+      "columns": {
+        "record": "السجل",
+        "field": "الحقل",
+        "finding": "الملاحظة",
+        "current": "المحفوظ حاليًا",
+        "proposed": "المقترح",
+        "action": "الإجراء"
+      },
+      "filters": {
+        "status": "الحالة",
+        "source": "المصدر",
+        "severity": "النوع",
+        "allSources": "كل المصادر",
+        "allSeverities": "كل الأنواع"
+      },
+      "actions": {
+        "review": "مراجعة",
+        "accept": "قبول",
+        "reject": "رفض",
+        "cancel": "إلغاء",
+        "acceptAll": "قبول الكل",
+        "applying": "جارٍ التطبيق…"
+      },
+      "summary": {
+        "openTotal": "ملاحظات مفتوحة",
+        "lastRun": "آخر فحص",
+        "byRule": "حسب الملاحظة"
+      },
+      "source": {
+        "manual_entry": "احتياجات مُدخلة",
+        "survey_response": "استجابات الاستبيانات",
+        "file_upload": "ملفات مستوردة"
+      },
+      "status": {
+        "pending": "بانتظار المراجعة",
+        "accepted": "مقبول",
+        "rejected": "مرفوض",
+        "superseded": "لم يعد ينطبق"
+      },
+      "severity": {
+        "missing": "ناقص",
+        "non_standard": "غير موحّد",
+        "out_of_vocabulary": "قيمة غير معروفة"
+      },
+      "rule": {
+        "MISSING_REQUIRED": "حقل مطلوب فارغ",
+        "DATE_FORMAT": "التاريخ ليس بالصيغة الموحّدة",
+        "DATE_AMBIGUOUS": "التاريخ يحتمل قراءتين",
+        "DATE_UNPARSEABLE": "تعذّر قراءة التاريخ",
+        "PHONE_FORMAT": "رقم الجوال ليس بالصيغة الدولية",
+        "PHONE_UNPARSEABLE": "تعذّر قراءة رقم الجوال",
+        "NUMBER_FORMAT": "الرقم ليس بالصيغة الموحّدة",
+        "NUMBER_UNPARSEABLE": "تعذّر قراءة الرقم",
+        "NUMBER_OUT_OF_RANGE": "الرقم خارج النطاق المتوقع",
+        "UNIT_MISMATCH": "وحدة مختلفة عن الوحدة المطلوبة في السؤال",
+        "DOMAIN_NOT_IN_METHODOLOGY": "المجال غير مُدرج في القائمة المعتمدة",
+        "SUBDOMAIN_NOT_IN_METHODOLOGY": "المجال الفرعي غير مُدرج في القائمة المعتمدة",
+        "SUBDOMAIN_WRONG_DOMAIN": "المجال الفرعي يتبع مجالًا آخر",
+        "VILLAGE_NEAR_MATCH": "اسم القرية قريب من موقع في المرجع",
+        "VILLAGE_AMBIGUOUS": "اسم القرية يطابق أكثر من موقع",
+        "VILLAGE_UNMATCHED": "اسم القرية غير موجود في المرجع الجغرافي",
+        "IMPORT_ROW_REJECTED": "تعذّر استيراد الصف",
+        "IMPORT_DUPLICATE_ROW": "الصف يكرّر احتياجًا مسجّلًا مسبقًا"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      },
+      "tabs": {
+        "findings": "الملاحظات",
+        "duplicates": "تكرارات محتملة",
+        "merges": "سجل الدمج",
+        "crossEntity": "بين الجهات"
+      },
+      "duplicates": {
+        "empty": "لا توجد تكرارات محتملة للمراجعة.",
+        "decisionError": "تعذّر تسجيل القرار. يرجى المحاولة مرة أخرى.",
+        "noteRequired": "الملاحظة مطلوبة عند استبعاد التكرار المقترح.",
+        "similarity": "تشابه {value}%",
+        "note": "ملاحظة",
+        "notePlaceholder": "مطلوبة عند الاستبعاد — وضّح لماذا الاحتياجان مختلفان.",
+        "reviewerNote": "ملاحظة المراجع",
+        "readOnly": "عرض فقط — البتّ في التكرارات يتطلب صلاحية الاعتماد في جودة البيانات.",
+        "showMore": "عرض النص كاملًا",
+        "showLess": "عرض أقل",
+        "actions": {
+          "confirmDuplicate": "تأكيد التكرار",
+          "notDuplicate": "ليسا تكرارًا",
+          "merge": "دمج…"
+        },
+        "method": {
+          "literal": "تطابق الألفاظ",
+          "semantic": "تطابق المعنى"
+        },
+        "scope": {
+          "within_study": "نفس الدراسة",
+          "within_org": "نفس الجهة",
+          "cross_org": "بين الجهات"
+        },
+        "status": {
+          "pending": "بانتظار المراجعة",
+          "confirmed_duplicate": "تكرار مؤكد",
+          "not_duplicate": "ليسا تكرارًا",
+          "merged": "مدموج",
+          "dismissed": "مستبعد"
+        },
+        "fields": {
+          "study": "الدراسة",
+          "domain": "المجال",
+          "village": "القرية",
+          "referenceId": "المرجع"
+        },
+        "confirmThenMerge": "التأكيد يسجّل أنهما الاحتياج نفسه. أما دمجهما فخطوة منفصلة.",
+        "readyToMerge": "مؤكد أنهما تكرار — جاهزان للدمج."
+      },
+      "merge": {
+        "title": "دمج الاحتياجين",
+        "description": "اختر الاحتياج الذي سيبقى. كل ما يرتبط بالآخر سيُنقل إليه.",
+        "chooseSurvivor": "أي احتياج يجب أن يبقى؟",
+        "outcome": "سيتم تقاعد <strong>{retired}</strong> ودمجه في <strong>{survivor}</strong>.",
+        "movesLabel": "{count} عنصر سيُنقل إلى الاحتياج الباقي",
+        "movesNothing": "لا يرتبط بالاحتياج المتقاعد أي عنصر، لذا سيتم تقاعد الاحتياج نفسه فقط.",
+        "guarantee": {
+          "alias": "سيظل {reference} صالحًا — سيشير إلى الاحتياج الباقي، فتبقى الروابط والتقارير القديمة تعمل.",
+          "notDeleted": "لا يُحذف الاحتياج المتقاعد. يبقى سجله كاملًا ويمكن التراجع عن الدمج.",
+          "frozenReports": "يبقى {count} تقرير منشور كما نُشر تمامًا.",
+          "rescore": "ستحتاج درجات الأولوية للاحتياج الباقي إلى إعادة احتساب.",
+          "undo": "يمكنك التراجع عن ذلك لاحقًا مع ذكر السبب."
+        },
+        "note": "ملاحظة",
+        "notePlaceholder": "اختيارية — لماذا هما الاحتياج نفسه.",
+        "previewError": "تعذّر تحديد نتيجة هذا الدمج. يرجى المحاولة مرة أخرى.",
+        "mergeError": "تعذّر دمج الاحتياجين. يرجى المحاولة مرة أخرى.",
+        "cancel": "إلغاء",
+        "confirm": "دمج",
+        "merging": "جارٍ الدمج…",
+        "entity": {
+          "SurveyResponse": "استجابات الاستبيانات",
+          "Evidence": "ملفات الأدلة",
+          "AiDecision": "قرارات التصنيف الآلي",
+          "AiSuggestion": "اقتراحات الذكاء الاصطناعي",
+          "AiSummary": "ملخصات الذكاء الاصطناعي",
+          "NeedStatementSummary": "ملخصات الوصف",
+          "NeedDecision": "القرارات والمتابعات",
+          "Survey": "الاستبيانات",
+          "PublicSurveyLink": "روابط الاستبيانات المنشورة",
+          "SurveySession": "جلسات الاستبيان",
+          "ResponseQualityResult": "نتائج جودة الاستجابات"
+        },
+        "warning": {
+          "DIFFERENT_STUDIES": "ينتمي الاحتياجان إلى دراستين مختلفتين. سينتقل كل ما يرتبط بهما إلى دراسة الاحتياج الباقي، ما يغيّر محتوى إجماليات كل دراسة.",
+          "RETIRED_HAS_SCORES": "لدى الاحتياج المتقاعد {count} درجة محتسبة. المنهجية لا تنقلها — بل يُعاد احتساب درجات الاحتياج الباقي."
+        }
+      },
+      "mergeHistory": {
+        "empty": "لم يتم دمج أي احتياجات بعد.",
+        "summary": "تم دمج <strong>{retired}</strong> في <strong>{survivor}</strong>",
+        "decided": "دمجه {name}",
+        "itemsMoved": "نُقل {count} عنصر",
+        "note": "ملاحظة",
+        "active": "ساري",
+        "undone": "تم التراجع",
+        "undoneBy": "تراجع عنه {name}",
+        "undoNote": "السبب",
+        "undo": "التراجع عن الدمج",
+        "undoNoteLabel": "لماذا تتراجع عن هذا الدمج؟",
+        "undoNotePlaceholder": "مطلوبة — وضّح لماذا ليسا الاحتياج نفسه.",
+        "undoKeepsAlias": "سيظل المرجع المتقاعد يشير إلى الاحتياج الباقي، لأن تقريرًا نُشر أثناء الدمج قد يستشهد به.",
+        "noteRequired": "الملاحظة مطلوبة عند التراجع عن الدمج.",
+        "undoError": "تعذّر التراجع عن الدمج. يرجى المحاولة مرة أخرى.",
+        "confirmUndo": "تأكيد التراجع",
+        "undoing": "جارٍ التراجع…",
+        "cancel": "إلغاء"
+      },
+      "settings": {
+        "title": "جودة البيانات — عتبات الاكتشاف",
+        "description": "مدى التشابه المطلوب بين نصّين قبل أن يقترح النظام شيئًا. 0 يعني لا شيء مشترك، و1 يعني متطابقًا تمامًا.",
+        "version": "محفوظة مع منهجية {version}",
+        "loadError": "تعذّر تحميل العتبات.",
+        "saveError": "تعذّر الحفظ. تحقق من القيم وحاول مرة أخرى.",
+        "saved": "تم الحفظ.",
+        "save": "حفظ العتبات",
+        "saving": "جارٍ الحفظ…",
+        "readOnly": "عرض فقط — تغيير العتبات يتطلب صلاحية الكتابة في جودة البيانات.",
+        "retuneNote": "تسري التغييرات على الملاحظات الجديدة فقط. أما الموجود في القائمة فيحتفظ بالدرجة التي أُنشئ بها.",
+        "dk": {
+          "excluded_answer": "إجابة حقيقية تُستثنى من الاحتساب",
+          "missing_value": "قيمة ناقصة"
+        },
+        "fields": {
+          "villageMatchAcceptThreshold": {
+            "label": "اسم القرية — مطابقة واحدة",
+            "help": "عند هذه الدرجة أو أعلى يُقترح مكان واحد لتقبله أو ترفضه. لا يجوز أن تقل عن درجة القائمة المختصرة."
+          },
+          "villageMatchProposeThreshold": {
+            "label": "اسم القرية — قائمة مختصرة",
+            "help": "بين هذه الدرجة ودرجة المطابقة الواحدة تختار من خمسة أماكن كحد أقصى. دونها يُعلّم الاسم كغير مطابق. لا يجوز أن تتجاوز درجة المطابقة الواحدة."
+          },
+          "literalDuplicateThreshold": {
+            "label": "الاحتياجات المكررة",
+            "help": "مدى التشابه المطلوب بين احتياجين قبل اقتراح الزوج. خفضها يكشف مزيدًا من التكرارات ومزيدًا من الإنذارات الخاطئة. لا يتم أي دمج تلقائي."
+          },
+          "classificationNearMatchThreshold": {
+            "label": "المجال والمجال الفرعي",
+            "help": "مدى قرب المجال غير المعروف من مجال معتمد قبل اقتراح تصحيح."
+          },
+          "dontKnowTreatment": {
+            "label": "إجابات «لا أعرف» و«أفضّل عدم الإجابة»",
+            "help": "موقف العميل (LIV-21) أنها إجابات حقيقية تُستثنى من الاحتساب وليست فجوات. بانتظار التأكيد الخطي."
+          },
+          "crossOrg": {
+            "label": "مطابقة التكرار بين الجهات",
+            "help": "يقارن الاحتياجات المسجّلة لدى جهات مختلفة ويقترح التطابقات لمراجعة المركز والمركز الوطني. لا يتم أي دمج بين الجهات. معطّلة افتراضيًا."
+          }
+        }
+      },
+      "crossEntity": {
+        "title": "التطابقات بين الجهات",
+        "description": "احتياجات مسجّلة لدى جهتين مختلفتين وتبدو الاحتياج نفسه. تظهر للمركز والمركز الوطني فقط. تُسجّل كملاحظات — ولا تُدمج أبدًا.",
+        "scan": "تشغيل الفحص بين الجهات",
+        "scanning": "جارٍ الفحص…",
+        "scanError": "تعذر إكمال الفحص بين الجهات.",
+        "empty": "لا توجد تطابقات مقترحة بين الجهات.",
+        "off": "مطابقة التكرار بين الجهات معطّلة، لذا لم تجرٍ أي مقارنة. فعّلها من الأعلى لتشغيل الفحص.",
+        "toggleError": "تعذر تغيير الإعداد. قد لا تملك صلاحية تفعيل المطابقة بين الجهات."
+      },
+      "thresholdsMoved": "عتبات الاكتشاف",
+      "semantic": {
+        "title": "فحص التكرار بالمعنى",
+        "description": "يجد التكرار بالمعنى لا بالإملاء — احتياج أُعيدت صياغته، أو الاحتياج نفسه مكتوبًا بالعربية والإنجليزية. يقتصر الفحص على جهتك. تظهر النتائج أدناه بوسم «تطابق المعنى».",
+        "scan": "تشغيل الفحص الدلالي",
+        "scanning": "جارٍ الفحص…",
+        "result": "تم ترميز {embedded} احتياج، ومقارنة {compared} زوج، واقتراح {proposed}.",
+        "error": "تعذر إكمال الفحص الدلالي.",
+        "skipped": {
+          "SEMANTIC_PROVIDER_DISABLED": "المطابقة الدلالية معطّلة في هذه البيئة. لم يُرسل أي شيء.",
+          "NO_NEEDS_IN_SCOPE": "يغطي هذا الفحص جهتك وحدها، ولا توجد فيها احتياجات للمقارنة — أما الأعداد أعلاه فقد تشمل جهات أخرى. سجّل الدخول بحساب يتبع الجهة التي تريد فحص احتياجاتها.",
+          "NOT_ENOUGH_NEEDS_TO_COMPARE": "يوجد احتياج واحد فقط، فلا يوجد زوج للمقارنة."
+        }
       }
     }
   },
@@ -3930,7 +4354,25 @@
         "failed": "تعذّر إتمام التصدير. يرجى المحاولة مرة أخرى."
       },
       "noResults": "لا توجد إدخالات مطابقة للمرشحات الحالية.",
-      "loadFailed": "تعذر تحميل سجلات النظام."
+      "loadFailed": "تعذر تحميل سجلات النظام.",
+      "backup": {
+        "run": "تشغيل نسخ احتياطي للبيانات",
+        "running": "جارٍ النسخ الاحتياطي لـ {kind}...",
+        "note": "ينشئ نسخة احتياطية موثَّقة من قاعدة البيانات وملفات الأدلة، ثم يتأكّد من إمكانية استرجاعهما. تُسجَّل كل عملية في السجل أدناه.",
+        "resultTitle": "النسخ الاحتياطي للبيانات",
+        "kind": {
+          "database": "قاعدة البيانات",
+          "attachments": "المرفقات"
+        },
+        "succeeded": "اكتمل النسخ الاحتياطي لـ {kind}",
+        "failed": "فشل النسخ الاحتياطي لـ {kind}",
+        "recoverable": "قابل للاسترجاع — تمّ فتح الملف والتحقق منه. {evidence}",
+        "notRecoverable": "غير قابل للاسترجاع — {reason}. لا تعتمد على هذه النسخة.",
+        "evidenceTables": "{count} جدولاً تحتوي على بيانات.",
+        "evidenceFiles": "تمّ التحقق من {verified} من أصل {expected} ملفاً مقابل بيان المحتويات.",
+        "checkUnavailable": "تعذّر إكمال فحص قابلية الاسترجاع",
+        "runError": "تعذّر بدء النسخ الاحتياطي."
+      }
     },
     "governance": {
       "title": "حوكمة المنصة وتنبيهات الأمان",
@@ -4150,6 +4592,79 @@
           "next": "التالي",
           "label": "الصفحة {page} من {count}"
         }
+      }
+    },
+    "backups": {
+      "title": "النسخ الاحتياطية",
+      "description": "كل محاولة نسخ احتياطي مع حجمها ومدتها وبصمتها. السؤال الذي تجيب عنه هذه الشاشة ليس هل تمت النسخ، بل هل يمكن الاستعادة.",
+      "loadError": "تعذر تحميل سجل النسخ الاحتياطية.",
+      "empty": "لا توجد عمليات نسخ مسجّلة بعد.",
+      "running": "جارٍ التنفيذ…",
+      "runDatabase": "نسخ قاعدة البيانات",
+      "runAttachments": "نسخ المرفقات",
+      "runSucceeded": "اكتمل نسخ {kind}.",
+      "runFailed": "فشلت عملية النسخ: {error}",
+      "runError": "تعذر إكمال الطلب.",
+      "verify": "تحقق",
+      "prune": "تطبيق سياسة الاحتفاظ",
+      "pruned": "تم حذف {count} من العمليات. يُحتفظ دائمًا بأحدث نسخة ناجحة من كل نوع.",
+      "summary": {
+        "lastDatabase": "آخر نسخ لقاعدة البيانات",
+        "lastAttachments": "آخر نسخ للمرفقات",
+        "failures": "حالات الفشل خلال 7 أيام",
+        "stored": "المخزّن على القرص",
+        "never": "لم يحدث"
+      },
+      "noDatabaseBackup": {
+        "title": "لم تنجح أي نسخة لقاعدة البيانات إطلاقًا.",
+        "detail": "لا يستطيع pg_dump قراءة قاعدة البيانات بدور التطبيق — فأمن الصفوف مفروض على 43 جدولًا ولا يجوز لأي دور تطبيق تجاوزه. يجب أن يشغّل مسؤول قاعدة البيانات الملف scripts/sql/nfr010-backup-role.sql لإنشاء الدور cnap_backup، ثم يُضبط BACKUP_DATABASE_URL عليه. حتى ذلك الحين تُنسخ المرفقات فقط."
+      },
+      "kind": {
+        "database": "قاعدة البيانات",
+        "attachments": "المرفقات"
+      },
+      "status": {
+        "running": "قيد التنفيذ",
+        "succeeded": "نجحت",
+        "failed": "فشلت"
+      },
+      "trigger": {
+        "schedule": "مجدولة",
+        "manual": "يدوية"
+      },
+      "table": {
+        "started": "البداية",
+        "kind": "النوع",
+        "status": "الحالة",
+        "size": "الحجم",
+        "duration": "المدة",
+        "trigger": "المصدر",
+        "retention": "يُحتفظ حتى",
+        "integrity": "السلامة",
+        "files": "{count} ملف",
+        "pruned": "تم الحذف"
+      },
+      "integrity": {
+        "ok": "البصمة مطابقة",
+        "CHECKSUM_MISMATCH": "البصمة غير مطابقة — الملف تالف",
+        "SIZE_CHANGED": "تغيّر الحجم منذ كتابته",
+        "FILE_MISSING": "الملف غير موجود على القرص",
+        "FILE_PRUNED": "تم حذف الملف",
+        "RUN_DID_NOT_SUCCEED": "لم تنجح هذه العملية",
+        "NO_ARTEFACT_RECORDED": "لا يوجد ملف مسجل",
+        "RUN_NOT_FOUND": "العملية غير موجودة",
+        "unknown": "تعذر التحقق"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      },
+      "filters": {
+        "kind": "النوع",
+        "allKinds": "كل الأنواع",
+        "status": "الحالة",
+        "allStatuses": "كل الحالات"
       }
     }
   },

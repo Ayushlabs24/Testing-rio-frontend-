@@ -34,6 +34,10 @@ export const PERMISSION_MODULES = [
   // center_supervisor and data_analyst, and these rows carry stack traces,
   // internal paths and cross-tenant detail. System Admin only.
   "systemLogs",
+  // RIO-NFR-010 — backup administration. Its own module rather than a
+  // systemLogs grant: that one is read-and-export by design and has no write
+  // action for anyone, and triggering a backup needs one.
+  "backups",
   // RIO-NFR-004 / RIO-FR-007 module-conflict fix: the Audit Log was split out
   // of archiveSharingAudit into its own module. archiveSharingAudit is held
   // read/create/approve by ngo_admin for Study/Report Sharing, which also gave
@@ -43,6 +47,28 @@ export const PERMISSION_MODULES = [
   // (src/rbac/role-matrix.ts) — every session response carries an entry per
   // module, and apiSessionViewSchema rejects any module missing from this list.
   "auditLog",
+  // RIO-FR-002 — the Data Quality reviewer queue. Deliberately not a reuse of
+  // dataImport, whose grants run the opposite way to the client's ruling on
+  // who owns cleaning decisions (system_admin holds dataImport read-only,
+  // while ngo_admin and ngo_research_officer hold write). `approve` decides a
+  // flag, which WRITES the correction onto the record; `write` tunes the
+  // rule set's thresholds; `read` sees the queue and the per-source report.
+  //
+  // Must stay in sync with the backend, per the note above: every session
+  // response carries an entry per module and apiSessionViewSchema rejects any
+  // module missing from this list, so omitting this would break sign-in for
+  // every user the moment the backend starts sending it.
+  "dataQuality",
+  // RIO-FR-009 — Initiative records and their linkage to Needs. The backend's
+  // ROLE_MATRIX grants this to every role (read-only for most), so it is in
+  // EVERY session response: leaving it out of this list made
+  // apiSessionViewSchema reject the response and broke sign-in for everyone,
+  // with "The server returned an unexpected session response shape."
+  "initiatives",
+  // RIO-FR-009 — Initiative records and their linkage to Needs. Added to the
+  // backend's role-matrix.ts but missing here, which made apiSessionViewSchema
+  // reject every login response (every role carries an `initiatives` entry).
+  "initiatives",
 ] as const;
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];

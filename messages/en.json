@@ -259,10 +259,13 @@
       "ncnpReport": "NCNP Compiled Report",
       "archive": "Archive",
       "sharing": "Sharing",
+      "initiatives": "Initiatives",
       "reportSharing": "Report Sharing",
       "reviewerSla": "Reviewer Alerts",
       "surveyBuilder": "Survey Builder",
-      "systemLogs": "System Logs"
+      "systemLogs": "System Logs",
+      "dataQuality": "Data Quality",
+      "backups": "Backups"
     },
     "topbar": {
       "menu": "Menu",
@@ -642,7 +645,24 @@
           "optionStatusLabel": "Status",
           "optionActionsLabel": "Actions",
           "needThemesHeading": "Need Themes",
-          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring."
+          "needThemesNote": "The closed vocabulary the theme extractor may pick from. Themes drive the group-by-theme view and the recurrence factor in priority scoring.",
+          "priorityFactorLabels": {
+            "severity": "Severity",
+            "affected_population": "Affected population",
+            "service_availability_gap": "Service availability gap",
+            "urgency": "Urgency",
+            "data_confidence": "Data confidence",
+            "frequency": "Frequency of similar needs",
+            "geographic_coverage": "Geographic coverage",
+            "vulnerable_groups": "Vulnerable groups (equity)",
+            "strategic_alignment": "Strategic alignment"
+          },
+          "strategicAxisLabels": {
+            "non_profit_empowerment": "Non-profit sector empowerment",
+            "diversified_economy": "Diversified local economy",
+            "human_capability": "Human capability and empowerment",
+            "essential_services": "Essential services"
+          }
         },
         "questions": {
           "filterDomain": "Domain",
@@ -705,7 +725,8 @@
             "title": "Question Details",
             "subDomain": "Sub-domain",
             "kpi": "KPI",
-            "answerType": "Answer Type"
+            "answerType": "Answer Type",
+            "answerOptions": "Answer Options"
           },
           "create": {
             "addQuestion": "Add Question",
@@ -1001,7 +1022,9 @@
             "surveyBuilder": "Survey Builder",
             "ncnpReport": "NCNP Compiled Report",
             "systemLogs": "System Logs",
-            "auditLog": "Audit Log"
+            "auditLog": "Audit Log",
+            "backups": "Backups",
+            "initiatives": "Initiatives"
           },
           "actionNames": {
             "read": "Read",
@@ -1052,7 +1075,13 @@
         "statusColumn": "Status",
         "status": {
           "active": "Active",
-          "invited": "Invited"
+          "invited": "Invited",
+          "disabled": "Disabled"
+        },
+        "statusBadges": {
+          "active": "Active",
+          "invited": "Invited",
+          "disabled": "Disabled"
         },
         "permissionsHeading": "Module access",
         "pagination": {
@@ -1174,7 +1203,14 @@
           "confirm_need_summary": "Need summary confirmed",
           "extract_need_themes": "Need themes extracted",
           "override_priority_score": "Priority score overridden",
-          "export": "Exported"
+          "export": "Exported",
+          "review_cleaning_flag": "Data quality decision",
+          "apply_standardization": "Data correction applied",
+          "review_duplicate_candidate": "Duplicate decision",
+          "merge_needs": "Needs merged",
+          "undo_need_merge": "Merge undone",
+          "run_backup": "Backup run",
+          "prune_backups": "Backup retention applied"
         },
         "entities": {
           "organization": "Organisation",
@@ -1603,6 +1639,7 @@
       "filterKindAll": "All",
       "filterKindStudy": "Studies",
       "filterKindReport": "Reports",
+      "filterKindHistorical": "Historical Studies",
       "filterEntityLabel": "Entity",
       "filterEntityAll": "All organisations",
       "filterSectorLabel": "Sector",
@@ -1613,11 +1650,15 @@
       "statusColumn": "Status",
       "villagesColumn": "Governorates",
       "dateColumn": "Date",
+      "viewDetails": "View details",
+      "previewFile": "Preview",
+      "downloadFile": "Download",
       "noResults": "Nothing archived yet.",
       "loadError": "Couldn't load the archive. Please try again.",
       "kind": {
         "study": "Study",
-        "report": "Report"
+        "report": "Report",
+        "historical": "Historical Study"
       },
       "filterRegionLabel": "Region",
       "filterRegionAll": "All regions",
@@ -1629,6 +1670,38 @@
         "previous": "Previous",
         "next": "Next",
         "label": "Page {page} of {count}"
+      },
+      "detail": {
+        "title": "Historical Study Details",
+        "entityLabel": "Entity",
+        "uploadedByLabel": "Uploaded by",
+        "uploadedAtLabel": "Uploaded on",
+        "notAvailable": "—",
+        "close": "Close"
+      },
+      "uploadHistorical": {
+        "trigger": "Upload Historical Study",
+        "title": "Upload Historical Study",
+        "studyTitleLabel": "Study title",
+        "studyTitlePlaceholder": "e.g. Al Rawdah Water Access Baseline (2022)",
+        "regionLabel": "Region",
+        "regionPlaceholder": "Select a region",
+        "selectRegionFirst": "Select a region first",
+        "subjectLabel": "Subject",
+        "subjectPlaceholder": "Select a subject (optional)",
+        "studyDateLabel": "Study date",
+        "authorLabel": "Author",
+        "authorPlaceholder": "e.g. Dr. Fatima Al-Zahrani",
+        "methodologyVersionLabel": "Methodology version",
+        "methodologyVersionPlaceholder": "e.g. Internal manual scoring, v1",
+        "fileLabel": "Document",
+        "chooseFile": "Click to choose a file",
+        "fileHint": "PDF, DOC, or DOCX, up to 10MB.",
+        "cancel": "Cancel",
+        "submit": "Upload",
+        "submitting": "Uploading...",
+        "missingFields": "Please fill in the study title, date, author, methodology version, and attach a file.",
+        "genericError": "Something went wrong. Please try again."
       }
     },
     "sharing": {
@@ -1661,7 +1734,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "expired": "Expired"
+        "expired": "Expired",
+        "withdrawn": "Withdrawn"
       },
       "approve": "Approve",
       "reject": "Reject",
@@ -1701,7 +1775,11 @@
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
-      "decisionNoteLabel": "Decision note"
+      "decisionNoteLabel": "Decision note",
+      "withdraw": "Withdraw",
+      "expiryColumn": "Expires",
+      "noExpiry": "No expiry",
+      "expiryInputLabel": "Optional expiry date"
     },
     "reportSharing": {
       "title": "Report Sharing",
@@ -1712,6 +1790,13 @@
       "tabApproved": "Approved",
       "tabRejected": "Rejected",
       "tabSharedReports": "Shared Reports",
+      "tabAllOrganizations": "All Organizations",
+      "noAllOrganizations": "No sharing activity recorded yet.",
+      "organizationFilterLabel": "Organization",
+      "allOrganizationsOption": "All organizations",
+      "allStatusesOption": "All statuses",
+      "ownerOrgColumn": "Owner",
+      "requestingOrgColumn": "Requester",
       "noIncoming": "No requests awaiting your decision.",
       "noOutgoing": "You haven't requested access to any reports.",
       "noApproved": "No approved sharing requests yet.",
@@ -1737,7 +1822,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "rejected": "Rejected",
-        "expired": "Expired"
+        "expired": "Expired",
+        "withdrawn": "Withdrawn"
       },
       "approve": "Approve",
       "reject": "Reject",
@@ -1786,7 +1872,56 @@
         "cancel": "Cancel",
         "confirm": "Reject request"
       },
-      "decisionNoteLabel": "Decision note"
+      "decisionNoteLabel": "Decision note",
+      "withdraw": "Withdraw",
+      "expiryColumn": "Expires",
+      "noExpiry": "No expiry",
+      "expiryInputLabel": "Optional expiry date"
+    },
+    "initiatives": {
+      "title": "Initiatives",
+      "description": "Track ongoing initiatives and link them to the Needs they address.",
+      "newInitiative": "New Initiative",
+      "nameColumn": "Name",
+      "orgColumn": "Organisation",
+      "domainColumn": "Domain",
+      "statusColumn": "Status",
+      "statusValues": {
+        "active": "Active",
+        "completed": "Completed"
+      },
+      "linkedNeedsColumn": "Linked Needs",
+      "visibilityColumn": "Visibility",
+      "visibilityOpen": "Open to other entities",
+      "visibilityOwnerOnly": "Owner only",
+      "noInitiatives": "No initiatives recorded yet.",
+      "loadError": "Couldn't load initiatives. Please try again.",
+      "edit": "Edit",
+      "create": {
+        "title": "New Initiative",
+        "editTitle": "Edit Initiative",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Well rehabilitation programme",
+        "nameRequired": "Name is required.",
+        "domainLabel": "Domain",
+        "domainPlaceholder": "Select a domain (optional)",
+        "geographyLabel": "Geography",
+        "geographyPlaceholder": "e.g. Ad-Dawadmi governorate, 6 villages",
+        "startDateLabel": "Start date",
+        "expectedEndDateLabel": "Expected end date",
+        "statusLabel": "Status",
+        "fundingSourceLabel": "Funding source",
+        "descriptionLabel": "Description",
+        "budgetLabel": "Budget (optional)",
+        "currencyLabel": "Currency",
+        "openToOtherEntitiesLabel": "Visible to other entities (read-only)",
+        "openToOtherEntitiesHint": "Off by default. Other organisations can view but never edit this initiative.",
+        "cancel": "Cancel",
+        "submit": "Save",
+        "submitting": "Saving...",
+        "genericError": "Something went wrong. Please try again.",
+        "invalidDateRange": "Expected end date cannot be before the start date."
+      }
     },
     "reviewerSla": {
       "title": "Reviewer Alerts",
@@ -2171,6 +2306,33 @@
           "reviewer_approved": "A reviewer has approved this need's classification — it can no longer be edited.",
           "survey_created": "A survey has been created for this need — it can no longer be edited.",
           "survey_published": "This need's survey has been published — it can no longer be edited."
+        },
+        "analyticalStatus": {
+          "observed": "Observed",
+          "under_analysis": "Under analysis",
+          "documented_in_study": "Documented in study",
+          "linked_to_initiative": "Linked to initiative",
+          "open_gap": "Open gap"
+        },
+        "initiativeLink": {
+          "heading": "Linked Initiatives",
+          "linkAction": "Link to Initiative",
+          "unlinkAction": "Unlink",
+          "unlinking": "Unlinking...",
+          "noLinks": "Not linked to any initiative yet.",
+          "loadError": "Couldn't load linked initiatives. Please try again.",
+          "genericError": "Something went wrong. Please try again."
+        },
+        "linkInitiative": {
+          "title": "Link to Initiative",
+          "selectPlaceholder": "Select an initiative",
+          "searchPlaceholder": "Search initiatives...",
+          "loading": "Loading initiatives...",
+          "noOptions": "No initiatives available to link.",
+          "cancel": "Cancel",
+          "link": "Link",
+          "linking": "Linking...",
+          "genericError": "Something went wrong. Please try again."
         },
         "genericError": "Couldn't save the need. Please try again.",
         "studyNotFound": "This study no longer exists. It may have been removed. Return to the studies list to continue.",
@@ -2780,6 +2942,268 @@
         "previous": "Previous",
         "next": "Next",
         "label": "Page {page} of {count}"
+      }
+    },
+    "dataQuality": {
+      "title": "Data Quality",
+      "description": "Findings from cleaning across manually entered needs, survey responses and imported files. Nothing is corrected until you decide.",
+      "loadError": "Couldn't load the data quality queue. Please try again.",
+      "decisionError": "Couldn't record that decision. Please try again.",
+      "noteRequired": "A note is required when rejecting a proposed correction.",
+      "empty": "Nothing to review.",
+      "refresh": "Refresh",
+      "readOnly": "View only",
+      "noValue": "empty",
+      "redacted": "hidden",
+      "redactedExplainer": "This is a respondent's contact detail, so it is masked here and the corrected value is not stored in this queue. Accepting recalculates it from the response itself.",
+      "recomputedOnAccept": "Calculated when you accept",
+      "fixOnRecord": "Fix on the record",
+      "confidence": "{value}% match",
+      "candidates": "Closest matches in the geographic reference",
+      "ambiguousDate": "This date reads as {dayFirst} day-first, or {monthFirst} month-first. Accepting takes the day-first reading.",
+      "wrongDomain": "This sub-domain is filed under {filedUnder} but belongs to {belongsTo}. Change it on the need itself.",
+      "note": "Note",
+      "notePlaceholder": "Required when rejecting — say why the stored value is correct.",
+      "columns": {
+        "record": "Record",
+        "field": "Field",
+        "finding": "Finding",
+        "current": "Stored now",
+        "proposed": "Proposed",
+        "action": "Action"
+      },
+      "filters": {
+        "status": "Status",
+        "source": "Source",
+        "severity": "Type",
+        "allSources": "All sources",
+        "allSeverities": "All types"
+      },
+      "actions": {
+        "review": "Review",
+        "accept": "Accept",
+        "reject": "Reject",
+        "cancel": "Cancel",
+        "acceptAll": "Accept all",
+        "applying": "Applying…"
+      },
+      "summary": {
+        "openTotal": "Open findings",
+        "lastRun": "Last checked",
+        "byRule": "By finding"
+      },
+      "source": {
+        "manual_entry": "Entered needs",
+        "survey_response": "Survey responses",
+        "file_upload": "Imported files"
+      },
+      "status": {
+        "pending": "Awaiting review",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "superseded": "No longer applies"
+      },
+      "severity": {
+        "missing": "Missing",
+        "non_standard": "Not standardised",
+        "out_of_vocabulary": "Unrecognised value"
+      },
+      "rule": {
+        "MISSING_REQUIRED": "Required field is empty",
+        "DATE_FORMAT": "Date not in standard format",
+        "DATE_AMBIGUOUS": "Date could be read two ways",
+        "DATE_UNPARSEABLE": "Date cannot be read",
+        "PHONE_FORMAT": "Mobile number not in international format",
+        "PHONE_UNPARSEABLE": "Mobile number cannot be read",
+        "NUMBER_FORMAT": "Number not in standard format",
+        "NUMBER_UNPARSEABLE": "Number cannot be read",
+        "NUMBER_OUT_OF_RANGE": "Number outside the expected range",
+        "UNIT_MISMATCH": "Different unit from the one the question asks for",
+        "DOMAIN_NOT_IN_METHODOLOGY": "Domain is not on the approved list",
+        "SUBDOMAIN_NOT_IN_METHODOLOGY": "Sub-domain is not on the approved list",
+        "SUBDOMAIN_WRONG_DOMAIN": "Sub-domain belongs to a different domain",
+        "VILLAGE_NEAR_MATCH": "Village name close to a place in the reference",
+        "VILLAGE_AMBIGUOUS": "Village name matches more than one place",
+        "VILLAGE_UNMATCHED": "Village name not in the geographic reference",
+        "IMPORT_ROW_REJECTED": "Row could not be imported",
+        "IMPORT_DUPLICATE_ROW": "Row repeats a need already recorded"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
+      "tabs": {
+        "findings": "Findings",
+        "duplicates": "Possible duplicates",
+        "merges": "Merge history",
+        "crossEntity": "Cross-entity"
+      },
+      "duplicates": {
+        "empty": "No possible duplicates to review.",
+        "decisionError": "Couldn't record that decision. Please try again.",
+        "noteRequired": "A note is required when dismissing a proposed duplicate.",
+        "similarity": "{value}% similar",
+        "note": "Note",
+        "notePlaceholder": "Required when dismissing — say why these are different needs.",
+        "reviewerNote": "Reviewer note",
+        "readOnly": "View only — deciding on duplicates needs the data quality approve permission.",
+        "showMore": "Show full statements",
+        "showLess": "Show less",
+        "actions": {
+          "confirmDuplicate": "Confirm duplicate",
+          "notDuplicate": "Not a duplicate",
+          "merge": "Merge…"
+        },
+        "method": {
+          "literal": "Matching words",
+          "semantic": "Matching meaning"
+        },
+        "scope": {
+          "within_study": "Same study",
+          "within_org": "Same entity",
+          "cross_org": "Across entities"
+        },
+        "status": {
+          "pending": "Awaiting review",
+          "confirmed_duplicate": "Confirmed duplicate",
+          "not_duplicate": "Not a duplicate",
+          "merged": "Merged",
+          "dismissed": "Dismissed"
+        },
+        "fields": {
+          "study": "Study",
+          "domain": "Domain",
+          "village": "Village",
+          "referenceId": "Reference"
+        },
+        "confirmThenMerge": "Confirming records that these are the same need. Merging them is a separate step.",
+        "readyToMerge": "Confirmed as duplicates — ready to merge."
+      },
+      "merge": {
+        "title": "Merge these two needs",
+        "description": "Choose which need survives. Everything attached to the other moves onto it.",
+        "chooseSurvivor": "Which need should survive?",
+        "outcome": "<strong>{retired}</strong> will be retired and merged into <strong>{survivor}</strong>.",
+        "movesLabel": "{count} item(s) move to the surviving need",
+        "movesNothing": "Nothing is attached to the retired need, so only the need itself is retired.",
+        "guarantee": {
+          "alias": "{reference} keeps working — it will resolve to the surviving need, so older links and reports still open.",
+          "notDeleted": "The retired need is not deleted. Its history stays intact and the merge can be undone.",
+          "frozenReports": "{count} published report(s) stay exactly as they were published.",
+          "rescore": "Priority scores for the surviving need will need recalculating.",
+          "undo": "You can undo this later, with a note explaining why."
+        },
+        "note": "Note",
+        "notePlaceholder": "Optional — why these are the same need.",
+        "previewError": "Couldn't work out what this merge would do. Please try again.",
+        "mergeError": "Couldn't merge these needs. Please try again.",
+        "cancel": "Cancel",
+        "confirm": "Merge",
+        "merging": "Merging…",
+        "entity": {
+          "SurveyResponse": "Survey responses",
+          "Evidence": "Evidence files",
+          "AiDecision": "AI classification decisions",
+          "AiSuggestion": "AI suggestions",
+          "AiSummary": "AI summaries",
+          "NeedStatementSummary": "Statement summaries",
+          "NeedDecision": "Decisions and follow-ups",
+          "Survey": "Surveys",
+          "PublicSurveyLink": "Published survey links",
+          "SurveySession": "Survey sessions",
+          "ResponseQualityResult": "Response quality results"
+        },
+        "warning": {
+          "DIFFERENT_STUDIES": "These needs belong to different studies. Everything attached moves into the surviving need's study, which changes what each study's totals contain.",
+          "RETIRED_HAS_SCORES": "The retired need has {count} computed score(s). The methodology does not transfer these — the surviving need is recalculated instead."
+        }
+      },
+      "mergeHistory": {
+        "empty": "No needs have been merged yet.",
+        "summary": "<strong>{retired}</strong> merged into <strong>{survivor}</strong>",
+        "decided": "Merged by {name}",
+        "itemsMoved": "{count} item(s) moved",
+        "note": "Note",
+        "active": "In effect",
+        "undone": "Undone",
+        "undoneBy": "Undone by {name}",
+        "undoNote": "Reason",
+        "undo": "Undo merge",
+        "undoNoteLabel": "Why are you undoing this?",
+        "undoNotePlaceholder": "Required — say why these are not the same need after all.",
+        "undoKeepsAlias": "The retired reference will keep resolving to the surviving need, because a report published while they were merged may still cite it.",
+        "noteRequired": "A note is required when undoing a merge.",
+        "undoError": "Couldn't undo this merge. Please try again.",
+        "confirmUndo": "Undo merge",
+        "undoing": "Undoing…",
+        "cancel": "Cancel"
+      },
+      "settings": {
+        "title": "Data quality — detection thresholds",
+        "description": "How similar two pieces of text must be before the system suggests anything. 0 means nothing in common, 1 means identical.",
+        "version": "Stored with methodology {version}",
+        "loadError": "Couldn't load the thresholds.",
+        "saveError": "Couldn't save. Check the values and try again.",
+        "saved": "Saved.",
+        "save": "Save thresholds",
+        "saving": "Saving…",
+        "readOnly": "View only — changing thresholds needs the data quality write permission.",
+        "retuneNote": "Changes apply to new findings only. Anything already in the queue keeps the score it was raised under.",
+        "dk": {
+          "excluded_answer": "A real answer, excluded from scoring",
+          "missing_value": "A missing value"
+        },
+        "fields": {
+          "villageMatchAcceptThreshold": {
+            "label": "Village name — single match",
+            "help": "At or above this score, one place is suggested for you to accept or reject. Must not be lower than the shortlist score."
+          },
+          "villageMatchProposeThreshold": {
+            "label": "Village name — shortlist",
+            "help": "Between this and the single-match score, you pick from up to five places. Below it, the name is marked unmatched. Must not be higher than the single-match score."
+          },
+          "literalDuplicateThreshold": {
+            "label": "Duplicate needs",
+            "help": "How similar two needs must be before the pair is proposed. Lower it to catch more duplicates and more false alarms. Nothing is ever merged automatically."
+          },
+          "classificationNearMatchThreshold": {
+            "label": "Domain and sub-domain",
+            "help": "How close an unrecognised domain must be to an approved one before a correction is suggested."
+          },
+          "dontKnowTreatment": {
+            "label": "“Don’t know” and “Prefer not to answer” responses",
+            "help": "The client’s position (LIV-21) is that these are real answers excluded from scoring, not gaps. Written confirmation pending."
+          },
+          "crossOrg": {
+            "label": "Cross-entity duplicate matching",
+            "help": "Compares needs recorded by different entities and proposes matches for Center and NCNP review. Nothing is merged across entities. Off by default."
+          }
+        }
+      },
+      "crossEntity": {
+        "title": "Cross-entity matches",
+        "description": "Needs recorded by two different entities that look like the same need. Visible to Center and NCNP only. Recorded as findings — never merged.",
+        "scan": "Run cross-entity scan",
+        "scanning": "Scanning…",
+        "scanError": "The cross-entity scan could not be completed.",
+        "empty": "No cross-entity matches proposed.",
+        "off": "Cross-entity matching is switched off, so nothing has been compared. Turn it on above to run a scan.",
+        "toggleError": "Couldn't change that setting. You may not have permission to enable cross-entity matching."
+      },
+      "thresholdsMoved": "Detection thresholds",
+      "semantic": {
+        "title": "Meaning-based duplicate scan",
+        "description": "Finds duplicates by meaning rather than spelling — a reworded need, or the same need written in Arabic and English. Scans your own entity only. Results appear below, marked “Matching meaning”.",
+        "scan": "Run semantic scan",
+        "scanning": "Scanning…",
+        "result": "{embedded} need(s) embedded, {compared} pair(s) compared, {proposed} proposed.",
+        "error": "The semantic scan could not be completed.",
+        "skipped": {
+          "SEMANTIC_PROVIDER_DISABLED": "Semantic matching is switched off for this deployment. Nothing was sent anywhere.",
+          "NO_NEEDS_IN_SCOPE": "This scan covers only your own entity, which has no needs to compare — the counts above may include other entities. Sign in as a user of the entity whose needs you want to scan.",
+          "NOT_ENOUGH_NEEDS_TO_COMPARE": "Only one need is available, so there is no pair to compare."
+        }
       }
     }
   },
@@ -3908,7 +4332,25 @@
         "failed": "The export could not be completed. Please try again."
       },
       "noResults": "No system log entries match the current filters.",
-      "loadFailed": "System logs could not be loaded."
+      "loadFailed": "System logs could not be loaded.",
+      "backup": {
+        "run": "Run Data Backup",
+        "running": "Backing up {kind}...",
+        "note": "Creates a verified backup of the database and evidence files, then confirms both can be restored.",
+        "resultTitle": "Data backup",
+        "kind": {
+          "database": "database",
+          "attachments": "attachments"
+        },
+        "succeeded": "The {kind} backup completed",
+        "failed": "The {kind} backup failed",
+        "recoverable": "Recoverable — the artefact was opened and checked. {evidence}",
+        "notRecoverable": "NOT recoverable — {reason}. Do not rely on this backup.",
+        "evidenceTables": "{count} tables carry data.",
+        "evidenceFiles": "{verified} of {expected} files verified against the manifest.",
+        "checkUnavailable": "the recoverability check could not be completed",
+        "runError": "The backup could not be started."
+      }
     },
     "governance": {
       "title": "Platform Governance & Security Alerts",
@@ -4128,6 +4570,79 @@
           "next": "Next",
           "label": "Page {page} of {count}"
         }
+      }
+    },
+    "backups": {
+      "title": "Backups",
+      "description": "Every backup attempt, with its size, duration and checksum. The question this screen answers is not whether a backup ran, but whether one can be restored.",
+      "loadError": "Couldn't load the backup history.",
+      "empty": "No backup runs recorded yet.",
+      "running": "Working…",
+      "runDatabase": "Back up database",
+      "runAttachments": "Back up attachments",
+      "runSucceeded": "{kind} backup completed.",
+      "runFailed": "The backup failed: {error}",
+      "runError": "The request could not be completed.",
+      "verify": "Verify",
+      "prune": "Apply retention",
+      "pruned": "{count} run(s) pruned. The newest successful backup of each kind is always kept.",
+      "summary": {
+        "lastDatabase": "Database last backed up",
+        "lastAttachments": "Attachments last backed up",
+        "failures": "Failures in the last 7 days",
+        "stored": "Stored on disk",
+        "never": "Never"
+      },
+      "noDatabaseBackup": {
+        "title": "No database backup has ever succeeded.",
+        "detail": "pg_dump cannot read this database as an application role — row-level security is forced on 43 tables, and no application role may bypass it. A superuser must run scripts/sql/nfr010-backup-role.sql to create the cnap_backup role, and BACKUP_DATABASE_URL must point at it. Until then only attachments are being backed up."
+      },
+      "kind": {
+        "database": "Database",
+        "attachments": "Attachments"
+      },
+      "status": {
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed"
+      },
+      "trigger": {
+        "schedule": "Scheduled",
+        "manual": "Manual"
+      },
+      "table": {
+        "started": "Started",
+        "kind": "Kind",
+        "status": "Status",
+        "size": "Size",
+        "duration": "Duration",
+        "trigger": "Trigger",
+        "retention": "Keep until",
+        "integrity": "Integrity",
+        "files": "{count} file(s)",
+        "pruned": "Pruned"
+      },
+      "integrity": {
+        "ok": "Checksum matches",
+        "CHECKSUM_MISMATCH": "Checksum does NOT match — this file is corrupt",
+        "SIZE_CHANGED": "Size has changed since it was written",
+        "FILE_MISSING": "File is missing from disk",
+        "FILE_PRUNED": "File was pruned",
+        "RUN_DID_NOT_SUCCEED": "This run did not succeed",
+        "NO_ARTEFACT_RECORDED": "No artefact recorded",
+        "RUN_NOT_FOUND": "Run not found",
+        "unknown": "Could not be verified"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
+      "filters": {
+        "kind": "Kind",
+        "allKinds": "All kinds",
+        "status": "Status",
+        "allStatuses": "All statuses"
       }
     }
   },

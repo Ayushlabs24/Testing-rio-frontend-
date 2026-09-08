@@ -10,12 +10,14 @@ import {
   LayoutDashboard,
   // ListChecks,
   ListTree,
+  Milestone,
   QrCode,
   ScrollText,
   Share2,
   Terminal,
   ShieldCheck,
   Users2,
+  // DatabaseBackup, // RIO-NFR-010 nav item hidden — see below
 } from "lucide-react";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
 
@@ -94,6 +96,21 @@ export const appNav: NavItem[] = [
     module: "archiveSharingAudit",
   },
   {
+    // RIO-FR-002. Gated on `dataQuality` rather than `dataImport`: the queue
+    // is a reviewer surface, and dataImport is held by the roles that create
+    // the data rather than the ones the client put decisions with (Q23).
+    labelKey: "dataQuality",
+    href: "/data-quality",
+    icon: ShieldCheck,
+    module: "dataQuality",
+  },
+  {
+    labelKey: "initiatives",
+    href: "/initiatives",
+    icon: Milestone,
+    module: "initiatives",
+  },
+  {
     labelKey: "reviewerSla",
     href: "/reviewer-sla",
     icon: AlarmClock,
@@ -150,6 +167,21 @@ export const appNav: NavItem[] = [
     module: "systemLogs",
     scope: "crossEntity",
   },
+  // RIO-NFR-010 — backups. Its own item next to System Logs and for the same
+  // reasons: platform infrastructure rather than tenant data, and its own
+  // permission module (`backups`, not `systemLogs`, which has no write action
+  // for anyone by design).
+  // Hidden on request — commented out here rather than in NAV_ORDER_BY_ROLE
+  // because the mobile nav (app-topbar.tsx) filters `appNav` by permission
+  // alone and never consults the per-role order, so this is the one place that
+  // hides the item on every surface. Uncomment to restore.
+  // {
+  //   labelKey: "backups",
+  //   href: "/system-admin/backups",
+  //   icon: DatabaseBackup,
+  //   module: "backups",
+  //   scope: "crossEntity",
+  // },
 ];
 
 /**
@@ -180,6 +212,8 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "archive",
     "sharing",
+    "dataQuality",
+    "initiatives",
     "reviewerSla",
     "audit",
     // Client-confirmed (2026-08-20): Methodology Configuration belongs at
@@ -205,6 +239,8 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "publicSurveys",
     "priorityDashboard",
     "reports",
+    "dataQuality",
+    "initiatives",
     "reviewerSla",
     "methodologyConfig",
   ],
@@ -216,6 +252,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "surveyBuilder",
     "publicSurveys",
     "reports",
+    "dataQuality",
     "reviewerSla",
     "methodologyConfig",
   ],
@@ -228,6 +265,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "publicSurveys",
     "priorityDashboard",
     "reports",
+    "initiatives",
     "reviewerSla",
     "methodologyConfig",
   ],
@@ -239,7 +277,11 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "publicSurveys",
     "surveyBuilder",
     "priorityDashboard",
+    // RIO-FR-002 Q23 puts data-quality decisions and threshold tuning with
+    // this role, so it sits with the analytical screens rather than last.
+    "dataQuality",
     "reports",
+    "initiatives",
     "methodologyConfig",
   ],
   system_admin: [
@@ -254,9 +296,15 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "archive",
     "sharing",
+    "dataQuality",
+    "initiatives",
     "reviewerSla",
     "audit",
     "systemLogs",
+    // RIO-NFR-010 — "backups" hidden from the sidebar on request. The screen,
+    // its service and its permission module are untouched; restore the entry
+    // here (and in system_reviewer below) to bring it back.
+    // "backups",
     "methodologyConfig",
   ],
   read_only_viewer: [
@@ -268,7 +316,9 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "surveyBuilder",
     "priorityDashboard",
     "reports",
+    "initiatives",
     "methodologyConfig",
+    "dataQuality",
   ],
   // Center Supervisor (NCNP Supervisor) — RIO-RBAC-001 (client-confirmed):
   // this is now the single combined role for what was previously two
@@ -288,8 +338,10 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "archive",
     "sharing",
+    "initiatives",
     "audit",
     "methodologyConfig",
+    "dataQuality",
   ],
   // System Reviewer — reviews the NCNP Compiled Report (approve/reject with
   // mandatory notes) via the unified /reports page (Category: Consolidated),
@@ -306,5 +358,8 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "priorityDashboard",
     "reports",
     "methodologyConfig",
+    "dataQuality",
+    // RIO-NFR-010 — hidden from the sidebar; see the note in system_admin.
+    // "backups",
   ],
 };

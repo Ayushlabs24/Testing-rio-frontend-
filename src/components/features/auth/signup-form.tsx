@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSectorOptions } from "@/hooks/use-sector-options";
+import { localizedName } from "@/lib/bilingual";
 import {
   isValidRegistrationNumberShape,
   normalizeRegistrationNumber,
@@ -843,7 +844,10 @@ export function SignupForm() {
             </Label>
             <Combobox
               aria-label={tGeo("administrativeRegionLabel")}
-              items={regions.map((r) => ({ value: r.id, label: r.name }))}
+              items={regions.map((r) => ({
+                value: r.id,
+                label: localizedName(r, consentLocale),
+              }))}
               value={regionId || null}
               onSelect={(value) => setValue("regionId", value, { shouldValidate: true })}
               placeholder={tGeo("administrativeRegionPlaceholder")}
@@ -860,7 +864,10 @@ export function SignupForm() {
               {tGeo("governorateLabel")} <span className="text-destructive">*</span>
             </Label>
             <MultiSelect
-              options={governorates.map((g) => ({ value: g.id, label: g.name }))}
+              options={governorates.map((g) => ({
+                value: g.id,
+                label: localizedName(g, consentLocale),
+              }))}
               values={governorateIds}
               onChange={(next) =>
                 setValue("governorateIds", next, { shouldValidate: true })
@@ -885,7 +892,10 @@ export function SignupForm() {
               {tGeo("centerLabel")} <span className="text-destructive">*</span>
             </Label>
             <MultiSelect
-              options={centers.map((c) => ({ value: c.id, label: c.name }))}
+              options={centers.map((c) => ({
+                value: c.id,
+                label: localizedName(c, consentLocale),
+              }))}
               values={centerIds}
               onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
               placeholder={

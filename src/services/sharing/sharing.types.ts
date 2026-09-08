@@ -1,4 +1,4 @@
-export type SharingStatus = "pending" | "approved" | "rejected" | "expired";
+export type SharingStatus = "pending" | "approved" | "rejected" | "expired" | "withdrawn";
 
 export interface SharingRequest {
   id: string;
@@ -15,6 +15,10 @@ export interface SharingRequest {
   decidedAt: string | null;
   note: string | null;
   decisionNote: string | null;
+  /** Optional expiry the owner set at approval time; null = never expires on its own. */
+  expiresAt: string | null;
+  withdrawnBy: string | null;
+  withdrawnAt: string | null;
 }
 
 export interface CreateSharingRequestPayload {
@@ -26,6 +30,8 @@ export interface CreateSharingRequestPayload {
 
 export interface DecideSharingRequestPayload {
   note?: string;
+  /** Only meaningful on approve. */
+  expiresAt?: string;
 }
 
 export interface SharedStudySnapshot {

@@ -113,6 +113,18 @@ export const endpoints = {
   // business-event governance trail (RIO-FR-007); these are system
   // diagnostics (errors, failed integrations, slow requests, job outcomes),
   // gated on the System-Admin-only `systemLogs` permission.
+  // RIO-NFR-010 — backup administration. Platform-scoped: a dump spans every
+  // entity, so nothing here takes an org.
+  backups: {
+    list: "/backups",
+    summary: "/backups/summary",
+    run: "/backups/run",
+    prune: "/backups/prune",
+    verify: (runId: string) => `/backups/${runId}/verify`,
+    // Deeper than verify: opens the artefact and checks it parses as something
+    // a restore could consume. See BackupController.checkRecoverability.
+    recoverability: (runId: string) => `/backups/${runId}/recoverability`,
+  },
   systemLogs: {
     list: "/system-logs",
     summary: "/system-logs/summary",
@@ -302,12 +314,18 @@ export const endpoints = {
     list: "/archive",
     byId: (id: string) => `/archive/${id}`,
   },
+  historicalStudies: {
+    list: "/historical-studies",
+    create: "/historical-studies",
+    file: (id: string) => `/historical-studies/${id}/file`,
+  },
   sharing: {
     list: "/sharing-requests",
     create: "/sharing-requests",
     byId: (id: string) => `/sharing-requests/${id}`,
     approve: (id: string) => `/sharing-requests/${id}/approve`,
     reject: (id: string) => `/sharing-requests/${id}/reject`,
+    withdraw: (id: string) => `/sharing-requests/${id}/withdraw`,
     sharedStudy: (id: string) => `/sharing-requests/${id}/shared-study`,
     lookupOrganizations: (query: string) =>
       `/sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
@@ -320,11 +338,45 @@ export const endpoints = {
     byId: (id: string) => `/report-sharing-requests/${id}`,
     approve: (id: string) => `/report-sharing-requests/${id}/approve`,
     reject: (id: string) => `/report-sharing-requests/${id}/reject`,
+    withdraw: (id: string) => `/report-sharing-requests/${id}/withdraw`,
     sharedReport: (id: string) => `/report-sharing-requests/${id}/shared-report`,
     lookupOrganizations: (query: string) =>
       `/report-sharing-requests/lookup/organizations?query=${encodeURIComponent(query)}`,
     lookupReportsForOrg: (orgId: string) =>
       `/report-sharing-requests/lookup/organizations/${orgId}/reports`,
+  },
+  // RIO-FR-002 — the Data Quality reviewer queue.
+  dataQuality: {
+    flags: "/data-quality/flags",
+    summary: "/data-quality/summary",
+    review: (flagId: string) => `/data-quality/flags/${flagId}/review`,
+    bulkAccept: "/data-quality/flags/bulk-accept",
+    duplicates: "/data-quality/duplicates",
+    decideDuplicate: (candidateId: string) =>
+      `/data-quality/duplicates/${candidateId}/decide`,
+    // RIO-AI-004 / Q9 — Center/NCNP only. Returns an empty page for anyone
+    // else, so an entity reviewer never learns the queue exists.
+    crossEntityDuplicates: "/data-quality/duplicates/cross-entity",
+    scanCrossEntity: "/data-quality/duplicates/cross-entity/scan",
+    scanSemantic: "/data-quality/duplicates/semantic/scan",
+    // RIO-AI-004 — merge. `merges` is both the history (GET) and the act
+    // (POST); the backend gates them on read and approve respectively.
+    merges: "/data-quality/merges",
+    mergePreview: "/data-quality/merges/preview",
+    settings: "/data-quality/settings",
+    undoMerge: (mergeId: string) => `/data-quality/merges/${mergeId}/undo`,
+  },
+  initiatives: {
+    list: "/initiatives",
+    create: "/initiatives",
+    byId: (id: string) => `/initiatives/${id}`,
+    update: (id: string) => `/initiatives/${id}`,
+    linkedByNeed: (needId: string) => `/needs/${needId}/initiatives`,
+    linkNeed: (needId: string, initiativeId: string) =>
+      `/needs/${needId}/initiatives/${initiativeId}`,
+    unlinkNeed: (needId: string, initiativeId: string) =>
+      `/needs/${needId}/initiatives/${initiativeId}/unlink`,
+    statusHistory: (needId: string) => `/needs/${needId}/initiatives/status-history`,
   },
   reviewerSla: {
     config: "/reviewer-sla/config",

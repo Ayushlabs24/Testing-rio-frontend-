@@ -37,6 +37,9 @@ const REQUEST: ReportSharingRequest = {
   decidedAt: null,
   note: "For reference",
   decisionNote: null,
+  expiresAt: null,
+  withdrawnBy: null,
+  withdrawnAt: null,
 };
 
 describe("reportSharingService", () => {

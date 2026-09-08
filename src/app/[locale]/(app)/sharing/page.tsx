@@ -6,7 +6,11 @@ import { Suspense } from "react";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
-import type { SharingInnerTab } from "@/components/features/sharing/study-sharing-panel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  StudySharingPanel,
+  type SharingInnerTab,
+} from "@/components/features/sharing/study-sharing-panel";
 import { ReportSharingPanel } from "@/components/features/sharing/report-sharing-panel";
 
 const INNER_TABS: SharingInnerTab[] = [
@@ -15,17 +19,16 @@ const INNER_TABS: SharingInnerTab[] = [
   "approved",
   "rejected",
   "sharedReports",
+  "allOrganizations",
 ];
 
-// Study-sharing (StudySharingPanel, an outer Studies/Reports tab here) is
-// intentionally not wired up on this page — it's a real, working feature
-// (predates FR-014, its own Prisma model/service/tests all still exist and
-// are untouched), just not part of the currently assigned scope for this
-// page. Hidden at the UI layer only: nothing backend-side was removed, so
-// it can come back by re-adding the outer entity tabs (see git history for
-// the previous version of this file) without any data migration. `tab`
-// still deep-links a sharing-alert notification straight to the right
-// ReportSharingPanel sub-tab (e.g. Incoming Requests).
+// Study-sharing (StudySharingPanel) restored as an outer Studies/Reports
+// tab (2026-09-07, client-confirmed) — it had been deliberately hidden at
+// the UI layer only (nothing backend-side was ever removed: its own
+// Prisma model/service/tests predate FR-014 and were untouched), and is
+// now wanted visible again. `tab` still deep-links a sharing-alert
+// notification straight to the right ReportSharingPanel sub-tab (e.g.
+// Incoming Requests) on the Reports side.
 export default function SharingPage() {
   return (
     <Suspense>
@@ -35,19 +38,41 @@ export default function SharingPage() {
 }
 
 function SharingPageContent() {
-  const t = useTranslations("app.reportSharing");
+  const t = useTranslations("app.sharing");
   const searchParams = useSearchParams();
 
+  // `undefined` when the URL doesn't name a valid tab — NOT a hardcoded
+  // "incoming" default, which would override ReportSharingPanel's own
+  // role-aware default (cross-entity roles land on "allOrganizations";
+  // everyone else lands on "incoming") every time this page mounts.
   const tabParam = searchParams.get("tab");
-  const initialTab: SharingInnerTab = INNER_TABS.includes(tabParam as SharingInnerTab)
+  const initialTab: SharingInnerTab | undefined = INNER_TABS.includes(
+    tabParam as SharingInnerTab,
+  )
     ? (tabParam as SharingInnerTab)
-    : "incoming";
+    : undefined;
 
   return (
     <PermissionGuard module="archiveSharingAudit" action="read">
       <PageContainer>
         <PageHeader title={t("title")} description={t("description")} />
-        <ReportSharingPanel initialTab={initialTab} />
+
+        <Tabs defaultValue="reports">
+          <TabsList variant="line" size="lg">
+            <TabsTrigger value="studies" size="lg">
+              {t("entityStudies")}
+            </TabsTrigger>
+            <TabsTrigger value="reports" size="lg">
+              {t("entityReports")}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="studies" className="mt-6">
+            <StudySharingPanel />
+          </TabsContent>
+          <TabsContent value="reports" className="mt-6">
+            <ReportSharingPanel initialTab={initialTab} />
+          </TabsContent>
+        </Tabs>
       </PageContainer>
     </PermissionGuard>
   );

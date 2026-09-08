@@ -1,6 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -89,6 +91,7 @@ export function StudyForm({
 }: StudyFormProps) {
   const t = useTranslations("app.studies.form");
   const tValidation = useTranslations("app.studies.validation");
+  const locale = useLocale() as AppLocale;
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isCreate = study === undefined;
 
@@ -271,7 +274,7 @@ export function StudyForm({
             <SelectContent>
               {studyTypes.map((option) => (
                 <SelectItem key={option.id} value={option.name}>
-                  {option.name}
+                  {localizedName(option, locale)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -291,7 +294,7 @@ export function StudyForm({
             <SelectContent>
               {targetSectors.map((option) => (
                 <SelectItem key={option.id} value={option.name}>
-                  {option.name}
+                  {localizedName(option, locale)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -305,7 +308,10 @@ export function StudyForm({
             {t("governorateLabel")} <span className="text-destructive">*</span>
           </Label>
           <MultiSelect
-            options={orgGovernorates.map((g) => ({ value: g.id, label: g.name }))}
+            options={orgGovernorates.map((g) => ({
+              value: g.id,
+              label: localizedName(g, locale),
+            }))}
             values={governorateIds}
             onChange={(next) => setValue("governorateIds", next)}
             placeholder={t("governoratePlaceholder")}
@@ -325,7 +331,10 @@ export function StudyForm({
             {t("centerLabel")} <span className="text-destructive">*</span>
           </Label>
           <MultiSelect
-            options={orgCenters.map((c) => ({ value: c.id, label: c.name }))}
+            options={orgCenters.map((c) => ({
+              value: c.id,
+              label: localizedName(c, locale),
+            }))}
             values={centerIds}
             onChange={(next) => setValue("centerIds", next)}
             placeholder={

@@ -147,13 +147,7 @@ export function AiClassificationSection({
     return () => {
       cancelled = true;
     };
-  }, [need.id, need.status]);
-
-  const refreshSurvey = () =>
-    surveysService
-      .getSurveyByNeedId(need.id, actAsOrgOptions(need.orgId))
-      .then((s) => setSurvey(s))
-      .catch(() => setSurvey(null));
+  }, [need.id, need.orgId, need.status]);
 
   // A rejected Need sits at `pending_ai_classification` too — same status
   // value a fresh Need starts at — but nothing is actually running here:
@@ -202,7 +196,7 @@ export function AiClassificationSection({
     return () => {
       cancelled = true;
     };
-  }, [need.id, need.status]);
+  }, [need.id, need.orgId, need.status]);
 
   // The Research Officer specifically loses the Override button once the
   // Survey they curated has been submitted for the Approver's review — an
@@ -243,7 +237,7 @@ export function AiClassificationSection({
     aiDecisionsService
       .classify(need.id, actAsOrgOptions(need.orgId))
       .catch(() => undefined);
-  }, [need.id, need.status]);
+  }, [need.id, need.orgId, need.status]);
 
   // Poll while classification is in flight (or about to be, for a "draft"
   // Need the effect above just kicked off) — no push mechanism exists, so

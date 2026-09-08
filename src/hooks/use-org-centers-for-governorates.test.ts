@@ -24,6 +24,7 @@ const centers: Center[] = [
     code: "001",
     governorateId: "gov-1",
     name: "Allowed Center",
+    nameAr: null,
     category: "A",
   },
   {
@@ -31,6 +32,7 @@ const centers: Center[] = [
     code: "002",
     governorateId: "gov-1",
     name: "Foreign Center",
+    nameAr: null,
     category: "A",
   },
 ];
