@@ -6,6 +6,7 @@ import type {
   Domain,
   DomainWithSubDomains,
   PublicDomainOption,
+  PublicDomainTreeOption,
   SubDomain,
   UpdateDomainPayload,
   UpdateSubDomainPayload,
@@ -28,9 +29,19 @@ export const domainsService = {
   },
 
   /** One request for every domain's sub-domains, nested — use this instead
-   * of `list()` + one `listSubDomains()` call per domain. */
+   * of `list()` + one `listSubDomains()` call per domain. Requires
+   * `methodologyQuestionBank:read` — most roles (e.g. ngo_admin) don't hold
+   * it; use `listPublicTree()` instead for the app-wide name→Arabic-name
+   * lookup (see useDomainArabicMap). */
   async listWithSubDomains(): Promise<DomainWithSubDomains[]> {
     return apiClient.get<DomainWithSubDomains[]>(endpoints.domains.tree);
+  },
+
+  /** Name + Arabic-name only, domains and sub-domains, reachable by every
+   * role regardless of `methodologyQuestionBank` grant — see
+   * PublicDomainTreeOption's own comment. */
+  async listPublicTree(): Promise<PublicDomainTreeOption[]> {
+    return apiClient.get<PublicDomainTreeOption[]>(endpoints.domains.publicTree);
   },
 
   async create(payload: CreateDomainPayload): Promise<Domain> {

@@ -36,6 +36,17 @@ export interface PublicDomainOption {
   nameAr: string | null;
 }
 
+/** From `GET /domains/public/tree` — same "name-only, nothing sensitive"
+ * posture as PublicDomainOption, extended with sub-domains. Reachable by
+ * every role regardless of `methodologyQuestionBank` grant, unlike
+ * `DomainWithSubDomains` from `/domains/tree` — see useDomainArabicMap,
+ * which needs this from roles (e.g. ngo_admin) that hold no such grant. */
+export interface PublicDomainTreeOption {
+  name: string;
+  nameAr: string | null;
+  subDomains: { name: string; nameAr: string | null }[];
+}
+
 export interface CreateDomainPayload {
   code: string;
   name: string;

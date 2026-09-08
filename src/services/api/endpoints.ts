@@ -206,6 +206,7 @@ export const endpoints = {
   },
   domains: {
     public: "/domains/public",
+    publicTree: "/domains/public/tree",
     list: "/domains",
     tree: "/domains/tree",
     create: "/domains",

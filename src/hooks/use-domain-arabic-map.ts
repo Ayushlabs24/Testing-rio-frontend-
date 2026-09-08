@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 import type { AppLocale } from "@/i18n/routing";
 import { domainsService } from "@/services/domains/domains.service";
-import type { DomainWithSubDomains } from "@/services/domains/domains.types";
+import type { PublicDomainTreeOption } from "@/services/domains/domains.types";
 
 export interface DomainArabicMap {
   /** Resolves a plain Domain name string to its Arabic name when the UI is
@@ -31,12 +31,22 @@ export interface DomainArabicMap {
  */
 export function useDomainArabicMap(): DomainArabicMap {
   const locale = useLocale() as AppLocale;
-  const [domainsTree, setDomainsTree] = useState<DomainWithSubDomains[]>([]);
+  const [domainsTree, setDomainsTree] = useState<PublicDomainTreeOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+    // `listPublicTree()`, not `listWithSubDomains()` — this hook is called
+    // from screens reachable by every role (Survey Builder, Initiatives,
+    // Data Quality, dashboards, ...), and most roles hold no
+    // `methodologyQuestionBank` grant at all (e.g. ngo_admin —
+    // client-confirmed 2026-08-20). `listWithSubDomains()` 403'd for those
+    // roles, and the catch below silently left `domainsTree` empty forever —
+    // every localizedDomain/localizedSubDomain call then fell back to
+    // showing the raw English name with no visible error anywhere. Found
+    // 2026-09-08 tracing a persistent "domain still shows in English" report
+    // that survived several rounds of otherwise-correct localization fixes.
     domainsService
-      .listWithSubDomains()
+      .listPublicTree()
       .then((tree) => {
         if (!cancelled) setDomainsTree(tree);
       })
