@@ -3,6 +3,7 @@
 import { Download, Eye, MessageSquareText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { BackButton } from "@/components/common/back-button";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
@@ -148,14 +149,14 @@ function ResponseDetailBody({
             {detail.answers.map((answer) => (
               <div key={answer.questionId} className="space-y-1.5">
                 <p dir="auto" className="text-muted-foreground text-xs font-medium">
-                  {answer.questionText}
+                  <AutoTranslate text={answer.questionText} />
                 </p>
                 <div
                   dir="auto"
                   className="border-border bg-muted/40 rounded-md border px-3.5 py-2 text-sm whitespace-pre-wrap"
                 >
                   {answer.answer && answer.answer.trim() ? (
-                    answer.answer
+                    <AutoTranslate text={answer.answer} />
                   ) : (
                     <span className="text-muted-foreground">{t("noAnswer")}</span>
                   )}

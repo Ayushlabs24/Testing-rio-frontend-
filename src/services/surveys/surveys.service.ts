@@ -20,8 +20,13 @@ export interface Question {
    * the bank entry has none set. */
   priorityWeight?: number | null;
   questionText: string;
+  // RIO Arabic Localization (Approach 3, Hybrid) — the backend has always
+  // returned this (see questions.service.ts's toQuestionRow), this type just
+  // never declared it, so nothing in Survey Builder ever read it.
+  questionTextAr?: string | null;
   answerType: string;
   answerOptions?: string[] | null;
+  answerOptionsAr?: string[] | null;
   requiredOptional: string;
 }
 
@@ -40,8 +45,17 @@ export interface SurveyQuestionItem {
   bankQuestionId: string | null;
   questionCode: string | null;
   questionText: string;
+  // RIO Arabic Localization (Approach 3, Hybrid) — added 2026-09-08. Set
+  // for a Question Bank item (client-supplied translation); always null/
+  // undefined for a custom/additional item (isCustom: true), which has no
+  // such column — see the backend's toQuestionDto. Optional (like
+  // priorityWeight below) so a client-constructed optimistic item — added
+  // locally before the next save/reload round-trips it through the API —
+  // doesn't have to fabricate a value for a field it can't know yet.
+  questionTextAr?: string | null;
   answerType: string;
   answerOptions: string[] | null;
+  answerOptionsAr?: string[] | null;
   domain: string | null;
   subDomain: string | null;
   indicator: string | null;

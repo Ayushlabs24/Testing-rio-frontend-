@@ -111,6 +111,15 @@ export const appNav: NavItem[] = [
     module: "initiatives",
   },
   {
+    // RIO-FR-002. Gated on `dataQuality` rather than `dataImport`: the queue
+    // is a reviewer surface, and dataImport is held by the roles that create
+    // the data rather than the ones the client put decisions with (Q23).
+    labelKey: "dataQuality",
+    href: "/data-quality",
+    icon: ShieldCheck,
+    module: "dataQuality",
+  },
+  {
     labelKey: "reviewerSla",
     href: "/reviewer-sla",
     icon: AlarmClock,
@@ -214,6 +223,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "sharing",
     "dataQuality",
     "initiatives",
+    "dataQuality",
     "reviewerSla",
     "audit",
     // Client-confirmed (2026-08-20): Methodology Configuration belongs at
@@ -241,6 +251,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "reports",
     "dataQuality",
     "initiatives",
+    "dataQuality",
     "reviewerSla",
     "methodologyConfig",
   ],
@@ -298,6 +309,7 @@ export const NAV_ORDER_BY_ROLE: Record<string, string[]> = {
     "sharing",
     "dataQuality",
     "initiatives",
+    "dataQuality",
     "reviewerSla",
     "audit",
     "systemLogs",

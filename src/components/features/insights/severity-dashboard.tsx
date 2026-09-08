@@ -17,6 +17,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -59,6 +61,7 @@ export function SeverityDashboard({
   villages,
 }: SeverityDashboardProps) {
   const t = useTranslations("PriorityDashboard.severityDashboard");
+  const { localizedDomain } = useDomainArabicMap();
   const canRecalculate = usePermission("priorityScoring", "create");
 
   const [selectedVillage, setSelectedVillage] = useState<string>("consolidated");
@@ -527,7 +530,7 @@ export function SeverityDashboard({
                           {t("criticalOverrideTitle")}
                         </p>
                         <p className="text-muted-foreground mt-0.5 text-xs">
-                          {priorityData.overrideReason}
+                          <AutoTranslate text={priorityData.overrideReason} />
                         </p>
                       </div>
                     </div>
@@ -611,7 +614,7 @@ export function SeverityDashboard({
                                 )}
                               >
                                 <TableCell className="py-2 font-semibold">
-                                  {comp.domainNameSnapshot}
+                                  {localizedDomain(comp.domainNameSnapshot)}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground py-2 text-right tabular-nums">
                                   {comp.domainSeverityScore.toFixed(1)}
@@ -704,10 +707,10 @@ export function SeverityDashboard({
                               {item.rank}
                             </TableCell>
                             <TableCell className="text-foreground text-sm font-semibold">
-                              {item.kpi}
+                              <AutoTranslate text={item.kpi} />
                             </TableCell>
                             <TableCell className="text-muted-foreground text-xs">
-                              {item.domain}
+                              {localizedDomain(item.domain)}
                             </TableCell>
                             <TableCell className="text-right font-black tabular-nums">
                               <span className={scoreColors.text}>

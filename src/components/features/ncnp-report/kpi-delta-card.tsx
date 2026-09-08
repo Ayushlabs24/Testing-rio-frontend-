@@ -1,4 +1,6 @@
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import type { NcnpPeriodStat } from "@/services/ncnp-report/ncnp-report.types";
 
@@ -7,12 +9,25 @@ interface KpiDeltaCardProps {
   total: number;
   stat: NcnpPeriodStat;
   periodLabel: string;
+  /** "New" — shown instead of a percentage when the prior period had zero
+   * (see the changePct note below). Passed in translated rather than
+   * hardcoded, so this presentational component carries no English text of
+   * its own. */
+  newLabel: string;
+  locale: AppLocale;
 }
 
 // changePct is null only when the prior period had zero — an undefined
 // percentage, never rendered as "+100%"/"+Infinity%", which would
 // misrepresent a 0-to-N change as something it isn't.
-export function KpiDeltaCard({ label, total, stat, periodLabel }: KpiDeltaCardProps) {
+export function KpiDeltaCard({
+  label,
+  total,
+  stat,
+  periodLabel,
+  newLabel,
+  locale,
+}: KpiDeltaCardProps) {
   const direction =
     stat.changePct === null
       ? null
@@ -27,7 +42,7 @@ export function KpiDeltaCard({ label, total, stat, periodLabel }: KpiDeltaCardPr
   return (
     <div className="border-border/60 bg-card rounded-2xl border p-6 shadow-sm">
       <p className="text-foreground text-4xl leading-none font-extrabold tracking-tight tabular-nums">
-        {total.toLocaleString()}
+        {formatNumber(total, locale)}
       </p>
       <p className="text-muted-foreground mt-2 text-base font-semibold">{label}</p>
       <div className="mt-3 flex items-center gap-1.5 text-sm">
@@ -41,7 +56,7 @@ export function KpiDeltaCard({ label, total, stat, periodLabel }: KpiDeltaCardPr
         >
           <Icon className="size-3.5" />
           {stat.changePct === null
-            ? "New"
+            ? newLabel
             : `${stat.changePct > 0 ? "+" : ""}${stat.changePct.toFixed(1)}%`}
         </span>
         <span className="text-muted-foreground/80">{periodLabel}</span>

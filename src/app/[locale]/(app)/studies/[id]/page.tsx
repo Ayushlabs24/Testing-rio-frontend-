@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { BackButton } from "@/components/common/back-button";
 import type { AppLocale } from "@/i18n/routing";
 import {
@@ -522,7 +523,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                               dir="auto"
                               className="max-w-52 text-sm font-medium break-words whitespace-normal"
                             >
-                              {need.title}
+                              <AutoTranslate text={need.title} />
                             </TableCell>
                             <TableCell className="max-w-40 text-sm">
                               <CompactNameList

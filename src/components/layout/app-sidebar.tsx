@@ -3,6 +3,7 @@
 import { LogOut } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { OrgBrandMark } from "@/components/common/org-brand-mark";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -38,6 +39,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
   const { session, logout } = useAuth();
   const t = useTranslations("app.sidebar");
   const tTopbar = useTranslations("app.topbar");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
   const pathname = usePathname();
   const locale = useLocale();
 
@@ -96,10 +98,10 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
           {!collapsed ? (
             <span className="min-w-0 flex-1">
               <span className="text-sidebar-foreground group-hover:text-sidebar-accent-foreground group-aria-expanded:text-sidebar-accent-foreground block text-sm font-medium break-words">
-                {session.user.name}
+                <AutoTranslate text={session.user.name} />
               </span>
               <span className="text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground/80 group-aria-expanded:text-sidebar-accent-foreground/80 block truncate text-xs">
-                {role.name}
+                {tRoleNames.has(role.key) ? tRoleNames(role.key) : role.name}
               </span>
             </span>
           ) : null}
@@ -133,7 +135,7 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
                 className="text-sidebar-foreground ms-2.5 min-w-0 flex-1 text-sm font-semibold break-words"
                 title={organization.name}
               >
-                {organization.name}
+                <AutoTranslate text={organization.name} />
               </span>
             )}
           </div>
@@ -180,7 +182,9 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>{profileMenu}</TooltipTrigger>
-              <TooltipContent side="right">{session.user.name}</TooltipContent>
+              <TooltipContent side="right">
+                <AutoTranslate text={session.user.name} />
+              </TooltipContent>
             </Tooltip>
           ) : (
             profileMenu

@@ -3,6 +3,7 @@
 import { BarChart3, Eye, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -269,7 +270,7 @@ function GenerateReportDialog({
                 <SelectContent>
                   {studies.map((study) => (
                     <SelectItem key={study.id} value={study.id}>
-                      {study.title}
+                      <AutoTranslate text={study.title} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -301,7 +302,8 @@ function GenerateReportDialog({
                   ) : null}
                   {(surveys ?? []).map((survey) => (
                     <SelectItem key={survey.id} value={survey.id}>
-                      {survey.title} — {survey.responseCount} {t("surveyResponsesSuffix")}
+                      <AutoTranslate text={survey.title} /> — {survey.responseCount}{" "}
+                      {t("surveyResponsesSuffix")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -553,7 +555,7 @@ export default function ReportsPage() {
                   <SelectItem value={ALL}>{t("filterStudyAll")}</SelectItem>
                   {studies.map((study) => (
                     <SelectItem key={study.id} value={study.id}>
-                      {study.title}
+                      <AutoTranslate text={study.title} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -633,9 +635,11 @@ export default function ReportsPage() {
                         dir="auto"
                         className="max-w-sm py-4 text-sm font-medium break-words whitespace-normal"
                       >
-                        {row.category === "ngo"
-                          ? row.report.title
-                          : consolidatedReportId(row.review.generatedAt)}
+                        {row.category === "ngo" ? (
+                          <AutoTranslate text={row.report.title} />
+                        ) : (
+                          consolidatedReportId(row.review.generatedAt)
+                        )}
                       </TableCell>
                       {canSeeConsolidated ? (
                         <TableCell className="text-sm">

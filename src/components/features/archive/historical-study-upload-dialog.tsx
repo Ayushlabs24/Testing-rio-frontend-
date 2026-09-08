@@ -29,7 +29,14 @@ import type { Center, Governorate, Region } from "@/services/geography/geography
 import { historicalStudiesService } from "@/services/historical-studies/historical-studies.service";
 
 const NONE = "__none__";
-const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"];
+// RIO-FR-013 shipped this as PDF/Word only, because an archived
+// pre-platform study was a document to read. RIO-DATA-002 then made the
+// archive an import source as well, and only one-need-per-row formats can
+// be imported into the dashboard — so a spreadsheet has to be uploadable in
+// the first place. The backend already accepted all of these
+// (EvidenceStorageService.ALLOWED_EXTENSIONS, which also checks the file
+// signature); it was only this picker that excluded them.
+const ALLOWED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".pdf", ".doc", ".docx"];
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -54,7 +61,7 @@ export function HistoricalStudyUploadDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sectorOptions: string[];
+  sectorOptions: { name: string; nameAr: string | null }[];
   onUploaded: () => void;
 }) {
   const t = useTranslations("app.archive.uploadHistorical");
@@ -270,8 +277,8 @@ export function HistoricalStudyUploadDialog({
                 <SelectContent>
                   <SelectItem value={NONE}>{t("subjectPlaceholder")}</SelectItem>
                   {sectorOptions.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
+                    <SelectItem key={s.name} value={s.name}>
+                      {localizedName(s, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>

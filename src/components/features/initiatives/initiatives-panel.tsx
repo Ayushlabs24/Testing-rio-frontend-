@@ -4,6 +4,7 @@ import { Milestone, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,12 +17,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { InitiativeFormDialog } from "@/components/features/initiatives/initiative-form-dialog";
 import { initiativesService } from "@/services/initiatives/initiatives.service";
 import type { Initiative } from "@/services/initiatives/initiatives.types";
 
 export function InitiativesPanel() {
   const t = useTranslations("app.initiatives");
+  const tStatus = useTranslations("app.initiatives.statusValues");
+  const { localizedDomain } = useDomainArabicMap();
   const { session } = useAuth();
   const canWriteInitiatives = usePermission("initiatives", "write");
   const canCreateInitiatives = usePermission("initiatives", "create");
@@ -120,15 +124,19 @@ export function InitiativesPanel() {
                     return (
                       <TableRow key={row.id}>
                         <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                          {row.name}
+                          <AutoTranslate text={row.name} />
                         </TableCell>
                         <TableCell className="text-sm break-words whitespace-normal">
-                          {row.orgName}
+                          <AutoTranslate text={row.orgName} />
                         </TableCell>
-                        <TableCell className="text-sm">{row.domain ?? "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          {row.domain ? localizedDomain(row.domain) : "—"}
+                        </TableCell>
                         <TableCell className="text-sm capitalize">
-                          {row.status === "active" || row.status === "completed"
-                            ? t(`statusValues.${row.status}`)
+                          {tStatus.has(row.status.toLowerCase())
+                            ? tStatus(
+                                row.status.toLowerCase() as Parameters<typeof tStatus>[0],
+                              )
                             : row.status}
                         </TableCell>
                         <TableCell className="text-center text-sm">

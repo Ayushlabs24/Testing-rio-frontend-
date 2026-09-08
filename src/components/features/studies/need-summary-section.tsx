@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, FileText, Loader2, RotateCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
@@ -170,6 +171,14 @@ export function NeedSummarySection({ needId }: { needId: string }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="need-summary-text">{t("summaryLabel")}</Label>
+          {/* Deliberately NOT auto-translated: this is a reviewer verifying
+              the AI summary against `sourceStatement` word-for-word (AC 5's
+              hallucination checks), and it's the field they edit and save as
+              `reviewerEditedText` — silently swapping its language here would
+              undermine that review and could get a translated (not
+              reviewed) sentence saved as the record of what the reviewer
+              actually approved. `sourceStatement` above it is read-only
+              reference text, so that one is auto-translated. */}
           <Textarea
             id="need-summary-text"
             rows={7}
@@ -192,7 +201,7 @@ export function NeedSummarySection({ needId }: { needId: string }) {
             id="need-summary-source"
             className="border-border bg-muted/40 text-muted-foreground max-h-48 overflow-y-auto rounded-md border p-3 text-sm whitespace-pre-wrap"
           >
-            {summary.sourceStatement}
+            <AutoTranslate text={summary.sourceStatement} />
           </div>
           <p className="text-muted-foreground text-xs">{t("sourceNote")}</p>
         </div>

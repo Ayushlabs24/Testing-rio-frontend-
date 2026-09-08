@@ -1,8 +1,11 @@
 "use client";
 
 import { Terminal, X, Copy, ListTree } from "lucide-react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { systemLogsService } from "@/services/system-logs/system-logs.service";
@@ -45,6 +48,7 @@ export function SystemLogDetailDrawer({
   onClose,
 }: SystemLogDetailDrawerProps) {
   const t = useTranslations("systemAdmin.systemLogs.detail");
+  const tLogs = useTranslations("systemAdmin.systemLogs");
   const [entry, setEntry] = useState<SystemLogEntry | null>(null);
   const [failed, setFailed] = useState(false);
   const [trace, setTrace] = useState<SystemLogEntry[] | null>(null);
@@ -82,6 +86,13 @@ export function SystemLogDetailDrawer({
   /** True until the fetched entry is the one the caller asked for — covers
    *  both the first load and switching rows while a drawer is already open. */
   const loading = !failed && entry?.id !== entryId;
+
+  // Field's `value` is a plain string (most of its other uses are technical
+  // IDs that must never be translated), so a translated org/person name is
+  // resolved to a string with the hook here rather than wrapped in
+  // <AutoTranslate> at the call site.
+  const orgName = useAutoTranslate(entry?.organizationName).text;
+  const actorName = useAutoTranslate(entry?.actor?.name).text;
 
   const toggleTrace = () => {
     if (trace) {
@@ -136,17 +147,34 @@ export function SystemLogDetailDrawer({
                 <div className="flex flex-wrap items-center gap-2">
                   <SystemLogLevelBadge level={entry.level} />
                   <span className="text-muted-foreground font-mono text-[11px]">
-                    {entry.source}
+                    {tLogs.has(`sources.${entry.source}`)
+                      ? tLogs(`sources.${entry.source}` as Parameters<typeof tLogs>[0])
+                      : entry.source}
                   </span>
                   <span className="text-muted-foreground font-mono text-[11px]">
-                    {new Date(entry.createdAt).toLocaleString()}
+                    <FormattedDate value={entry.createdAt} withTime />
                   </span>
                 </div>
-                <p className="text-foreground text-sm break-words">{entry.message}</p>
+                <p className="text-foreground text-sm break-words">
+                  <AutoTranslate text={entry.message} />
+                </p>
               </div>
 
               <Card className="grid grid-cols-2 gap-3 p-3">
-                <Field label={t("eventCode")} value={entry.eventCode} />
+                <Field
+                  label={t("eventCode")}
+                  value={
+                    entry.eventCode
+                      ? tLogs.has(`eventCodes.${entry.eventCode}`)
+                        ? tLogs(
+                            `eventCodes.${entry.eventCode}` as Parameters<
+                              typeof tLogs
+                            >[0],
+                          )
+                        : entry.eventCode
+                      : null
+                  }
+                />
                 <Field
                   label={t("endpoint")}
                   value={
@@ -158,12 +186,13 @@ export function SystemLogDetailDrawer({
                   }
                 />
                 <Field label={t("requestId")} value={entry.requestId} />
-                <Field label={t("organization")} value={entry.organizationName} />
+                <Field
+                  label={t("organization")}
+                  value={entry.organizationName ? orgName : null}
+                />
                 <Field
                   label={t("actor")}
-                  value={
-                    entry.actor ? `${entry.actor.name} (${entry.actor.email})` : null
-                  }
+                  value={entry.actor ? `${actorName} (${entry.actor.email})` : null}
                 />
                 <Field label={t("ipAddress")} value={entry.ipAddress} />
                 <Field label={t("instance")} value={entry.instanceId} />
@@ -242,11 +271,11 @@ export function SystemLogDetailDrawer({
                             }
                           >
                             <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
-                              {new Date(row.createdAt).toLocaleTimeString()}
+                              <FormattedDate value={row.createdAt} withTime />
                             </span>
                             <SystemLogLevelBadge level={row.level} />
                             <span className="text-foreground text-xs break-words">
-                              {row.message}
+                              <AutoTranslate text={row.message} />
                             </span>
                           </div>
                         ))

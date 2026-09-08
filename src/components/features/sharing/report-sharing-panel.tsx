@@ -1,9 +1,12 @@
 "use client";
 
 import { Plus, Share2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
 import { useAuth } from "@/components/providers/auth-provider";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { translationService } from "@/services/translation/translation.service";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
 import type { SharingInnerTab } from "@/components/features/sharing/study-sharing-panel";
@@ -70,7 +73,13 @@ function CreateReportSharingRequestDialog({
   onCreated: () => void;
 }) {
   const t = useTranslations("app.reportSharing.create");
+  const locale = useLocale() as AppLocale;
   const [orgOptions, setOrgOptions] = useState<OrgLookupResult[]>([]);
+  // Combobox items take a plain string label, not JSX — resolved once per
+  // lookup through the same translation endpoint AutoTranslate itself
+  // calls, since a Combobox has no "one item visible" render to hang
+  // <AutoTranslate> off (see study-sharing-panel's identical pattern).
+  const [orgLabelById, setOrgLabelById] = useState<Map<string, string>>(new Map());
   const [orgLoading, setOrgLoading] = useState(false);
   const [ownerOrgId, setOwnerOrgId] = useState<string | null>(null);
 
@@ -83,17 +92,35 @@ function CreateReportSharingRequestDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function loadOrgLabels(orgs: OrgLookupResult[]) {
+    if (locale !== "ar") return;
+    const entries = await Promise.all(
+      orgs.map(async (o) => {
+        try {
+          const result = await translationService.translate(o.name, locale);
+          return [o.id, result.translatedText] as const;
+        } catch {
+          return [o.id, o.name] as const;
+        }
+      }),
+    );
+    setOrgLabelById((prev) => new Map([...prev, ...entries]));
+  }
+
   useEffect(() => {
     if (!open) return;
     async function loadOrgs() {
       setOrgLoading(true);
       try {
-        setOrgOptions(await reportSharingService.lookupOrganizations(""));
+        const orgs = await reportSharingService.lookupOrganizations("");
+        setOrgOptions(orgs);
+        void loadOrgLabels(orgs);
       } finally {
         setOrgLoading(false);
       }
     }
     loadOrgs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -116,7 +143,9 @@ function CreateReportSharingRequestDialog({
   async function handleOrgQueryChange(query: string) {
     setOrgLoading(true);
     try {
-      setOrgOptions(await reportSharingService.lookupOrganizations(query));
+      const orgs = await reportSharingService.lookupOrganizations(query);
+      setOrgOptions(orgs);
+      void loadOrgLabels(orgs);
     } finally {
       setOrgLoading(false);
     }
@@ -160,7 +189,10 @@ function CreateReportSharingRequestDialog({
           <div className="space-y-2">
             <Label>{t("ownerOrgLabel")}</Label>
             <Combobox
-              items={orgOptions.map((o) => ({ value: o.id, label: o.name }))}
+              items={orgOptions.map((o) => ({
+                value: o.id,
+                label: orgLabelById.get(o.id) ?? o.name,
+              }))}
               value={ownerOrgId}
               onSelect={setOwnerOrgId}
               onQueryChange={handleOrgQueryChange}
@@ -439,22 +471,26 @@ export function ReportSharingPanel({
                     return (
                       <TableRow key={request.id}>
                         <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                          {request.reportTitle}
+                          <AutoTranslate text={request.reportTitle} />
                         </TableCell>
                         {options.showBothOrgs ? (
                           <>
                             <TableCell className="py-4 text-sm break-words whitespace-normal">
-                              {request.ownerOrgName}
+                              <AutoTranslate text={request.ownerOrgName} />
                             </TableCell>
                             <TableCell className="py-4 text-sm break-words whitespace-normal">
-                              {request.requestingOrgName}
+                              <AutoTranslate text={request.requestingOrgName} />
                             </TableCell>
                           </>
                         ) : (
                           <TableCell className="py-4 text-sm break-words whitespace-normal">
-                            {isOwnerView
-                              ? request.requestingOrgName
-                              : request.ownerOrgName}
+                            <AutoTranslate
+                              text={
+                                isOwnerView
+                                  ? request.requestingOrgName
+                                  : request.ownerOrgName
+                              }
+                            />
                           </TableCell>
                         )}
                         {options.showRole ? (
@@ -467,7 +503,7 @@ export function ReportSharingPanel({
                             className="max-w-56 truncate text-sm"
                             title={request.note ?? undefined}
                           >
-                            {request.note ?? "—"}
+                            {request.note ? <AutoTranslate text={request.note} /> : "—"}
                           </TableCell>
                         ) : null}
                         {options.showRejectReason ? (
@@ -475,7 +511,11 @@ export function ReportSharingPanel({
                             className="max-w-56 truncate text-sm"
                             title={request.decisionNote ?? undefined}
                           >
-                            {request.decisionNote ?? "—"}
+                            {request.decisionNote ? (
+                              <AutoTranslate text={request.decisionNote} />
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                         ) : null}
                         {options.showExpiry ? (

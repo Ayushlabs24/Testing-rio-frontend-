@@ -3,6 +3,7 @@
 import { MessageSquareText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { BackButton } from "@/components/common/back-button";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
@@ -176,7 +177,7 @@ export default function QuestionResponsesPage({
                       </TableCell>
                       <TableCell dir="auto" className="py-4 text-sm break-words">
                         {item.answer && item.answer.trim() ? (
-                          item.answer
+                          <AutoTranslate text={item.answer} />
                         ) : (
                           <span className="text-muted-foreground">{t("noAnswer")}</span>
                         )}

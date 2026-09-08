@@ -11,6 +11,7 @@ import {
   FileText,
   Edit3,
 } from "lucide-react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { BackButton } from "@/components/common/back-button";
@@ -297,7 +298,7 @@ export default function CombinedReportPage({
                       {t("methodologyVersion")}
                     </span>
                     <span className="text-xs font-semibold">
-                      {context?.study.methodologyVersion}
+                      <AutoTranslate text={context?.study.methodologyVersion} />
                     </span>
                   </div>
                 </div>

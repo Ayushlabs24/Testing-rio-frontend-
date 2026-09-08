@@ -1,6 +1,7 @@
 "use client";
 
 import { Shield, X, User, Building2, Tag, Key, Monitor, Lock } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -118,7 +119,7 @@ export function AuditDetailDrawer({ eventId, open, onClose }: AuditDetailDrawerP
                 <div className="text-right text-xs">
                   <span className="text-muted-foreground block">{t("timestamp")}</span>
                   <span className="text-foreground font-mono font-medium">
-                    {new Date(data.createdAt).toLocaleString()}
+                    <FormattedDate value={data.createdAt} withTime />
                   </span>
                 </div>
               </div>

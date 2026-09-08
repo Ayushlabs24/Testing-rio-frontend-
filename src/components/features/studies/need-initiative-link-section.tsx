@@ -14,6 +14,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnalyticalStatusBadge } from "@/components/features/studies/study-status-badge";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { ApiError } from "@/services/api/types";
 import { initiativesService } from "@/services/initiatives/initiatives.service";
 import type { Initiative } from "@/services/initiatives/initiatives.types";
@@ -218,7 +219,9 @@ export function NeedInitiativeLinkSection({
                 className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-md border px-3.5 py-2.5"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{initiative.name}</p>
+                  <p className="truncate text-sm font-medium">
+                    <AutoTranslate text={initiative.name} />
+                  </p>
                   <p className="text-muted-foreground truncate text-xs">
                     {initiative.orgName}
                   </p>

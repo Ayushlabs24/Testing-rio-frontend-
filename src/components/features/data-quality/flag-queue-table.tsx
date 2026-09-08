@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,7 +60,7 @@ export function FlagQueueTable({ flags, canDecide, onReview }: FlagQueueTablePro
             <TableRow key={flag.id}>
               <TableCell className="max-w-[240px]">
                 <span dir="auto" className="block truncate text-sm">
-                  {flag.entityLabel ?? "—"}
+                  {flag.entityLabel ? <AutoTranslate text={flag.entityLabel} /> : "—"}
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {t(`source.${flag.source}`)}

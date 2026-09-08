@@ -3,6 +3,7 @@
 import { BarChart3, QrCode } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -10,6 +11,13 @@ import { NeedStatusBadge } from "@/components/features/studies/study-status-badg
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,13 +30,19 @@ import { PUBLIC_SURVEYS_PAGE_SIZE } from "@/config/pagination";
 import { useRouter } from "@/i18n/navigation";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { organizationsService } from "@/services/organizations/organizations.service";
+import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import { studiesService } from "@/services/studies/studies.service";
 
 interface Row {
   need: Need;
   studyTitle: string;
+  orgId: string;
+  orgName: string;
 }
+
+const ALL_ORGS = "all";
 
 // A Need only belongs on this list once its survey is actually published —
 // `survey_created` means a survey exists but is still a DRAFT, and a public
@@ -37,18 +51,37 @@ interface Row {
 // invites creating/sharing a link that doesn't work yet.
 const SURVEY_EXISTS_STATUSES: readonly Need["status"][] = ["survey_published"];
 
-/** One row per Need, not per Study — each Need runs its own independent
- * survey/link set now. */
+/**
+ * One row per Need, not per Study — each Need runs its own independent
+ * survey/link set now.
+ *
+ * Client-confirmed 2026-09-08 (live QA): a Center Supervisor/System Admin/
+ * System Reviewer here must see every organization's published surveys, not
+ * just whichever one they happen to be scoped to — `studiesService.list()`
+ * already returns cross-org data for exactly these roles (RIO-RBAC-002), so
+ * this was already correct data-wise; what was actually missing was any way
+ * to tell rows apart by organization or narrow the list to one — the
+ * Organization column and filter below.
+ */
 export default function PublicSurveysPage() {
   const t = useTranslations("app.publicSurveys");
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
+  const [orgFilter, setOrgFilter] = useState<string>(ALL_ORGS);
   // Which Needs have at least one active public survey link — "View
   // Insights" is only meaningful (and only shown) once one exists; opening
   // it before that would just be an empty page.
   const [needsWithActiveLink, setNeedsWithActiveLink] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    organizationsService
+      .listAll()
+      .then(setOrganizations)
+      .catch(() => setOrganizations([]));
+  }, []);
 
   useEffect(() => {
     studiesService
@@ -59,7 +92,12 @@ export default function PublicSurveysPage() {
         );
         const nextRows = studies
           .flatMap((study, index) =>
-            needsByStudy[index].map((need) => ({ need, studyTitle: study.title })),
+            needsByStudy[index].map((need) => ({
+              need,
+              studyTitle: study.title,
+              orgId: study.orgId,
+              orgName: study.orgName ?? "",
+            })),
           )
           .filter(({ need }) => SURVEY_EXISTS_STATUSES.includes(need.status));
         setRows(nextRows);
@@ -82,18 +120,26 @@ export default function PublicSurveysPage() {
       });
   }, []);
 
+  const filteredRows = useMemo(
+    () =>
+      orgFilter === ALL_ORGS
+        ? (rows ?? [])
+        : (rows ?? []).filter((r) => r.orgId === orgFilter),
+    [rows, orgFilter],
+  );
+
   const pageCount = Math.max(
     1,
-    Math.ceil((rows?.length ?? 0) / PUBLIC_SURVEYS_PAGE_SIZE),
+    Math.ceil(filteredRows.length / PUBLIC_SURVEYS_PAGE_SIZE),
   );
   const currentPage = Math.min(page, pageCount);
   const pagedRows = useMemo(
     () =>
-      (rows ?? []).slice(
+      filteredRows.slice(
         (currentPage - 1) * PUBLIC_SURVEYS_PAGE_SIZE,
         currentPage * PUBLIC_SURVEYS_PAGE_SIZE,
       ),
-    [rows, currentPage],
+    [filteredRows, currentPage],
   );
 
   return (
@@ -102,12 +148,41 @@ export default function PublicSurveysPage() {
         <PageHeader title={t("title")} description={t("description")} />
 
         <Card>
+          <CardContent className="space-y-4 p-4">
+            <div className="max-w-xs space-y-1.5">
+              <Select
+                value={orgFilter}
+                onValueChange={(v) => {
+                  setOrgFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger aria-label={t("filterOrganizationLabel")}>
+                  <SelectValue placeholder={t("filterOrganizationLabel")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_ORGS}>{t("filterOrganizationAll")}</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      <AutoTranslate text={org.name} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardContent className="p-0">
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[45%] py-3">{t("studyColumn")}</TableHead>
-                  <TableHead className="w-40 py-3">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-[32%] py-3">{t("studyColumn")}</TableHead>
+                  <TableHead className="w-[28%] py-3">
+                    {t("filterOrganizationLabel")}
+                  </TableHead>
+                  <TableHead className="w-32 py-3">{t("statusColumn")}</TableHead>
                   <TableHead className="w-40 py-3" />
                 </TableRow>
               </TableHeader>
@@ -115,17 +190,17 @@ export default function PublicSurveysPage() {
                 {rows === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 3 }).map((__, cell) => (
+                      {Array.from({ length: 4 }).map((__, cell) => (
                         <TableCell key={cell} className="py-5">
                           <div className="bg-muted h-4 w-28 rounded" />
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
-                ) : rows.length === 0 ? (
+                ) : filteredRows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={3}
+                      colSpan={4}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -137,10 +212,14 @@ export default function PublicSurveysPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pagedRows.map(({ need, studyTitle }) => (
+                  pagedRows.map(({ need, studyTitle, orgName }) => (
                     <TableRow key={need.id}>
                       <TableCell className="max-w-sm py-4 text-sm font-medium whitespace-normal">
-                        {studyTitle} — {need.title}
+                        <AutoTranslate text={studyTitle} /> —{" "}
+                        <AutoTranslate text={need.title} />
+                      </TableCell>
+                      <TableCell className="py-4 text-sm break-words whitespace-normal">
+                        <AutoTranslate text={orgName} />
                       </TableCell>
                       <TableCell className="py-4">
                         <NeedStatusBadge status={need.status} />
@@ -181,7 +260,7 @@ export default function PublicSurveysPage() {
               </TableBody>
             </Table>
 
-            {rows && rows.length > 0 ? (
+            {filteredRows.length > 0 ? (
               <div className="border-border border-t px-4 py-3">
                 <Pagination
                   page={currentPage}

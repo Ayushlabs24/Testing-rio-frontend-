@@ -5,6 +5,7 @@ import { use, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn, formatDomainSummary } from "@/lib/utils";
 import { BackButton } from "@/components/common/back-button";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -75,6 +76,7 @@ export default function PriorityDetailInsightsPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("PriorityDashboard.detailPage");
+  const { localizedDomain } = useDomainArabicMap();
   // Client-confirmed (Aug 14): Quality Assessment is Data Analyst's action —
   // was aiReview:write (shared with Research Officer's unrelated Need-
   // classification-trigger use of that flag). Reuses canScore
@@ -557,7 +559,7 @@ export default function PriorityDetailInsightsPage({
                         <div className="mt-2 flex flex-wrap gap-2">
                           {criticalOverrides.map((override, i) => (
                             <Badge key={i} variant="destructive">
-                              {override.domainNameSnapshot}:{" "}
+                              {localizedDomain(override.domainNameSnapshot)}:{" "}
                               {override.domainSeverityScore}
                             </Badge>
                           ))}
@@ -586,7 +588,7 @@ export default function PriorityDetailInsightsPage({
                           {(priorityV2.domainComponents || []).map((domain) => (
                             <TableRow key={domain.domainKey}>
                               <TableCell className="font-medium">
-                                {domain.domainNameSnapshot}
+                                {localizedDomain(domain.domainNameSnapshot)}
                               </TableCell>
                               <TableCell>{domain.domainSeverityScore}</TableCell>
                               <TableCell>{domain.domainPerformanceScore}</TableCell>

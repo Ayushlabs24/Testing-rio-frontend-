@@ -28,10 +28,12 @@ export interface DomainWithSubDomains extends Domain {
   subDomains: SubDomain[];
 }
 
-/** From `GET /domains/public` — reachable pre-login (signup form), so just
- * the name, nothing else. */
+/** From `GET /domains/public` — reachable pre-login (signup form). */
 export interface PublicDomainOption {
   name: string;
+  // RIO Arabic Localization (Approach 3, Hybrid) — the Sign Up sector
+  // dropdown needs this the same as every authenticated Domain read does.
+  nameAr: string | null;
 }
 
 export interface CreateDomainPayload {

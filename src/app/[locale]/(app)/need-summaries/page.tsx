@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -200,7 +201,11 @@ export default function NeedSummariesPage() {
                               href={`/studies/${item.studyId}/needs/${item.needId}`}
                               className="text-primary text-sm font-medium hover:underline"
                             >
-                              {item.needTitle ?? item.needId}
+                              {item.needTitle ? (
+                                <AutoTranslate text={item.needTitle} />
+                              ) : (
+                                item.needId
+                              )}
                             </Link>
                             {/* AC 5 — a summary with a failed check is the one
                                 worth opening rather than bulk-confirming. */}
@@ -220,7 +225,7 @@ export default function NeedSummariesPage() {
                                 and the whole text is one click away on the need
                                 page. `title` keeps it readable on hover. */}
                             <span className="line-clamp-3" title={item.effectiveText}>
-                              {item.effectiveText}
+                              <AutoTranslate text={item.effectiveText} />
                             </span>
                           </TableCell>
                           <TableCell className="text-muted-foreground align-top text-xs break-words whitespace-normal">

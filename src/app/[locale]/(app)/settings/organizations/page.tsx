@@ -3,6 +3,7 @@
 import { Building2, Eye, Users2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -84,7 +85,9 @@ function OrganizationDetailSheet({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <SheetTitle>{organization.name}</SheetTitle>
+                  <SheetTitle>
+                    <AutoTranslate text={organization.name} />
+                  </SheetTitle>
                   <SheetDescription>
                     {t("membersCount", { count: organization.memberCount })}
                   </SheetDescription>
@@ -347,7 +350,7 @@ export default function OrganizationsSettingsPage() {
                       onClick={() => openDetail(organization.id)}
                     >
                       <TableCell className="text-foreground font-medium">
-                        {organization.name}
+                        <AutoTranslate text={organization.name} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {organization.region.join(", ")}

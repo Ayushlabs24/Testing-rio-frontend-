@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Building2, Compass } from "lucide-react";
@@ -88,6 +92,8 @@ export function GeographicDistribution({
   className,
 }: GeographicDistributionProps) {
   const t = useTranslations("systemAdmin.dashboard");
+  const locale = useLocale() as AppLocale;
+  const { localizedDomain } = useDomainArabicMap();
 
   const [loading, setLoading] = useState(true);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -212,7 +218,11 @@ export function GeographicDistribution({
 
       return {
         regionId: region.id,
-        name: region.name,
+        // Display name only — the coordinate lookup above deliberately keys
+        // off `region.name` (English) against KSA_REGION_COORDS and must
+        // stay that way; this is the separate, later "what the user sees"
+        // value, which does follow the UI locale.
+        name: localizedName(region, locale),
         centerName: coords.centerName,
         lat: coords.lat,
         lng: coords.lng,
@@ -221,13 +231,14 @@ export function GeographicDistribution({
         responseCount: NO_RECORDED_RESPONSES,
         publishedCount,
         draftCount,
-        leadingDomain,
+        leadingDomain:
+          leadingDomain === "-" ? leadingDomain : localizedDomain(leadingDomain),
         workingOrgs: workingOrgsList,
         villages: villagesList,
         isFallbackCoverage: regionStudies.length === 0 && regionOrgs.length > 0,
       };
     });
-  }, [regions, governorates, organizations, studies, needs]);
+  }, [regions, governorates, organizations, studies, needs, locale, localizedDomain]);
 
   const activeSelectedRegionId = useMemo(() => {
     if (selectedRegionId) return selectedRegionId;
@@ -402,7 +413,7 @@ export function GeographicDistribution({
                               <div className="flex items-center gap-2">
                                 <Building2 className="text-primary size-4" />
                                 <span className="text-foreground font-semibold">
-                                  {org.name}
+                                  <AutoTranslate text={org.name} />
                                 </span>
                               </div>
                               <span className="text-muted-foreground text-xs font-medium">
@@ -437,7 +448,7 @@ export function GeographicDistribution({
                             <div className="flex items-center gap-2">
                               <MapPin className="text-primary size-4" />
                               <span className="text-foreground font-semibold">
-                                {v.name}
+                                <AutoTranslate text={v.name} />
                               </span>
                             </div>
                             <span className="text-muted-foreground text-xs font-medium">

@@ -3,6 +3,7 @@
 import { Gauge } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -292,10 +293,10 @@ export default function PriorityDashboardPage() {
                           href={`/priority-dashboard/${entry.needId}`}
                           className="text-primary hover:underline"
                         >
-                          {entry.needTitle}
+                          <AutoTranslate text={entry.needTitle} />
                         </Link>
                         <span className="text-muted-foreground block text-xs font-normal">
-                          {entry.studyTitle}
+                          <AutoTranslate text={entry.studyTitle} />
                         </span>
                       </TableCell>
                       <TableCell className="text-sm tabular-nums">

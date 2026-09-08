@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -119,7 +121,7 @@ function DuplicatePairCard({
           // Only a semantic pair has one. Shown because a reviewer deciding on
           // a model's proposal is entitled to its reasoning.
           <p dir="auto" className="text-muted-foreground text-sm italic">
-            {candidate.aiReason}
+            <AutoTranslate text={candidate.aiReason} />
           </p>
         )}
 
@@ -183,7 +185,7 @@ function DuplicatePairCard({
 
         {candidate.note && (
           <p dir="auto" className="text-muted-foreground border-t pt-3 text-sm">
-            {t("reviewerNote")}: {candidate.note}
+            {t("reviewerNote")}: <AutoTranslate text={candidate.note} />
           </p>
         )}
       </CardContent>
@@ -199,6 +201,7 @@ function NeedPanel({
   expanded: boolean;
 }) {
   const t = useTranslations("app.dataQuality.duplicates");
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   if (!need)
     return <div className="text-muted-foreground rounded-md border p-3 text-sm">—</div>;
 
@@ -206,37 +209,43 @@ function NeedPanel({
     <div className="space-y-2 rounded-md border p-3">
       <p className="text-muted-foreground font-mono text-xs">{need.reference}</p>
       <p dir="auto" className="text-sm font-medium">
-        {need.title}
+        <AutoTranslate text={need.title} />
       </p>
       <p dir="auto" className={expanded ? "text-sm" : "line-clamp-3 text-sm"}>
-        {need.statement}
+        <AutoTranslate text={need.statement} />
       </p>
-      <dl className="text-muted-foreground grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs">
+      <dl className="text-muted-foreground grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-xs">
         {need.studyTitle && (
           <>
-            <dt>{t("fields.study")}</dt>
-            <dd dir="auto">{need.studyTitle}</dd>
+            <dt className="whitespace-nowrap">{t("fields.study")}</dt>
+            <dd dir="auto" className="min-w-0 break-words">
+              <AutoTranslate text={need.studyTitle} />
+            </dd>
           </>
         )}
         {need.domain && (
           <>
-            <dt>{t("fields.domain")}</dt>
-            <dd dir="auto">
-              {need.domain}
-              {need.subDomain ? ` · ${need.subDomain}` : ""}
+            <dt className="whitespace-nowrap">{t("fields.domain")}</dt>
+            <dd dir="auto" className="min-w-0 break-words">
+              {localizedDomain(need.domain)}
+              {need.subDomain ? ` · ${localizedSubDomain(need.subDomain)}` : ""}
             </dd>
           </>
         )}
         {need.village.length > 0 && (
           <>
-            <dt>{t("fields.village")}</dt>
-            <dd dir="auto">{need.village.join(", ")}</dd>
+            <dt className="whitespace-nowrap">{t("fields.village")}</dt>
+            <dd dir="auto" className="min-w-0 break-words">
+              <AutoTranslate text={need.village.join(", ")} />
+            </dd>
           </>
         )}
         {need.referenceId && (
           <>
-            <dt>{t("fields.referenceId")}</dt>
-            <dd dir="auto">{need.referenceId}</dd>
+            <dt className="whitespace-nowrap">{t("fields.referenceId")}</dt>
+            <dd dir="auto" className="min-w-0 break-words">
+              {need.referenceId}
+            </dd>
           </>
         )}
       </dl>

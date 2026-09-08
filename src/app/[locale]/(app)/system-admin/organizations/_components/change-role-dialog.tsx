@@ -3,6 +3,7 @@
 import { Shield, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -124,8 +125,10 @@ export function ChangeRoleDialog({
             </div>
             <DialogDescription className="pt-1 text-xs">
               {t("description")} —{" "}
-              <span className="text-foreground font-semibold">{user.name}</span> (
-              {user.email})
+              <span className="text-foreground font-semibold">
+                <AutoTranslate text={user.name} />
+              </span>{" "}
+              ({user.email})
             </DialogDescription>
           </DialogHeader>
 

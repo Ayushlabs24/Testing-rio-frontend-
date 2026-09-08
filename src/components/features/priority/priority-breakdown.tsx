@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
@@ -138,7 +139,9 @@ export function PriorityBreakdown({
             <PencilLine className="size-3.5" aria-hidden />
             {t("overriddenHeading")}
           </p>
-          <p className="text-muted-foreground text-xs">{score.overrideReason}</p>
+          <p className="text-muted-foreground text-xs">
+            <AutoTranslate text={score.overrideReason} />
+          </p>
         </div>
       ) : null}
 

@@ -17,6 +17,8 @@ import {
   Info,
   FileText,
 } from "lucide-react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +71,14 @@ export function AiPrioritySummaryPanel({
   const t = useTranslations("PriorityDashboard.summaryPanel");
   const canCreate = usePermission("priorityScoring", "create");
   const canWrite = usePermission("priorityScoring", "write");
+  const { localizedDomain } = useDomainArabicMap();
+  // Scope/status are fixed, finite vocabularies (not user data), so a plain
+  // t()-lookup is correct here — same reasoning as every other
+  // fixed-status-Select pattern in the app (e.g. Initiative status).
+  const tScope = (scope: SummaryScopeType) =>
+    t.has(`scope.${scope}`) ? t(`scope.${scope}` as Parameters<typeof t>[0]) : scope;
+  const tStatus = (status: PrioritySummaryRecord["status"]) =>
+    t.has(`status.${status}`) ? t(`status.${status}` as Parameters<typeof t>[0]) : status;
 
   const [activeScope, setActiveScope] = useState<SummaryScopeType>("VILLAGE");
   const [record, setRecord] = useState<PrioritySummaryRecord | null>(null);
@@ -124,9 +134,7 @@ export function AiPrioritySummaryPanel({
           // error banner) from an actual load failure — without this the
           // Generator card renders either way and a real fetch failure
           // looks identical to a study that just has no summary.
-          setActionError(
-            err instanceof Error ? err.message : "Failed to load AI summary.",
-          );
+          setActionError(err instanceof Error ? err.message : t("loadSummaryError"));
         })
         .finally(() => setLoading(false));
     },
@@ -140,9 +148,7 @@ export function AiPrioritySummaryPanel({
       .then((list) => setSavedSummaries(list || []))
       .catch((err: unknown) => {
         setSavedSummaries([]);
-        setActionError(
-          err instanceof Error ? err.message : "Failed to load saved summaries.",
-        );
+        setActionError(err instanceof Error ? err.message : t("loadSavedError"));
       })
       .finally(() => setLoadingSaved(false));
   }, [studyId, surveyId]);
@@ -182,7 +188,7 @@ export function AiPrioritySummaryPanel({
       setEditing(false);
       loadSavedSummariesTable();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : "Failed to save summary.");
+      setActionError(err instanceof Error ? err.message : t("saveSummaryError"));
     } finally {
       setSaving(false);
     }
@@ -197,9 +203,7 @@ export function AiPrioritySummaryPanel({
         loadSummary(activeScope);
       }
     } catch (err: unknown) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to delete saved summary.",
-      );
+      setActionError(err instanceof Error ? err.message : t("deleteSavedError"));
     }
   };
 
@@ -215,9 +219,7 @@ export function AiPrioritySummaryPanel({
       setHistoryList(list);
     } catch (err: unknown) {
       setHistoryOpen(false);
-      setActionError(
-        err instanceof Error ? err.message : "Failed to load summary audit history.",
-      );
+      setActionError(err instanceof Error ? err.message : t("loadHistoryError"));
     }
   };
 
@@ -247,7 +249,9 @@ export function AiPrioritySummaryPanel({
           role="alert"
           className="border-destructive/40 bg-destructive/10 rounded-lg border p-4 text-sm"
         >
-          <p className="text-destructive font-semibold">{actionError}</p>
+          <p className="text-destructive font-semibold">
+            <AutoTranslate text={actionError} />
+          </p>
         </div>
       ) : null}
 
@@ -271,7 +275,7 @@ export function AiPrioritySummaryPanel({
                     onClick={() => setActiveScope(s)}
                     className="h-7 px-2.5 text-xs"
                   >
-                    {s}
+                    {tScope(s)}
                   </Button>
                 ),
               )}
@@ -279,12 +283,9 @@ export function AiPrioritySummaryPanel({
           </CardHeader>
           <CardContent className="space-y-6 p-6">
             <p className="text-muted-foreground text-xs">
-              Generate a draft summary narrative from current Severity Score, Priority
-              Score, confidence data, and approved evidence for{" "}
-              <strong className="text-foreground">
-                {t("levelBadge", { scope: activeScope })}
-              </strong>
-              .
+              {t("generatorDescription", {
+                level: t("levelBadge", { scope: tScope(activeScope) }),
+              })}
             </p>
 
             <div className="bg-muted/30 border-border space-y-2.5 rounded-lg border p-4 text-xs">
@@ -335,7 +336,7 @@ export function AiPrioritySummaryPanel({
                     variant="outline"
                     className="text-primary border-primary/40 text-xs font-semibold uppercase"
                   >
-                    {t("levelBadge", { scope: record.summaryScope })}
+                    {t("levelBadge", { scope: tScope(record.summaryScope) })}
                   </Badge>
                   <Badge
                     variant={
@@ -347,7 +348,7 @@ export function AiPrioritySummaryPanel({
                     }
                     className="text-xs font-semibold uppercase"
                   >
-                    {record.status}
+                    {tStatus(record.status)}
                   </Badge>
                 </CardTitle>
               </div>
@@ -434,7 +435,7 @@ export function AiPrioritySummaryPanel({
                 />
               ) : (
                 <p className="text-foreground bg-muted/30 border-border/50 rounded-md border p-3.5 text-xs leading-relaxed whitespace-pre-line">
-                  {activeOutput?.executiveSummary}
+                  <AutoTranslate text={activeOutput?.executiveSummary} />
                 </p>
               )}
             </div>
@@ -452,7 +453,7 @@ export function AiPrioritySummaryPanel({
                 />
               ) : (
                 <p className="text-foreground bg-muted/30 border-border/50 rounded-md border p-3.5 text-xs leading-relaxed whitespace-pre-line">
-                  {activeOutput?.priorityExplanation}
+                  <AutoTranslate text={activeOutput?.priorityExplanation} />
                 </p>
               )}
             </div>
@@ -470,7 +471,9 @@ export function AiPrioritySummaryPanel({
                       className="bg-card border-border space-y-1.5 rounded-lg border p-3 text-xs"
                     >
                       <div className="flex items-center justify-between font-semibold">
-                        <span>{kf.title}</span>
+                        <span>
+                          <AutoTranslate text={kf.title} />
+                        </span>
                         {kf.severityScore !== null && (
                           <Badge variant="destructive" className="text-[10px]">
                             {t("severityLabel")}: {Math.round(kf.severityScore)}
@@ -478,9 +481,12 @@ export function AiPrioritySummaryPanel({
                         )}
                       </div>
                       <p className="text-muted-foreground text-[11px]">
-                        {t("domainLabel")}: {kf.domain} | {t("kpiLabel")}: {kf.kpi}
+                        {t("domainLabel")}: {localizedDomain(kf.domain)} | {t("kpiLabel")}
+                        : {kf.kpi}
                       </p>
-                      <p className="text-foreground leading-normal">{kf.summary}</p>
+                      <p className="text-foreground leading-normal">
+                        <AutoTranslate text={kf.summary} />
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -490,7 +496,9 @@ export function AiPrioritySummaryPanel({
             {/* Audit Metadata Footer */}
             <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-[11px]">
               <div className="flex flex-wrap items-center gap-3">
-                <span>Scope: {record.summaryScope}</span>
+                <span>
+                  {t("scopeFooterLabel", { scope: tScope(record.summaryScope) })}
+                </span>
                 <span>•</span>
                 <span>
                   {t("promptLabel")}: {record.promptVersion}
@@ -508,7 +516,7 @@ export function AiPrioritySummaryPanel({
                   className="gap-1.5 text-xs"
                 >
                   <FileText className="size-3.5" />
-                  {t("generateReportButton", { scope: record.summaryScope })}
+                  {t("generateReportButton", { scope: tScope(record.summaryScope) })}
                   <ArrowRight className="size-3.5 rtl:rotate-180" />
                 </Button>
               )}
@@ -537,7 +545,7 @@ export function AiPrioritySummaryPanel({
         <CardContent className="p-0">
           {loadingSaved ? (
             <div className="text-muted-foreground animate-pulse p-6 text-center text-xs">
-              Loading organization saved summaries...
+              {t("loadingSaved")}
             </div>
           ) : savedSummaries.length > 0 ? (
             <Table>
@@ -557,12 +565,12 @@ export function AiPrioritySummaryPanel({
                 {savedSummaries.map((s) => {
                   const out = s.officerEditedOutputJson || s.aiOutputJson;
                   const filters = s.scopeFilters || {};
-                  const filterLabel =
+                  const rawFilterLabel =
                     filters.domainKey ||
                     filters.regionId ||
                     filters.villageId ||
                     s.villageId ||
-                    "Consolidated Villages";
+                    null;
 
                   return (
                     <TableRow key={s.id}>
@@ -571,19 +579,27 @@ export function AiPrioritySummaryPanel({
                           variant="outline"
                           className="text-primary text-[10px] font-semibold uppercase"
                         >
-                          {s.summaryScope}
+                          {tScope(s.summaryScope)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-foreground text-xs font-medium">
-                        {filterLabel}
+                        {rawFilterLabel ? (
+                          <AutoTranslate text={rawFilterLabel} />
+                        ) : (
+                          t("consolidatedVillages")
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="text-[10px]">
-                          {s.status}
+                          {tStatus(s.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground max-w-xs truncate text-xs">
-                        {out?.executiveSummary || "N/A"}
+                        {out?.executiveSummary ? (
+                          <AutoTranslate text={out.executiveSummary} />
+                        ) : (
+                          t("naLabel")
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {new Date(s.updatedAt || s.createdAt).toLocaleString()}
@@ -596,7 +612,7 @@ export function AiPrioritySummaryPanel({
                           className="h-8 gap-1 px-2 text-xs"
                         >
                           <Eye className="text-primary size-3.5" />
-                          View
+                          {t("viewAction")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -605,7 +621,7 @@ export function AiPrioritySummaryPanel({
                           className="text-destructive hover:text-destructive h-8 gap-1 px-2 text-xs"
                         >
                           <Trash2 className="size-3.5" />
-                          Delete
+                          {t("deleteAction")}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -627,7 +643,9 @@ export function AiPrioritySummaryPanel({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-semibold">
               <Sparkles className="text-primary size-5" />
-              {t("savedDetailsTitle", { scope: viewSummary?.summaryScope ?? "" })}
+              {t("savedDetailsTitle", {
+                scope: viewSummary ? tScope(viewSummary.summaryScope) : "",
+              })}
             </DialogTitle>
             <DialogDescription className="text-xs">
               {t("savedOnDate", {
@@ -647,22 +665,26 @@ export function AiPrioritySummaryPanel({
                   {t("executiveSummaryLabel")}
                 </span>
                 <p className="text-muted-foreground whitespace-pre-line">
-                  {
-                    (viewSummary.officerEditedOutputJson || viewSummary.aiOutputJson)
-                      ?.executiveSummary
-                  }
+                  <AutoTranslate
+                    text={
+                      (viewSummary.officerEditedOutputJson || viewSummary.aiOutputJson)
+                        ?.executiveSummary
+                    }
+                  />
                 </p>
               </div>
 
               <div className="bg-muted/30 space-y-1 rounded-md p-3">
                 <span className="text-foreground font-semibold">
-                  Priority Explanation:
+                  {t("priorityExplanationLabel")}
                 </span>
                 <p className="text-muted-foreground whitespace-pre-line">
-                  {
-                    (viewSummary.officerEditedOutputJson || viewSummary.aiOutputJson)
-                      ?.priorityExplanation
-                  }
+                  <AutoTranslate
+                    text={
+                      (viewSummary.officerEditedOutputJson || viewSummary.aiOutputJson)
+                        ?.priorityExplanation
+                    }
+                  />
                 </p>
               </div>
             </div>
@@ -676,10 +698,10 @@ export function AiPrioritySummaryPanel({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
               <History className="text-primary size-4" />
-              Summary Audit History ({activeScope})
+              {t("historyDialogTitle", { scope: tScope(activeScope) })}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Every generation and save creates an auditable record.
+              {t("historyDialogDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-96 space-y-3 overflow-y-auto pt-2">
@@ -690,14 +712,17 @@ export function AiPrioritySummaryPanel({
               >
                 <div className="flex items-center justify-between">
                   <Badge variant={h.status === "SAVED" ? "secondary" : "outline"}>
-                    {h.status}
+                    {tStatus(h.status)}
                   </Badge>
                   <span className="text-muted-foreground">
                     {new Date(h.generatedAt).toLocaleString()}
                   </span>
                 </div>
                 <p className="text-muted-foreground text-[11px]">
-                  Prompt: {h.promptVersion} | Scope: {h.summaryScope}
+                  {t("historyPromptScopeLine", {
+                    prompt: h.promptVersion,
+                    scope: tScope(h.summaryScope),
+                  })}
                 </p>
               </div>
             ))}

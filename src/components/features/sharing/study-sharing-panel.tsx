@@ -1,9 +1,12 @@
 "use client";
 
 import { Plus, Share2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
 import { useAuth } from "@/components/providers/auth-provider";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { translationService } from "@/services/translation/translation.service";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +63,14 @@ function CreateRequestDialog({
   onCreated: () => void;
 }) {
   const t = useTranslations("app.sharing.create");
+  const locale = useLocale() as AppLocale;
   const [orgOptions, setOrgOptions] = useState<OrgLookupResult[]>([]);
+  // Combobox items take a plain string label, not JSX — a Combobox has no
+  // "one item visible at a time" render like a table row, so `<AutoTranslate>`
+  // (which needs to mount to translate) doesn't apply the same way. Resolved
+  // once per lookup instead, straight through the same translation endpoint
+  // AutoTranslate itself calls.
+  const [orgLabelById, setOrgLabelById] = useState<Map<string, string>>(new Map());
   const [orgLoading, setOrgLoading] = useState(false);
   const [ownerOrgId, setOwnerOrgId] = useState<string | null>(null);
 
@@ -73,17 +83,38 @@ function CreateRequestDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Best-effort: a translation failure here just leaves the English name
+  // showing for that one row (same "never block on this" philosophy as
+  // AutoTranslate itself), never blocks the org list from rendering.
+  async function loadOrgLabels(orgs: OrgLookupResult[]) {
+    if (locale !== "ar") return;
+    const entries = await Promise.all(
+      orgs.map(async (o) => {
+        try {
+          const result = await translationService.translate(o.name, locale);
+          return [o.id, result.translatedText] as const;
+        } catch {
+          return [o.id, o.name] as const;
+        }
+      }),
+    );
+    setOrgLabelById((prev) => new Map([...prev, ...entries]));
+  }
+
   useEffect(() => {
     if (!open) return;
     async function loadOrgs() {
       setOrgLoading(true);
       try {
-        setOrgOptions(await sharingService.lookupOrganizations(""));
+        const orgs = await sharingService.lookupOrganizations("");
+        setOrgOptions(orgs);
+        void loadOrgLabels(orgs);
       } finally {
         setOrgLoading(false);
       }
     }
     loadOrgs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -106,7 +137,9 @@ function CreateRequestDialog({
   async function handleOrgQueryChange(query: string) {
     setOrgLoading(true);
     try {
-      setOrgOptions(await sharingService.lookupOrganizations(query));
+      const orgs = await sharingService.lookupOrganizations(query);
+      setOrgOptions(orgs);
+      void loadOrgLabels(orgs);
     } finally {
       setOrgLoading(false);
     }
@@ -146,7 +179,10 @@ function CreateRequestDialog({
           <div className="space-y-2">
             <Label>{t("ownerOrgLabel")}</Label>
             <Combobox
-              items={orgOptions.map((o) => ({ value: o.id, label: o.name }))}
+              items={orgOptions.map((o) => ({
+                value: o.id,
+                label: orgLabelById.get(o.id) ?? o.name,
+              }))}
               value={ownerOrgId}
               onSelect={setOwnerOrgId}
               onQueryChange={handleOrgQueryChange}
@@ -432,10 +468,16 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
                     return (
                       <TableRow key={request.id}>
                         <TableCell className="py-4 text-sm font-medium">
-                          {request.studyTitle}
+                          <AutoTranslate text={request.studyTitle} />
                         </TableCell>
                         <TableCell className="py-4 text-sm">
-                          {isOwnerView ? request.requestingOrgName : request.ownerOrgName}
+                          <AutoTranslate
+                            text={
+                              isOwnerView
+                                ? request.requestingOrgName
+                                : request.ownerOrgName
+                            }
+                          />
                         </TableCell>
                         {options.showRole ? (
                           <TableCell className="text-sm">
@@ -447,7 +489,7 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
                             className="max-w-56 truncate text-sm"
                             title={request.note ?? undefined}
                           >
-                            {request.note ?? "—"}
+                            {request.note ? <AutoTranslate text={request.note} /> : "—"}
                           </TableCell>
                         ) : null}
                         {options.showRejectReason ? (
@@ -455,7 +497,11 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
                             className="max-w-56 truncate text-sm"
                             title={request.decisionNote ?? undefined}
                           >
-                            {request.decisionNote ?? "—"}
+                            {request.decisionNote ? (
+                              <AutoTranslate text={request.decisionNote} />
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                         ) : null}
                         {options.showExpiry ? (

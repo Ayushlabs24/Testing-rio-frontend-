@@ -13,7 +13,9 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { DomainChips } from "@/components/common/domain-chips";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { LoadingButton } from "@/components/common/loading-button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
@@ -86,6 +88,7 @@ export function AiClassificationSection({
 }) {
   const t = useTranslations("app.studies.classification");
   const canReview = usePermission("aiReview", "approve");
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   const { session } = useAuth();
   const router = useRouter();
 
@@ -269,11 +272,16 @@ export function AiClassificationSection({
 
   // Deduped — a staged override can carry several sub-domains under the
   // same domain, and each domain/sub-domain should only appear once here.
+  // .map(localizedDomain/SubDomain) below: these feed DomainChips display
+  // only (never fed back into the override submission, which reads
+  // `pendingOverride.pairs`/`need.needDomains` directly) — see
+  // useDomainArabicMap's own comment for why a plain Domain/Sub-domain name
+  // string needs this resolution at all.
   const workingDomains = pendingOverride
-    ? [...new Set(pendingOverride.pairs.map((p) => p.domain))]
+    ? [...new Set(pendingOverride.pairs.map((p) => p.domain))].map(localizedDomain)
     : [];
   const workingSubDomains = pendingOverride
-    ? [...new Set(pendingOverride.pairs.map((p) => p.subDomain))]
+    ? [...new Set(pendingOverride.pairs.map((p) => p.subDomain))].map(localizedSubDomain)
     : [];
   const workingSubDomainGroups = pendingOverride
     ? Object.entries(
@@ -289,25 +297,29 @@ export function AiClassificationSection({
       )
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([domain, subDomains]) => ({
-          domain,
-          subDomains: [...subDomains].sort((a, b) => a.localeCompare(b)),
+          domain: localizedDomain(domain),
+          subDomains: [...subDomains]
+            .sort((a, b) => a.localeCompare(b))
+            .map(localizedSubDomain),
         }))
     : [];
   // The real, multi-valued Approved classification once one exists (see
   // NeedDomain on the backend) — falls back to the single domain/subDomain
   // columns for a Need reviewed before this existed.
-  const approvedDomains =
+  const approvedDomains = (
     need.needDomains.length > 0
       ? [...new Set(need.needDomains.map((d) => d.domain))]
       : need.domain
         ? [need.domain]
-        : [];
-  const approvedSubDomains =
+        : []
+  ).map(localizedDomain);
+  const approvedSubDomains = (
     need.needDomains.length > 0
       ? [...new Set(need.needDomains.map((d) => d.subDomain))]
       : need.subDomain
         ? [need.subDomain]
-        : [];
+        : []
+  ).map(localizedSubDomain);
 
   const subDomainOptionsFor = (domain: string): string[] =>
     domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
@@ -659,7 +671,7 @@ export function AiClassificationSection({
                     need.allDomainsSelected
                       ? [t("allDomainsChip")]
                       : need.aiSuggestedDomain
-                        ? [need.aiSuggestedDomain]
+                        ? [localizedDomain(need.aiSuggestedDomain)]
                         : []
                   }
                   variant="secondary"
@@ -675,7 +687,7 @@ export function AiClassificationSection({
                     items={
                       need.allDomainsSelected
                         ? [t("allSubDomainsChip")]
-                        : [need.aiSuggestedSubDomain!]
+                        : [localizedSubDomain(need.aiSuggestedSubDomain!)]
                     }
                     variant="secondary"
                     border
@@ -687,7 +699,7 @@ export function AiClassificationSection({
                   dir="auto"
                   className="text-foreground/80 text-xs leading-relaxed italic"
                 >
-                  {latest.suggestion.rationale}
+                  <AutoTranslate text={latest.suggestion.rationale} />
                 </p>
               ) : null}
             </div>
@@ -781,7 +793,7 @@ export function AiClassificationSection({
                       need.allDomainsSelected
                         ? [t("allDomainsChip")]
                         : need.aiSuggestedDomain
-                          ? [need.aiSuggestedDomain]
+                          ? [localizedDomain(need.aiSuggestedDomain)]
                           : []
                     }
                     variant="secondary"
@@ -797,7 +809,7 @@ export function AiClassificationSection({
                       items={
                         need.allDomainsSelected
                           ? [t("allSubDomainsChip")]
-                          : [need.aiSuggestedSubDomain!]
+                          : [localizedSubDomain(need.aiSuggestedSubDomain!)]
                       }
                       variant="secondary"
                       border
@@ -809,7 +821,7 @@ export function AiClassificationSection({
                     dir="auto"
                     className="text-foreground/80 text-xs leading-relaxed italic"
                   >
-                    {latest.suggestion.rationale}
+                    <AutoTranslate text={latest.suggestion.rationale} />
                   </p>
                 ) : null}
               </div>

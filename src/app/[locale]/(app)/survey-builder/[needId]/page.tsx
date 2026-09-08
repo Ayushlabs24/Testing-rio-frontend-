@@ -12,8 +12,12 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useRef, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { localizedText } from "@/lib/bilingual";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
+import type { AppLocale } from "@/i18n/routing";
 import { BackButton } from "@/components/common/back-button";
 import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
@@ -103,6 +107,9 @@ export default function SurveyBuilderDetailPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.surveyBuilder.detail");
+  const tClassification = useTranslations("app.studies.classification");
+  const locale = useLocale() as AppLocale;
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   const canWrite = usePermission("surveyBuilder", "write");
   const canApprove = usePermission("surveyBuilder", "approve");
   // Bug fix (Aug 13): Publish and Create New Version were gated on `write`,
@@ -1029,13 +1036,16 @@ export default function SurveyBuilderDetailPage({
               title={need?.title ?? ""}
               description={
                 need?.allDomainsSelected
-                  ? "All Domains"
+                  ? tClassification("allDomainsChip")
                   : need && need.needDomains.length > 0
                     ? formatDomainSummary(
-                        need.needDomains.map((d) => `${d.domain} / ${d.subDomain}`),
+                        need.needDomains.map(
+                          (d) =>
+                            `${localizedDomain(d.domain)} / ${localizedSubDomain(d.subDomain)}`,
+                        ),
                       )
                     : need?.domain && need?.subDomain
-                      ? `${need.domain} / ${need.subDomain}`
+                      ? `${localizedDomain(need.domain)} / ${localizedSubDomain(need.subDomain)}`
                       : undefined
               }
               actions={
@@ -1271,7 +1281,11 @@ export default function SurveyBuilderDetailPage({
                 {t("unsavedChangesNote")}
               </p>
             ) : null}
-            {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
+            {error ? (
+              <p className="text-destructive mb-4 text-sm">
+                <AutoTranslate text={error} />
+              </p>
+            ) : null}
 
             {need?.status === "ai_classification_failed" ? (
               // Manual-classification gate — AI could not classify this
@@ -1609,17 +1623,18 @@ export default function SurveyBuilderDetailPage({
                               ? t("questionBankDescription", {
                                   scope: formatDomainSummary(
                                     need.needDomains.map(
-                                      (d) => `${d.domain} / ${d.subDomain}`,
+                                      (d) =>
+                                        `${localizedDomain(d.domain)} / ${localizedSubDomain(d.subDomain)}`,
                                     ),
                                   ),
                                 })
                               : need?.domain && need?.subDomain
                                 ? t("questionBankDescription", {
-                                    scope: `${need.domain} / ${need.subDomain}`,
+                                    scope: `${localizedDomain(need.domain)} / ${localizedSubDomain(need.subDomain)}`,
                                   })
                                 : need?.aiSuggestedDomain && need?.aiSuggestedSubDomain
                                   ? t("questionBankDescriptionSuggested", {
-                                      scope: `${need.aiSuggestedDomain} / ${need.aiSuggestedSubDomain}`,
+                                      scope: `${localizedDomain(need.aiSuggestedDomain)} / ${localizedSubDomain(need.aiSuggestedSubDomain)}`,
                                     })
                                   : t("questionBankNoDomain")}
                         </p>
@@ -1656,7 +1671,13 @@ export default function SurveyBuilderDetailPage({
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <p dir="auto" className="text-foreground text-sm">
-                                      {q.questionText}
+                                      <AutoTranslate
+                                        text={localizedText(
+                                          q.questionText,
+                                          q.questionTextAr,
+                                          locale,
+                                        )}
+                                      />
                                     </p>
                                     {canEditQuestions ? (
                                       <Button
@@ -1705,8 +1726,10 @@ export default function SurveyBuilderDetailPage({
                                         {t("domainLabel")}
                                       </p>
                                       <p className="text-foreground text-sm">
-                                        {q.domain}
-                                        {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                        {localizedDomain(q.domain)}
+                                        {q.subDomain
+                                          ? ` · ${localizedSubDomain(q.subDomain)}`
+                                          : ""}
                                       </p>
                                     </div>
                                   ) : null}
@@ -1847,7 +1870,13 @@ export default function SurveyBuilderDetailPage({
                                     {t("questionLabel")}
                                   </p>
                                   <p dir="auto" className="text-foreground text-sm">
-                                    {q.questionText}
+                                    <AutoTranslate
+                                      text={localizedText(
+                                        q.questionText,
+                                        q.questionTextAr,
+                                        locale,
+                                      )}
+                                    />
                                   </p>
                                 </div>
 
@@ -1871,8 +1900,10 @@ export default function SurveyBuilderDetailPage({
                                       {t("domainLabel")}
                                     </p>
                                     <p className="text-foreground text-sm">
-                                      {q.domain}
-                                      {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                      {localizedDomain(q.domain)}
+                                      {q.subDomain
+                                        ? ` · ${localizedSubDomain(q.subDomain)}`
+                                        : ""}
                                     </p>
                                   </div>
                                 ) : null}
@@ -2006,7 +2037,7 @@ export default function SurveyBuilderDetailPage({
                                 {t("questionLabel")}
                               </p>
                               <p dir="auto" className="text-foreground text-sm">
-                                {q.questionText}
+                                <AutoTranslate text={q.questionText} />
                               </p>
                             </div>
 

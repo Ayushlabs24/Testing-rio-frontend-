@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { isEntityLabelTranslatable } from "@/config/audit";
 import { Link } from "@/i18n/navigation";
 import { apiClient } from "@/services/api/client";
 import type { AuditEvent } from "@/services/audit/audit.types";
@@ -50,7 +52,21 @@ function formatRelativeTime(
 }
 
 /* ─── Human-friendly label from action enum ────────────────────────────── */
-function formatAction(action: string): string {
+// Bug found in the 2026-09-08 bilingual audit (the exact defect a reported
+// screenshot showed: "Login"/"Logout"/"... Admin Viewed Organization Users"
+// staying in English on an otherwise-Arabic dashboard) — this used to just
+// title-case the raw action code instead of resolving it through the same
+// `app.settings.audit.actions` dictionary the full Audit Log page already
+// uses. Same graceful-fallback shape as that page's own `formatAuditActionLabel`.
+function formatAction(action: string, tActions: (key: string) => string): string {
+  try {
+    const translated = tActions(action);
+    if (translated && !translated.startsWith("app.settings.audit.actions.")) {
+      return translated;
+    }
+  } catch {
+    // fall through to the title-cased fallback below
+  }
   return action
     .toLowerCase()
     .replace(/_/g, " ")
@@ -67,6 +83,7 @@ export function AuditActivityTimeline({
   className,
 }: AuditActivityTimelineProps) {
   const t = useTranslations("systemAdmin.dashboard");
+  const tActions = useTranslations("app.settings.audit.actions");
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -123,11 +140,16 @@ export function AuditActivityTimeline({
               {/* Content */}
               <div className="min-w-0 flex-1">
                 <p className="text-foreground truncate text-sm leading-snug font-semibold">
-                  {formatAction(ev.action)}
+                  {formatAction(ev.action, tActions)}
                   {ev.entityLabel ? (
                     <span className="text-muted-foreground font-normal">
                       {" "}
-                      — {ev.entityLabel}
+                      —{" "}
+                      {isEntityLabelTranslatable(ev.entityType) ? (
+                        <AutoTranslate text={ev.entityLabel} />
+                      ) : (
+                        ev.entityLabel
+                      )}
                     </span>
                   ) : null}
                 </p>

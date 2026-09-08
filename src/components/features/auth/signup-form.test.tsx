@@ -43,7 +43,10 @@ vi.mock("@/i18n/navigation", () => ({
 // 10-digit unified national number, checked against the NIC entity registry.
 const NIC_NUMBER = "7011038218";
 
-const SECTOR_OPTIONS = ["Health", "Education"];
+const SECTOR_OPTIONS = [
+  { name: "Health", nameAr: null },
+  { name: "Education", nameAr: null },
+];
 vi.mock("@/hooks/use-sector-options", () => ({
   useSectorOptions: () => SECTOR_OPTIONS,
 }));
@@ -268,7 +271,9 @@ describe("SignupForm sector field", () => {
     );
 
     for (const option of SECTOR_OPTIONS) {
-      expect(await screen.findByRole("option", { name: option })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("option", { name: option.name }),
+      ).toBeInTheDocument();
     }
     expect(
       screen.getByRole("option", { name: en.app.settings.organization.sectors.other }),

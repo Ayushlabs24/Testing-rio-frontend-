@@ -36,7 +36,17 @@ export interface Study {
   minimumDetectableEffect: number | null;
   // Sequential per-org counter (1, 2, 3... across every Study the org has
   // ever created) — server-assigned at creation, never client-writable.
+  // RIO-DATA-002 imports count backwards from 0 instead, so they sort
+  // before cycle 1 rather than taking a live cycle's number.
   cycleNumber: number;
+  // RIO-DATA-002 — true when this Study is a pre-platform study imported
+  // from the Archive (RIO-FR-013) rather than a cycle run on the platform.
+  isHistorical: boolean;
+  // ISO date (YYYY-MM-DD) the original study was conducted. `createdAt` is
+  // only the import date, so comparing an old study against a current one
+  // has to read this. Null for anything that is not a historical import.
+  historicalStudyDate: string | null;
+  historicalStudyId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

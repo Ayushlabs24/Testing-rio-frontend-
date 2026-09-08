@@ -1,6 +1,7 @@
 "use client";
 
 import { X, FileText } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { apiClient } from "@/services/api/client";
@@ -132,7 +133,11 @@ export function ArchiveDetailDrawer({
                 <Card className="p-3">
                   <span className="text-muted-foreground">{t("drawer.archivedAt")}</span>
                   <p className="text-foreground mt-1 font-mono font-medium">
-                    {data.archivedAt ? new Date(data.archivedAt).toLocaleString() : "—"}
+                    {data.archivedAt ? (
+                      <FormattedDate value={data.archivedAt} withTime />
+                    ) : (
+                      "—"
+                    )}
                   </p>
                 </Card>
                 <Card className="p-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreVertical, Plus, Search } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import type { AppLocale } from "@/i18n/routing";
@@ -470,7 +471,11 @@ export function QuestionsTab() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                        {q.submittedAt ? new Date(q.submittedAt).toLocaleString() : "—"}
+                        {q.submittedAt ? (
+                          <FormattedDate value={q.submittedAt} withTime />
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">

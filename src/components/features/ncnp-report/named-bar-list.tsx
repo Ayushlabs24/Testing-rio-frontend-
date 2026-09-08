@@ -4,6 +4,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
 
 interface NamedBarListItem {
   id: string;
@@ -15,6 +17,7 @@ interface NamedBarListProps {
   items: NamedBarListItem[];
   limit?: number;
   emptyText: string;
+  locale: AppLocale;
   /**
    * Called with (shownCount, totalCount) to render a disclosure caption
    * ("Showing 5 of 24") whenever the list is actually truncated — omit
@@ -36,6 +39,7 @@ export function NamedBarList({
   limit = 5,
   emptyText,
   formatCaption,
+  locale,
 }: NamedBarListProps) {
   const shown = items.slice(0, limit);
   const max = Math.max(1, ...shown.map((i) => i.count));
@@ -67,7 +71,7 @@ export function NamedBarList({
                 />
               </div>
               <span className="text-foreground w-14 shrink-0 text-sm font-semibold tabular-nums">
-                {item.count.toLocaleString()}
+                {formatNumber(item.count, locale)}
               </span>
             </div>
           ))}

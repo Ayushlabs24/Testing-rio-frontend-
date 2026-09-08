@@ -812,8 +812,8 @@ export function SignupForm() {
               </SelectTrigger>
               <SelectContent>
                 {sectorOptions.map((sector) => (
-                  <SelectItem key={sector} value={sector}>
-                    {sector}
+                  <SelectItem key={sector.name} value={sector.name}>
+                    {localizedName(sector, consentLocale)}
                   </SelectItem>
                 ))}
                 <SelectItem value="other">{tSectors("other")}</SelectItem>

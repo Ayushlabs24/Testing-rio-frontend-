@@ -10,8 +10,11 @@ import {
   XCircle,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, useMemo } from "react";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -48,6 +51,7 @@ import { ReactivateOrganizationDialog } from "./_components/reactivate-organizat
 
 export default function SystemAdminOrganizationsPage() {
   const t = useTranslations("systemAdmin.organizations");
+  const locale = useLocale() as AppLocale;
   const router = useRouter();
 
   const [organizations, setOrganizations] = useState<OrganizationSummary[] | null>(null);
@@ -75,7 +79,17 @@ export default function SystemAdminOrganizationsPage() {
   // Reference), never the legacy free-text `region` array — so an org
   // created that way needs its region resolved by id, not just read off
   // `org.region`, or it silently shows blank.
-  const [regionNameById, setRegionNameById] = useState<Map<string, string>>(new Map());
+  const [regionNameById, setRegionNameById] = useState<
+    Map<string, { name: string; nameAr: string | null }>
+  >(new Map());
+  // The legacy free-text `org.region` array has no id to join against —
+  // resolved by matching its English name against the same loaded Region
+  // list (case-insensitive), so a self-registered org showing "Riyadh"
+  // still gets الرياض instead of falling back to AutoTranslate's AI guess
+  // for a name that already has an authoritative master-data Arabic value.
+  const [regionByName, setRegionByName] = useState<
+    Map<string, { name: string; nameAr: string | null }>
+  >(new Map());
 
   const fetchOrganizations = () => {
     organizationsService
@@ -88,17 +102,52 @@ export default function SystemAdminOrganizationsPage() {
     fetchOrganizations();
     geographyService
       .listRegions()
-      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
-      .catch(() => setRegionNameById(new Map()));
+      .then((rows) => {
+        setRegionNameById(
+          new Map(rows.map((r) => [r.id, { name: r.name, nameAr: r.nameAr }])),
+        );
+        setRegionByName(
+          new Map(
+            rows.map((r) => [r.name.toLowerCase(), { name: r.name, nameAr: r.nameAr }]),
+          ),
+        );
+      })
+      .catch(() => {
+        setRegionNameById(new Map());
+        setRegionByName(new Map());
+      });
   }, []);
 
-  const displayRegion = useCallback(
+  // Raw (always-English) region key for this org — the stable value the
+  // region filter's Select and the row-matching logic below key on, so
+  // switching locale (which changes `displayRegion`'s output) never breaks
+  // the filter comparison.
+  const rawRegion = useCallback(
     (org: OrganizationSummary): string => {
       if (org.region.length > 0) return org.region.join(", ");
-      if (org.regionId) return regionNameById.get(org.regionId) ?? "—";
+      if (org.regionId) return regionNameById.get(org.regionId)?.name ?? "—";
       return "—";
     },
     [regionNameById],
+  );
+
+  const displayRegion = useCallback(
+    (org: OrganizationSummary): string => {
+      if (org.region.length > 0) {
+        return org.region
+          .map((r) => {
+            const match = regionByName.get(r.toLowerCase());
+            return match ? localizedName(match, locale) : r;
+          })
+          .join(", ");
+      }
+      if (org.regionId) {
+        const match = regionNameById.get(org.regionId);
+        return match ? localizedName(match, locale) : "—";
+      }
+      return "—";
+    },
+    [regionNameById, regionByName, locale],
   );
 
   const regions = useMemo(() => {
@@ -109,7 +158,7 @@ export default function SystemAdminOrganizationsPage() {
         if (r.trim()) set.add(r.trim());
       }
       if (org.region.length === 0 && org.regionId) {
-        const name = regionNameById.get(org.regionId);
+        const name = regionNameById.get(org.regionId)?.name;
         if (name) set.add(name);
       }
     }
@@ -137,14 +186,14 @@ export default function SystemAdminOrganizationsPage() {
 
       // Region
       if (regionFilter !== "all") {
-        if (displayRegion(org) !== regionFilter && !org.region.includes(regionFilter)) {
+        if (rawRegion(org) !== regionFilter && !org.region.includes(regionFilter)) {
           return false;
         }
       }
 
       return true;
     });
-  }, [organizations, searchQuery, statusFilter, regionFilter, displayRegion]);
+  }, [organizations, searchQuery, statusFilter, regionFilter, rawRegion]);
 
   const hasActiveFilters =
     searchQuery !== "" || statusFilter !== "all" || regionFilter !== "all";
@@ -230,11 +279,14 @@ export default function SystemAdminOrganizationsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("allRegions")}</SelectItem>
-                  {regions.map((reg) => (
-                    <SelectItem key={reg} value={reg}>
-                      {reg}
-                    </SelectItem>
-                  ))}
+                  {regions.map((reg) => {
+                    const match = regionByName.get(reg.toLowerCase());
+                    return (
+                      <SelectItem key={reg} value={reg}>
+                        {match ? localizedName(match, locale) : reg}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             ) : null}
@@ -299,7 +351,7 @@ export default function SystemAdminOrganizationsPage() {
                       onClick={() => router.push(`/system-admin/organizations/${org.id}`)}
                     >
                       <TableCell className="text-foreground max-w-[220px] font-medium whitespace-normal">
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-xs">
                         {org.registrationNumber ?? "—"}
@@ -311,7 +363,7 @@ export default function SystemAdminOrganizationsPage() {
                         {org.ngoAdminName ? (
                           <div>
                             <p className="text-foreground text-xs font-medium break-words">
-                              {org.ngoAdminName}
+                              <AutoTranslate text={org.ngoAdminName} />
                             </p>
                             <p className="text-muted-foreground text-[11px] break-words">
                               {org.ngoAdminEmail}

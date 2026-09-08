@@ -436,6 +436,27 @@
         },
         "recentStudiesHeading": "الدراسات الأخيرة",
         "noStudies": "لا توجد دراسات بعد — أنشئ واحدة للبدء."
+      },
+      "historicalComparison": {
+        "title": "مقارنة الدراسة السابقة",
+        "description": "احتياجات الدراسة السابقة المستوردة مقابل الدراسات المنفذة بعدها. التغيير الموجب يعني احتياجات أكثر الآن.",
+        "noHistorical": "لم تُستورد أي دراسة سابقة بعد. استورد واحدة من الأرشيف لمقارنتها بالدراسات الحالية.",
+        "noRows": "لا توجد احتياجات مطابقة لهذه الفلاتر.",
+        "groupByLabel": "التجميع حسب",
+        "groupByVillage": "حسب القرية",
+        "groupByDomain": "حسب المجال",
+        "priorStudyLabel": "الدراسة السابقة",
+        "priorStudyAll": "كل الدراسات السابقة",
+        "sectorLabel": "القطاع المستهدف",
+        "sectorAll": "كل القطاعات",
+        "villageColumn": "القرية",
+        "domainColumn": "المجال",
+        "priorColumn": "الدراسة السابقة",
+        "currentColumn": "الحالية",
+        "changeColumn": "التغيير",
+        "totalRow": "الإجمالي",
+        "unassigned": "لا توجد قرية مسجلة",
+        "unclassified": "غير مصنف"
       }
     },
     "evidence": {
@@ -961,7 +982,12 @@
           "reportsDashboards": "التقارير ولوحات التحكم",
           "archiveSharingAudit": "الأرشيف والمشاركة والتدقيق",
           "surveyBuilder": "منشئ الاستبيانات",
-          "ncnpReport": "التقرير المجمّع لـ NCNP"
+          "ncnpReport": "التقرير المجمّع لـ NCNP",
+          "systemLogs": "سجلات النظام",
+          "backups": "النسخ الاحتياطية",
+          "auditLog": "سجل التدقيق",
+          "dataQuality": "جودة البيانات",
+          "initiatives": "المبادرات"
         },
         "crossEntityBadge": "متعدد الجهات",
         "actions": {
@@ -1612,7 +1638,123 @@
         "requiredQuestions": "الأسئلة الإلزامية ضمن النطاق",
         "submittedResponses": "الاستجابات المُرسلة",
         "requiredAnswerSlots": "الإجابات الإلزامية المتوقعة",
-        "leftBlank": "تُركت فارغة"
+        "leftBlank": "تُركت فارغة",
+        "col": {
+          "domain": "المجال",
+          "code": "الرمز",
+          "avgSeverity": "متوسط الشدة",
+          "maxKpiSeverity": "أعلى شدة لمؤشر أداء رئيسي",
+          "performance": "الأداء",
+          "weight": "الوزن",
+          "kpisDefined": "مؤشرات الأداء الرئيسية المحددة",
+          "confidence": "الثقة",
+          "validPct": "نسبة الصحة %",
+          "critical": "حرج",
+          "masking": "إخفاء؟",
+          "subDomain": "المجال الفرعي",
+          "indicator": "المؤشر",
+          "severity": "الشدة",
+          "band": "المستوى",
+          "equity": "الإنصاف",
+          "responses": "الردود",
+          "notes": "ملاحظات",
+          "rank": "#",
+          "location": "الموقع",
+          "affectedPop": "السكان المتأثرون",
+          "assessed": "تم التقييم",
+          "indicators": "المؤشرات",
+          "subDomains": "المجالات الفرعية",
+          "documents": "المستندات",
+          "withAiSummary": "بملخص الذكاء الاصطناعي",
+          "officerConfirmed": "تأكيد الموظف",
+          "priorityTier": "مستوى الأولوية",
+          "sharePct": "النسبة %",
+          "equityFlagged": "معلَّم للإنصاف",
+          "criticalKpis": "مؤشرات الأداء الرئيسية الحرجة",
+          "measure": "المقياس",
+          "value": "القيمة",
+          "version": "الإصدار",
+          "status": "الحالة",
+          "stoppedAt": "توقف عند",
+          "sessions": "الجلسات",
+          "share": "النسبة",
+          "requiredQuestion": "سؤال إلزامي",
+          "ofResponses": "من الردود",
+          "rate": "المعدل",
+          "validResponsePct": "نسبة الردود الصحيحة %",
+          "dontKnowPct": "نسبة لا أعرف %",
+          "kpis": "مؤشرات الأداء الرئيسية",
+          "reason": "السبب",
+          "flag": "العلامة",
+          "region": "المنطقة",
+          "governorate": "المحافظة",
+          "center": "المركز",
+          "type": "النوع",
+          "collected": "تاريخ الجمع",
+          "summaryStatus": "حالة الملخص",
+          "documentsByType": "المستندات حسب النوع",
+          "themesAcrossDocuments": "المواضيع عبر المستندات",
+          "responseValidity": "صحة الردود",
+          "validShort": "صحيح",
+          "excludedShort": "مستبعد",
+          "ref": "المرجع",
+          "topDomainsKpis": "أعلى المجالات / مؤشرات الأداء الرئيسية حسب الشدة"
+        },
+        "title": {
+          "scopeBasis": "أساس النطاق",
+          "evidenceBase": "قاعدة الأدلة",
+          "evidenceComposition": "تركيبة الأدلة",
+          "geographyHierarchy": "التسلسل الجغرافي",
+          "evidenceDocuments": "مستندات الأدلة وملخصات الذكاء الاصطناعي",
+          "combinedSummary": "الملخص المجمّع",
+          "scoreBasedSummary": "الملخص القائم على الدرجات",
+          "execQualSummary": "الملخص التنفيذي النوعي",
+          "keyFindings": "النتائج الرئيسية",
+          "themes": "المواضيع",
+          "supportingStatements": "الأقوال الداعمة",
+          "risksConcerns": "المخاطر / المخاوف",
+          "scoreBasedFindings": "النتائج القائمة على الدرجات",
+          "documentBasedEvidence": "الأدلة المستندة إلى المستندات",
+          "priorityExplanation": "تفسير الأولوية",
+          "domainInsights": "رؤى المجال"
+        },
+        "scopeBasisValue": {
+          "explicitFilter": "تصفية صريحة",
+          "latestPublished": "آخر استبيان منشور"
+        },
+        "gauge": {
+          "overallSeverity": "الشدة الإجمالية"
+        },
+        "dma": {
+          "title": "تنبيه إخفاء المجال",
+          "body": "متوسط {count} مجال (مجالات) أخف من أسوأ مؤشر أداء رئيسي فيه: {details}. ووفقاً للمنهجية، تظهر الحاجة الحرجة بغض النظر عن متوسط مجالها — يُرجى قراءة عمود أعلى شدة لمؤشر أداء رئيسي، وليس المتوسط، لهذه المجالات.",
+          "domainDetail": "{name} (الأسوأ: {kpi} عند {severity})"
+        },
+        "rq2": {
+          "overallConfidence": "الثقة الإجمالية",
+          "validResponseRate": "معدل الردود الصحيحة",
+          "dontKnowBand": "مستوى \"لا أعرف\"",
+          "populationArea": "عدد السكان (المنطقة)",
+          "requiredSampleSize": "حجم العينة المطلوب",
+          "minDetectableEffect": "الحد الأدنى للأثر القابل للاكتشاف",
+          "whyThisBand": "سبب هذا المستوى",
+          "minDetectableEffectValue": "±{value} نقطة"
+        },
+        "noSummary": "لا يوجد ملخص",
+        "equityNotEvaluable": "لا يمكن تقييم الإنصاف: {reason}",
+        "partialScope": "نطاق جزئي",
+        "noDocumentTypesRecorded": "لم يتم تسجيل أنواع مستندات.",
+        "noThemesIdentified": "لم يتم تحديد مواضيع.",
+        "kingdomMap": "خريطة المملكة",
+        "markersRegionLevel": "العلامات على مستوى المنطقة، ويعتمد حجمها على {unit} في هذا التقرير.",
+        "locationHierarchy": "التسلسل الهرمي للموقع",
+        "unitDocumentSingular": "مستند",
+        "unitDocumentPlural": "مستندات",
+        "unitDataPointSingular": "نقطة بيانات",
+        "unitDataPointPlural": "نقاط بيانات",
+        "findingCount": "{count, plural, one {# نتيجة} other {# نتائج}}",
+        "refInline": "المرجع: {ref} • {loc}",
+        "confidenceInline": "الثقة: {value}"
       },
       "detail": {
         "title": "محتوى التقرير",
@@ -1649,7 +1791,7 @@
       "filterKindAll": "الكل",
       "filterKindStudy": "الدراسات",
       "filterKindReport": "التقارير",
-      "filterKindHistorical": "دراسات سابقة",
+      "filterKindHistorical": "دراسة سابقة",
       "filterEntityLabel": "الجهة",
       "filterEntityAll": "جميع الكيانات",
       "filterSectorLabel": "القطاع",
@@ -1670,6 +1812,10 @@
         "report": "تقرير",
         "historical": "دراسة سابقة"
       },
+      "statusValues": {
+        "completed": "مكتمل",
+        "imported": "مستورَد"
+      },
       "filterRegionLabel": "المنطقة",
       "filterRegionAll": "جميع المناطق",
       "filterVillageLabel": "المحافظة",
@@ -1689,6 +1835,19 @@
         "notAvailable": "—",
         "close": "إغلاق"
       },
+      "kindHistorical": "سابقة",
+      "actionsColumn": "الإجراءات",
+      "importToDashboard": "استيراد إلى لوحة المعلومات",
+      "importing": "جارٍ الاستيراد…",
+      "viewImported": "عرض الاحتياجات المستوردة",
+      "importNotSupported": "يمكن استيراد ملفات .csv و .xlsx و .xls فقط. يجب تحويل هذا الملف إلى صف واحد لكل احتياج أولاً.",
+      "importSuccess": "تم استيراد {imported} من {total} احتياج إلى \"{study}\".",
+      "importPartial": "تم استيراد {imported} من {total} احتياج إلى \"{study}\". تم تجاهل {failed} صفوف.",
+      "importFailed": "فشل الاستيراد. لم تُضف أي بيانات إلى لوحة المعلومات.",
+      "importErrorsTitle": "الصفوف التي تم تجاهلها",
+      "importedBadge": "مستوردة",
+      "importDialogDescription": "يقرأ الاحتياجات داخل \"{title}\" ويضيفها إلى لوحة المعلومات الموحدة كدراسة سابقة. لا يتم تغيير الملف المؤرشف.",
+      "importDialogClose": "إغلاق",
       "uploadHistorical": {
         "trigger": "رفع دراسة سابقة",
         "title": "رفع دراسة سابقة",
@@ -1706,7 +1865,7 @@
         "methodologyVersionPlaceholder": "مثال: تقييم يدوي داخلي، الإصدار 1",
         "fileLabel": "المستند",
         "chooseFile": "انقر لاختيار ملف",
-        "fileHint": "بصيغة PDF أو DOC أو DOCX، بحد أقصى 10 ميغابايت.",
+        "fileHint": "بصيغة CSV أو XLSX أو XLS أو PDF أو DOC أو DOCX، بحد أقصى 10 ميغابايت. يمكن استيراد ملفات CSV و XLSX و XLS فقط إلى لوحة المعلومات.",
         "cancel": "إلغاء",
         "submit": "رفع",
         "submitting": "جارٍ الرفع...",
@@ -1898,7 +2057,10 @@
       "statusColumn": "الحالة",
       "statusValues": {
         "active": "نشط",
-        "completed": "مكتملة"
+        "completed": "مكتملة",
+        "planned": "مخطط له",
+        "on_hold": "معلّق",
+        "cancelled": "ملغى"
       },
       "linkedNeedsColumn": "الاحتياجات المرتبطة",
       "visibilityColumn": "الظهور",
@@ -1985,6 +2147,8 @@
       "description": "انشر استبيان الدراسة كرابط عام ورمز QR ليجيب عليه المواطنون.",
       "studyColumn": "الدراسة",
       "statusColumn": "الحالة",
+      "filterOrganizationLabel": "الجهة",
+      "filterOrganizationAll": "جميع الجهات",
       "manageLinks": "إدارة الروابط",
       "viewInsights": "عرض الرؤى",
       "viewResponses": "عرض الاستجابات",
@@ -2706,6 +2870,8 @@
       "loadError": "تعذّر تحميل الدراسات. يرجى المحاولة مرة أخرى.",
       "filterDomainLabel": "تصفية حسب المجال",
       "filterDomainAll": "جميع المجالات",
+      "filterOrganizationLabel": "الجهة",
+      "filterOrganizationAll": "جميع الجهات",
       "filterStatusLabel": "تصفية حسب الحالة",
       "filterStatusAll": "جميع الحالات",
       "pagination": {
@@ -3221,7 +3387,8 @@
     "appName": "Rio",
     "loading": "جارٍ التحميل...",
     "close": "إغلاق",
-    "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+    "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "nationalCenter": "المركز الوطني"
   },
   "notFound": {
     "title": "الصفحة غير موجودة",
@@ -3275,18 +3442,6 @@
         "privacyNotice": "تُستخدم إجاباتك بشكل مجمّع فقط لفهم احتياجات المجتمع وتوجيه التخطيط. هذا ليس نظام طلبات أو شكاوى، ولن يتم التواصل معك شخصيًا بشأن إجاباتك.",
         "consentTitle": "الموافقة على جمع ومعالجة البيانات الشخصية",
         "consentVersionLine": "الإصدار {version}",
-        "consentThisOrg": "هذا الكيان",
-        "consentContactChannelPlaceholder": "[جهة التواصل]",
-        "consentPurposeLabel": "الغرض",
-        "consentPurposeBody": "تُستخدم إجاباتك لتقييم الاحتياجات التنموية في قريتك وللمساعدة في تخطيط البرامج المجتمعية. المشاركة طوعية بالكامل، ويمكنك التوقف في أي وقت.",
-        "consentCollectLabel": "ما نجمعه",
-        "consentCollectBody": "إجابات الاستبيان حول أوضاع الأسرة والمجتمع. ولا تُجمع بيانات التواصل (الاسم، رقم الجوال، البريد الإلكتروني) إلا إذا اخترت تقديمها.",
-        "consentHandlingLabel": "كيفية التعامل مع بياناتك",
-        "consentHandlingBody": "تُحفظ إجاباتك الفردية بسرية، وتُخزَّن بشكل آمن داخل المملكة العربية السعودية، ولا تُعرض في التقارير إلا بصورة مجمّعة، ولن تظهر هويتك في أي تقرير.",
-        "consentRightsLabel": "حقوقك",
-        "consentRightsBody": "وفقاً لنظام حماية البيانات الشخصية، يحق لك طلب الاطلاع على بياناتك الشخصية أو تصحيحها أو حذفها، كما يحق لك سحب هذه الموافقة في أي وقت عبر التواصل مع {contactChannel}.",
-        "consentRetentionLabel": "الاحتفاظ بالبيانات",
-        "consentRetentionBody": "تُحفظ البيانات الشخصية للمدة اللازمة للدراسة فقط، ثم تُحذف أو تُخفى هوية أصحابها وفق سياسة الاحتفاظ المعتمدة في المنصة.",
         "consentAgreeLabel": "أوافق على جمع معلوماتي واستخدامها على النحو الموضح أعلاه. (يُسجَّل التاريخ والوقت تلقائياً)",
         "consentRequired": "يجب أن توافق على إشعار الموافقة قبل المتابعة.",
         "nameRequired": "أدخل اسمك قبل المتابعة.",
@@ -3455,7 +3610,36 @@
       "noSavedSummaries": "لا توجد ملخصات ذكاء اصطناعي محفوظة متاحة لهذا الكيان بعد. انقر فوق حفظ في القسم أعلاه لأرشفة ملخص.",
       "savedDetailsTitle": "تفاصيل الملخص المحفوظ — نطاق {scope}",
       "savedOnDate": "حُفظ في {date}",
-      "executiveSummaryLabel": "الملخص التنفيذي:"
+      "executiveSummaryLabel": "الملخص التنفيذي:",
+      "priorityExplanationLabel": "شرح الأولوية:",
+      "generatorDescription": "أنشئ مسودة ملخص سردي من درجة الشدة الحالية ودرجة الأولوية وبيانات الثقة والأدلة المعتمدة لمستوى {level}.",
+      "consolidatedVillages": "القرى المجمَّعة",
+      "loadingSaved": "جارٍ تحميل الملخصات المحفوظة للجهة...",
+      "viewAction": "عرض",
+      "deleteAction": "حذف",
+      "naLabel": "غير متاح",
+      "scopeFooterLabel": "النطاق: {scope}",
+      "historyDialogTitle": "سجل تدقيق الملخص ({scope})",
+      "historyDialogDesc": "كل عملية إنشاء وحفظ تُنشئ سجلًا قابلًا للتدقيق.",
+      "historyPromptScopeLine": "الطلب: {prompt} | النطاق: {scope}",
+      "scope": {
+        "VILLAGE": "القرية",
+        "SECTOR": "القطاع",
+        "REGION": "المنطقة",
+        "EXECUTIVE": "التنفيذي"
+      },
+      "status": {
+        "DRAFT": "مسودة",
+        "SAVED": "محفوظ",
+        "OFFICER_CONFIRMED": "مؤكَّد من الموظف",
+        "STALE": "قديم",
+        "SUPERSEDED": "مستبدَل"
+      },
+      "loadSummaryError": "تعذّر تحميل ملخص الذكاء الاصطناعي.",
+      "loadSavedError": "تعذّر تحميل الملخصات المحفوظة.",
+      "saveSummaryError": "تعذّر حفظ الملخص.",
+      "deleteSavedError": "تعذّر حذف الملخص المحفوظ.",
+      "loadHistoryError": "تعذّر تحميل سجل تدقيق الملخص."
     },
     "saveModal": {
       "title": "حفظ التقرير المؤكَّد في المستودع؟",
@@ -3897,6 +4081,7 @@
       "resendInvite": "إعادة إرسال الدعوة",
       "inviteResentToast": "تمت إعادة إرسال الدعوة بنجاح",
       "never": "أبدًا",
+      "noFilterMatches": "لا يوجد مستخدمون مطابقون لمعايير التصفية.",
       "columns": {
         "name": "الاسم",
         "email": "البريد الإلكتروني",
@@ -4277,7 +4462,7 @@
         "info": "معلومة"
       },
       "categories": {
-        "http": "HTTP",
+        "http": "طلبات الشبكة",
         "database": "قاعدة البيانات",
         "auth": "المصادقة",
         "integration": "التكامل",
@@ -4285,6 +4470,39 @@
         "startup": "بدء التشغيل",
         "security": "الأمان",
         "application": "التطبيق"
+      },
+      "sources": {
+        "AllExceptionsFilter": "معالج الأخطاء",
+        "OperationalLogInterceptor": "مسجّل الطلبات",
+        "AuthService": "خدمة المصادقة",
+        "MailerService": "خدمة البريد الإلكتروني",
+        "SmsService": "خدمة الرسائل النصية",
+        "BackupService": "خدمة النسخ الاحتياطي",
+        "SystemLogsRetentionService": "خدمة الاحتفاظ بالسجلات",
+        "bootstrap": "بدء التشغيل"
+      },
+      "eventCodes": {
+        "APP_STARTED": "بدأ تشغيل التطبيق",
+        "INTERNAL_ERROR": "خطأ داخلي",
+        "UNAUTHENTICATED": "لم يتم تسجيل الدخول",
+        "NO_ORG_CONTEXT": "لا يوجد سياق جهة",
+        "FORBIDDEN": "الوصول ممنوع",
+        "MISSING_FIELDS": "حقول مطلوبة مفقودة",
+        "VALIDATION_ERROR": "خطأ في التحقق من الصحة",
+        "ACCOUNT_LOCKED": "الحساب مقفل",
+        "NEED_NOT_FOUND": "الاحتياج غير موجود",
+        "STUDY_NOT_FOUND": "الدراسة غير موجودة",
+        "SURVEY_NOT_FOUND": "الاستبيان غير موجود",
+        "REPORT_NOT_FOUND": "التقرير غير موجود",
+        "AUDIT_LOG_NOT_FOUND": "سجل التدقيق غير موجود",
+        "HTTP_400": "طلب غير صالح",
+        "HTTP_401": "غير مصرَّح",
+        "HTTP_403": "ممنوع",
+        "HTTP_404": "غير موجود",
+        "HTTP_409": "تعارض",
+        "HTTP_422": "طلب غير قابل للمعالجة",
+        "HTTP_429": "طلبات كثيرة جدًا",
+        "HTTP_500": "خطأ داخلي في الخادم"
       },
       "stats": {
         "total": "إجمالي الإدخالات",
@@ -4592,6 +4810,112 @@
           "next": "التالي",
           "label": "الصفحة {page} من {count}"
         }
+      },
+      "kpiNewLabel": "جديد",
+      "rejectionReasons": {
+        "REJ_01": "تصميم استبيان غير مكتمل",
+        "REJ_02": "عدم التوافق مع المنهجية",
+        "REJ_03": "نسخة مكررة من استبيان موجود",
+        "REJ_04": "ربط غير صحيح بالاحتياج أو الدراسة",
+        "REJ_05": "نطاق جغرافي أو فئة مستهدفة خارج النطاق",
+        "REJ_06": "مخاوف تتعلق بجودة البيانات",
+        "REJ_07": "مرفقات أو موافقات مطلوبة مفقودة",
+        "REJ_99": "أخرى",
+        "UNSPECIFIED": "غير محدد (سابق)"
+      },
+      "ageBrackets": {
+        "age_15_24": "15–24",
+        "age_25_34": "25–34",
+        "age_35_44": "35–44",
+        "age_45_54": "45–54",
+        "age_55_64": "55–64",
+        "age_65_plus": "+65",
+        "prefer_not_to_say": "تفضّل عدم الإفصاح"
+      },
+      "genderLabels": {
+        "male": "ذكر",
+        "female": "أنثى",
+        "other": "أخرى",
+        "prefer_not_to_say": "تفضّل عدم الإفصاح"
+      },
+      "needSourceLabels": {
+        "manual_entry": "استبيان",
+        "file_upload": "مستند مرفوع",
+        "citizen_input": "مدخلات المواطن",
+        "field_survey": "استبيان ميداني"
+      }
+    },
+    "backups": {
+      "title": "النسخ الاحتياطية",
+      "description": "كل محاولة نسخ احتياطي مع حجمها ومدتها وبصمتها. السؤال الذي تجيب عنه هذه الشاشة ليس هل تمت النسخ، بل هل يمكن الاستعادة.",
+      "loadError": "تعذر تحميل سجل النسخ الاحتياطية.",
+      "empty": "لا توجد عمليات نسخ مسجّلة بعد.",
+      "running": "جارٍ التنفيذ…",
+      "runDatabase": "نسخ قاعدة البيانات",
+      "runAttachments": "نسخ المرفقات",
+      "runSucceeded": "اكتمل نسخ {kind}.",
+      "runFailed": "فشلت عملية النسخ: {error}",
+      "runError": "تعذر إكمال الطلب.",
+      "verify": "تحقق",
+      "prune": "تطبيق سياسة الاحتفاظ",
+      "pruned": "تم حذف {count} من العمليات. يُحتفظ دائمًا بأحدث نسخة ناجحة من كل نوع.",
+      "summary": {
+        "lastDatabase": "آخر نسخ لقاعدة البيانات",
+        "lastAttachments": "آخر نسخ للمرفقات",
+        "failures": "حالات الفشل خلال 7 أيام",
+        "stored": "المخزّن على القرص",
+        "never": "لم يحدث"
+      },
+      "noDatabaseBackup": {
+        "title": "لم تنجح أي نسخة لقاعدة البيانات إطلاقًا.",
+        "detail": "لا يستطيع pg_dump قراءة قاعدة البيانات بدور التطبيق — فأمن الصفوف مفروض على 43 جدولًا ولا يجوز لأي دور تطبيق تجاوزه. يجب أن يشغّل مسؤول قاعدة البيانات الملف scripts/sql/nfr010-backup-role.sql لإنشاء الدور cnap_backup، ثم يُضبط BACKUP_DATABASE_URL عليه. حتى ذلك الحين تُنسخ المرفقات فقط."
+      },
+      "kind": {
+        "database": "قاعدة البيانات",
+        "attachments": "المرفقات"
+      },
+      "status": {
+        "running": "قيد التنفيذ",
+        "succeeded": "نجحت",
+        "failed": "فشلت"
+      },
+      "trigger": {
+        "schedule": "مجدولة",
+        "manual": "يدوية"
+      },
+      "table": {
+        "started": "البداية",
+        "kind": "النوع",
+        "status": "الحالة",
+        "size": "الحجم",
+        "duration": "المدة",
+        "trigger": "المصدر",
+        "retention": "يُحتفظ حتى",
+        "integrity": "السلامة",
+        "files": "{count} ملف",
+        "pruned": "تم الحذف"
+      },
+      "integrity": {
+        "ok": "البصمة مطابقة",
+        "CHECKSUM_MISMATCH": "البصمة غير مطابقة — الملف تالف",
+        "SIZE_CHANGED": "تغيّر الحجم منذ كتابته",
+        "FILE_MISSING": "الملف غير موجود على القرص",
+        "FILE_PRUNED": "تم حذف الملف",
+        "RUN_DID_NOT_SUCCEED": "لم تنجح هذه العملية",
+        "NO_ARTEFACT_RECORDED": "لا يوجد ملف مسجل",
+        "RUN_NOT_FOUND": "العملية غير موجودة",
+        "unknown": "تعذر التحقق"
+      },
+      "pagination": {
+        "previous": "السابق",
+        "next": "التالي",
+        "label": "صفحة {page} من {count}"
+      },
+      "filters": {
+        "kind": "النوع",
+        "allKinds": "كل الأنواع",
+        "status": "الحالة",
+        "allStatuses": "كل الحالات"
       }
     },
     "backups": {
@@ -4674,6 +4998,7 @@
     "loadErrorTitle": "تعذّر تحميل مستندات الأدلة.",
     "actionErrorTitle": "تعذّر تحديث مستند الأدلة.",
     "retry": "إعادة المحاولة",
+    "cycle": "الدورة {number}",
     "uploadButton": "رفع مستند أدلة",
     "unsupportedFileWarning": "ملفات PDF الممسوحة ضوئيًا والمستندات المستندة إلى الصور غير مدعومة في هذا الإصدار.",
     "fields": {

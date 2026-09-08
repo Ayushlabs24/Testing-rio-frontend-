@@ -3,6 +3,8 @@
 import { Download } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -101,11 +103,17 @@ export function SystemLogExportDialog({
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
-  const organizationName =
+  const rawOrganizationName =
     draft.organizationId === ALL
-      ? t("allOrganizations")
+      ? null
       : (organizations.find((o) => o.id === draft.organizationId)?.name ??
         draft.organizationId);
+  // Criteria values below are plain strings (a label/value summary list),
+  // so the org name is resolved through the hook rather than wrapped in
+  // <AutoTranslate> — same reasoning as the detail drawer's Field values.
+  const translatedOrganizationName = useAutoTranslate(rawOrganizationName).text;
+  const organizationName =
+    draft.organizationId === ALL ? t("allOrganizations") : translatedOrganizationName;
 
   const levelLabel =
     draft.levelFilter === ALL
@@ -209,7 +217,7 @@ export function SystemLogExportDialog({
                   <SelectItem value={ALL}>{t("allOrganizations")}</SelectItem>
                   {organizations.map((org) => (
                     <SelectItem key={org.id} value={org.id}>
-                      {org.name}
+                      <AutoTranslate text={org.name} />
                     </SelectItem>
                   ))}
                 </SelectContent>

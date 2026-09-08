@@ -30,7 +30,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AUDIT_ACTIONS, type AuditAction } from "@/config/audit";
+import {
+  AUDIT_ACTIONS,
+  isEntityLabelTranslatable,
+  type AuditAction,
+} from "@/config/audit";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { AUDIT_PAGE_SIZE } from "@/config/pagination";
 import { auditService } from "@/services/audit/audit.service";
 import type { AuditEvent, AuditListParams } from "@/services/audit/audit.types";
@@ -411,7 +416,11 @@ export default function AuditSettingsPage() {
                           </Avatar>
                           <div className="space-y-0.5">
                             <p className="text-foreground text-sm font-medium">
-                              {event.actor?.name ?? t("systemActor")}
+                              {event.actor ? (
+                                <AutoTranslate text={event.actor.name} />
+                              ) : (
+                                t("systemActor")
+                              )}
                             </p>
                             {event.actor ? (
                               <p className="text-muted-foreground text-xs">
@@ -450,9 +459,14 @@ export default function AuditSettingsPage() {
                               {event.entityLabel &&
                               /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
                                 event.entityLabel,
-                              )
-                                ? `${(event.entityType || "Record").charAt(0).toUpperCase() + (event.entityType || "Record").slice(1)} (${event.entityLabel.slice(0, 8)})`
-                                : event.entityLabel || event.entityType}
+                              ) ? (
+                                `${(event.entityType || "Record").charAt(0).toUpperCase() + (event.entityType || "Record").slice(1)} (${event.entityLabel.slice(0, 8)})`
+                              ) : event.entityLabel &&
+                                isEntityLabelTranslatable(event.entityType) ? (
+                                <AutoTranslate text={event.entityLabel} />
+                              ) : (
+                                event.entityLabel || event.entityType
+                              )}
                             </span>
                             <span className="text-muted-foreground text-xs">
                               {/* `has` rather than try/catch: a missing key is

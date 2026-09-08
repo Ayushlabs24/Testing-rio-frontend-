@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface OrgBrandMarkProps {
@@ -45,6 +46,7 @@ export function OrgBrandMark({
   collapsed = false,
   className,
 }: OrgBrandMarkProps) {
+  const t = useTranslations("common");
   if (crossEntity) {
     if (collapsed) {
       return (
@@ -64,7 +66,7 @@ export function OrgBrandMark({
             NCNP
           </span>
           <span className="text-muted-foreground mt-0.5 text-xs font-medium tracking-normal">
-            National Center
+            {t("nationalCenter")}
           </span>
         </div>
       </div>

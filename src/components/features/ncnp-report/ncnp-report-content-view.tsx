@@ -38,33 +38,12 @@ const TOTAL_PAGES = 6;
 const GEO_LIST_LIMIT = 10;
 const REGION_LIST_LIMIT = 20;
 
-// Matches the Prisma RejectionReasonCode enum's identifiers — UNSPECIFIED
-// covers surveys rejected before this field existed (see
-// NcnpReportService.buildSurveyAnalytics). Kept in sync manually with the
-// PDF export's REJECTION_REASON_LABELS, since the two are separate render
-// pipelines.
-const REJECTION_REASON_LABELS: Record<string, string> = {
-  REJ_01: "Incomplete survey design",
-  REJ_02: "Methodology non-compliance",
-  REJ_03: "Duplicate of an existing survey",
-  REJ_04: "Incorrect need or study linkage",
-  REJ_05: "Out-of-scope geography or target population",
-  REJ_06: "Data quality concerns",
-  REJ_07: "Missing required attachments or approvals",
-  REJ_99: "Other",
-  UNSPECIFIED: "Unspecified (legacy)",
-};
-
-// Display order matches the Prisma AgeBracket enum's declaration order.
-const AGE_BRACKET_LABELS: Record<string, string> = {
-  age_15_24: "15–24",
-  age_25_34: "25–34",
-  age_35_44: "35–44",
-  age_45_54: "45–54",
-  age_55_64: "55–64",
-  age_65_plus: "65+",
-  prefer_not_to_say: "Prefer not to say",
-};
+// These used to be plain module-level lookup dictionaries — moved to
+// i18n (systemAdmin.ncnpReport.{rejectionReasons,ageBrackets,genderLabels,
+// needSourceLabels}) and looked up via `t.has()/t()` at each of the 4 call
+// sites below, since a module-level constant has no translator to call.
+// Display order for age brackets still matches the Prisma AgeBracket enum's
+// declaration order.
 const AGE_BRACKET_ORDER = [
   "age_15_24",
   "age_25_34",
@@ -74,26 +53,6 @@ const AGE_BRACKET_ORDER = [
   "age_65_plus",
   "prefer_not_to_say",
 ];
-
-// Matches the Prisma Gender enum's values.
-const GENDER_LABELS: Record<string, string> = {
-  male: "Male",
-  female: "Female",
-  other: "Other",
-  prefer_not_to_say: "Prefer not to say",
-};
-
-// Matches the Prisma NeedSource enum's values, in the client's own Report
-// Type terminology — see the backend's copy of this same map
-// (ncnp-report-pdf.ts) for why 'manual_entry' displays as "Survey" and why
-// 'citizen_input'/'field_survey' are kept even though nothing produces them
-// yet.
-const NEED_SOURCE_LABELS: Record<string, string> = {
-  manual_entry: "Survey",
-  file_upload: "Uploaded Document",
-  citizen_input: "Citizen Input",
-  field_survey: "Field Survey",
-};
 
 // A validated 7-hue categorical set (CVD-safe adjacent pairs) — the design
 // system's own --chart-N tokens only cover 5 slots, which forced two of these
@@ -175,6 +134,15 @@ export function NcnpReportContentView({
 }) {
   const t = useTranslations("systemAdmin.ncnpReport");
   const locale = useLocale() as AppLocale;
+  // Reuses the Priority Dashboard's own level labels (`level.high` etc.)
+  // rather than duplicating them here — same pattern as
+  // village-comparison/page.tsx's VillageCard. The API sends this field
+  // upper-cased ("HIGH"), hence the lowercase before lookup.
+  const tLevel = useTranslations("app.priorityDashboard");
+  const priorityLevelLabel = (status: string) => {
+    const key = status.toLowerCase();
+    return tLevel.has(`level.${key}`) ? tLevel(`level.${key}`) : status;
+  };
 
   const {
     summary,
@@ -342,6 +310,7 @@ export function NcnpReportContentView({
         <section className="mb-8">
           <SectionLabel num="02" title={t("surveyStatusPlatformGrowthTitle")} />
           <StatusDonut
+            locale={locale}
             centerLabel={t("surveysCenterLabel")}
             segments={[
               {
@@ -375,24 +344,32 @@ export function NcnpReportContentView({
           </p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <KpiDeltaCard
+              locale={locale}
+              newLabel={t("kpiNewLabel")}
               label={t("totalOrganizations")}
               total={summary.totals.organizations}
               stat={summary.newThisPeriod.organizations}
               periodLabel={periodLabel}
             />
             <KpiDeltaCard
+              locale={locale}
+              newLabel={t("kpiNewLabel")}
               label={t("totalStudies")}
               total={summary.totals.studies}
               stat={summary.newThisPeriod.studies}
               periodLabel={periodLabel}
             />
             <KpiDeltaCard
+              locale={locale}
+              newLabel={t("kpiNewLabel")}
               label={t("totalSurveys")}
               total={summary.totals.surveys}
               stat={summary.newThisPeriod.surveys}
               periodLabel={periodLabel}
             />
             <KpiDeltaCard
+              locale={locale}
+              newLabel={t("kpiNewLabel")}
               label={t("totalResponses")}
               total={summary.totals.responses}
               stat={summary.newThisPeriod.responses}
@@ -441,7 +418,7 @@ export function NcnpReportContentView({
                           n.priorityStatus === "HIGH" ? "destructive" : "secondary"
                         }
                       >
-                        {n.priorityStatus}
+                        {priorityLevelLabel(n.priorityStatus)}
                       </Badge>
                       <p className="text-foreground mt-1 text-sm font-semibold tabular-nums">
                         {n.priorityScore.toFixed(1)}
@@ -486,6 +463,7 @@ export function NcnpReportContentView({
                 {t("orgsByRegion")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={geography.organizationsByRegion}
                 limit={REGION_LIST_LIMIT}
                 emptyText={t("geographyEmpty")}
@@ -497,6 +475,7 @@ export function NcnpReportContentView({
                 {t("orgsByGovernorate")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={geography.organizationsByGovernorate}
                 limit={GEO_LIST_LIMIT}
                 emptyText={t("geographyEmpty")}
@@ -509,6 +488,7 @@ export function NcnpReportContentView({
               {t("orgsByCenter")}
             </p>
             <NamedBarList
+              locale={locale}
               items={geography.organizationsByCenter}
               limit={GEO_LIST_LIMIT}
               emptyText={t("geographyEmpty")}
@@ -548,6 +528,7 @@ export function NcnpReportContentView({
               </p>
               <div className="mb-3">
                 <TwoStateBar
+                  locale={locale}
                   primaryLabel={t("orgHealthy")}
                   primaryCount={Math.max(
                     0,
@@ -590,6 +571,7 @@ export function NcnpReportContentView({
             {t("orgSummaryByStudies")}
           </p>
           <NamedBarList
+            locale={locale}
             items={orgSummary.byStudies.map((r) => ({
               id: r.organizationId,
               name: r.organizationName,
@@ -611,6 +593,7 @@ export function NcnpReportContentView({
             {t("orgSummaryBySurveys")}
           </p>
           <NamedBarList
+            locale={locale}
             items={orgSummary.bySurveys.map((r) => ({
               id: r.organizationId,
               name: r.organizationName,
@@ -632,6 +615,7 @@ export function NcnpReportContentView({
             {t("orgSummaryByResponses")}
           </p>
           <NamedBarList
+            locale={locale}
             items={orgSummary.byResponses.map((r) => ({
               id: r.organizationId,
               name: r.organizationName,
@@ -671,6 +655,7 @@ export function NcnpReportContentView({
           </p>
           <p className="text-muted-foreground mb-4 text-xs">{t("needDomainsNote")}</p>
           <NamedBarList
+            locale={locale}
             items={needDomains.map((d) => ({
               id: d.domainCode,
               name: d.domainName,
@@ -683,6 +668,7 @@ export function NcnpReportContentView({
             {t("sectionStudyStatus")}
           </p>
           <TwoStateBar
+            locale={locale}
             primaryLabel={t("studyActive")}
             primaryCount={studyStatus.active}
             secondaryLabel={t("studyArchived")}
@@ -693,6 +679,7 @@ export function NcnpReportContentView({
         <section className="mb-10">
           <SectionLabel num="02" title={t("studiesByRegion")} />
           <NamedBarList
+            locale={locale}
             items={geography.studiesByRegion}
             emptyText={t("geographyEmpty")}
             formatCaption={formatCaption}
@@ -736,6 +723,7 @@ export function NcnpReportContentView({
         <section className="mb-10">
           <SectionLabel num="04" title={t("studiesCreatedTrend")} />
           <TrendLineChart
+            locale={locale}
             points={studyOverview.studiesCreatedTrend}
             emptyText={t("noDataAvailable")}
           />
@@ -750,6 +738,7 @@ export function NcnpReportContentView({
                 {t("needsByRegion")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={needsGeography.byRegion}
                 limit={REGION_LIST_LIMIT}
                 emptyText={t("geographyEmpty")}
@@ -761,6 +750,7 @@ export function NcnpReportContentView({
                 {t("needsByGovernorate")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={needsGeography.byGovernorate}
                 limit={GEO_LIST_LIMIT}
                 emptyText={t("geographyEmpty")}
@@ -773,6 +763,7 @@ export function NcnpReportContentView({
               {t("needsByCenter")}
             </p>
             <NamedBarList
+              locale={locale}
               items={needsGeography.byCenter}
               limit={GEO_LIST_LIMIT}
               emptyText={t("geographyEmpty")}
@@ -784,6 +775,7 @@ export function NcnpReportContentView({
         <section className="mb-10">
           <SectionLabel num="06" title={t("needsBySubDomainTitle")} />
           <NamedBarList
+            locale={locale}
             items={needSubDomains.map((d, i) => ({
               id: `${d.domainName}-${d.subDomainName}-${i}`,
               name: `${d.domainName} — ${d.subDomainName}`,
@@ -850,6 +842,7 @@ export function NcnpReportContentView({
                 {t("surveyStatusPlatformWide")}
               </p>
               <StatusDonut
+                locale={locale}
                 centerLabel={t("sectionSurveys")}
                 segments={[
                   {
@@ -898,9 +891,10 @@ export function NcnpReportContentView({
             <p className="text-muted-foreground text-sm">{t("rejectionReasonsEmpty")}</p>
           ) : (
             <NamedBarList
+              locale={locale}
               items={surveyAnalytics.rejectionReasonBreakdown.map((r) => ({
                 id: r.reasonCode,
-                name: `${r.reasonCode} — ${REJECTION_REASON_LABELS[r.reasonCode] ?? r.reasonCode}`,
+                name: `${r.reasonCode} — ${t.has(`rejectionReasons.${r.reasonCode}`) ? t(`rejectionReasons.${r.reasonCode}`) : r.reasonCode}`,
                 count: r.count,
               }))}
               limit={surveyAnalytics.rejectionReasonBreakdown.length}
@@ -917,6 +911,7 @@ export function NcnpReportContentView({
                 {t("surveysByRegionTitle")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={surveyGeography.byRegion}
                 limit={REGION_LIST_LIMIT}
                 emptyText={t("geographyEmpty")}
@@ -928,6 +923,7 @@ export function NcnpReportContentView({
                 {t("surveysByGovernorate")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={surveyGeography.byGovernorate}
                 limit={GEO_LIST_LIMIT}
                 emptyText={t("geographyEmpty")}
@@ -940,6 +936,7 @@ export function NcnpReportContentView({
               {t("surveysByCenter")}
             </p>
             <NamedBarList
+              locale={locale}
               items={surveyGeography.byCenter}
               limit={GEO_LIST_LIMIT}
               emptyText={t("geographyEmpty")}
@@ -1026,6 +1023,7 @@ export function NcnpReportContentView({
             {t("responseTrend")}
           </p>
           <TrendLineChart
+            locale={locale}
             points={responseAnalytics.monthlyTrend}
             emptyText={t("noDataAvailable")}
           />
@@ -1037,6 +1035,7 @@ export function NcnpReportContentView({
             {t("responsesByRegion")}
           </p>
           <NamedBarList
+            locale={locale}
             items={responseAnalytics.responsesByRegion.map((r) => ({
               id: r.regionId,
               name: r.regionName,
@@ -1055,6 +1054,7 @@ export function NcnpReportContentView({
                 {t("topOrgsByTotal")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={responseAnalytics.topOrgsByTotalResponses.map((o) => ({
                   id: o.organizationId,
                   name: o.organizationName,
@@ -1076,6 +1076,7 @@ export function NcnpReportContentView({
                 {t("topOrgsByAvg")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={responseAnalytics.topOrgsByAvgResponsesPerSurvey.map((o) => ({
                   id: o.organizationId,
                   name: o.organizationName,
@@ -1101,6 +1102,7 @@ export function NcnpReportContentView({
             {t("genderDistribution")}
           </p>
           <StatusDonut
+            locale={locale}
             centerLabel={t("genderDistribution")}
             // AGE_BRACKET_COLORS, not --chart-N — two adjacent --chart
             // tokens (steel blue-gray, sage green) read too close in
@@ -1108,7 +1110,9 @@ export function NcnpReportContentView({
             // with Female/Male. Reusing the same validated, CVD-safe
             // categorical set Age Distribution already uses.
             segments={responseAnalytics.genderDistribution.map((g, i) => ({
-              label: GENDER_LABELS[g.gender] ?? g.gender,
+              label: t.has(`genderLabels.${g.gender}`)
+                ? t(`genderLabels.${g.gender}`)
+                : g.gender,
               count: g.count,
               colorVar: AGE_BRACKET_COLORS[i % AGE_BRACKET_COLORS.length]!,
             }))}
@@ -1125,10 +1129,11 @@ export function NcnpReportContentView({
             <p className="text-muted-foreground text-sm">{t("ageDistributionEmpty")}</p>
           ) : (
             <PieChart
+              locale={locale}
               slices={AGE_BRACKET_ORDER.filter(
                 (key) => (ageBracketCountByKey.get(key) ?? 0) > 0,
               ).map((key, i) => ({
-                label: AGE_BRACKET_LABELS[key] ?? key,
+                label: t.has(`ageBrackets.${key}`) ? t(`ageBrackets.${key}`) : key,
                 count: ageBracketCountByKey.get(key) ?? 0,
                 color: AGE_BRACKET_COLORS[i % AGE_BRACKET_COLORS.length]!,
               }))}
@@ -1154,9 +1159,10 @@ export function NcnpReportContentView({
         <section className="mb-8">
           <SectionLabel num="01" title={t("priorityByStatus")} />
           <StatusDonut
+            locale={locale}
             centerLabel={t("priorityByStatus")}
             segments={priorityOverview.byStatus.map((s) => ({
-              label: s.status,
+              label: priorityLevelLabel(s.status),
               count: s.count,
               colorVar:
                 s.status === "HIGH"
@@ -1173,6 +1179,7 @@ export function NcnpReportContentView({
             {t("domainComparisonNote")}
           </p>
           <NamedBarList
+            locale={locale}
             items={priorityOverview.domainComparison.map((d) => ({
               id: d.domainKey,
               name: d.domainName,
@@ -1212,7 +1219,7 @@ export function NcnpReportContentView({
                           v.priorityStatus === "HIGH" ? "destructive" : "secondary"
                         }
                       >
-                        {v.priorityStatus}
+                        {priorityLevelLabel(v.priorityStatus)}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -1263,7 +1270,7 @@ export function NcnpReportContentView({
                             n.priorityStatus === "HIGH" ? "destructive" : "secondary"
                           }
                         >
-                          {n.priorityStatus}
+                          {priorityLevelLabel(n.priorityStatus)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -1277,7 +1284,11 @@ export function NcnpReportContentView({
                       <TableCell className="text-right tabular-nums">
                         {n.evidenceCount}
                       </TableCell>
-                      <TableCell>{NEED_SOURCE_LABELS[n.source] ?? n.source}</TableCell>
+                      <TableCell>
+                        {t.has(`needSourceLabels.${n.source}`)
+                          ? t(`needSourceLabels.${n.source}`)
+                          : n.source}
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {n.sourceRef ?? "—"}
                       </TableCell>

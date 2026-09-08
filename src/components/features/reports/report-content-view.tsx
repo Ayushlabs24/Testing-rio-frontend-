@@ -2,8 +2,10 @@
 
 import { ArrowRight, FileText, Sparkles, Table2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { localizeReportText } from "@/lib/report-narrative-i18n";
+import { formatDate, formatNumber } from "@/lib/format-date";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import type { AppLocale } from "@/i18n/routing";
 import {
   Accordion,
@@ -50,6 +52,12 @@ function label(key: string): string {
     .replace(/[_.]/g, " ")
     .replace(/^./, (c) => c.toUpperCase());
 }
+// NOTE: "Yes"/"No" below are a deliberate, known exception — `scalar` is a
+// plain function (not a component) called from ~46 places across this file,
+// several outside any component scope, so it has no access to a translator.
+// Localizing these two words correctly would mean threading a `yesNo` tuple
+// through every one of those call sites; left as a follow-up rather than
+// risking a rushed, wide-blast-radius refactor of this file's core formatter.
 function scalar(v: unknown, key?: string): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "boolean") return v ? "Yes" : "No";
@@ -98,10 +106,11 @@ function priorityColor(status: string): string {
   }
 }
 
-// Module-level, not inline literals: RegionMap rebuilds every marker when its
-// `unitLabel` prop is a fresh array each render (see its own comment).
-const DOCUMENT_UNIT_LABEL = ["document", "documents"] as const;
-const DATA_POINT_UNIT_LABEL = ["data point", "data points"] as const;
+// These used to be module-level literal constants for referential stability
+// (RegionMap rebuilds every marker when its `unitLabel` prop is a fresh
+// array each render) — now built once per render via `useMemo` inside
+// `ReportContentView` instead, since the labels need a translator. See
+// `documentUnitLabel`/`dataPointUnitLabel` there.
 
 const GENDER_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-5)"];
 const RURAL_COLORS = ["var(--chart-3)", "var(--chart-4)"];
@@ -165,42 +174,52 @@ function DataTable({ rows, columns }: { rows: Dict[]; columns?: ColSpec[] }) {
 // Explicit column set for the domain table. The confidence BAND and the
 // valid-response RATE are separate columns: folding them into "STANDARD (90%)"
 // read as "90% confident", which is a claim neither number makes.
-const DOMAIN_COLUMNS: ColSpec[] = [
-  { key: "name", label: "Domain" },
-  { key: "domainCode", label: "Code" },
-  // Severity is ALWAYS shown. Null renders "—", never 0.
-  // This is the AVERAGE; the two that follow are the methodology's no-masking
-  // rule (a domain can average Low while hiding a Critical KPI). KEEP IN SYNC
-  // with DOMAIN_TABLE_COLS in report-doc.ts — the export and the screen must
-  // show the same columns or a masking domain is visible in only one of them.
-  { key: "severityScore", label: "Avg Severity" },
-  { key: "maxKpiSeverity", label: "Max KPI Severity" },
-  // The worst KPI's NAME is not a column here either — it is in the Domain
-  // Masking Alert, where it is actionable. See DOMAIN_TABLE_COLS in report-doc.ts.
-  { key: "performanceScore", label: "Performance" },
-  { key: "weight", label: "Weight" },
-  { key: "kpiCount", label: "KPIs defined" },
-  { key: "confidence", label: "Confidence" },
-  { key: "validResponseRatePct", label: "Valid %" },
-  { key: "isCriticalDomain", label: "Critical" },
-  { key: "masksCriticalFinding", label: "Masking?" },
-];
+// `ColSpec.label` needs a translator, and this array is read at module-load
+// time — before any component (and its `t`) exists — so it's built by a
+// factory called once inside `ReportContentView`, instead of being a plain
+// module-level constant.
+function domainColumns(t: (key: string) => string): ColSpec[] {
+  return [
+    { key: "name", label: t("col.domain") },
+    { key: "domainCode", label: t("col.code") },
+    // Severity is ALWAYS shown. Null renders "—", never 0.
+    // This is the AVERAGE; the two that follow are the methodology's no-masking
+    // rule (a domain can average Low while hiding a Critical KPI). KEEP IN SYNC
+    // with DOMAIN_TABLE_COLS in report-doc.ts — the export and the screen must
+    // show the same columns or a masking domain is visible in only one of them.
+    { key: "severityScore", label: t("col.avgSeverity") },
+    { key: "maxKpiSeverity", label: t("col.maxKpiSeverity") },
+    // The worst KPI's NAME is not a column here either — it is in the Domain
+    // Masking Alert, where it is actionable. See DOMAIN_TABLE_COLS in report-doc.ts.
+    { key: "performanceScore", label: t("col.performance") },
+    { key: "weight", label: t("col.weight") },
+    { key: "kpiCount", label: t("col.kpisDefined") },
+    { key: "confidence", label: t("col.confidence") },
+    { key: "validResponseRatePct", label: t("col.validPct") },
+    { key: "isCriticalDomain", label: t("col.critical") },
+    { key: "masksCriticalFinding", label: t("col.masking") },
+  ];
+}
 
 // One row per Unified Need Record — the client's domain / sub-domain /
 // indicator classification, with severity always visible.
-const NEED_RECORD_COLUMNS: ColSpec[] = [
-  { key: "domain", label: "Domain" },
-  { key: "subDomain", label: "Sub-domain" },
-  { key: "indicatorName", label: "Indicator" },
-  { key: "severityScore", label: "Severity" },
-  { key: "severityBand", label: "Band" },
-  { key: "confidence", label: "Confidence" },
-  { key: "equityFlag", label: "Equity" },
-  { key: "validResponseCount", label: "Responses" },
-  // Why this row carries no severity, or why its equity check could not run —
-  // a blank Equity "No" would otherwise read as "checked, no inequity found".
-  { key: "notMeasuredReason", label: "Notes", format: needNotes },
-];
+function needRecordColumns(
+  t: (key: string, values?: Record<string, string>) => string,
+): ColSpec[] {
+  return [
+    { key: "domain", label: t("col.domain") },
+    { key: "subDomain", label: t("col.subDomain") },
+    { key: "indicatorName", label: t("col.indicator") },
+    { key: "severityScore", label: t("col.severity") },
+    { key: "severityBand", label: t("col.band") },
+    { key: "confidence", label: t("col.confidence") },
+    { key: "equityFlag", label: t("col.equity") },
+    { key: "validResponseCount", label: t("col.responses") },
+    // Why this row carries no severity, or why its equity check could not run —
+    // a blank Equity "No" would otherwise read as "checked, no inequity found".
+    { key: "notMeasuredReason", label: t("col.notes"), format: makeNeedNotes(t) },
+  ];
+}
 
 // Where a need sits, compact enough for a table cell. The full scope sentence
 // (`unitGeo.scopeLabel`) belongs in the Geographic Scope block, not in a column
@@ -232,35 +251,39 @@ function compactGeoLabel(r: Dict): string {
 // for the priority-scoring mechanism's per-need output. It read "Relevance",
 // while the only thing on the page labelled "Priority Score" was a different,
 // village-level figure.
-const PRIORITY_NEED_COLUMNS: ColSpec[] = [
-  { key: "rank", label: "#" },
-  { key: "domain", label: "Domain" },
-  { key: "subDomain", label: "Sub-domain" },
-  { key: "indicatorName", label: "Indicator" },
-  { key: "unitGeo", label: "Location", format: compactGeoLabel },
-  {
-    key: "relevanceScore",
-    label: "Priority Score",
-    format: (r) =>
-      typeof r.relevanceScore === "number" ? r.relevanceScore.toFixed(2) : "—",
-  },
-  { key: "severityScore", label: "Severity" },
-  { key: "severityBand", label: "Band" },
-  // The source Need's own recorded estimate (the need-entry question). A dash
-  // when it was never answered, with the reason stated beneath the table —
-  // never the study-area figure. Mirrors report-doc.ts.
-  {
-    key: "affectedPopulation",
-    label: "Affected Pop.",
-    format: (r) =>
-      typeof r.affectedPopulation === "number"
-        ? r.affectedPopulation.toLocaleString("en-GB")
-        : "—",
-  },
-  { key: "confidence", label: "Confidence" },
-  { key: "equityFlag", label: "Equity" },
-  { key: "validResponseCount", label: "Responses" },
-];
+function priorityNeedColumns(t: (key: string) => string, locale: AppLocale): ColSpec[] {
+  return [
+    { key: "rank", label: t("col.rank") },
+    { key: "domain", label: t("col.domain") },
+    { key: "subDomain", label: t("col.subDomain") },
+    { key: "indicatorName", label: t("col.indicator") },
+    { key: "unitGeo", label: t("col.location"), format: compactGeoLabel },
+    {
+      key: "relevanceScore",
+      label: t("priorityScore"),
+      format: (r) =>
+        typeof r.relevanceScore === "number" ? r.relevanceScore.toFixed(2) : "—",
+    },
+    { key: "severityScore", label: t("col.severity") },
+    { key: "severityBand", label: t("col.band") },
+    // The source Need's own recorded estimate (the need-entry question). A dash
+    // when it was never answered, with the reason stated beneath the table —
+    // never the study-area figure. Mirrors report-doc.ts.
+    {
+      key: "affectedPopulation",
+      label: t("col.affectedPop"),
+      format: (r) =>
+        // Was hardcoded to the "en-GB" locale regardless of UI language — the
+        // exact class of bug fixed elsewhere in this pass (formatNumber()).
+        typeof r.affectedPopulation === "number"
+          ? formatNumber(r.affectedPopulation, locale)
+          : "—",
+    },
+    { key: "confidence", label: t("col.confidence") },
+    { key: "equityFlag", label: t("col.equity") },
+    { key: "validResponseCount", label: t("col.responses") },
+  ];
+}
 
 // Summary status as a reserved status colour PLUS its written label — the
 // badge never communicates state by colour alone. Tinted backgrounds pair with
@@ -289,21 +312,23 @@ function EvidenceStatusBadge({ status }: { status: string }) {
 // PDF/Excel export emits (report-doc.ts) — a masking domain must be equally
 // visible on screen and in the exported file.
 function DomainMaskingAlert({ domains }: { domains: Dict[] }) {
+  const t = useTranslations("app.reports.content");
   const masked = domains.filter((d) => d.masksCriticalFinding === true);
   if (masked.length === 0) return null;
+  const details = masked
+    .map((d) =>
+      t("dma.domainDetail", {
+        name: scalar(d.name),
+        kpi: scalar(d.maxKpiName),
+        severity: scalar(d.maxKpiSeverity),
+      }),
+    )
+    .join("; ");
   return (
     <div className="border-warning/40 bg-warning/10 text-foreground rounded-md border p-3 text-sm">
-      <p className="font-semibold">Domain Masking Alert</p>
+      <p className="font-semibold">{t("dma.title")}</p>
       <p className="mt-1 leading-relaxed">
-        {masked.length} domain(s) average a milder band than their worst KPI:{" "}
-        {masked
-          .map(
-            (d) =>
-              `${scalar(d.name)} (worst: ${scalar(d.maxKpiName)} at ${scalar(d.maxKpiSeverity)})`,
-          )
-          .join("; ")}
-        . Per the methodology, a critical need surfaces regardless of its domain average —
-        read the Max KPI Severity column, not the average, for these domains.
+        {t("dma.body", { count: String(masked.length), details })}
       </p>
     </div>
   );
@@ -314,14 +339,15 @@ function DomainMaskingAlert({ domains }: { domains: Dict[] }) {
 // auto-derived labels turned `dontKnowBand` into "Dont Know Band" and printed
 // the rate without a unit.
 function ResponseQualityBlock({ rq }: { rq: Dict }) {
+  const t = useTranslations("app.reports.content");
   const pct = (v: unknown) => (typeof v === "number" ? `${v.toFixed(2)}%` : scalar(v));
   const rows: Array<{ label: string; value: string; wide?: boolean }> = [
-    { label: "Overall confidence", value: scalar(rq.overallConfidence) },
-    { label: "Responses submitted", value: scalar(rq.submittedResponses) },
-    { label: "Valid responses", value: scalar(rq.validResponses) },
-    { label: "Valid-response rate", value: `${scalar(rq.validResponseRatePct)}%` },
-    { label: "Don't-know rate", value: pct(rq.dontKnowRate) },
-    { label: "Don't-know band", value: scalar(rq.dontKnowBand) },
+    { label: t("rq2.overallConfidence"), value: scalar(rq.overallConfidence) },
+    { label: t("cov.submitted"), value: scalar(rq.submittedResponses) },
+    { label: t("cov.valid"), value: scalar(rq.validResponses) },
+    { label: t("rq2.validResponseRate"), value: `${scalar(rq.validResponseRatePct)}%` },
+    { label: t("dq.dontKnow"), value: pct(rq.dontKnowRate) },
+    { label: t("rq2.dontKnowBand"), value: scalar(rq.dontKnowBand) },
   ];
   // RIO-FR-024: the study's own signed-off sample-size target — absent
   // entirely (not just null) for studies created before this field existed,
@@ -332,13 +358,15 @@ function ResponseQualityBlock({ rq }: { rq: Dict }) {
     rq.minimumDetectableEffect != null
   ) {
     rows.push(
-      { label: "Population (area)", value: scalar(rq.population) },
-      { label: "Required sample size", value: scalar(rq.requiredSampleSize) },
+      { label: t("rq2.populationArea"), value: scalar(rq.population) },
+      { label: t("rq2.requiredSampleSize"), value: scalar(rq.requiredSampleSize) },
       {
-        label: "Minimum detectable effect",
+        label: t("rq2.minDetectableEffect"),
         value:
           typeof rq.minimumDetectableEffect === "number"
-            ? `±${rq.minimumDetectableEffect.toFixed(1)} pts`
+            ? t("rq2.minDetectableEffectValue", {
+                value: rq.minimumDetectableEffect.toFixed(1),
+              })
             : scalar(rq.minimumDetectableEffect),
       },
     );
@@ -348,22 +376,33 @@ function ResponseQualityBlock({ rq }: { rq: Dict }) {
       <StatTiles items={rows} />
       {typeof rq.confidenceReason === "string" && rq.confidenceReason ? (
         <div>
-          <p className="text-muted-foreground text-xs font-medium">Why this band</p>
-          <p className="text-foreground text-sm leading-relaxed">{rq.confidenceReason}</p>
+          <p className="text-muted-foreground text-xs font-medium">
+            {t("rq2.whyThisBand")}
+          </p>
+          <p className="text-foreground text-sm leading-relaxed">
+            <AutoTranslate text={rq.confidenceReason} />
+          </p>
         </div>
       ) : null}
     </div>
   );
 }
 
-function needNotes(r: Dict): string {
-  if (typeof r.notMeasuredReason === "string" && r.notMeasuredReason)
-    return r.notMeasuredReason;
-  const eq = r.equityDetail;
-  if (isObj(eq) && eq.evaluable === false && typeof eq.reason === "string") {
-    return `Equity not evaluable: ${eq.reason}`;
-  }
-  return "";
+// Factory, not a plain function: the "Equity not evaluable:" prefix is a
+// static label needing translation, but `needNotes` itself is called from a
+// `ColSpec.format` (a plain string-returning function, not a component), so
+// it has no translator of its own — the caller resolves `t` once and passes
+// the bound formatter down.
+function makeNeedNotes(t: (key: string, values?: Record<string, string>) => string) {
+  return function needNotes(r: Dict): string {
+    if (typeof r.notMeasuredReason === "string" && r.notMeasuredReason)
+      return r.notMeasuredReason;
+    const eq = r.equityDetail;
+    if (isObj(eq) && eq.evaluable === false && typeof eq.reason === "string") {
+      return t("equityNotEvaluable", { reason: eq.reason });
+    }
+    return "";
+  };
 }
 
 /** Card-wrapped section — used only for the generic (placeholder) fallback. */
@@ -392,6 +431,22 @@ function Section({
 export function ReportContentView({ report }: { report: Report }) {
   const t = useTranslations("app.reports.content");
   const locale = useLocale() as AppLocale;
+  // Built once per render, now that `t`/`locale` exist — see each factory's
+  // own comment for why these can't be plain module-level constants.
+  const domainCols = domainColumns(t);
+  const needRecordCols = needRecordColumns(t);
+  const priorityNeedCols = priorityNeedColumns(t, locale);
+  // Referentially stable across renders (see the removed module-level
+  // constants' old comment) — RegionMap/LeafletMapContainer rebuild every
+  // marker when this array's identity changes.
+  const documentUnitLabel = useMemo(
+    () => [t("unitDocumentSingular"), t("unitDocumentPlural")] as const,
+    [t],
+  );
+  const dataPointUnitLabel = useMemo(
+    () => [t("unitDataPointSingular"), t("unitDataPointPlural")] as const,
+    [t],
+  );
   const c = report.content as Dict;
   // KEEP IN SYNC with the identical predicate in the backend doc builder
   // (Project-RIO-Backend/src/modules/reports/report-doc.ts#buildReportDoc).
@@ -586,7 +641,7 @@ export function ReportContentView({ report }: { report: Report }) {
   if (isObj(c.scopeBasis)) {
     const sb = c.scopeBasis as Dict;
     sections.push({
-      title: "Scope Basis",
+      title: t("title.scopeBasis"),
       node: (
         <div className="space-y-3">
           <KeyValues
@@ -595,14 +650,16 @@ export function ReportContentView({ report }: { report: Report }) {
               surveysInStudy: sb.studySurveyCount,
               selectedBy:
                 sb.resolution === "EXPLICIT_FILTER"
-                  ? "Explicit filter"
-                  : "Latest published survey",
+                  ? t("scopeBasisValue.explicitFilter")
+                  : t("scopeBasisValue.latestPublished"),
             }}
           />
           {typeof sb.partialScopeNote === "string" && sb.partialScopeNote ? (
             <div className="border-warning/40 bg-warning/10 text-foreground rounded-md border p-3 text-sm">
-              <p className="font-semibold">Partial Scope</p>
-              <p className="mt-1 leading-relaxed">{sb.partialScopeNote}</p>
+              <p className="font-semibold">{t("partialScope")}</p>
+              <p className="mt-1 leading-relaxed">
+                <AutoTranslate text={sb.partialScopeNote} />
+              </p>
             </div>
           ) : null}
         </div>
@@ -738,7 +795,7 @@ export function ReportContentView({ report }: { report: Report }) {
           />
           {typeof es.coverageStatement === "string" ? (
             <p className="text-muted-foreground text-sm leading-relaxed">
-              {es.coverageStatement}
+              <AutoTranslate text={es.coverageStatement} />
             </p>
           ) : null}
           {isObjArray(es.domainDistribution) ? (
@@ -749,14 +806,14 @@ export function ReportContentView({ report }: { report: Report }) {
               <DataTable
                 rows={es.domainDistribution}
                 columns={[
-                  { key: "domain", label: "Domain" },
-                  { key: "assessed", label: "Assessed" },
-                  { key: "severityScore", label: "Severity" },
-                  { key: "severityBand", label: "Band" },
-                  { key: "needCount", label: "Indicators" },
+                  { key: "domain", label: t("col.domain") },
+                  { key: "assessed", label: t("col.assessed") },
+                  { key: "severityScore", label: t("col.severity") },
+                  { key: "severityBand", label: t("col.band") },
+                  { key: "needCount", label: t("col.indicators") },
                   {
                     key: "subDomainsAssessed",
-                    label: "Sub-domains",
+                    label: t("col.subDomains"),
                     format: (r) =>
                       `${scalar(r.subDomainsAssessed)} / ${scalar(r.subDomainsDefined)}`,
                   },
@@ -771,12 +828,14 @@ export function ReportContentView({ report }: { report: Report }) {
                   ? t("es.topHighest")
                   : t("es.topCritical")}
               </p>
-              <DataTable rows={es.topThreeCriticalNeeds} columns={NEED_RECORD_COLUMNS} />
+              <DataTable rows={es.topThreeCriticalNeeds} columns={needRecordCols} />
             </div>
           ) : null}
           {typeof es.topNeedsShortfallReason === "string" &&
           es.topNeedsShortfallReason ? (
-            <p className="text-muted-foreground text-sm">{es.topNeedsShortfallReason}</p>
+            <p className="text-muted-foreground text-sm">
+              <AutoTranslate text={es.topNeedsShortfallReason} />
+            </p>
           ) : null}
         </div>
       ),
@@ -835,15 +894,15 @@ export function ReportContentView({ report }: { report: Report }) {
       (d) => scalar(d.summaryStatus) === "OFFICER_CONFIRMED",
     ).length;
     sections.push({
-      title: "Evidence Base",
+      title: t("title.evidenceBase"),
       node: (
         <StatTiles
           items={[
-            { label: "Documents", value: evidenceDocs.length },
-            { label: "With AI summary", value: withSummary },
-            { label: "Officer confirmed", value: confirmed },
+            { label: t("col.documents"), value: evidenceDocs.length },
+            { label: t("col.withAiSummary"), value: withSummary },
+            { label: t("col.officerConfirmed"), value: confirmed },
             {
-              label: "Valid responses",
+              label: t("cov.valid"),
               value: scalar(rq.validResponses),
               sub: scalar(rq.overallConfidence),
             },
@@ -913,44 +972,57 @@ export function ReportContentView({ report }: { report: Report }) {
     const valid = num(rq.validResponses);
 
     sections.push({
-      title: "Evidence Composition",
+      title: t("title.evidenceComposition"),
       node: (
         <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-medium">Summary status</p>
+              <p className="text-muted-foreground text-xs font-medium">
+                {t("col.summaryStatus")}
+              </p>
               {/* StatusDonut renders the total itself; centerLabel is the
                   caption under it, not the number. */}
-              <StatusDonut segments={statusSegments} centerLabel="Documents" />
+              <StatusDonut
+                segments={statusSegments}
+                centerLabel={t("col.documents")}
+                locale={locale}
+              />
             </div>
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">
-                Documents by type
+                {t("col.documentsByType")}
               </p>
               <NamedBarList
+                locale={locale}
                 items={byType}
                 limit={8}
-                emptyText="No document types recorded."
+                emptyText={t("noDocumentTypesRecorded")}
               />
             </div>
           </div>
           {byTheme.length > 0 ? (
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">
-                Themes across documents
+                {t("col.themesAcrossDocuments")}
               </p>
-              <NamedBarList items={byTheme} limit={8} emptyText="No themes identified." />
+              <NamedBarList
+                items={byTheme}
+                limit={8}
+                emptyText={t("noThemesIdentified")}
+                locale={locale}
+              />
             </div>
           ) : null}
           {submitted !== null && valid !== null && submitted > 0 ? (
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">
-                Response validity
+                {t("col.responseValidity")}
               </p>
               <TwoStateBar
-                primaryLabel="Valid"
+                locale={locale}
+                primaryLabel={t("col.validShort")}
                 primaryCount={valid}
-                secondaryLabel="Excluded"
+                secondaryLabel={t("col.excludedShort")}
                 secondaryCount={Math.max(0, submitted - valid)}
               />
             </div>
@@ -972,10 +1044,10 @@ export function ReportContentView({ report }: { report: Report }) {
       : [];
     const unitLabel =
       Array.isArray(geo.mapUnitLabel) && geo.mapUnitLabel[0] === "data point"
-        ? DATA_POINT_UNIT_LABEL
-        : DOCUMENT_UNIT_LABEL;
+        ? dataPointUnitLabel
+        : documentUnitLabel;
     sections.push({
-      title: "Geography Hierarchy",
+      title: t("title.geographyHierarchy"),
       node: (
         // Map and text side by side, each taking half the width. The map is
         // region-level only, so the hierarchy beside it is what actually
@@ -990,20 +1062,24 @@ export function ReportContentView({ report }: { report: Report }) {
         >
           {mapRegions.length > 0 ? (
             <div className="bg-muted/20 rounded-lg border p-4">
-              <p className="text-foreground mb-1 text-sm font-semibold">Kingdom Map</p>
+              <p className="text-foreground mb-1 text-sm font-semibold">
+                {t("kingdomMap")}
+              </p>
               <p className="text-muted-foreground mb-4 text-xs">
-                Markers are region-level, sized by {unitLabel[1]} in this report.
+                {t("markersRegionLevel", { unit: unitLabel[1] })}
               </p>
               <RegionMap data={mapRegions} unitLabel={unitLabel} />
             </div>
           ) : null}
           <div className="bg-muted/20 flex flex-col gap-3 rounded-lg border p-4">
-            <p className="text-foreground text-sm font-semibold">Location Hierarchy</p>
+            <p className="text-foreground text-sm font-semibold">
+              {t("locationHierarchy")}
+            </p>
             {(
               [
-                ["Region", geo.region],
-                ["Governorate", geo.governorate],
-                ["Center", geo.center],
+                [t("col.region"), geo.region],
+                [t("col.governorate"), geo.governorate],
+                [t("col.center"), geo.center],
               ] as const
             ).map(([label, value], i) => (
               <div
@@ -1073,7 +1149,7 @@ export function ReportContentView({ report }: { report: Report }) {
               <BarChart bars={severBars} max={100} />
             </div>
           </div>
-          <DataTable rows={domains} columns={DOMAIN_COLUMNS} />
+          <DataTable rows={domains} columns={domainCols} />
           <DomainMaskingAlert domains={domains} />
         </div>
       ),
@@ -1113,7 +1189,7 @@ export function ReportContentView({ report }: { report: Report }) {
                           rows={s.indicators.flatMap((i) =>
                             isObjArray(i.needs) ? i.needs : [],
                           )}
-                          columns={NEED_RECORD_COLUMNS}
+                          columns={needRecordCols}
                         />
                       ) : null}
                     </div>
@@ -1167,10 +1243,10 @@ export function ReportContentView({ report }: { report: Report }) {
         <DataTable
           rows={c.tierSummary}
           columns={[
-            { key: "tier", label: "Priority Tier" },
-            { key: "count", label: "Needs" },
-            { key: "sharePct", label: "Share %" },
-            { key: "equityFlagged", label: "Equity-flagged" },
+            { key: "tier", label: t("col.priorityTier") },
+            { key: "count", label: t("port.needs") },
+            { key: "sharePct", label: t("col.sharePct") },
+            { key: "equityFlagged", label: t("col.equityFlagged") },
           ]}
         />
       ),
@@ -1186,14 +1262,14 @@ export function ReportContentView({ report }: { report: Report }) {
           <DataTable
             rows={c.domainRollup}
             columns={[
-              { key: "domain", label: "Domain" },
-              { key: "averageSeverity", label: "Avg Severity" },
+              { key: "domain", label: t("col.domain") },
+              { key: "averageSeverity", label: t("col.avgSeverity") },
               // The no-masking column. A domain can average LOW while hiding a
               // CRITICAL KPI, so the max is shown beside the average, never
               // instead of it.
-              { key: "maxKpiSeverity", label: "Max KPI Severity" },
-              { key: "criticalKpiCount", label: "Critical KPIs" },
-              { key: "kpiCount", label: "KPIs Defined" },
+              { key: "maxKpiSeverity", label: t("col.maxKpiSeverity") },
+              { key: "criticalKpiCount", label: t("col.criticalKpis") },
+              { key: "kpiCount", label: t("col.kpisDefined") },
             ]}
           />
           {masking.length > 0 ? (
@@ -1215,8 +1291,8 @@ export function ReportContentView({ report }: { report: Report }) {
         <DataTable
           rows={c.completeness}
           columns={[
-            { key: "label", label: "Measure" },
-            { key: "value", label: "Value" },
+            { key: "label", label: t("col.measure") },
+            { key: "value", label: t("col.value") },
           ]}
         />
       ),
@@ -1246,10 +1322,10 @@ export function ReportContentView({ report }: { report: Report }) {
               <DataTable
                 rows={scope.coveredSurveys}
                 columns={[
-                  { key: "title", label: "Survey" },
-                  { key: "version", label: "Version" },
-                  { key: "status", label: "Status" },
-                  { key: "responses", label: "Submitted Responses" },
+                  { key: "title", label: t("survey") },
+                  { key: "version", label: t("col.version") },
+                  { key: "status", label: t("col.status") },
+                  { key: "responses", label: t("submittedResponses") },
                 ]}
               />
             ) : null}
@@ -1261,10 +1337,10 @@ export function ReportContentView({ report }: { report: Report }) {
                 <DataTable
                   rows={scope.excludedSurveys}
                   columns={[
-                    { key: "title", label: "Survey" },
-                    { key: "version", label: "Version" },
-                    { key: "status", label: "Status" },
-                    { key: "responses", label: "Submitted Responses" },
+                    { key: "title", label: t("survey") },
+                    { key: "version", label: t("col.version") },
+                    { key: "status", label: t("col.status") },
+                    { key: "responses", label: t("submittedResponses") },
                   ]}
                 />
               </div>
@@ -1303,20 +1379,22 @@ export function ReportContentView({ report }: { report: Report }) {
                 },
               ]}
               columns={[
-                { key: "measure", label: "Measure" },
-                { key: "value", label: "Value" },
+                { key: "measure", label: t("col.measure") },
+                { key: "value", label: t("col.value") },
               ]}
             />
-            <p className="text-muted-foreground text-xs">{scalar(ab.note)}</p>
+            <p className="text-muted-foreground text-xs">
+              <AutoTranslate text={scalar(ab.note)} />
+            </p>
             {isObjArray(ab.byStage) ? (
               <DataTable
                 rows={ab.byStage}
                 columns={[
-                  { key: "stageLabel", label: "Stopped at" },
-                  { key: "count", label: "Sessions" },
+                  { key: "stageLabel", label: t("col.stoppedAt") },
+                  { key: "count", label: t("col.sessions") },
                   {
                     key: "sharePct",
-                    label: "Share",
+                    label: t("col.share"),
                     format: (r) => `${scalar(r.sharePct)}%`,
                   },
                 ]}
@@ -1339,11 +1417,13 @@ export function ReportContentView({ report }: { report: Report }) {
                 { measure: t("invalidTotal"), value: scalar(inv.total) },
               ]}
               columns={[
-                { key: "measure", label: "Measure" },
-                { key: "value", label: "Value" },
+                { key: "measure", label: t("col.measure") },
+                { key: "value", label: t("col.value") },
               ]}
             />
-            <p className="text-muted-foreground text-xs">{scalar(inv.basis)}</p>
+            <p className="text-muted-foreground text-xs">
+              <AutoTranslate text={scalar(inv.basis)} />
+            </p>
           </div>
         ),
       });
@@ -1374,23 +1454,25 @@ export function ReportContentView({ report }: { report: Report }) {
                 },
               ]}
               columns={[
-                { key: "measure", label: "Measure" },
-                { key: "value", label: "Value" },
+                { key: "measure", label: t("col.measure") },
+                { key: "value", label: t("col.value") },
               ]}
             />
-            <p className="text-muted-foreground text-xs">{scalar(un.note)}</p>
+            <p className="text-muted-foreground text-xs">
+              <AutoTranslate text={scalar(un.note)} />
+            </p>
             {isObjArray(un.byQuestion) ? (
               <DataTable
                 rows={un.byQuestion}
                 columns={[
-                  { key: "questionText", label: "Required Question" },
-                  { key: "domain", label: "Domain" },
-                  { key: "surveyTitle", label: "Survey" },
-                  { key: "unanswered", label: "Left Blank" },
-                  { key: "ofResponses", label: "Of Responses" },
+                  { key: "questionText", label: t("col.requiredQuestion") },
+                  { key: "domain", label: t("col.domain") },
+                  { key: "surveyTitle", label: t("survey") },
+                  { key: "unanswered", label: t("leftBlank") },
+                  { key: "ofResponses", label: t("col.ofResponses") },
                   {
                     key: "unansweredPct",
-                    label: "Rate",
+                    label: t("col.rate"),
                     format: (r) => `${scalar(r.unansweredPct)}%`,
                   },
                 ]}
@@ -1409,12 +1491,12 @@ export function ReportContentView({ report }: { report: Report }) {
         <DataTable
           rows={c.domainConfidence}
           columns={[
-            { key: "domain", label: "Domain" },
-            { key: "confidence", label: "Confidence" },
-            { key: "validResponseRatePct", label: "Valid-Response %" },
-            { key: "dontKnowRatePct", label: "Don't-Know %" },
-            { key: "kpiCount", label: "KPIs" },
-            { key: "reason", label: "Why this band" },
+            { key: "domain", label: t("col.domain") },
+            { key: "confidence", label: t("col.confidence") },
+            { key: "validResponseRatePct", label: t("col.validResponsePct") },
+            { key: "dontKnowRatePct", label: t("col.dontKnowPct") },
+            { key: "kpiCount", label: t("col.kpis") },
+            { key: "reason", label: t("rq2.whyThisBand") },
           ]}
         />
       ),
@@ -1437,10 +1519,10 @@ export function ReportContentView({ report }: { report: Report }) {
             <DataTable
               rows={flagged}
               columns={[
-                { key: "flag", label: "Flag" },
-                { key: "domain", label: "Domain" },
-                { key: "indicatorName", label: "Indicator" },
-                { key: "reason", label: "Reason" },
+                { key: "flag", label: t("col.flag") },
+                { key: "domain", label: t("col.domain") },
+                { key: "indicatorName", label: t("col.indicator") },
+                { key: "reason", label: t("col.reason") },
               ]}
             />
           ) : null}
@@ -1482,14 +1564,16 @@ export function ReportContentView({ report }: { report: Report }) {
               {/* Severity and priority run in opposite directions on the same
                   page; saying so is cheaper than a reader inverting a finding. */}
               <p className="text-muted-foreground text-xs">
-                {scalar(vp.scoreDirectionNote)}
+                <AutoTranslate text={scalar(vp.scoreDirectionNote)} />
               </p>
-              <p className="text-muted-foreground text-xs">{scalar(vp.coverageBasis)}</p>
+              <p className="text-muted-foreground text-xs">
+                <AutoTranslate text={scalar(vp.coverageBasis)} />
+              </p>
             </div>
           ) : null}
           {isObjArray(pn.needs) ? (
             <div className="space-y-2">
-              <DataTable rows={pn.needs} columns={PRIORITY_NEED_COLUMNS} />
+              <DataTable rows={pn.needs} columns={priorityNeedCols} />
               {/* How the order was arrived at, beneath the order itself. The
                   methodology asks that a reader be able to RECOMPUTE the
                   ranking, which a formula left in the payload does not allow. */}
@@ -1524,7 +1608,7 @@ export function ReportContentView({ report }: { report: Report }) {
               <p className="text-muted-foreground text-xs font-medium">
                 {t("pn.notMeasured")}
               </p>
-              <DataTable rows={pn.notMeasured} columns={NEED_RECORD_COLUMNS} />
+              <DataTable rows={pn.notMeasured} columns={needRecordCols} />
             </div>
           ) : null}
         </div>
@@ -1545,7 +1629,9 @@ export function ReportContentView({ report }: { report: Report }) {
               style={{ borderColor: priorityColor(priorityStatus) }}
             >
               <p className="text-muted-foreground text-xs font-medium">{t("override")}</p>
-              <p className="text-foreground">{scalar(priority.overrideReason)}</p>
+              <p className="text-foreground">
+                <AutoTranslate text={scalar(priority.overrideReason)} />
+              </p>
             </div>
           ) : null}
         </div>
@@ -1767,7 +1853,7 @@ export function ReportContentView({ report }: { report: Report }) {
   if (isObj(c.evidenceSection) && isObjArray((c.evidenceSection as Dict).documents)) {
     const evDocs = (c.evidenceSection as Dict).documents as Dict[];
     sections.push({
-      title: "Evidence Documents & AI Summaries",
+      title: t("title.evidenceDocuments"),
       node: (
         // One accordion row per document instead of every summary expanded at
         // once: with several documents the old layout was an unreadable wall of
@@ -1799,13 +1885,13 @@ export function ReportContentView({ report }: { report: Report }) {
                       {String(idx + 1).padStart(2, "0")}
                     </span>
                     <span className="text-foreground text-sm font-semibold">
-                      {scalar(doc.title)}
+                      <AutoTranslate text={scalar(doc.title)} />
                     </span>
                     <EvidenceStatusBadge status={status} />
                     <span className="text-muted-foreground ml-auto text-[10px]">
                       {findingCount > 0
-                        ? `${findingCount} finding${findingCount === 1 ? "" : "s"}`
-                        : "No summary"}
+                        ? t("findingCount", { count: findingCount })
+                        : t("noSummary")}
                     </span>
                   </div>
                 </AccordionTrigger>
@@ -1814,9 +1900,9 @@ export function ReportContentView({ report }: { report: Report }) {
                   <div className="flex flex-wrap gap-1.5">
                     {(
                       [
-                        ["Ref", doc.sourceReferenceId],
-                        ["Type", doc.documentType],
-                        ["Collected", doc.collectedDate],
+                        [t("col.ref"), doc.sourceReferenceId],
+                        [t("col.type"), doc.documentType],
+                        [t("col.collected"), doc.collectedDate],
                       ] as const
                     ).map(([label, value]) => (
                       <span
@@ -1831,36 +1917,42 @@ export function ReportContentView({ report }: { report: Report }) {
                     <div className="space-y-3">
                       {ai.evidenceNote ? (
                         <div className="bg-info/10 border-info/30 text-foreground rounded border p-2.5 text-[10px] font-medium">
-                          {String(scalar(ai.evidenceNote))}
+                          <AutoTranslate text={String(scalar(ai.evidenceNote))} />
                         </div>
                       ) : null}
                       <div>
                         <p className="text-foreground text-[11px] font-semibold">
-                          Executive Qualitative Summary
+                          {t("title.execQualSummary")}
                         </p>
                         <p className="text-muted-foreground mt-0.5 leading-relaxed">
-                          {String(scalar(ai.summary))}
+                          <AutoTranslate text={String(scalar(ai.summary))} />
                         </p>
                       </div>
                       {isObjArray(ai.keyFindings) ? (
                         <div>
                           <p className="text-foreground mb-1 text-[11px] font-semibold">
-                            Key Findings
+                            {t("title.keyFindings")}
                           </p>
                           <div className="space-y-1.5">
                             {(ai.keyFindings as Dict[]).map(
                               (kf: Dict | string, i: number) => (
                                 <div key={i} className="bg-muted/20 rounded border p-2">
                                   <p className="text-foreground font-medium">
-                                    {typeof kf === "string"
-                                      ? kf
-                                      : String(scalar(kf.finding))}
+                                    <AutoTranslate
+                                      text={
+                                        typeof kf === "string"
+                                          ? kf
+                                          : String(scalar(kf.finding))
+                                      }
+                                    />
                                   </p>
                                   {typeof kf !== "string" &&
                                   (kf.sourceReferenceId || kf.pageOrSection) ? (
                                     <p className="text-muted-foreground mt-0.5 text-[10px]">
-                                      Ref: {String(scalar(kf.sourceReferenceId))} •{" "}
-                                      {String(scalar(kf.pageOrSection))}
+                                      {t("refInline", {
+                                        ref: String(scalar(kf.sourceReferenceId)),
+                                        loc: String(scalar(kf.pageOrSection)),
+                                      })}
                                     </p>
                                   ) : null}
                                 </div>
@@ -1872,17 +1964,25 @@ export function ReportContentView({ report }: { report: Report }) {
                       {isObjArray(ai.themes) ? (
                         <div>
                           <p className="text-foreground mb-1 text-[11px] font-semibold">
-                            Themes
+                            {t("title.themes")}
                           </p>
                           <div className="space-y-1.5">
                             {(ai.themes as Dict[]).map((th: Dict | string, i: number) => (
                               <div key={i} className="bg-card rounded border p-2">
                                 <p className="text-primary font-semibold">
-                                  {typeof th === "string" ? th : String(scalar(th.theme))}
+                                  <AutoTranslate
+                                    text={
+                                      typeof th === "string"
+                                        ? th
+                                        : String(scalar(th.theme))
+                                    }
+                                  />
                                 </p>
                                 {typeof th !== "string" && th.description ? (
                                   <p className="text-muted-foreground mt-0.5">
-                                    {String(scalar(th.description))}
+                                    <AutoTranslate
+                                      text={String(scalar(th.description))}
+                                    />
                                   </p>
                                 ) : null}
                               </div>
@@ -1893,7 +1993,7 @@ export function ReportContentView({ report }: { report: Report }) {
                       {isObjArray(ai.supportingStatements) ? (
                         <div>
                           <p className="text-foreground mb-1 text-[11px] font-semibold">
-                            Supporting Statements
+                            {t("title.supportingStatements")}
                           </p>
                           <div className="space-y-1.5">
                             {(ai.supportingStatements as Dict[]).map(
@@ -1904,9 +2004,13 @@ export function ReportContentView({ report }: { report: Report }) {
                                 >
                                   <p className="text-foreground font-medium">
                                     &quot;
-                                    {typeof st === "string"
-                                      ? st
-                                      : String(scalar(st.statement))}
+                                    <AutoTranslate
+                                      text={
+                                        typeof st === "string"
+                                          ? st
+                                          : String(scalar(st.statement))
+                                      }
+                                    />
                                     &quot;
                                   </p>
                                   {typeof st !== "string" &&
@@ -1914,10 +2018,12 @@ export function ReportContentView({ report }: { report: Report }) {
                                     st.pageOrSection ||
                                     st.sectionOrPageRef) ? (
                                     <p className="text-muted-foreground mt-0.5 text-[10px]">
-                                      Ref: {String(scalar(st.sourceReferenceId))} •{" "}
-                                      {String(
-                                        scalar(st.pageOrSection || st.sectionOrPageRef),
-                                      )}
+                                      {t("refInline", {
+                                        ref: String(scalar(st.sourceReferenceId)),
+                                        loc: String(
+                                          scalar(st.pageOrSection || st.sectionOrPageRef),
+                                        ),
+                                      })}
                                     </p>
                                   ) : null}
                                 </div>
@@ -1929,7 +2035,7 @@ export function ReportContentView({ report }: { report: Report }) {
                       {isObjArray(ai.risksOrConcerns) ? (
                         <div>
                           <p className="text-foreground mb-1 text-[11px] font-semibold">
-                            Risks / Concerns
+                            {t("title.risksConcerns")}
                           </p>
                           <div className="space-y-1">
                             {(ai.risksOrConcerns as Dict[]).map(
@@ -1939,9 +2045,13 @@ export function ReportContentView({ report }: { report: Report }) {
                                   className="border-warning/30 bg-warning/10 text-foreground rounded border p-2"
                                 >
                                   <p className="font-medium">
-                                    {typeof r === "string"
-                                      ? r
-                                      : String(scalar(r.concern))}
+                                    <AutoTranslate
+                                      text={
+                                        typeof r === "string"
+                                          ? r
+                                          : String(scalar(r.concern))
+                                      }
+                                    />
                                   </p>
                                 </div>
                               ),
@@ -1968,11 +2078,13 @@ export function ReportContentView({ report }: { report: Report }) {
     const cs = c.combinedSummarySection as Dict;
     const score = isObj(cs.scoreBasedFindings) ? (cs.scoreBasedFindings as Dict) : null;
     sections.push({
-      title: "Combined Summary",
+      title: t("title.combinedSummary"),
       node: (
         <div className="space-y-4 text-xs">
           {typeof cs.executiveSummary === "string" && cs.executiveSummary ? (
-            <p className="text-muted-foreground leading-relaxed">{cs.executiveSummary}</p>
+            <p className="text-muted-foreground leading-relaxed">
+              <AutoTranslate text={cs.executiveSummary} />
+            </p>
           ) : null}
 
           {score
@@ -1994,18 +2106,22 @@ export function ReportContentView({ report }: { report: Report }) {
                 return (
                   <div className="bg-muted/20 space-y-4 rounded-lg border p-4">
                     <p className="text-foreground text-[11px] font-semibold uppercase">
-                      Score-Based Findings
+                      {t("title.scoreBasedFindings")}
                     </p>
                     <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
                       <div className="flex flex-wrap items-center gap-5">
                         {sev !== null ? (
-                          <Gauge value={sev} max={100} label="Overall Severity" />
+                          <Gauge
+                            value={sev}
+                            max={100}
+                            label={t("gauge.overallSeverity")}
+                          />
                         ) : null}
                         {pri !== null ? (
                           <Gauge
                             value={pri}
                             max={100}
-                            label="Priority Score"
+                            label={t("priorityScore")}
                             sub={scalar(score.priorityStatus)}
                           />
                         ) : null}
@@ -2013,7 +2129,7 @@ export function ReportContentView({ report }: { report: Report }) {
                       {topBars.length > 0 ? (
                         <div className="space-y-2">
                           <p className="text-muted-foreground text-xs font-medium">
-                            Top domains / KPIs by severity
+                            {t("col.topDomainsKpis")}
                           </p>
                           <BarChart bars={topBars} max={100} />
                         </div>
@@ -2021,7 +2137,7 @@ export function ReportContentView({ report }: { report: Report }) {
                     </div>
                     {score.confidenceDataQualityNote ? (
                       <p className="text-muted-foreground border-t pt-3 text-[11px] leading-relaxed">
-                        {scalar(score.confidenceDataQualityNote)}
+                        <AutoTranslate text={scalar(score.confidenceDataQualityNote)} />
                       </p>
                     ) : null}
                   </div>
@@ -2032,19 +2148,22 @@ export function ReportContentView({ report }: { report: Report }) {
           {isObjArray(cs.documentBasedEvidence) ? (
             <div>
               <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
-                Document-Based Evidence
+                {t("title.documentBasedEvidence")}
               </p>
               <div className="space-y-1.5">
                 {(cs.documentBasedEvidence as Dict[]).map((e, i) => (
                   <div key={i} className="bg-card rounded border p-2">
                     <p className="text-foreground font-medium">
-                      {scalar(e.documentTitle)}
+                      <AutoTranslate text={scalar(e.documentTitle)} />
                     </p>
                     <p className="text-muted-foreground">
-                      {scalar(e.keyEvidenceFinding)}
+                      <AutoTranslate text={scalar(e.keyEvidenceFinding)} />
                     </p>
                     <p className="text-muted-foreground text-[10px]">
-                      Ref: {scalar(e.sourceReferenceId)} • {scalar(e.linkedNeedOrDomain)}
+                      {t("refInline", {
+                        ref: scalar(e.sourceReferenceId),
+                        loc: scalar(e.linkedNeedOrDomain),
+                      })}
                     </p>
                   </div>
                 ))}
@@ -2063,20 +2182,22 @@ export function ReportContentView({ report }: { report: Report }) {
   if (isObj(c.scoreSummarySection)) {
     const ss = c.scoreSummarySection as Dict;
     sections.push({
-      title: "Score-Based Summary",
+      title: t("title.scoreBasedSummary"),
       node: (
         <div className="space-y-4 text-xs">
           {typeof ss.executiveSummary === "string" && ss.executiveSummary ? (
-            <p className="text-muted-foreground leading-relaxed">{ss.executiveSummary}</p>
+            <p className="text-muted-foreground leading-relaxed">
+              <AutoTranslate text={ss.executiveSummary} />
+            </p>
           ) : null}
 
           {typeof ss.priorityExplanation === "string" && ss.priorityExplanation ? (
             <div className="bg-muted/20 rounded-lg border p-3">
               <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
-                Priority Explanation
+                {t("title.priorityExplanation")}
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                {ss.priorityExplanation}
+                <AutoTranslate text={ss.priorityExplanation} />
               </p>
             </div>
           ) : null}
@@ -2084,16 +2205,20 @@ export function ReportContentView({ report }: { report: Report }) {
           {isObjArray(ss.keyFindings) ? (
             <div>
               <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
-                Key Findings
+                {t("title.keyFindings")}
               </p>
               <div className="space-y-1.5">
                 {(ss.keyFindings as Dict[]).map((f, i) => (
                   <div key={i} className="bg-card rounded border p-2">
-                    <p className="text-foreground font-medium">{scalar(f.title)}</p>
-                    <p className="text-muted-foreground">{scalar(f.summary)}</p>
+                    <p className="text-foreground font-medium">
+                      <AutoTranslate text={scalar(f.title)} />
+                    </p>
+                    <p className="text-muted-foreground">
+                      <AutoTranslate text={scalar(f.summary)} />
+                    </p>
                     <p className="text-muted-foreground text-[10px]">
-                      {scalar(f.domain)} • {scalar(f.kpi)} • Confidence:{" "}
-                      {scalar(f.confidence)}
+                      {scalar(f.domain)} • {scalar(f.kpi)} •{" "}
+                      {t("confidenceInline", { value: scalar(f.confidence) })}
                     </p>
                   </div>
                 ))}
@@ -2104,7 +2229,7 @@ export function ReportContentView({ report }: { report: Report }) {
           {isObjArray(ss.domainInsights) ? (
             <div>
               <p className="text-foreground mb-1 text-[11px] font-semibold uppercase">
-                Domain Insights
+                {t("title.domainInsights")}
               </p>
               <DataTable rows={ss.domainInsights as Dict[]} />
             </div>
@@ -2112,12 +2237,14 @@ export function ReportContentView({ report }: { report: Report }) {
 
           {ss.criticalOverrideNote ? (
             <p className="border-warning/30 bg-warning/10 text-foreground rounded border p-2">
-              {scalar(ss.criticalOverrideNote)}
+              <AutoTranslate text={scalar(ss.criticalOverrideNote)} />
             </p>
           ) : null}
 
           {ss.dataQualityNote ? (
-            <p className="text-muted-foreground">{scalar(ss.dataQualityNote)}</p>
+            <p className="text-muted-foreground">
+              <AutoTranslate text={scalar(ss.dataQualityNote)} />
+            </p>
           ) : null}
         </div>
       ),
@@ -2197,12 +2324,18 @@ export function ReportContentView({ report }: { report: Report }) {
       title: t("analysis"),
       node: (
         <div className="space-y-3">
-          {(["keyFindings", "dataQualityNote", "trendNote"] as const).map((k) =>
+          {(
+            [
+              ["keyFindings", t("title.keyFindings")],
+              ["dataQualityNote", t("dataQualityNote")],
+              ["trendNote", t("trendNote")],
+            ] as const
+          ).map(([k, heading]) =>
             ai[k] ? (
               <div key={k}>
-                <p className="text-muted-foreground text-xs font-medium">{label(k)}</p>
+                <p className="text-muted-foreground text-xs font-medium">{heading}</p>
                 <p className="text-foreground text-sm leading-relaxed">
-                  {localizeReportText(scalar(ai[k]), locale)}
+                  <AutoTranslate text={localizeReportText(scalar(ai[k]), locale)} />
                 </p>
               </div>
             ) : null,
@@ -2214,7 +2347,9 @@ export function ReportContentView({ report }: { report: Report }) {
               </p>
               <ul className="text-foreground mt-1 list-disc space-y-1 pl-5 text-sm">
                 {ai.recommendations.map((r, i) => (
-                  <li key={i}>{scalar(r)}</li>
+                  <li key={i}>
+                    <AutoTranslate text={scalar(r)} />
+                  </li>
                 ))}
               </ul>
             </div>
@@ -2257,7 +2392,9 @@ export function ReportContentView({ report }: { report: Report }) {
             ]}
           />
           {typeof dq.narrative === "string" ? (
-            <p className="text-foreground text-sm leading-relaxed">{dq.narrative}</p>
+            <p className="text-foreground text-sm leading-relaxed">
+              <AutoTranslate text={dq.narrative} />
+            </p>
           ) : null}
           {/* Survey-level cycle-over-cycle note. KEEP IN SYNC with
               dataQualitySections in the backend's report-doc.ts. */}
@@ -2265,7 +2402,7 @@ export function ReportContentView({ report }: { report: Report }) {
             <div className="space-y-1">
               <p className="text-muted-foreground text-xs font-medium">{t("dq.trend")}</p>
               <p className="text-foreground text-sm leading-relaxed">
-                {localizeReportText(dq.trendNote, locale)}
+                <AutoTranslate text={localizeReportText(dq.trendNote, locale)} />
               </p>
             </div>
           ) : null}
@@ -2305,7 +2442,7 @@ export function ReportContentView({ report }: { report: Report }) {
   if (isObjArray(c.needRecords)) {
     sections.push({
       title: t("needRecords"),
-      node: <DataTable rows={c.needRecords} columns={NEED_RECORD_COLUMNS} />,
+      node: <DataTable rows={c.needRecords} columns={needRecordCols} />,
     });
   }
 
@@ -2322,7 +2459,7 @@ export function ReportContentView({ report }: { report: Report }) {
       title: t("dataQualityNote"),
       node: (
         <p className="text-foreground text-sm leading-relaxed">
-          {scalar(c.dataQualityNote)}
+          <AutoTranslate text={scalar(c.dataQualityNote)} />
         </p>
       ),
     });
@@ -2332,7 +2469,7 @@ export function ReportContentView({ report }: { report: Report }) {
       title: t("trendNote"),
       node: (
         <p className="text-foreground text-sm leading-relaxed">
-          {localizeReportText(scalar(c.trendNote), locale)}
+          <AutoTranslate text={localizeReportText(scalar(c.trendNote), locale)} />
         </p>
       ),
     });
@@ -2345,7 +2482,9 @@ export function ReportContentView({ report }: { report: Report }) {
       node: (
         <ul className="text-foreground list-disc space-y-1 pl-5 text-sm">
           {c.anomalies.map((a, i) => (
-            <li key={i}>{scalar(a)}</li>
+            <li key={i}>
+              <AutoTranslate text={scalar(a)} />
+            </li>
           ))}
         </ul>
       ),
@@ -2354,7 +2493,11 @@ export function ReportContentView({ report }: { report: Report }) {
   if (c.reviewerNotes) {
     sections.push({
       title: t("reviewerNotes"),
-      node: <p className="text-foreground text-sm">{scalar(c.reviewerNotes)}</p>,
+      node: (
+        <p className="text-foreground text-sm">
+          <AutoTranslate text={scalar(c.reviewerNotes)} />
+        </p>
+      ),
     });
   }
 
@@ -2394,7 +2537,9 @@ export function ReportContentView({ report }: { report: Report }) {
   if (header.reportGeneratedAt)
     meta.push({
       k: t("generated"),
-      v: new Date(scalar(header.reportGeneratedAt)).toLocaleDateString(),
+      // Was a bare `.toLocaleDateString()` (browser-locale dependent) — the
+      // exact class of bug fixed elsewhere in this pass.
+      v: formatDate(scalar(header.reportGeneratedAt), locale),
     });
   meta.push({ k: t("reportId"), v: report.id.slice(0, 8).toUpperCase() });
 
@@ -2407,10 +2552,12 @@ export function ReportContentView({ report }: { report: Report }) {
             {t("reportLabel")}
           </p>
           <h1 className="text-foreground mt-1 text-2xl font-bold">
-            {scalar(header.studyName)}
+            <AutoTranslate text={scalar(header.studyName)} />
           </h1>
           {village ? (
-            <p className="text-muted-foreground mt-0.5 text-sm">{scalar(village.name)}</p>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              <AutoTranslate text={scalar(village.name)} />
+            </p>
           ) : null}
           <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
             {meta.map((m) => (

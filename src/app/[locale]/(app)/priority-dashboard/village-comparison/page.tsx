@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { BackButton } from "@/components/common/back-button";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -53,12 +55,13 @@ function VillageCard({
   // etc.) rather than duplicating them here — the API sends this field
   // upper-cased ("HIGH"), same as statusVariant above normalizes for.
   const tLevel = useTranslations("app.priorityDashboard");
+  const { localizedDomain } = useDomainArabicMap();
   return (
     <Card className="flex flex-col">
       <CardHeader className="gap-3 pb-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-foreground text-base font-semibold break-words">
-            {entry.village}
+            <AutoTranslate text={entry.village} />
           </h3>
           {entry.priorityStatus ? (
             <Badge variant={statusVariant(entry.priorityStatus)} className="shrink-0">
@@ -126,7 +129,7 @@ function VillageCard({
           <div className="flex flex-wrap gap-1">
             {Object.entries(entry.needTypeCounts).map(([domain, count]) => (
               <Badge key={domain} variant="secondary" className="text-xs">
-                {domain} ({count})
+                {localizedDomain(domain)} ({count})
               </Badge>
             ))}
           </div>
@@ -146,7 +149,8 @@ function VillageCard({
                   variant={dc.triggeredOverride ? "destructive" : "outline"}
                   className="text-xs"
                 >
-                  {dc.domainNameSnapshot}: {Math.round(dc.domainSeverityScore)}
+                  {localizedDomain(dc.domainNameSnapshot)}:{" "}
+                  {Math.round(dc.domainSeverityScore)}
                 </Badge>
               ))}
             </div>

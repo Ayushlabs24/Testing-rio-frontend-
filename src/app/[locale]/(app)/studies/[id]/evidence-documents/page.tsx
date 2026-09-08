@@ -57,6 +57,8 @@ import { useRouter } from "@/i18n/navigation";
 import { usePermission } from "@/hooks/use-permission";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
+import { severityScoringService } from "@/services/priority/severity-scoring.service";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import {
   evidenceDocumentsService,
   EvidenceDocument,
@@ -83,6 +85,14 @@ export default function EvidenceDocumentsPage({
   const canCreateReport = usePermission("reportsDashboards", "create");
 
   const [study, setStudy] = useState<Study | null>(null);
+  // Bug fix (2026-09-08): this page used to render the raw
+  // `methodologyVersionId` UUID (with a hardcoded "v5.0 Baseline" fallback)
+  // instead of the version's actual name — Study itself carries only the id,
+  // never the name, so it has to be resolved against the live list, same
+  // service study-form.tsx already uses for the picker.
+  const [methodologyVersionName, setMethodologyVersionName] = useState<string | null>(
+    null,
+  );
   const [documents, setDocuments] = useState<EvidenceDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -129,12 +139,16 @@ export default function EvidenceDocumentsPage({
     setLoadError(null);
     setActionError(null);
     try {
-      const [studyData, docsData] = await Promise.all([
+      const [studyData, docsData, versions] = await Promise.all([
         studiesService.getById(studyId),
         evidenceDocumentsService.listDocuments(studyId),
+        severityScoringService.listMethodologyVersions().catch(() => []),
       ]);
       setStudy(studyData);
       setDocuments(docsData);
+      setMethodologyVersionName(
+        versions.find((v) => v.id === studyData.methodologyVersionId)?.name ?? null,
+      );
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error ? err.message : "Failed to load evidence documents data.";
@@ -351,7 +365,7 @@ export default function EvidenceDocumentsPage({
                 {t("studyName")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                {study?.title || "..."}
+                {study?.title ? <AutoTranslate text={study.title} /> : "..."}
               </p>
             </div>
             <div>
@@ -359,7 +373,7 @@ export default function EvidenceDocumentsPage({
                 {t("assessmentCycle")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                Cycle {study?.cycleNumber || 1}
+                {t("cycle", { number: study?.cycleNumber || 1 })}
               </p>
             </div>
             <div>
@@ -367,7 +381,11 @@ export default function EvidenceDocumentsPage({
                 {t("methodologyVersion")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                {study?.methodologyVersionId || "v5.0 Baseline"}
+                {methodologyVersionName ? (
+                  <AutoTranslate text={methodologyVersionName} />
+                ) : (
+                  "—"
+                )}
               </p>
             </div>
             <div>

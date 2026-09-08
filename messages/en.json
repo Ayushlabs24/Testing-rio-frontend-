@@ -436,6 +436,27 @@
         },
         "recentStudiesHeading": "Recent Studies",
         "noStudies": "No studies yet — create one to get started."
+      },
+      "historicalComparison": {
+        "title": "Prior study comparison",
+        "description": "Needs from the imported prior study against the studies run since. Positive change means more needs reported now.",
+        "noHistorical": "No prior study has been imported yet. Import one from the Archive to compare it against current studies.",
+        "noRows": "No needs match these filters.",
+        "groupByLabel": "Group by",
+        "groupByVillage": "By village",
+        "groupByDomain": "By domain",
+        "priorStudyLabel": "Prior study",
+        "priorStudyAll": "All prior studies",
+        "sectorLabel": "Target sector",
+        "sectorAll": "All sectors",
+        "villageColumn": "Village",
+        "domainColumn": "Domain",
+        "priorColumn": "Prior study",
+        "currentColumn": "Current",
+        "changeColumn": "Change",
+        "totalRow": "Total",
+        "unassigned": "No village recorded",
+        "unclassified": "Not classified"
       }
     },
     "evidence": {
@@ -961,7 +982,12 @@
           "reportsDashboards": "Reports & Dashboards",
           "archiveSharingAudit": "Archive, Sharing & Audit",
           "surveyBuilder": "Survey Builder",
-          "ncnpReport": "NCNP Compiled Report"
+          "ncnpReport": "NCNP Compiled Report",
+          "systemLogs": "System Logs",
+          "backups": "Backups",
+          "auditLog": "Audit Log",
+          "dataQuality": "Data Quality",
+          "initiatives": "Initiatives"
         },
         "crossEntityBadge": "Cross-entity",
         "actions": {
@@ -1602,7 +1628,123 @@
         "requiredQuestions": "Required questions in scope",
         "submittedResponses": "Submitted responses",
         "requiredAnswerSlots": "Required answers expected",
-        "leftBlank": "Left blank"
+        "leftBlank": "Left blank",
+        "col": {
+          "domain": "Domain",
+          "code": "Code",
+          "avgSeverity": "Avg Severity",
+          "maxKpiSeverity": "Max KPI Severity",
+          "performance": "Performance",
+          "weight": "Weight",
+          "kpisDefined": "KPIs defined",
+          "confidence": "Confidence",
+          "validPct": "Valid %",
+          "critical": "Critical",
+          "masking": "Masking?",
+          "subDomain": "Sub-domain",
+          "indicator": "Indicator",
+          "severity": "Severity",
+          "band": "Band",
+          "equity": "Equity",
+          "responses": "Responses",
+          "notes": "Notes",
+          "rank": "#",
+          "location": "Location",
+          "affectedPop": "Affected Pop.",
+          "assessed": "Assessed",
+          "indicators": "Indicators",
+          "subDomains": "Sub-domains",
+          "documents": "Documents",
+          "withAiSummary": "With AI summary",
+          "officerConfirmed": "Officer confirmed",
+          "priorityTier": "Priority Tier",
+          "sharePct": "Share %",
+          "equityFlagged": "Equity-flagged",
+          "criticalKpis": "Critical KPIs",
+          "measure": "Measure",
+          "value": "Value",
+          "version": "Version",
+          "status": "Status",
+          "stoppedAt": "Stopped at",
+          "sessions": "Sessions",
+          "share": "Share",
+          "requiredQuestion": "Required Question",
+          "ofResponses": "Of Responses",
+          "rate": "Rate",
+          "validResponsePct": "Valid-Response %",
+          "dontKnowPct": "Don't-Know %",
+          "kpis": "KPIs",
+          "reason": "Reason",
+          "flag": "Flag",
+          "region": "Region",
+          "governorate": "Governorate",
+          "center": "Center",
+          "type": "Type",
+          "collected": "Collected",
+          "summaryStatus": "Summary status",
+          "documentsByType": "Documents by type",
+          "themesAcrossDocuments": "Themes across documents",
+          "responseValidity": "Response validity",
+          "validShort": "Valid",
+          "excludedShort": "Excluded",
+          "ref": "Ref",
+          "topDomainsKpis": "Top domains / KPIs by severity"
+        },
+        "title": {
+          "scopeBasis": "Scope Basis",
+          "evidenceBase": "Evidence Base",
+          "evidenceComposition": "Evidence Composition",
+          "geographyHierarchy": "Geography Hierarchy",
+          "evidenceDocuments": "Evidence Documents & AI Summaries",
+          "combinedSummary": "Combined Summary",
+          "scoreBasedSummary": "Score-Based Summary",
+          "execQualSummary": "Executive Qualitative Summary",
+          "keyFindings": "Key Findings",
+          "themes": "Themes",
+          "supportingStatements": "Supporting Statements",
+          "risksConcerns": "Risks / Concerns",
+          "scoreBasedFindings": "Score-Based Findings",
+          "documentBasedEvidence": "Document-Based Evidence",
+          "priorityExplanation": "Priority Explanation",
+          "domainInsights": "Domain Insights"
+        },
+        "scopeBasisValue": {
+          "explicitFilter": "Explicit filter",
+          "latestPublished": "Latest published survey"
+        },
+        "gauge": {
+          "overallSeverity": "Overall Severity"
+        },
+        "dma": {
+          "title": "Domain Masking Alert",
+          "body": "{count} domain(s) average a milder band than their worst KPI: {details}. Per the methodology, a critical need surfaces regardless of its domain average — read the Max KPI Severity column, not the average, for these domains.",
+          "domainDetail": "{name} (worst: {kpi} at {severity})"
+        },
+        "rq2": {
+          "overallConfidence": "Overall confidence",
+          "validResponseRate": "Valid-response rate",
+          "dontKnowBand": "Don't-know band",
+          "populationArea": "Population (area)",
+          "requiredSampleSize": "Required sample size",
+          "minDetectableEffect": "Minimum detectable effect",
+          "whyThisBand": "Why this band",
+          "minDetectableEffectValue": "±{value} pts"
+        },
+        "noSummary": "No summary",
+        "equityNotEvaluable": "Equity not evaluable: {reason}",
+        "partialScope": "Partial Scope",
+        "noDocumentTypesRecorded": "No document types recorded.",
+        "noThemesIdentified": "No themes identified.",
+        "kingdomMap": "Kingdom Map",
+        "markersRegionLevel": "Markers are region-level, sized by {unit} in this report.",
+        "locationHierarchy": "Location Hierarchy",
+        "unitDocumentSingular": "document",
+        "unitDocumentPlural": "documents",
+        "unitDataPointSingular": "data point",
+        "unitDataPointPlural": "data points",
+        "findingCount": "{count, plural, one {# finding} other {# findings}}",
+        "refInline": "Ref: {ref} • {loc}",
+        "confidenceInline": "Confidence: {value}"
       },
       "detail": {
         "title": "Report content",
@@ -1639,7 +1781,7 @@
       "filterKindAll": "All",
       "filterKindStudy": "Studies",
       "filterKindReport": "Reports",
-      "filterKindHistorical": "Historical Studies",
+      "filterKindHistorical": "Historical study",
       "filterEntityLabel": "Entity",
       "filterEntityAll": "All organisations",
       "filterSectorLabel": "Sector",
@@ -1660,6 +1802,10 @@
         "report": "Report",
         "historical": "Historical Study"
       },
+      "statusValues": {
+        "completed": "Completed",
+        "imported": "Imported"
+      },
       "filterRegionLabel": "Region",
       "filterRegionAll": "All regions",
       "filterVillageLabel": "Governorate",
@@ -1679,6 +1825,19 @@
         "notAvailable": "—",
         "close": "Close"
       },
+      "kindHistorical": "Historical",
+      "actionsColumn": "Actions",
+      "importToDashboard": "Import to dashboard",
+      "importing": "Importing…",
+      "viewImported": "View imported needs",
+      "importNotSupported": "Only .csv, .xlsx and .xls files can be imported. Convert this file to one need per row first.",
+      "importSuccess": "Imported {imported} of {total} needs into \"{study}\".",
+      "importPartial": "Imported {imported} of {total} needs into \"{study}\". {failed} rows were skipped.",
+      "importFailed": "Import failed. Nothing was added to the dashboard.",
+      "importErrorsTitle": "Rows that were skipped",
+      "importedBadge": "Imported",
+      "importDialogDescription": "Reads the needs inside \"{title}\" and adds them to the unified dashboard as a historical study. The archived file is left untouched.",
+      "importDialogClose": "Close",
       "uploadHistorical": {
         "trigger": "Upload Historical Study",
         "title": "Upload Historical Study",
@@ -1696,7 +1855,7 @@
         "methodologyVersionPlaceholder": "e.g. Internal manual scoring, v1",
         "fileLabel": "Document",
         "chooseFile": "Click to choose a file",
-        "fileHint": "PDF, DOC, or DOCX, up to 10MB.",
+        "fileHint": "CSV, XLSX, XLS, PDF, DOC or DOCX, up to 10MB. Only CSV, XLSX and XLS can be imported into the dashboard.",
         "cancel": "Cancel",
         "submit": "Upload",
         "submitting": "Uploading...",
@@ -1888,7 +2047,10 @@
       "statusColumn": "Status",
       "statusValues": {
         "active": "Active",
-        "completed": "Completed"
+        "completed": "Completed",
+        "planned": "Planned",
+        "on_hold": "On Hold",
+        "cancelled": "Cancelled"
       },
       "linkedNeedsColumn": "Linked Needs",
       "visibilityColumn": "Visibility",
@@ -1975,6 +2137,8 @@
       "description": "Publish a study's survey as a public link and QR code for citizens to respond to.",
       "studyColumn": "Study",
       "statusColumn": "Status",
+      "filterOrganizationLabel": "Organization",
+      "filterOrganizationAll": "All organizations",
       "manageLinks": "Manage links",
       "viewInsights": "View insights",
       "viewResponses": "View responses",
@@ -2696,6 +2860,8 @@
       "loadError": "Couldn't load studies. Please try again.",
       "filterDomainLabel": "Filter by domain",
       "filterDomainAll": "All domains",
+      "filterOrganizationLabel": "Organization",
+      "filterOrganizationAll": "All organizations",
       "filterStatusLabel": "Filter by status",
       "filterStatusAll": "All statuses",
       "pagination": {
@@ -3211,7 +3377,8 @@
     "appName": "Rio",
     "loading": "Loading...",
     "close": "Close",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "nationalCenter": "National Center"
   },
   "notFound": {
     "title": "Page not found",
@@ -3433,7 +3600,36 @@
       "noSavedSummaries": "No saved AI summaries available for this organization yet. Click Save in the section above to archive a summary.",
       "savedDetailsTitle": "Saved Summary Details — {scope} Scope",
       "savedOnDate": "Saved on {date}",
-      "executiveSummaryLabel": "Executive Summary:"
+      "executiveSummaryLabel": "Executive Summary:",
+      "priorityExplanationLabel": "Priority Explanation:",
+      "generatorDescription": "Generate a draft summary narrative from current Severity Score, Priority Score, confidence data, and approved evidence for {level}.",
+      "consolidatedVillages": "Consolidated Villages",
+      "loadingSaved": "Loading organization saved summaries...",
+      "viewAction": "View",
+      "deleteAction": "Delete",
+      "naLabel": "N/A",
+      "scopeFooterLabel": "Scope: {scope}",
+      "historyDialogTitle": "Summary Audit History ({scope})",
+      "historyDialogDesc": "Every generation and save creates an auditable record.",
+      "historyPromptScopeLine": "Prompt: {prompt} | Scope: {scope}",
+      "scope": {
+        "VILLAGE": "Village",
+        "SECTOR": "Sector",
+        "REGION": "Region",
+        "EXECUTIVE": "Executive"
+      },
+      "status": {
+        "DRAFT": "Draft",
+        "SAVED": "Saved",
+        "OFFICER_CONFIRMED": "Officer Confirmed",
+        "STALE": "Stale",
+        "SUPERSEDED": "Superseded"
+      },
+      "loadSummaryError": "Failed to load AI summary.",
+      "loadSavedError": "Failed to load saved summaries.",
+      "saveSummaryError": "Failed to save summary.",
+      "deleteSavedError": "Failed to delete saved summary.",
+      "loadHistoryError": "Failed to load summary audit history."
     },
     "saveModal": {
       "title": "Save Confirmed Report to Repository?",
@@ -3875,6 +4071,7 @@
       "resendInvite": "Resend Invite",
       "inviteResentToast": "Invitation resent successfully",
       "never": "Never",
+      "noFilterMatches": "No users matching filter criteria.",
       "columns": {
         "name": "Name",
         "email": "Email",
@@ -4264,6 +4461,39 @@
         "security": "Security",
         "application": "Application"
       },
+      "sources": {
+        "AllExceptionsFilter": "Error Handler",
+        "OperationalLogInterceptor": "Request Logger",
+        "AuthService": "Authentication Service",
+        "MailerService": "Email Service",
+        "SmsService": "SMS Service",
+        "BackupService": "Backup Service",
+        "SystemLogsRetentionService": "Log Retention Service",
+        "bootstrap": "Startup"
+      },
+      "eventCodes": {
+        "APP_STARTED": "Application started",
+        "INTERNAL_ERROR": "Internal error",
+        "UNAUTHENTICATED": "Not signed in",
+        "NO_ORG_CONTEXT": "No organization context",
+        "FORBIDDEN": "Access forbidden",
+        "MISSING_FIELDS": "Missing required fields",
+        "VALIDATION_ERROR": "Validation error",
+        "ACCOUNT_LOCKED": "Account locked",
+        "NEED_NOT_FOUND": "Need not found",
+        "STUDY_NOT_FOUND": "Study not found",
+        "SURVEY_NOT_FOUND": "Survey not found",
+        "REPORT_NOT_FOUND": "Report not found",
+        "AUDIT_LOG_NOT_FOUND": "Audit record not found",
+        "HTTP_400": "Bad request",
+        "HTTP_401": "Unauthorized",
+        "HTTP_403": "Forbidden",
+        "HTTP_404": "Not found",
+        "HTTP_409": "Conflict",
+        "HTTP_422": "Unprocessable request",
+        "HTTP_429": "Too many requests",
+        "HTTP_500": "Internal server error"
+      },
       "stats": {
         "total": "Total Entries",
         "fatal": "Fatal",
@@ -4570,6 +4800,112 @@
           "next": "Next",
           "label": "Page {page} of {count}"
         }
+      },
+      "kpiNewLabel": "New",
+      "rejectionReasons": {
+        "REJ_01": "Incomplete survey design",
+        "REJ_02": "Methodology non-compliance",
+        "REJ_03": "Duplicate of an existing survey",
+        "REJ_04": "Incorrect need or study linkage",
+        "REJ_05": "Out-of-scope geography or target population",
+        "REJ_06": "Data quality concerns",
+        "REJ_07": "Missing required attachments or approvals",
+        "REJ_99": "Other",
+        "UNSPECIFIED": "Unspecified (legacy)"
+      },
+      "ageBrackets": {
+        "age_15_24": "15–24",
+        "age_25_34": "25–34",
+        "age_35_44": "35–44",
+        "age_45_54": "45–54",
+        "age_55_64": "55–64",
+        "age_65_plus": "65+",
+        "prefer_not_to_say": "Prefer not to say"
+      },
+      "genderLabels": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other",
+        "prefer_not_to_say": "Prefer not to say"
+      },
+      "needSourceLabels": {
+        "manual_entry": "Survey",
+        "file_upload": "Uploaded Document",
+        "citizen_input": "Citizen Input",
+        "field_survey": "Field Survey"
+      }
+    },
+    "backups": {
+      "title": "Backups",
+      "description": "Every backup attempt, with its size, duration and checksum. The question this screen answers is not whether a backup ran, but whether one can be restored.",
+      "loadError": "Couldn't load the backup history.",
+      "empty": "No backup runs recorded yet.",
+      "running": "Working…",
+      "runDatabase": "Back up database",
+      "runAttachments": "Back up attachments",
+      "runSucceeded": "{kind} backup completed.",
+      "runFailed": "The backup failed: {error}",
+      "runError": "The request could not be completed.",
+      "verify": "Verify",
+      "prune": "Apply retention",
+      "pruned": "{count} run(s) pruned. The newest successful backup of each kind is always kept.",
+      "summary": {
+        "lastDatabase": "Database last backed up",
+        "lastAttachments": "Attachments last backed up",
+        "failures": "Failures in the last 7 days",
+        "stored": "Stored on disk",
+        "never": "Never"
+      },
+      "noDatabaseBackup": {
+        "title": "No database backup has ever succeeded.",
+        "detail": "pg_dump cannot read this database as an application role — row-level security is forced on 43 tables, and no application role may bypass it. A superuser must run scripts/sql/nfr010-backup-role.sql to create the cnap_backup role, and BACKUP_DATABASE_URL must point at it. Until then only attachments are being backed up."
+      },
+      "kind": {
+        "database": "Database",
+        "attachments": "Attachments"
+      },
+      "status": {
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed"
+      },
+      "trigger": {
+        "schedule": "Scheduled",
+        "manual": "Manual"
+      },
+      "table": {
+        "started": "Started",
+        "kind": "Kind",
+        "status": "Status",
+        "size": "Size",
+        "duration": "Duration",
+        "trigger": "Trigger",
+        "retention": "Keep until",
+        "integrity": "Integrity",
+        "files": "{count} file(s)",
+        "pruned": "Pruned"
+      },
+      "integrity": {
+        "ok": "Checksum matches",
+        "CHECKSUM_MISMATCH": "Checksum does NOT match — this file is corrupt",
+        "SIZE_CHANGED": "Size has changed since it was written",
+        "FILE_MISSING": "File is missing from disk",
+        "FILE_PRUNED": "File was pruned",
+        "RUN_DID_NOT_SUCCEED": "This run did not succeed",
+        "NO_ARTEFACT_RECORDED": "No artefact recorded",
+        "RUN_NOT_FOUND": "Run not found",
+        "unknown": "Could not be verified"
+      },
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "label": "Page {page} of {count}"
+      },
+      "filters": {
+        "kind": "Kind",
+        "allKinds": "All kinds",
+        "status": "Status",
+        "allStatuses": "All statuses"
       }
     },
     "backups": {
@@ -4652,6 +4988,7 @@
     "loadErrorTitle": "Couldn't load evidence documents.",
     "actionErrorTitle": "Couldn't update the evidence document.",
     "retry": "Retry",
+    "cycle": "Cycle {number}",
     "uploadButton": "Upload Evidence Document",
     "unsupportedFileWarning": "Scanned PDFs and image-based documents are not supported in this version.",
     "fields": {

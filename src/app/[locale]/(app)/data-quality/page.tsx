@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { Link } from "@/i18n/navigation";
@@ -308,7 +309,11 @@ export default function DataQualityPage() {
                   </Button>
                 </div>
 
-                {error && <p className="text-destructive text-sm">{error}</p>}
+                {error && (
+                  <p className="text-destructive text-sm">
+                    <AutoTranslate text={error} />
+                  </p>
+                )}
 
                 {loading ? (
                   <div className="flex justify-center py-12">
@@ -413,7 +418,11 @@ export default function DataQualityPage() {
                 </Select>
               </div>
 
-              {error && <p className="text-destructive text-sm">{error}</p>}
+              {error && (
+                <p className="text-destructive text-sm">
+                  <AutoTranslate text={error} />
+                </p>
+              )}
 
               {loading ? (
                 <div className="flex justify-center py-12">
@@ -435,7 +444,11 @@ export default function DataQualityPage() {
 
           <TabsContent value="merges">
             <div className="space-y-4">
-              {error && <p className="text-destructive text-sm">{error}</p>}
+              {error && (
+                <p className="text-destructive text-sm">
+                  <AutoTranslate text={error} />
+                </p>
+              )}
               {loading ? (
                 <div className="flex justify-center py-12">
                   <Spinner />

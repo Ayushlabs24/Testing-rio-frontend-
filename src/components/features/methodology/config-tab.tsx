@@ -1501,6 +1501,7 @@ export function MethodologyConfigTab() {
         update={studyConfigService.updateNeedTheme}
         setActive={studyConfigService.setNeedThemeActive}
       />
+      */}
 
       {/* RIO-FR-002 / Q23 — the data-cleaning thresholds. They live HERE
           rather than on the Data Quality screen because that is where they are

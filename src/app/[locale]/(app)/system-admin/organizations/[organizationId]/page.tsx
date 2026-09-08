@@ -18,8 +18,11 @@ import {
   UserX,
   Shield,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState, useMemo, useCallback } from "react";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Link } from "@/i18n/navigation";
@@ -72,6 +75,7 @@ export default function SystemAdminOrganizationDetailPage({
 }) {
   const { organizationId } = use(params);
   const t = useTranslations("systemAdmin.detail");
+  const locale = useLocale() as AppLocale;
   const tOrgs = useTranslations("systemAdmin.organizations");
   const tNgo = useTranslations("systemAdmin.ngoAdmin");
   const tUsers = useTranslations("systemAdmin.users");
@@ -90,11 +94,13 @@ export default function SystemAdminOrganizationDetailPage({
   // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
   // Reference), never the legacy free-text `region` array — resolve it by
   // id or a pending org's region silently shows blank.
-  const [regionNameById, setRegionNameById] = useState<Map<string, string>>(new Map());
+  const [regionNameById, setRegionNameById] = useState<
+    Map<string, { name: string; nameAr: string | null }>
+  >(new Map());
   useEffect(() => {
     geographyService
       .listRegions()
-      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
+      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r]))))
       .catch(() => setRegionNameById(new Map()));
   }, []);
 
@@ -236,7 +242,9 @@ export default function SystemAdminOrganizationDetailPage({
         <div className="border-border bg-card mb-6 flex flex-col gap-4 rounded-lg border p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-foreground text-2xl font-bold">{organization.name}</h1>
+              <h1 className="text-foreground text-2xl font-bold">
+                <AutoTranslate text={organization.name} />
+              </h1>
               <Badge
                 variant={organization.isActive ? "default" : "outline"}
                 className={
@@ -261,7 +269,10 @@ export default function SystemAdminOrganizationDetailPage({
                 {organization.region.length > 0
                   ? organization.region.join(", ")
                   : (organization.regionId &&
-                      regionNameById.get(organization.regionId)) ||
+                      (() => {
+                        const region = regionNameById.get(organization.regionId!);
+                        return region ? localizedName(region, locale) : null;
+                      })()) ||
                     "—"}
               </span>
               <span>•</span>
@@ -614,7 +625,7 @@ export default function SystemAdminOrganizationDetailPage({
                           colSpan={6}
                           className="text-muted-foreground h-24 text-center"
                         >
-                          No users matching filter criteria.
+                          {tUsers("noFilterMatches")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -626,7 +637,9 @@ export default function SystemAdminOrganizationDetailPage({
                           <TableRow key={user.id}>
                             <TableCell className="text-foreground font-medium">
                               <div className="flex items-center gap-2">
-                                <span>{user.name}</span>
+                                <span>
+                                  <AutoTranslate text={user.name} />
+                                </span>
                                 {isNgoAdmin ? (
                                   <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
                                     NGO Admin

@@ -25,6 +25,7 @@ vi.mock("next-intl", () => ({
       actionErrorTitle: "Couldn't update the evidence document.",
       retry: "Retry",
     })[key] ?? key,
+  useLocale: () => "en",
 }));
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/hooks/use-permission", () => ({

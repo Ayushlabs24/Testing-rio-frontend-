@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { LoadingButton } from "@/components/common/loading-button";
 import {
   Dialog,
@@ -184,7 +185,7 @@ export function ContactDialog() {
                 <SelectContent>
                   {(organizations ?? []).map((org) => (
                     <SelectItem key={org.id} value={org.id}>
-                      {org.name}
+                      <AutoTranslate text={org.name} />
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -3,6 +3,7 @@
 import { AlertTriangle, UserCheck, UserX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -97,8 +98,10 @@ export function ToggleUserStatusDialog({
               </DialogTitle>
             </div>
             <DialogDescription className="pt-1 text-xs">
-              <span className="text-foreground font-semibold">{user.name}</span> (
-              {user.email})
+              <span className="text-foreground font-semibold">
+                <AutoTranslate text={user.name} />
+              </span>{" "}
+              ({user.email})
             </DialogDescription>
           </DialogHeader>
 

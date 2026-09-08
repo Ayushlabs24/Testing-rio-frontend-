@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Combobox } from "@/components/ui/combobox";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import type { QuestionOption } from "@/services/surveys/surveys.service";
 
 const SEPARATOR = "|||";
@@ -33,12 +34,13 @@ export function DomainCategoryPicker({
   options: QuestionOption[];
 }) {
   const t = useTranslations("app.studies.need");
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
 
   return (
     <Combobox
       items={options.map((option) => ({
         value: toKey(option.domain, option.subDomain),
-        label: `${option.domain} / ${option.subDomain}`,
+        label: `${localizedDomain(option.domain)} / ${localizedSubDomain(option.subDomain)}`,
       }))}
       value={value ? toKey(value.domain, value.subDomain) : null}
       onSelect={(key) => {

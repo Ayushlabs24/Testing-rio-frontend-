@@ -3,6 +3,7 @@
 import { BarChart3, Search, Eye, Download, Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -126,7 +127,7 @@ export default function SystemAdminReportsPage() {
                     <SelectItem value="all">{t("allOrganizations")}</SelectItem>
                     {organizations.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
