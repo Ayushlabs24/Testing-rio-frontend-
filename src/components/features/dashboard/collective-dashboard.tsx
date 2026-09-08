@@ -503,7 +503,9 @@ export function CollectiveDashboard() {
                           className={`${ANOMALY_STYLE[a.severity]} size-4 shrink-0`}
                         />
                       )}
-                      <span className="text-foreground">{a.note}</span>
+                      <span className="text-foreground">
+                        <AutoTranslate text={a.note} />
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -519,9 +521,11 @@ export function CollectiveDashboard() {
               <ul className="space-y-2">
                 {exec.reviewerNotes.map((n, i) => (
                   <li key={i} className="border-border rounded-md border p-3 text-sm">
-                    <p className="text-foreground">{n.note}</p>
+                    <p className="text-foreground">
+                      <AutoTranslate text={n.note} />
+                    </p>
                     <p className="text-muted-foreground mt-1 text-xs">
-                      {n.author} · {formatDate(n.at, locale)}
+                      <AutoTranslate text={n.author} /> · {formatDate(n.at, locale)}
                     </p>
                   </li>
                 ))}

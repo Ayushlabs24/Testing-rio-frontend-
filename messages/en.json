@@ -2288,6 +2288,14 @@
         "viewResponses": "View Responses",
         "noAnswer": "No answer",
         "viewAllResponses": "View All Responses",
+        "answerTypes": {
+          "singleChoice": "Single Choice",
+          "multipleChoice": "Multiple Choice",
+          "yesNo": "Yes / No",
+          "likertScale": "Likert Scale",
+          "numeric": "Numeric",
+          "openEnded": "Open Ended"
+        },
         "versionsHeading": "Survey Versions",
         "versionsHint": "Each version's questions and responses stay tied to that version — creating a new draft never affects an already-published version's collected responses.",
         "versionLabel": "v{version}",
@@ -2900,6 +2908,14 @@
         "weightLabel": "Weight",
         "questionLabel": "Question",
         "answerTypeLabel": "Answer Type",
+        "answerTypes": {
+          "singleChoice": "Single Choice",
+          "multipleChoice": "Multiple Choice",
+          "yesNo": "Yes / No",
+          "likertScale": "Likert Scale",
+          "numeric": "Numeric",
+          "openEnded": "Open Ended"
+        },
         "optionsLabel": "Options",
         "requiredLabel": "Required",
         "moveUp": "Move up",
@@ -3137,6 +3153,20 @@
         "current": "Stored now",
         "proposed": "Proposed",
         "action": "Action"
+      },
+      "fields": {
+        "title": "Title",
+        "statement": "Statement",
+        "geography": "Geography",
+        "source": "Source",
+        "affectedPopulation": "Affected Population",
+        "urgency": "Urgency",
+        "gapType": "Gap Type",
+        "domain": "Domain",
+        "subDomain": "Sub-domain",
+        "contact": "Contact",
+        "mobile": "Mobile",
+        "village": "Village"
       },
       "filters": {
         "status": "Status",

@@ -40,6 +40,7 @@ import {
   SURVEY_RESPONSES_PAGE_SIZE_OPTIONS,
 } from "@/config/pagination";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
@@ -180,6 +181,8 @@ export default function SurveyResponsesPage({
   const canExport = usePermission("studySurvey", "export");
 
   const [need, setNeed] = useState<Need | null>(null);
+  // PageHeader's `title` is a plain string, not JSX.
+  const needTitle = useAutoTranslate(need?.title).text;
   const [responses, setResponses] = useState<SurveyResponseSummary[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -252,7 +255,7 @@ export default function SurveyResponsesPage({
         </div>
 
         <PageHeader
-          title={need?.title ?? ""}
+          title={need?.title ? needTitle : ""}
           description={t("description")}
           actions={
             canExport && total > 0 ? (

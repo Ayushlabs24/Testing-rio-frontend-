@@ -2,6 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { describeField } from "@/components/features/data-quality/flag-queue-table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -68,7 +70,8 @@ export function FlagReviewDialog({ flag, onClose, onDecided }: FlagReviewDialogP
         <DialogHeader>
           <DialogTitle>{t(`rule.${flag.ruleCode}`)}</DialogTitle>
           <DialogDescription dir="auto">
-            {flag.entityLabel ?? "—"} · <span className="font-mono">{flag.field}</span>
+            {flag.entityLabel ? <AutoTranslate text={flag.entityLabel} /> : "—"} ·{" "}
+            {describeField(flag.field, t)}
           </DialogDescription>
         </DialogHeader>
 

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Eye } from "lucide-react";
 import { useAutoTranslate } from "@/hooks/use-auto-translate";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,11 +51,11 @@ export function QuestionResponseCard({
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <p dir="auto" className="text-foreground text-sm font-semibold">
-              {stat.questionText}
+              <AutoTranslate text={stat.questionText} />
             </p>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-normal">
-                {describeAnswerType(stat.answerType)}
+                {describeAnswerType(stat.answerType, t)}
               </Badge>
               <span className="text-muted-foreground text-xs">
                 {t("responseCount", { count: stat.totalAnswered })}

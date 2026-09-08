@@ -18,9 +18,17 @@ export interface SectorOption {
  * hatch, not a domain, and each caller renders/handles it slightly
  * differently: some pair it with a free-text field, some don't).
  *
- * `authenticated: false` is for the public signup form (reached pre-login,
- * before any session exists) — it hits the name-only public endpoint instead
- * of the full authenticated one.
+ * Always uses `listPublic()` (name + nameAr, active domains only, gated by
+ * authentication alone) — never `list()`/`listWithSubDomains()`, which
+ * require `methodologyQuestionBank:read`. Most roles hold no such grant at
+ * all (e.g. ngo_admin — Methodology Configuration is System Admin only,
+ * client-confirmed 2026-08-20), so an ngo_admin editing their OWN
+ * organization's sector on Settings > Organization got a silently empty
+ * options list and their sector displayed in English with no way to see it
+ * translated — the exact same 403-swallowed-into-empty-list bug found and
+ * fixed in useDomainArabicMap. `authenticated` no longer changes which
+ * endpoint is called (both branches used the same shape already); kept as a
+ * parameter only so existing call sites don't need to change.
  *
  * Returns `{ name, nameAr }` pairs, not plain strings — every caller of this
  * hook was rendering the raw English `name` directly regardless of the UI
@@ -30,24 +38,16 @@ export interface SectorOption {
  * `name` as the value.
  */
 export function useSectorOptions(authenticated: boolean = true): SectorOption[] {
+  void authenticated;
   const [options, setOptions] = useState<SectorOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    const load = authenticated
-      ? domainsService
-          .list()
-          .then((domains) =>
-            domains
-              .filter((d) => d.isActive)
-              .map((d) => ({ name: d.name, nameAr: d.nameAr })),
-          )
-      : domainsService
-          .listPublic()
-          .then((domains) => domains.map((d) => ({ name: d.name, nameAr: d.nameAr })));
-    load
-      .then((result) => {
-        if (!cancelled) setOptions(result);
+    domainsService
+      .listPublic()
+      .then((domains) => {
+        if (!cancelled)
+          setOptions(domains.map((d) => ({ name: d.name, nameAr: d.nameAr })));
       })
       .catch(() => {
         if (!cancelled) setOptions([]);
@@ -55,7 +55,7 @@ export function useSectorOptions(authenticated: boolean = true): SectorOption[] 
     return () => {
       cancelled = true;
     };
-  }, [authenticated]);
+  }, []);
 
   return options;
 }

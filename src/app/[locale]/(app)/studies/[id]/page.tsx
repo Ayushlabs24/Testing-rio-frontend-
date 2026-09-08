@@ -15,6 +15,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { BackButton } from "@/components/common/back-button";
 import type { AppLocale } from "@/i18n/routing";
 import {
@@ -220,6 +221,10 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canDeleteNeed = usePermission("dataCollection", "write");
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
+  // PageHeader's `title` is a plain string, not JSX — resolved through the
+  // hook (called unconditionally, ahead of the early returns below) rather
+  // than wrapped in <AutoTranslate> at the call site.
+  const studyTitle = useAutoTranslate(study?.title).text;
   const studyGovernorates = useStudyGovernorates(study);
   const studyCenters = useStudyCenters(study);
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
@@ -369,7 +374,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           {t("eyebrow")}
         </p>
         <PageHeader
-          title={study.title}
+          title={studyTitle}
           actions={
             canWrite ? (
               <>

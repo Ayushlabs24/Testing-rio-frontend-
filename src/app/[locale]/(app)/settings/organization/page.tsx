@@ -294,7 +294,12 @@ export default function OrganizationSettingsPage() {
   const sectorDisplay =
     organization.sector === "other"
       ? organization.purpose || tSectors("other")
-      : (organization.sector ?? "—");
+      : organization.sector
+        ? (() => {
+            const match = sectorOptions.find((s) => s.name === organization.sector);
+            return match ? localizedName(match, locale) : organization.sector;
+          })()
+        : "—";
   const logoInitial = organization.name.charAt(0).toUpperCase();
 
   return (

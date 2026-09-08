@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 
 // A genuinely heavy, below-the-fold, conditionally-rendered widget (only
 // shown inside the "View QR" dialog, not on initial page load) — code-split
@@ -156,7 +158,7 @@ function LinkRow({
         className="max-w-48 truncate py-4 text-sm font-medium"
         title={link.label}
       >
-        {link.label}
+        <AutoTranslate text={link.label} />
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
         <FormattedDate value={link.createdAt} />
@@ -264,7 +266,9 @@ function LinkRow({
         <Dialog open={qrOpen} onOpenChange={setQrOpen}>
           <DialogContent className="sm:max-w-xs">
             <DialogHeader>
-              <DialogTitle>{link.label}</DialogTitle>
+              <DialogTitle>
+                <AutoTranslate text={link.label} />
+              </DialogTitle>
             </DialogHeader>
             <div className="flex justify-center py-2">
               <div className="bg-background rounded-md border p-3">
@@ -449,6 +453,9 @@ export default function PublicSurveyDetailPage({
   // with nothing in it — disabled until at least one of this need's links
   // has actually collected a response, not just once the survey is live.
   const hasResponses = (links ?? []).some((link) => link.responseCount > 0);
+  // PageHeader's `title` is a plain string, not JSX — resolved through the
+  // hook rather than wrapped in <AutoTranslate> at the call site.
+  const needTitle = useAutoTranslate(need?.title).text;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -457,7 +464,7 @@ export default function PublicSurveyDetailPage({
           <BackButton href="/public-surveys" label={t("backToList")} />
         </div>
         <PageHeader
-          title={need?.title ?? ""}
+          title={need?.title ? needTitle : ""}
           description={t("description")}
           actions={
             <>

@@ -8,6 +8,7 @@ import { BackButton } from "@/components/common/back-button";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +54,8 @@ export default function QuestionResponsesPage({
   const t = useTranslations("app.publicSurveys.questionResponses");
 
   const [questionText, setQuestionText] = useState("");
+  // PageHeader's `title` is a plain string, not JSX.
+  const translatedQuestionText = useAutoTranslate(questionText).text;
   const [items, setItems] = useState<QuestionResponseRow[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -101,7 +104,7 @@ export default function QuestionResponsesPage({
         </div>
 
         <PageHeader
-          title={questionText || t("title")}
+          title={questionText ? translatedQuestionText : t("title")}
           description={t("description")}
           actions={
             <Badge variant="outline">{t("totalResponses", { count: total })}</Badge>
@@ -170,7 +173,11 @@ export default function QuestionResponsesPage({
                   items.map((item) => (
                     <TableRow key={item.responseId}>
                       <TableCell className="py-4 text-sm font-medium">
-                        {item.respondentName || t("anonymousRespondent")}
+                        {item.respondentName ? (
+                          <AutoTranslate text={item.respondentName} />
+                        ) : (
+                          t("anonymousRespondent")
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground py-4 text-sm">
                         {item.contact}

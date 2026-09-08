@@ -4,6 +4,7 @@ import { Bell, LogOut, Menu, PanelLeft } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { OrgBrandMark } from "@/components/common/org-brand-mark";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ function MobileNav() {
   const { session, logout } = useAuth();
   const t = useTranslations("app.sidebar");
   const tTopbar = useTranslations("app.topbar");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
   const pathname = usePathname();
   const locale = useLocale();
 
@@ -108,10 +110,12 @@ function MobileNav() {
               </Avatar>
               <span className="min-w-0 flex-1">
                 <span className="text-foreground block truncate text-sm font-medium">
-                  {session.user.name}
+                  <AutoTranslate text={session.user.name} />
                 </span>
                 <span className="text-muted-foreground block truncate text-xs">
-                  {session.role.name}
+                  {tRoleNames.has(session.role.key)
+                    ? tRoleNames(session.role.key)
+                    : session.role.name}
                 </span>
               </span>
             </button>

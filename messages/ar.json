@@ -2298,6 +2298,14 @@
         "viewResponses": "عرض الاستجابات",
         "noAnswer": "لا توجد إجابة",
         "viewAllResponses": "عرض جميع الاستجابات",
+        "answerTypes": {
+          "singleChoice": "اختيار واحد",
+          "multipleChoice": "اختيار متعدد",
+          "yesNo": "نعم / لا",
+          "likertScale": "مقياس ليكرت",
+          "numeric": "رقمي",
+          "openEnded": "إجابة مفتوحة"
+        },
         "versionsHeading": "إصدارات الاستبيان",
         "versionsHint": "تبقى أسئلة واستجابات كل إصدار مرتبطة بذلك الإصدار — إنشاء مسودة جديدة لا يؤثر أبدًا على الاستجابات التي تم جمعها لإصدار منشور بالفعل.",
         "versionLabel": "الإصدار {version}",
@@ -2382,9 +2390,9 @@
       "form": {
         "createTitle": "دراسة جديدة",
         "createDescription": "امنح الدراسة عنوانًا — حدد احتياجها وأدلتها لاحقًا.",
-        "organizationLabel": "المنظمة",
-        "organizationPlaceholder": "اختر المنظمة التي تنتمي إليها هذه الدراسة",
-        "organizationHint": "بصفتك مسؤول النظام، اختر المنظمة التي تنتمي إليها هذه الدراسة — ستطابق المحافظات/المراكز أدناه نطاق تلك المنظمة.",
+        "organizationLabel": "الكيان",
+        "organizationPlaceholder": "اختر الكيان الذي تنتمي إليه هذه الدراسة",
+        "organizationHint": "بصفتك مسؤول النظام، اختر الكيان الذي تنتمي إليه هذه الدراسة — ستطابق المحافظات/المراكز أدناه نطاق ذلك الكيان.",
         "editTitle": "تعديل الدراسة",
         "editDescription": "العنوان هو الحقل الوحيد الذي يمكنك تغييره هنا.",
         "titleLabel": "عنوان الدراسة",
@@ -2910,6 +2918,14 @@
         "weightLabel": "الوزن",
         "questionLabel": "السؤال",
         "answerTypeLabel": "نوع الإجابة",
+        "answerTypes": {
+          "singleChoice": "اختيار واحد",
+          "multipleChoice": "اختيار متعدد",
+          "yesNo": "نعم / لا",
+          "likertScale": "مقياس ليكرت",
+          "numeric": "رقمي",
+          "openEnded": "إجابة مفتوحة"
+        },
         "optionsLabel": "الخيارات",
         "requiredLabel": "مطلوب",
         "moveUp": "تحريك لأعلى",
@@ -3147,6 +3163,20 @@
         "current": "المحفوظ حاليًا",
         "proposed": "المقترح",
         "action": "الإجراء"
+      },
+      "fields": {
+        "title": "العنوان",
+        "statement": "البيان",
+        "geography": "الموقع الجغرافي",
+        "source": "المصدر",
+        "affectedPopulation": "عدد السكان المتأثرين",
+        "urgency": "الإلحاح",
+        "gapType": "نوع الفجوة",
+        "domain": "المجال",
+        "subDomain": "المجال الفرعي",
+        "contact": "جهة الاتصال",
+        "mobile": "الجوال",
+        "village": "القرية"
       },
       "filters": {
         "status": "الحالة",
