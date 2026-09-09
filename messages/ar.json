@@ -137,7 +137,7 @@
       "triggerLabel": "اتصل بنا",
       "title": "اتصل بنا",
       "description": "هل تواجه مشكلة في تسجيل الدخول أو لديك سؤال؟ أرسل لنا رسالة وسنرد عليك عبر البريد الإلكتروني.",
-      "organizationLabel": "الكيان",
+      "organizationLabel": "كيان",
       "organizationPlaceholder": "اختر كيان",
       "organizationLoading": "جارٍ تحميل الكيانات...",
       "organizationsError": "تعذّر تحميل قائمة الكيانات. يرجى المحاولة لاحقًا.",
@@ -268,8 +268,8 @@
       "redirecting": "جارٍ إعادة التوجيه..."
     },
     "sidebar": {
-      "dashboard": "لوحة التحكم",
-      "organization": "الكيان",
+      "dashboard": "لوحة التحكم الكاملة",
+      "organization": "كيان",
       "roles": "الأدوار",
       "users": "المستخدمون",
       "audit": "سجل التدقيق",
@@ -326,7 +326,7 @@
       "title": "مرحبًا، {name}",
       "description": "إليك ما يجري في مساحة عملك.",
       "stats": {
-        "organizations": "الكيان",
+        "organizations": "كيان",
         "users": "المستخدمون",
         "roles": "الأدوار",
         "modules": "الوحدات",
@@ -394,7 +394,7 @@
           "reportsShared": "التقارير المشتركة",
           "pendingSharingRequests": "طلبات المشاركة المعلّقة"
         },
-        "orgColumn": "الكيان",
+        "orgColumn": "كيان",
         "activeStudyColumn": "الدراسة النشطة",
         "latestReportColumn": "أحدث تقرير",
         "sharingStatusColumn": "حالة المشاركة",
@@ -892,7 +892,7 @@
         }
       },
       "organization": {
-        "title": "الكيان",
+        "title": "كيان",
         "description": "إدارة ملف كيانك.",
         "edit": "تعديل",
         "cancel": "إلغاء",
@@ -1091,7 +1091,7 @@
         "title": "المستخدمون",
         "description": "كل من لديه صلاحية وصول إلى هذا الكيان.",
         "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني...",
-        "filterOrganizationLabel": "الكيان",
+        "filterOrganizationLabel": "كيان",
         "filterOrganizationAll": "كل الكيانات",
         "noResults": "لم يتم العثور على مستخدمين.",
         "newUser": "مستخدم جديد",
@@ -1144,7 +1144,7 @@
       "organizations": {
         "title": "الكيانات",
         "description": "كل كيان على المنصة.",
-        "nameColumn": "الكيان",
+        "nameColumn": "كيان",
         "regionColumn": "المنطقة",
         "sectorColumn": "القطاع",
         "membersColumn": "الأعضاء",
@@ -1274,7 +1274,7 @@
           "prune_backups": "تطبيق سياسة الاحتفاظ بالنسخ"
         },
         "entities": {
-          "organization": "الكيان",
+          "organization": "كيان",
           "user": "المستخدم",
           "study": "الدراسة",
           "need": "الاحتياج",
@@ -1535,7 +1535,7 @@
         "orgTopPriorities": "أعلى أولويات الكيان",
         "comparison": "هذا الاستبيان مقابل الكيان",
         "thisSurvey": "هذا الاستبيان",
-        "organisation": "الكيان",
+        "organisation": "كيان",
         "cov": {
           "needs": "الاحتياجات في الدراسة",
           "coveredHere": "مشمولة هنا",
@@ -1920,7 +1920,7 @@
       "noSharedReports": "لم تتم مشاركة أي دراسات معك بعد.",
       "loadError": "تعذّر تحميل طلبات المشاركة. يرجى المحاولة مرة أخرى.",
       "studyColumn": "الدراسة",
-      "orgColumn": "الكيان",
+      "orgColumn": "كيان",
       "roleColumn": "العلاقة",
       "roleOwner": "المالك",
       "roleRequester": "الطالب",
@@ -1940,7 +1940,7 @@
       "view": "عرض الدراسة المشتركة",
       "create": {
         "title": "طلب الوصول إلى دراسة",
-        "ownerOrgLabel": "الكيان",
+        "ownerOrgLabel": "كيان",
         "ownerOrgPlaceholder": "ابحث عن كيان...",
         "ownerOrgSearchPlaceholder": "ابحث بالاسم",
         "ownerOrgEmpty": "لم يتم العثور على كيانات مطابقة.",
@@ -2008,7 +2008,7 @@
         "label": "الصفحة {page} من {count}"
       },
       "reportColumn": "التقرير",
-      "orgColumn": "الكيان",
+      "orgColumn": "كيان",
       "roleColumn": "العلاقة",
       "roleOwner": "المالك",
       "roleRequester": "الطالب",
@@ -2028,7 +2028,7 @@
       "view": "عرض التقرير المشترك",
       "create": {
         "title": "طلب الوصول إلى تقرير",
-        "ownerOrgLabel": "الكيان",
+        "ownerOrgLabel": "كيان",
         "ownerOrgPlaceholder": "ابحث عن كيان...",
         "ownerOrgSearchPlaceholder": "ابحث بالاسم",
         "ownerOrgEmpty": "لم يتم العثور على كيانات مطابقة.",
@@ -2419,7 +2419,7 @@
       "form": {
         "createTitle": "دراسة جديدة",
         "createDescription": "امنح الدراسة عنوانًا — حدد احتياجها وأدلتها لاحقًا.",
-        "organizationLabel": "الكيان",
+        "organizationLabel": "كيان",
         "organizationPlaceholder": "اختر الكيان الذي تنتمي إليه هذه الدراسة",
         "organizationHint": "بصفتك مسؤول النظام، اختر الكيان الذي تنتمي إليه هذه الدراسة — ستطابق المحافظات/المراكز أدناه نطاق ذلك الكيان.",
         "editTitle": "تعديل الدراسة",
@@ -4179,7 +4179,7 @@
         "emailPlaceholder": "sarah@ngo.org",
         "roleLabel": "الدور",
         "rolePlaceholder": "اختر دورًا...",
-        "organizationLabel": "الكيان",
+        "organizationLabel": "كيان",
         "submit": "إرسال الدعوة",
         "submitting": "جارٍ الإرسال...",
         "cancel": "إلغاء",
@@ -4245,7 +4245,7 @@
       "allStatuses": "جميع الحالات",
       "columns": {
         "name": "اسم الدراسة",
-        "organization": "الكيان",
+        "organization": "كيان",
         "village": "القرى / الجغرافيا",
         "surveysCount": "الاستبيانات المرتبطة",
         "status": "حالة الدراسة",
@@ -4289,7 +4289,7 @@
       "columns": {
         "name": "عنوان الاستبيان",
         "linkedStudy": "الدراسة المرتبطة",
-        "organization": "الكيان",
+        "organization": "كيان",
         "targetVillage": "القرية المستهدفة",
         "sector": "القطاع / المجال",
         "status": "الحالة",
@@ -4310,7 +4310,7 @@
       "drawer": {
         "title": "تفاصيل الاستبيان ونتائج الاستجابات",
         "surveyInfo": "نظرة عامة على الاستبيان",
-        "organization": "الكيان",
+        "organization": "كيان",
         "linkedStudy": "الدراسة المرتبطة",
         "village": "القرية المستهدفة",
         "domainCategory": "القطاع / المجال",
@@ -4372,7 +4372,7 @@
       "allSectors": "جميع القطاعات",
       "columns": {
         "title": "عنوان الدراسة / التقرير",
-        "organization": "الكيان",
+        "organization": "كيان",
         "region": "المنطقة",
         "sector": "القطاع / المجال",
         "kind": "نوع الإدخال",
@@ -4447,7 +4447,7 @@
       "paginationShowing": "عرض {start} - {end} من {total} حدث",
       "paginationPage": "الصفحة {current} من {total}",
       "entityTypes": {
-        "organization": "الكيان",
+        "organization": "كيان",
         "user": "المستخدم",
         "study": "الدراسة",
         "report": "التقرير",
@@ -4464,7 +4464,7 @@
       "columns": {
         "timestamp": "الطابع الزمني",
         "actor": "الفاعل",
-        "organization": "الكيان",
+        "organization": "كيان",
         "action": "الإجراء",
         "entity": "نوع الجهة والتسمية",
         "result": "النتيجة / الحالة",
@@ -4594,7 +4594,7 @@
         "message": "الرسالة",
         "status": "الحالة",
         "duration": "المدة",
-        "organization": "الكيان",
+        "organization": "كيان",
         "actions": "إجراءات"
       },
       "detail": {
@@ -4604,7 +4604,7 @@
         "context": "السياق",
         "copyJson": "نسخ JSON",
         "requestId": "معرّف الطلب",
-        "organization": "الكيان",
+        "organization": "كيان",
         "actor": "الفاعل",
         "ipAddress": "عنوان IP",
         "userAgent": "وكيل المستخدم",
@@ -4694,7 +4694,7 @@
       "page5Title": "تحليلات الاستجابات",
       "page5Description": "اتجاه الاستجابات على مستوى المنصة، والتوزيع الجغرافي والديموغرافي، والكيانات الأكثر تلقيًا للاستجابات.",
       "orgSummaryTitle": "ملخص الكيانات",
-      "orgSummaryColOrg": "الكيان",
+      "orgSummaryColOrg": "كيان",
       "orgSummaryColStudies": "الدراسات",
       "orgSummaryCaption": "ثلاثة تصنيفات منفصلة لأفضل 5 — قائمة واحدة مرتبة حسب مقياس واحد قد تخفي كيانات متفوقة في مقاييس أخرى.",
       "orgSummaryByStudies": "أفضل الكيانات — حسب الدراسات",
@@ -4911,79 +4911,6 @@
         "file_upload": "مستند مرفوع",
         "citizen_input": "مدخلات المواطن",
         "field_survey": "استبيان ميداني"
-      }
-    },
-    "backups": {
-      "title": "النسخ الاحتياطية",
-      "description": "كل محاولة نسخ احتياطي مع حجمها ومدتها وبصمتها. السؤال الذي تجيب عنه هذه الشاشة ليس هل تمت النسخ، بل هل يمكن الاستعادة.",
-      "loadError": "تعذر تحميل سجل النسخ الاحتياطية.",
-      "empty": "لا توجد عمليات نسخ مسجّلة بعد.",
-      "running": "جارٍ التنفيذ…",
-      "runDatabase": "نسخ قاعدة البيانات",
-      "runAttachments": "نسخ المرفقات",
-      "runSucceeded": "اكتمل نسخ {kind}.",
-      "runFailed": "فشلت عملية النسخ: {error}",
-      "runError": "تعذر إكمال الطلب.",
-      "verify": "تحقق",
-      "prune": "تطبيق سياسة الاحتفاظ",
-      "pruned": "تم حذف {count} من العمليات. يُحتفظ دائمًا بأحدث نسخة ناجحة من كل نوع.",
-      "summary": {
-        "lastDatabase": "آخر نسخ لقاعدة البيانات",
-        "lastAttachments": "آخر نسخ للمرفقات",
-        "failures": "حالات الفشل خلال 7 أيام",
-        "stored": "المخزّن على القرص",
-        "never": "لم يحدث"
-      },
-      "noDatabaseBackup": {
-        "title": "لم تنجح أي نسخة لقاعدة البيانات إطلاقًا.",
-        "detail": "لا يستطيع pg_dump قراءة قاعدة البيانات بدور التطبيق — فأمن الصفوف مفروض على 43 جدولًا ولا يجوز لأي دور تطبيق تجاوزه. يجب أن يشغّل مسؤول قاعدة البيانات الملف scripts/sql/nfr010-backup-role.sql لإنشاء الدور cnap_backup، ثم يُضبط BACKUP_DATABASE_URL عليه. حتى ذلك الحين تُنسخ المرفقات فقط."
-      },
-      "kind": {
-        "database": "قاعدة البيانات",
-        "attachments": "المرفقات"
-      },
-      "status": {
-        "running": "قيد التنفيذ",
-        "succeeded": "نجحت",
-        "failed": "فشلت"
-      },
-      "trigger": {
-        "schedule": "مجدولة",
-        "manual": "يدوية"
-      },
-      "table": {
-        "started": "البداية",
-        "kind": "النوع",
-        "status": "الحالة",
-        "size": "الحجم",
-        "duration": "المدة",
-        "trigger": "المصدر",
-        "retention": "يُحتفظ حتى",
-        "integrity": "السلامة",
-        "files": "{count} ملف",
-        "pruned": "تم الحذف"
-      },
-      "integrity": {
-        "ok": "البصمة مطابقة",
-        "CHECKSUM_MISMATCH": "البصمة غير مطابقة — الملف تالف",
-        "SIZE_CHANGED": "تغيّر الحجم منذ كتابته",
-        "FILE_MISSING": "الملف غير موجود على القرص",
-        "FILE_PRUNED": "تم حذف الملف",
-        "RUN_DID_NOT_SUCCEED": "لم تنجح هذه العملية",
-        "NO_ARTEFACT_RECORDED": "لا يوجد ملف مسجل",
-        "RUN_NOT_FOUND": "العملية غير موجودة",
-        "unknown": "تعذر التحقق"
-      },
-      "pagination": {
-        "previous": "السابق",
-        "next": "التالي",
-        "label": "صفحة {page} من {count}"
-      },
-      "filters": {
-        "kind": "النوع",
-        "allKinds": "كل الأنواع",
-        "status": "الحالة",
-        "allStatuses": "كل الحالات"
       }
     },
     "backups": {
