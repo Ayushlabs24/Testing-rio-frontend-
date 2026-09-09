@@ -308,8 +308,12 @@ export const endpoints = {
     approve: (id: string) => `/reports/${id}/approve`,
     reject: (id: string) => `/reports/${id}/reject`,
     archive: (id: string) => `/reports/${id}/archive`,
-    export: (id: string, format: "pdf" | "excel") =>
-      `/reports/${id}/export?format=${format}`,
+    // `locale` is the language the user is viewing the app in, so the exported
+    // PDF/Excel reads the same as the screen it was requested from. Omitted for
+    // English — the API defaults to it, so the URL stays unchanged for the
+    // locale that was the only one before this.
+    export: (id: string, format: "pdf" | "excel", locale?: "en" | "ar") =>
+      `/reports/${id}/export?format=${format}${locale === "ar" ? "&locale=ar" : ""}`,
   },
   archive: {
     list: "/archive",

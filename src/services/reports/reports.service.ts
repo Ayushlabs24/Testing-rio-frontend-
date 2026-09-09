@@ -45,9 +45,9 @@ export const reportsService = {
    * content-type/filename contract the real PDF/Excel export will have
    * later, so this download path doesn't change when that lands.
    */
-  async download(id: string, format: ExportFormat): Promise<void> {
+  async download(id: string, format: ExportFormat, locale?: "en" | "ar"): Promise<void> {
     const { blob, filename } = await apiClient.download(
-      endpoints.reports.export(id, format),
+      endpoints.reports.export(id, format, locale),
       `report.${format === "pdf" ? "pdf" : "xlsx"}`,
     );
 
