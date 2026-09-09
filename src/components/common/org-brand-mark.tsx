@@ -63,7 +63,7 @@ export function OrgBrandMark({
         <NcnpEmblem className="h-10 w-auto shrink-0" />
         <div className="flex flex-col justify-center leading-none">
           <span className="text-foreground text-lg font-extrabold tracking-tight">
-            NCNP
+            {t("ncnpBrandName")}
           </span>
           <span className="text-muted-foreground mt-0.5 text-xs font-medium tracking-normal">
             {t("nationalCenter")}

@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, PencilLine } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
@@ -55,6 +56,13 @@ export function PriorityBreakdown({
   const [error, setError] = useState<string | null>(null);
 
   const breakdown = score.factors;
+  // Interpolated into a translation string below (modelNote), so this needs
+  // the plain-string hook, not the <AutoTranslate> component — same raw
+  // English methodology-version-name bug already fixed on the Data Quality
+  // panel and Survey Builder's own version dropdown, missed here.
+  const translatedMethodologyVersion = useAutoTranslate(
+    breakdown?.methodologyVersion ?? null,
+  ).text;
   const components = breakdown?.components ?? [];
   const coveragePct = Math.round((breakdown?.coverage ?? 0) * 100);
   const isOverridden = score.overrideScore !== null;
@@ -106,7 +114,11 @@ export function PriorityBreakdown({
             {t("heading")}
           </h2>
           <p className="text-muted-foreground text-xs">
-            {t("modelNote", { version: breakdown?.methodologyVersion ?? t("noVersion") })}
+            {t("modelNote", {
+              version: breakdown?.methodologyVersion
+                ? translatedMethodologyVersion
+                : t("noVersion"),
+            })}
           </p>
         </div>
 
@@ -164,9 +176,15 @@ export function PriorityBreakdown({
                 className="border-rule border-border/60 border-b last:border-0"
               >
                 <td className="py-2.5 align-top break-words whitespace-normal">
-                  <span className="text-foreground">{c.label}</span>
+                  <span className="text-foreground">
+                    {t.has(`factorLabels.${c.key}`)
+                      ? t(`factorLabels.${c.key}` as Parameters<typeof t>[0])
+                      : c.label}
+                  </span>
                   {c.basis ? (
-                    <span className="text-muted-foreground block text-xs">{c.basis}</span>
+                    <span className="text-muted-foreground block text-xs">
+                      <AutoTranslate text={c.basis} />
+                    </span>
                   ) : null}
                 </td>
                 <td className="text-muted-foreground py-2.5 text-right align-top tabular-nums">

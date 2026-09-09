@@ -1048,6 +1048,7 @@
           "statusRevoked": "Revoked",
           "actionsLabel": "Actions",
           "revoke": "Revoke",
+          "unknownGrantee": "Unknown user",
           "empty": "No permission grants yet.",
           "rowsPerPage": "Rows per page",
           "pagePrevious": "Previous",
@@ -1339,6 +1340,17 @@
         "colWeight": "Weight",
         "colValue": "Value",
         "colContribution": "Contribution",
+        "factorLabels": {
+          "severity": "Need severity",
+          "affected_population": "Affected population",
+          "service_availability_gap": "Service availability gap",
+          "urgency": "Urgency",
+          "data_confidence": "Data confidence",
+          "frequency": "Frequency of similar needs",
+          "geographic_coverage": "Geographic coverage",
+          "vulnerable_groups": "Vulnerable groups (equity)",
+          "strategic_alignment": "Strategic alignment"
+        },
         "notMeasured": "Not measured",
         "approved": "Signed off",
         "awaitingSignOff": "Awaiting sign-off",
@@ -2781,6 +2793,7 @@
         "status": {
           "DRAFT": "Draft",
           "SUBMITTED": "Submitted for Approval",
+          "APPROVED": "Approved — Awaiting Publish",
           "REJECTED": "Rejected",
           "PUBLISHED": "Published"
         },
@@ -3466,7 +3479,8 @@
     "loading": "Loading...",
     "close": "Close",
     "error": "Something went wrong. Please try again.",
-    "nationalCenter": "National Center"
+    "nationalCenter": "National Center",
+    "ncnpBrandName": "NCNP"
   },
   "notFound": {
     "title": "Page not found",
@@ -3801,6 +3815,8 @@
         "affectedGroupSize": "Affected Group Size",
         "theme": "Theme",
         "placeholderBadge": "Placeholder",
+        "placeholderUrgencyValue": "High",
+        "placeholderThemeValue": "Water access",
         "affectedGroupSizeEmpty": "Not recorded",
         "people": "{count} people",
         "households": "{count} households"

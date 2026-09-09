@@ -1436,25 +1436,20 @@ export default function SurveyBuilderDetailPage({
                       disabled={!isEditable || savingMethodologyVersion}
                     >
                       <SelectTrigger id="methodology-version" className="w-full sm:w-96">
-                        {/* Methodology version names are authored in English
-                            only, regardless of UI locale. The truncation
-                            edge for the trigger's line-clamped value is
-                            decided by ITS OWN `dir`, not the inner text's —
-                            without this, RTL silently clips the start of the
-                            name (e.g. "Village Needs..." became just "s...")
-                            with no ellipsis marker (found testing
-                            RIO-NFR-007). Only set once a real value is
-                            selected, so the (Arabic) placeholder keeps its
-                            normal RTL alignment. */}
-                        <SelectValue
-                          placeholder={t("methodologyVersionPlaceholder")}
-                          dir={survey.methodologyVersion ? "ltr" : undefined}
-                        />
+                        {/* Client-confirmed: methodology version names now
+                            follow the UI locale like every other piece of
+                            free text (AutoTranslate), rather than staying
+                            forced English/LTR — the RTL truncation-clipping
+                            concern from RIO-NFR-007 no longer applies since
+                            AutoTranslate's own `dir="auto"` on each option
+                            resolves direction from the rendered string
+                            itself, English or Arabic. */}
+                        <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {methodologyOptions.map((option) => (
                           <SelectItem key={option.id} value={option.version}>
-                            <span dir="ltr">{option.name}</span>
+                            <AutoTranslate text={option.name} />
                           </SelectItem>
                         ))}
                       </SelectContent>

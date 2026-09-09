@@ -1048,6 +1048,7 @@
           "statusRevoked": "مُلغى",
           "actionsLabel": "الإجراءات",
           "revoke": "إلغاء",
+          "unknownGrantee": "مستخدم غير معروف",
           "empty": "لا توجد أذونات ممنوحة بعد.",
           "rowsPerPage": "عدد الصفوف في الصفحة",
           "pagePrevious": "السابق",
@@ -1349,6 +1350,17 @@
         "colWeight": "الوزن",
         "colValue": "القيمة",
         "colContribution": "المساهمة",
+        "factorLabels": {
+          "severity": "شدة الاحتياج",
+          "affected_population": "عدد السكان المتأثرين",
+          "service_availability_gap": "فجوة توفر الخدمة",
+          "urgency": "الإلحاح",
+          "data_confidence": "موثوقية البيانات",
+          "frequency": "تكرار احتياجات مماثلة",
+          "geographic_coverage": "التغطية الجغرافية",
+          "vulnerable_groups": "الفئات الضعيفة (الإنصاف)",
+          "strategic_alignment": "التوافق الاستراتيجي"
+        },
         "notMeasured": "غير مقاسة",
         "approved": "معتمدة",
         "awaitingSignOff": "بانتظار الاعتماد",
@@ -2509,7 +2521,7 @@
         "statementLabel": "بيان الاحتياج",
         "statementPlaceholder": "تمشي الأسر في هذه المحافظة أكثر من ساعة لجمع مياه الشرب...",
         "villageLabel": "القرية",
-        "villageFreeTextHint": "اختياري — اكتب اسم قرية واضغط Enter لإضافتها.",
+        "villageFreeTextHint": "اختياري — اكتب اسم قرية واضغط مفتاح الإدخال لإضافتها.",
         "villageEmptyHint": "اكتب اسم قرية لإضافتها.",
         "affectedPopulationLabel": "عدد السكان المتأثرين",
         "affectedPopulationPlaceholder": "مثال: 450",
@@ -2586,7 +2598,7 @@
           "notDeletableBlocked": "تجاوز هذا الاحتياج مرحلة المسودة بالفعل ولم يعد بالإمكان حذفه.",
           "lockedHint": "لا يمكن الحذف — تجاوز هذا الاحتياج مرحلة المسودة بالفعل (قد تعتمد عليه أدلة أو تصنيف ذكاء اصطناعي أو استبيان)."
         },
-        "villageSearchPlaceholder": "اكتب اسم قرية واضغط Enter",
+        "villageSearchPlaceholder": "اكتب اسم قرية واضغط مفتاح الإدخال",
         "addNewVillage": "إضافة \"{village}\"",
         "domainCategoryLabel": "فئة المجال",
         "domainCategoryPlaceholder": "اختر فئة مجال",
@@ -2791,6 +2803,7 @@
         "status": {
           "DRAFT": "مسودة",
           "SUBMITTED": "أُرسل للاعتماد",
+          "APPROVED": "معتمد — بانتظار النشر",
           "REJECTED": "مرفوض",
           "PUBLISHED": "منشور"
         },
@@ -3476,7 +3489,8 @@
     "loading": "جارٍ التحميل...",
     "close": "إغلاق",
     "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "nationalCenter": "المركز الوطني"
+    "nationalCenter": "المركز الوطني",
+    "ncnpBrandName": "إن سي إن بي"
   },
   "notFound": {
     "title": "الصفحة غير موجودة",
@@ -3811,6 +3825,8 @@
         "affectedGroupSize": "حجم الفئة المتأثرة",
         "theme": "الموضوع",
         "placeholderBadge": "قيمة مؤقتة",
+        "placeholderUrgencyValue": "عالية",
+        "placeholderThemeValue": "الوصول إلى المياه",
         "affectedGroupSizeEmpty": "غير مسجَّل",
         "people": "{count} شخص",
         "households": "{count} أسرة"

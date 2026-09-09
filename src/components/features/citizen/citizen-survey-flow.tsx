@@ -509,7 +509,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               <p className="text-muted-foreground text-sm">
                 {t("welcome.conductedBy")}{" "}
                 <span className="text-foreground font-medium">
-                  {survey.organizationName}
+                  <AutoTranslate text={survey.organizationName} />
                 </span>
               </p>
             ) : null}

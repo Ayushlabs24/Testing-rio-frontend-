@@ -352,8 +352,8 @@ export function AiClassificationSection({
   const subDomainOptions = overrideDomains.flatMap((domain) =>
     subDomainOptionsFor(domain).map((subDomain) => ({
       value: subDomainOptionValue(domain, subDomain),
-      label: subDomain,
-      group: domain,
+      label: localizedSubDomain(subDomain),
+      group: localizedDomain(domain),
     })),
   );
   const subDomainSelectedValues = overrideDomains.flatMap((domain) =>
@@ -1095,7 +1095,19 @@ export function AiClassificationSection({
           </>
         ) : null}
 
-        {hasSurvey && !canReview ? (
+        {/* Fallback nav for once a decision has already been made
+            (isReadyForReview false) — the canReview branch above only
+            renders this same navigation while isReadyForReview is true
+            (it lives inside that ternary, alongside the Approve/Modify/
+            Reject row). Without this, an Approver who has already decided
+            a classification (e.g. Human Reviewer, or NGO Admin/System
+            Admin acting as reviewer) had no way back to the Survey
+            Builder from this page at all — found while tracing a
+            "the survey button just isn't there" report for a
+            reviewer_approved Need. Gated on `!isReadyForReview`, not
+            `!canReview`: an Approver still viewing an undecided
+            suggestion correctly sees the decision row instead, not this. */}
+        {hasSurvey && !isReadyForReview ? (
           <div className="pt-2">
             <Button asChild size="sm" className="gap-2 font-medium">
               <Link href={`/survey-builder/${need.id}`}>
@@ -1104,7 +1116,7 @@ export function AiClassificationSection({
               </Link>
             </Button>
           </div>
-        ) : canRegenerateSurvey && !canReview ? (
+        ) : canRegenerateSurvey && !isReadyForReview ? (
           <div className="space-y-1.5 pt-2">
             <Button
               type="button"
@@ -1137,7 +1149,10 @@ export function AiClassificationSection({
             <div className="space-y-1.5">
               <Label>{t("domainLabel")}</Label>
               <MultiSelect
-                options={domainOptions.map((d) => ({ value: d.name, label: d.name }))}
+                options={domainOptions.map((d) => ({
+                  value: d.name,
+                  label: localizedDomain(d.name),
+                }))}
                 values={overrideDomains}
                 onChange={handleOverrideDomainsChange}
                 placeholder={t("selectDomain")}

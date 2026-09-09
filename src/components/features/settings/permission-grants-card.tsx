@@ -205,7 +205,11 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                 pagedGrants.map((grant) => (
                   <TableRow key={grant.id}>
                     <TableCell className="text-foreground font-medium">
-                      {grant.granteeName ?? grant.granteeId}
+                      {grant.granteeName ? (
+                        <AutoTranslate text={grant.granteeName} />
+                      ) : (
+                        t("unknownGrantee")
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
                       {tModules(grant.module)} — {t(`actionNames.${grant.action}`)}

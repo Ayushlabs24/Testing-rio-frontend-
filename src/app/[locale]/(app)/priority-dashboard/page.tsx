@@ -1,10 +1,12 @@
 "use client";
 
 import { Gauge } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
 import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
+import { localizedName } from "@/lib/bilingual";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -51,6 +53,7 @@ const LEVEL_VARIANT: Record<
 
 export default function PriorityDashboardPage() {
   const t = useTranslations("app.priorityDashboard");
+  const locale = useLocale() as AppLocale;
   // const tTheme = useTranslations("app.studies.themes");  // hidden with the theme filter
   const [entries, setEntries] = useState<PriorityDashboardEntry[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -199,9 +202,7 @@ export default function PriorityDashboardPage() {
                   <SelectItem value={ALL}>{t("filterGapTypeAll")}</SelectItem>
                   {gapTypeOptions.map((option) => (
                     <SelectItem key={option.id} value={option.name}>
-                      {t.has(`gapType.${option.name}`)
-                        ? t(`gapType.${option.name}` as Parameters<typeof t>[0])
-                        : option.name}
+                      {localizedName(option, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -314,9 +315,14 @@ export default function PriorityDashboardPage() {
                       <TableCell>
                         {entry.gapType ? (
                           <Badge variant="outline">
-                            {t.has(`gapType.${entry.gapType}`)
-                              ? t(`gapType.${entry.gapType}` as Parameters<typeof t>[0])
-                              : entry.gapType}
+                            {(() => {
+                              const option = gapTypeOptions.find(
+                                (o) => o.name === entry.gapType,
+                              );
+                              return option
+                                ? localizedName(option, locale)
+                                : entry.gapType;
+                            })()}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
