@@ -60,7 +60,6 @@ export function LeafletMapContainer({
       maxBoundsViscosity: 1.0, // Prevents panning outside Saudi Arabia
       zoomControl: true,
       scrollWheelZoom: false,
-      attributionControl: false,
     });
 
     // Fit map view tightly around Saudi Arabia. `animate: false` is required,
@@ -71,11 +70,14 @@ export function LeafletMapContainer({
     // "Cannot read properties of undefined (reading '_leaflet_pos')".
     map.fitBounds(ksaBounds, { padding: [10, 10], animate: false });
 
-    // CartoDB Positron / Light basemap tile layer
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    // OpenStreetMap's own tiles. CartoDB's Positron basemap now stamps
+    // "API KEY REQUIRED" across every tile, which made this map look broken
+    // on all five dashboards that render it. OSM needs no key; its licence
+    // requires the attribution control, so that is left enabled below.
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       minZoom: 5,
       maxZoom: 10,
-      subdomains: "abcd",
+      attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
 
     // Crisp Saudi Arabia Outer Boundary GeoJSON Overlay (makes country border dark & clearly visible)

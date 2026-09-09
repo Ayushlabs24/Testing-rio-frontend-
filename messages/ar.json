@@ -436,6 +436,44 @@
         },
         "recentStudiesHeading": "الدراسات الأخيرة",
         "noStudies": "لا توجد دراسات بعد — أنشئ واحدة للبدء."
+      },
+      "needsMap": {
+        "title": "الاحتياجات حسب الموقع",
+        "description": "اللون يوضح أعلى أولوية موجودة. الحجم يوضح عدد الاحتياجات.",
+        "level": {
+          "region": "حسب المنطقة",
+          "governorate": "حسب المحافظة",
+          "center": "حسب المركز"
+        },
+        "band": {
+          "critical": "حرجة",
+          "high": "عالية",
+          "medium": "متوسطة",
+          "low": "منخفضة",
+          "unscored": "لم تُقيَّم بعد"
+        },
+        "filter": {
+          "sector": "القطاع",
+          "allSectors": "جميع القطاعات",
+          "urgency": "الإلحاح",
+          "allUrgencies": "جميع مستويات الإلحاح",
+          "status": "الحالة",
+          "allStatuses": "جميع الحالات"
+        },
+        "needsCount": "{count, plural, =0 {لا توجد احتياجات} one {احتياج واحد} two {احتياجان} few {# احتياجات} many {# احتياجًا} other {# احتياج}}",
+        "initiativesCount": "{count, plural, =0 {لا توجد مبادرات} one {مبادرة واحدة} two {مبادرتان} few {# مبادرات} many {# مبادرة} other {# مبادرة}}",
+        "sizeHint": "الدائرة الأكبر = احتياجات أكثر",
+        "noPlaces": "لا توجد مواقع مطابقة لهذه الفلاتر.",
+        "loadFailed": "تعذّر تحميل خريطة الاحتياجات.",
+        "coverage": "يتم عرض {plotted} من أصل {total} احتياج على الخريطة.",
+        "coverageMissingLocation": "{count, plural, one {احتياج واحد بدون موقع مسجّل} other {# احتياجات بدون موقع مسجّل}}.",
+        "coverageMissingCoordinates": "{count, plural, one {موقع واحد بدون إحداثيات بعد} other {# مواقع بدون إحداثيات بعد}}.",
+        "approximate": "موقع تقريبي — في حدود {km} كم",
+        "approximateLegend": "موقع تقريبي",
+        "linkedInitiatives": "المبادرات المرتبطة",
+        "moreInitiatives": "و{count} أخرى",
+        "statNeeds": "الاحتياجات",
+        "statPriority": "توزيع الأولويات"
       }
     },
     "evidence": {
