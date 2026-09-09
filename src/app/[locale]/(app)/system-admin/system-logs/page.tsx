@@ -422,10 +422,16 @@ export default function SystemLogsPage() {
                         className="hover:bg-muted flex w-full items-center justify-between gap-3 rounded px-2 py-1 text-left"
                       >
                         <span className="text-foreground font-mono text-xs">
-                          {failure.eventCode}
+                          {t.has(`eventCodes.${failure.eventCode}`)
+                            ? t(
+                                `eventCodes.${failure.eventCode}` as Parameters<
+                                  typeof t
+                                >[0],
+                              )
+                            : failure.eventCode}
                         </span>
                         <span className="text-muted-foreground truncate text-xs">
-                          {failure.sampleMessage}
+                          <AutoTranslate text={failure.sampleMessage} />
                         </span>
                         <span className="text-muted-foreground shrink-0 font-mono text-[11px]">
                           {t("topFailures.occurrences", { count: failure.count })}

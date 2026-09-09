@@ -3,6 +3,8 @@
 import { Archive, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,12 @@ interface OrgArchiveTabProps {
 
 export function OrgArchiveTab({ organizationId }: OrgArchiveTabProps) {
   const t = useTranslations("systemAdmin.archive");
+  // Client-reported gap (2026-09-10) — title/kind/status/date all rendered
+  // raw here; the main Archive page (app/(app)/archive/page.tsx) already
+  // solved this exact problem, so this reuses its dictionaries rather than
+  // inventing a second copy under systemAdmin.archive.
+  const tArchive = useTranslations("app.archive");
+  const tReportStatus = useTranslations("app.reports.status");
   const [entries, setEntries] = useState<ArchiveEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,21 +129,31 @@ export function OrgArchiveTab({ organizationId }: OrgArchiveTabProps) {
             ) : (
               pagedEntries.map((entry) => (
                 <TableRow key={`${entry.kind}-${entry.id}`}>
-                  <TableCell className="text-foreground font-medium">
-                    {entry.title}
+                  <TableCell className="text-foreground max-w-64 font-medium break-words whitespace-normal">
+                    <AutoTranslate text={entry.title} />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-[10px] capitalize">
-                      {entry.kind}
+                    <Badge variant="outline" className="text-[10px]">
+                      {tArchive(`kind.${entry.kind}`)}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="text-xs capitalize">
-                      {entry.status}
+                    <Badge variant="secondary" className="text-xs">
+                      {entry.kind === "report" && tReportStatus.has(entry.status)
+                        ? tReportStatus(
+                            entry.status as Parameters<typeof tReportStatus>[0],
+                          )
+                        : tArchive.has(`statusValues.${entry.status}`)
+                          ? tArchive(
+                              `statusValues.${entry.status}` as Parameters<
+                                typeof tArchive
+                              >[0],
+                            )
+                          : entry.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground font-mono text-xs">
-                    {new Date(entry.date).toLocaleDateString()}
+                    <FormattedDate value={entry.date} />
                   </TableCell>
                 </TableRow>
               ))

@@ -2,13 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Upload, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import type { AppLocale } from "@/i18n/routing";
 import { BackButton } from "@/components/common/back-button";
 import { GovernoratePicker } from "@/components/common/governorate-picker";
 import { LoadingButton } from "@/components/common/loading-button";
+import { localizedName } from "@/lib/bilingual";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -79,6 +81,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
   const { id: studyId } = use(params);
   const t = useTranslations("app.studies.need");
   const tGeo = useTranslations("app.geography");
+  const locale = useLocale() as AppLocale;
   const tValidation = useTranslations("app.studies.validation");
   const router = useRouter();
 
@@ -338,7 +341,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                     <MultiSelect
                       options={studyGovernorates.map((g) => ({
                         value: g.id,
-                        label: g.name,
+                        label: localizedName(g, locale),
                       }))}
                       values={governorateIds}
                       onChange={(next) => {
@@ -374,7 +377,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
                       <MultiSelect
                         options={centerOptions.map((c) => ({
                           value: c.id,
-                          label: c.name,
+                          label: localizedName(c, locale),
                         }))}
                         values={centerIds}
                         onChange={(next) =>

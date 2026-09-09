@@ -319,6 +319,7 @@
       "questionBankAlertRejected": "Question {questionId} was rejected"
     },
     "footer": {
+      "brandName": "Rio",
       "rightsReserved": "All rights reserved.",
       "version": "v{version}"
     },
@@ -1464,7 +1465,26 @@
         "surveyScopeLabel": "Survey scope (optional)",
         "surveyScopePlaceholder": "All surveys in this study",
         "surveyScopeAll": "All surveys in this study",
-        "stillNeeded": "Still needed: {fields}"
+        "stillNeeded": "Still needed: {fields}",
+        "reportTypeNames": {
+          "RPT01": "Individual Survey Report",
+          "RPT02": "Collective Report / Dashboard",
+          "RPT03": "Top-Priority Report",
+          "RPT04": "Domain-wise Needs",
+          "RPT05": "Governorate-wise Needs",
+          "RPT06": "Region/Governorate Filtering",
+          "RPT07": "Gender-wise Needs",
+          "RPT08": "KPI Results",
+          "RPT09": "Priority Ranking",
+          "RPT10": "Data-Quality Report",
+          "RPT11": "Previous Studies View",
+          "RPT12": "Report Sharing Status",
+          "RPT13": "Executive Summary",
+          "RPT14": "Village Report",
+          "RPT15": "Survey & Dashboard Report",
+          "RPT16": "Combined Evidence & Score Report",
+          "RPT17": "Evidence Document-Based Report"
+        }
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -4228,6 +4248,7 @@
     "studies": {
       "title": "Organization Studies",
       "platformTitle": "All Platform Studies",
+      "cycleLabel": "Cycle #{number}",
       "searchPlaceholder": "Search studies by name...",
       "filterOrganization": "Filter by Organization",
       "filterStatus": "Filter by Status",

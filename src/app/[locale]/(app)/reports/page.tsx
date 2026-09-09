@@ -2,7 +2,7 @@
 
 import { BarChart3, Eye, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
@@ -86,11 +86,6 @@ type UnifiedRow =
       review: NcnpReportReviewSummary;
     };
 
-const REPORT_TYPE_ITEMS = GENERATABLE_REPORT_TYPES.map((code) => ({
-  value: code,
-  label: `${code} — ${REPORT_TYPE_META[code].name}`,
-}));
-
 /** Report type (searchable) + study + (for RPT14) village, in a modal. */
 function GenerateReportDialog({
   open,
@@ -102,6 +97,20 @@ function GenerateReportDialog({
   onGenerated: () => void;
 }) {
   const t = useTranslations("app.reports.create");
+  const tReportTypes = useTranslations("app.reports.create.reportTypeNames");
+  // Client-reported gap (2026-09-10) — the report-type Combobox listed the
+  // hardcoded English `REPORT_TYPE_META[code].name` (e.g. "Individual Survey
+  // Report") on an otherwise-Arabic dialog. `REPORT_TYPE_META` mirrors the
+  // backend's own English-only metadata one-for-one, so the label is built
+  // here instead, from a small fixed dictionary keyed by report code.
+  const reportTypeItems = useMemo(
+    () =>
+      GENERATABLE_REPORT_TYPES.map((code) => ({
+        value: code,
+        label: `${code} — ${tReportTypes(code)}`,
+      })),
+    [tReportTypes],
+  );
   const [reportType, setReportType] = useState<ReportTypeCode | null>(null);
   const [studyId, setStudyId] = useState<string>("");
   const [surveyId, setSurveyId] = useState<string>("");
@@ -242,7 +251,7 @@ function GenerateReportDialog({
           <div className="space-y-2">
             <Label>{t("reportTypeLabel")}</Label>
             <Combobox
-              items={REPORT_TYPE_ITEMS}
+              items={reportTypeItems}
               value={reportType}
               onSelect={(value) => setReportType(value as ReportTypeCode)}
               placeholder={t("reportTypeLabel")}

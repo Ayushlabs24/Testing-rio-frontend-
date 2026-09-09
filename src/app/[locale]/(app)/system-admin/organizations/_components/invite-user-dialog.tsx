@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import {
   Select,
   SelectContent,
@@ -42,6 +43,11 @@ export function InviteUserDialog({
   onInvited,
 }: InviteUserDialogProps) {
   const t = useTranslations("systemAdmin.users.inviteDialog");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
+  // The org name goes into a disabled <input>, whose `value` must be a plain
+  // string — can't wrap it in <AutoTranslate> the way a display-only element
+  // handles this elsewhere (see PageHeader's `title` prop, same constraint).
+  const translatedOrgName = useAutoTranslate(organizationName).text;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -186,7 +192,11 @@ export function InviteUserDialog({
               <Label className="text-muted-foreground text-xs">
                 {t("organizationLabel")}
               </Label>
-              <Input value={organizationName} disabled className="bg-muted font-medium" />
+              <Input
+                value={translatedOrgName}
+                disabled
+                className="bg-muted font-medium"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -227,7 +237,7 @@ export function InviteUserDialog({
                 <SelectContent>
                   {roles.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name}
+                      {tRoleNames.has(r.key) ? tRoleNames(r.key) : r.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

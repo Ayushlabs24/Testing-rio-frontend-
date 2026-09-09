@@ -29,6 +29,7 @@ import {
   isFlaggedConfidence,
 } from "@/lib/confidence-band";
 import { cn } from "@/lib/utils";
+import { localizedName } from "@/lib/bilingual";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
@@ -532,19 +533,22 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                             </TableCell>
                             <TableCell className="max-w-40 text-sm">
                               <CompactNameList
-                                names={need.governorateIds.map(
-                                  (id) =>
-                                    studyGovernorates.find((g) => g.id === id)?.name ??
-                                    id,
-                                )}
+                                names={need.governorateIds.map((id) => {
+                                  const governorate = studyGovernorates.find(
+                                    (g) => g.id === id,
+                                  );
+                                  return governorate
+                                    ? localizedName(governorate, locale)
+                                    : id;
+                                })}
                               />
                             </TableCell>
                             <TableCell className="max-w-40 text-sm">
                               <CompactNameList
-                                names={need.centerIds.map(
-                                  (id) =>
-                                    studyCenters.find((c) => c.id === id)?.name ?? id,
-                                )}
+                                names={need.centerIds.map((id) => {
+                                  const center = studyCenters.find((c) => c.id === id);
+                                  return center ? localizedName(center, locale) : id;
+                                })}
                               />
                             </TableCell>
                             <TableCell className="max-w-32 text-sm">

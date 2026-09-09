@@ -13,6 +13,7 @@ import { NeedPriorityInputs } from "@/components/features/studies/need-priority-
 import { NeedInitiativeLinkSection } from "@/components/features/studies/need-initiative-link-section";
 import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
+import { localizedName } from "@/lib/bilingual";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { BackButton } from "@/components/common/back-button";
@@ -359,7 +360,10 @@ function NeedDetailsCard({
               <div className="space-y-2">
                 <Label>{tGeo("governorateLabel")}</Label>
                 <MultiSelect
-                  options={studyGovernorates.map((g) => ({ value: g.id, label: g.name }))}
+                  options={studyGovernorates.map((g) => ({
+                    value: g.id,
+                    label: localizedName(g, locale),
+                  }))}
                   values={governorateIds}
                   onChange={(next) => {
                     setValue("governorateIds", next, { shouldValidate: true });
@@ -392,7 +396,10 @@ function NeedDetailsCard({
                 <div className="space-y-2">
                   <Label>{tGeo("centerLabel")}</Label>
                   <MultiSelect
-                    options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
+                    options={centerOptions.map((c) => ({
+                      value: c.id,
+                      label: localizedName(c, locale),
+                    }))}
                     values={centerIds}
                     onChange={(next) =>
                       setValue("centerIds", next, { shouldValidate: true })
@@ -520,11 +527,14 @@ function NeedDetailsCard({
               <FilledField label={tGeo("governorateLabel")}>
                 {need.governorateIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {need.governorateIds.map((id) => (
-                      <Badge key={id} variant="secondary">
-                        {studyGovernorates.find((g) => g.id === id)?.name ?? id}
-                      </Badge>
-                    ))}
+                    {need.governorateIds.map((id) => {
+                      const governorate = studyGovernorates.find((g) => g.id === id);
+                      return (
+                        <Badge key={id} variant="secondary">
+                          {governorate ? localizedName(governorate, locale) : id}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -533,11 +543,14 @@ function NeedDetailsCard({
               <FilledField label={tGeo("centerLabel")}>
                 {need.centerIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {need.centerIds.map((id) => (
-                      <Badge key={id} variant="secondary">
-                        {studyCenters.find((c) => c.id === id)?.name ?? id}
-                      </Badge>
-                    ))}
+                    {need.centerIds.map((id) => {
+                      const center = studyCenters.find((c) => c.id === id);
+                      return (
+                        <Badge key={id} variant="secondary">
+                          {center ? localizedName(center, locale) : id}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>

@@ -44,6 +44,7 @@ export function ChangeRoleDialog({
   onUpdated,
 }: ChangeRoleDialogProps) {
   const t = useTranslations("systemAdmin.users.changeRoleDialog");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
 
   const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -150,7 +151,7 @@ export function ChangeRoleDialog({
                 <SelectContent>
                   {roles.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name}
+                      {tRoleNames.has(r.key) ? tRoleNames(r.key) : r.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -156,7 +156,7 @@ export function AuditActivityTimeline({
                 <div className="mt-1 flex items-center gap-1.5 text-xs">
                   {ev.actor ? (
                     <span className="text-muted-foreground truncate font-medium">
-                      {ev.actor.name}
+                      <AutoTranslate text={ev.actor.name} />
                     </span>
                   ) : (
                     <span className="text-muted-foreground font-medium">
