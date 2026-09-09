@@ -34,24 +34,35 @@ const LeafletMapContainer = dynamic(
   },
 );
 
-// 13 Saudi Regions mapped to real GPS lat/lng coordinates
+// 13 Saudi Regions mapped to real GPS lat/lng coordinates, keyed by
+// Region.code — the KSA Geographic Reference's own 1-13 numbering, which the
+// geography API already returns on every Region row.
+//
+// This used to be keyed by informal short names ("Makkah", "Qassim") and
+// matched with a fuzzy `region.name.includes(key)` substring test, which had
+// two problems beyond localization: any rename of a region upstream silently
+// stopped matching, and a name that contains another key's text can match the
+// wrong entry. Keying on the code is an exact lookup against master data that
+// does not move with the display language, so the display name is now free to
+// be the Arabic one without a comment having to warn future readers not to
+// touch it. Same table, same keying, as ncnp-report-pdf.ts and region-map.tsx.
 const KSA_REGION_COORDS: Record<
   string,
   { lat: number; lng: number; centerName?: string }
 > = {
-  Riyadh: { lat: 24.7136, lng: 46.6753, centerName: "Central Administrative Centre" },
-  Makkah: { lat: 21.3891, lng: 39.8579, centerName: "Western Administrative Centre" },
-  Madinah: { lat: 24.5247, lng: 39.5692, centerName: "Central Administrative Centre" },
-  Qassim: { lat: 26.326, lng: 43.975, centerName: "Northern Administrative Centre" },
-  Eastern: { lat: 26.4207, lng: 50.0888, centerName: "Eastern Administrative Centre" },
-  Asir: { lat: 18.2164, lng: 42.5053, centerName: "Southern Administrative Centre" },
-  Tabuk: { lat: 28.3835, lng: 36.5662, centerName: "Northern Administrative Centre" },
-  Hail: { lat: 27.5219, lng: 41.6961, centerName: "Northern Administrative Centre" },
-  Northern: { lat: 30.9753, lng: 41.0381, centerName: "Northern Administrative Centre" },
-  Jizan: { lat: 16.8894, lng: 42.5511, centerName: "Southern Administrative Centre" },
-  Najran: { lat: 17.4924, lng: 44.1277, centerName: "Southern Administrative Centre" },
-  Bahah: { lat: 20.0129, lng: 41.4676, centerName: "Western Administrative Centre" },
-  Jawf: { lat: 29.9697, lng: 40.2064, centerName: "Northern Administrative Centre" },
+  1: { lat: 24.7136, lng: 46.6753, centerName: "Central Administrative Centre" }, // Riyadh
+  2: { lat: 21.3891, lng: 39.8579, centerName: "Western Administrative Centre" }, // Makkah Al-Mukarramah
+  3: { lat: 24.5247, lng: 39.5692, centerName: "Central Administrative Centre" }, // Madinah Al-Munawwarah
+  4: { lat: 26.326, lng: 43.975, centerName: "Northern Administrative Centre" }, // Al-Qassim
+  5: { lat: 26.4207, lng: 50.0888, centerName: "Eastern Administrative Centre" }, // Eastern Province
+  6: { lat: 18.2164, lng: 42.5053, centerName: "Southern Administrative Centre" }, // Aseer
+  7: { lat: 28.3835, lng: 36.5662, centerName: "Northern Administrative Centre" }, // Tabuk
+  8: { lat: 27.5219, lng: 41.6961, centerName: "Northern Administrative Centre" }, // Hail
+  9: { lat: 30.9753, lng: 41.0381, centerName: "Northern Administrative Centre" }, // Northern Borders
+  10: { lat: 16.8894, lng: 42.5511, centerName: "Southern Administrative Centre" }, // Jazan
+  11: { lat: 17.4924, lng: 44.1277, centerName: "Southern Administrative Centre" }, // Najran
+  12: { lat: 20.0129, lng: 41.4676, centerName: "Western Administrative Centre" }, // Al-Baha
+  13: { lat: 29.9697, lng: 40.2064, centerName: "Northern Administrative Centre" }, // Al-Jouf
 };
 
 interface VillageSummary {
@@ -69,8 +80,12 @@ interface RegionMapData {
   regionId: string;
   name: string;
   centerName?: string;
-  lat: number;
-  lng: number;
+  /** Null when this region has no real coordinate (a row outside the
+   *  reference's 1-13 codes). The region still appears in the list and the
+   *  detail panel; it is simply not plotted, rather than being plotted at a
+   *  made-up location. */
+  lat: number | null;
+  lng: number | null;
   studyCount: number;
   orgCount: number;
   responseCount: number;
@@ -139,18 +154,15 @@ export function GeographicDistribution({
   const regionMapDataList = useMemo<RegionMapData[]>(() => {
     if (regions.length === 0) return [];
 
-    return regions.map((region, idx) => {
-      // Find coordinates fallback by region name matching
-      const matchedKey = Object.keys(KSA_REGION_COORDS).find((k) =>
-        region.name.toLowerCase().includes(k.toLowerCase()),
-      );
-      const coords = matchedKey
-        ? KSA_REGION_COORDS[matchedKey]
-        : {
-            lat: 24.0 + (idx % 3),
-            lng: 42.0 + Math.floor(idx / 3) * 3,
-            centerName: "Administrative Centre",
-          };
+    return regions.map((region) => {
+      // Exact lookup on the region's own master-data code. The previous
+      // fallback synthesised coordinates off the array index
+      // (`24.0 + (idx % 3)`), which put a marker at a plausible-looking but
+      // entirely made-up place on the map — worse than showing nothing,
+      // because nothing about the pin said it was invented. An unmatched
+      // region now carries no coordinate and is skipped by `mapMarkers`
+      // while keeping its row in the list and detail panel.
+      const coords = KSA_REGION_COORDS[String(region.code)];
 
       // Find governorates in this region
       const regionGovIds = new Set(
@@ -218,14 +230,13 @@ export function GeographicDistribution({
 
       return {
         regionId: region.id,
-        // Display name only — the coordinate lookup above deliberately keys
-        // off `region.name` (English) against KSA_REGION_COORDS and must
-        // stay that way; this is the separate, later "what the user sees"
-        // value, which does follow the UI locale.
+        // Free to follow the UI locale: the coordinate lookup above keys on
+        // `region.code`, not on this, so localizing the display name can no
+        // longer break the map.
         name: localizedName(region, locale),
-        centerName: coords.centerName,
-        lat: coords.lat,
-        lng: coords.lng,
+        centerName: coords?.centerName,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
         studyCount: regionStudies.length,
         orgCount: regionOrgs.length,
         responseCount: NO_RECORDED_RESPONSES,
@@ -260,14 +271,19 @@ export function GeographicDistribution({
   }, [regionMapDataList]);
 
   const mapMarkers = useMemo<MapRegionMarker[]>(() => {
-    return regionMapDataList.map((r) => ({
-      regionId: r.regionId,
-      name: r.name,
-      centerName: r.centerName,
-      lat: r.lat,
-      lng: r.lng,
-      studyCount: r.studyCount,
-    }));
+    return regionMapDataList
+      .filter(
+        (r): r is RegionMapData & { lat: number; lng: number } =>
+          r.lat !== null && r.lng !== null,
+      )
+      .map((r) => ({
+        regionId: r.regionId,
+        name: r.name,
+        centerName: r.centerName,
+        lat: r.lat,
+        lng: r.lng,
+        studyCount: r.studyCount,
+      }));
   }, [regionMapDataList]);
 
   return (
