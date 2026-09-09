@@ -4,6 +4,8 @@ import { CheckCircle2, Info, Pencil, Plus, ShieldCheck, XCircle } from "lucide-r
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { AppLocale } from "@/i18n/routing";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { localizedName } from "@/lib/bilingual";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -142,7 +144,9 @@ function VersionCard({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <p className="text-muted-foreground text-xs">{t("versionLabel")}</p>
-            <p className="text-foreground text-sm font-medium">{config.version}</p>
+            <p className="text-foreground text-sm font-medium">
+              <AutoTranslate text={config.version} />
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t("statusLabel")}</p>
@@ -164,7 +168,11 @@ function VersionCard({
           <div>
             <p className="text-muted-foreground text-xs">{t("publishedByLabel")}</p>
             <p className="text-foreground text-sm font-medium">
-              {config.publishedByName ?? "—"}
+              {config.publishedByName ? (
+                <AutoTranslate text={config.publishedByName} />
+              ) : (
+                "—"
+              )}
             </p>
           </div>
           <div>
@@ -194,11 +202,11 @@ function VersionCard({
           <div className="bg-muted/50 mt-4 rounded-md p-3">
             <p className="text-muted-foreground text-xs">{t("reviewerNoteLabel")}</p>
             <p className="text-foreground mt-1 text-sm">
-              {config.reviewNotes ?? "—"}
+              {config.reviewNotes ? <AutoTranslate text={config.reviewNotes} /> : "—"}
               {config.reviewedByName ? (
                 <span className="text-muted-foreground">
                   {" — "}
-                  {config.reviewedByName}
+                  <AutoTranslate text={config.reviewedByName} />
                   {config.reviewedAt ? (
                     <>
                       {" · "}
@@ -371,11 +379,17 @@ function ConfigHistoryCard() {
                       >
                         {t(`historyChangeType.${entry.changeType}`)}
                       </Badge>
-                      <span className="text-foreground">{entry.version}</span>
+                      <span className="text-foreground">
+                        <AutoTranslate text={entry.version} />
+                      </span>
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      {entry.changedByName ?? t("historyUnknownActor")} ·{" "}
-                      <FormattedDate value={entry.changedAt} withTime />
+                      {entry.changedByName ? (
+                        <AutoTranslate text={entry.changedByName} />
+                      ) : (
+                        t("historyUnknownActor")
+                      )}{" "}
+                      · <FormattedDate value={entry.changedAt} withTime />
                     </div>
                   </li>
                 ))}
@@ -672,6 +686,11 @@ export function MethodologyConfigTab() {
   // a DIFFERENT grant from this page's own write permission.
   const canTuneCleaning = usePermission("dataQuality", "write");
   const t = useTranslations("app.settings.methodology.config");
+  // Client-reported gap (2026-09-10) — each Strategic Axis's domain-list
+  // subtitle (e.g. "Livelihood, Culture") is a plain denormalized English
+  // name list on MethodologyConfig, same shape `useDomainArabicMap` already
+  // exists to resolve for Need/AI-decision domain strings elsewhere.
+  const { localizedDomain } = useDomainArabicMap();
   const canWrite = usePermission("methodologyQuestionBank", "write");
   const canApprove = usePermission("methodologyQuestionBank", "approve");
 
@@ -1247,7 +1266,7 @@ export function MethodologyConfigTab() {
                     <div>
                       <span className="text-foreground text-sm">{axisLabel}</span>
                       <p className="text-muted-foreground text-xs">
-                        {axis.domains.join(", ")}
+                        {axis.domains.map(localizedDomain).join(", ")}
                       </p>
                     </div>
                     <Input

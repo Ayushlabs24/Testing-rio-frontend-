@@ -12,13 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  getApiErrorMessage,
+  NEEDS_IMPORT_API_ERROR_CODES,
+} from "@/lib/api-error-message";
 import { extensionOf } from "@/lib/file-utils";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
-import type {
-  ImportNeedsResult,
-  ParsedPdfNeedItem,
-} from "@/services/needs/needs.types";
+import type { ImportNeedsResult, ParsedPdfNeedItem } from "@/services/needs/needs.types";
 import { EditableNeedsPreviewTable, ErrorTable } from "./needs-import-shared";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".txt"];
@@ -36,6 +36,7 @@ export function ImportSurveyResultsDialog({
 }) {
   const t = useTranslations("app.studies.importSurveyResults");
   const tCommon = useTranslations("app.studies.import");
+  const tErrors = useTranslations("app.studies.import.apiErrors");
   const fileInputRef = useRef<HTMLInputElement>(null);
   // A ref, not just the `importing` state — a state update only takes
   // effect on the next render, so a second click landing before that render
@@ -87,7 +88,14 @@ export function ImportSurveyResultsDialog({
       const preview = await needsService.previewSurveyResultsFromFile(studyId, selected);
       setExtractedNeeds(preview.needs);
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : tCommon("genericError"));
+      setSubmitError(
+        getApiErrorMessage(
+          error,
+          NEEDS_IMPORT_API_ERROR_CODES,
+          tErrors,
+          tCommon("genericError"),
+        ),
+      );
       setExtractedNeeds(null);
     } finally {
       setParsing(false);
@@ -128,7 +136,14 @@ export function ImportSurveyResultsDialog({
         setTimeout(() => handleOpenChange(false), 1200);
       }
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : tCommon("genericError"));
+      setSubmitError(
+        getApiErrorMessage(
+          error,
+          NEEDS_IMPORT_API_ERROR_CODES,
+          tErrors,
+          tCommon("genericError"),
+        ),
+      );
     } finally {
       importInFlightRef.current = false;
       setImporting(false);
@@ -178,7 +193,9 @@ export function ImportSurveyResultsDialog({
               <span className="text-foreground text-sm font-medium">
                 {file ? file.name : t("chooseFile")}
               </span>
-              <span className="text-muted-foreground text-xs">{t("allowedTypesHint")}</span>
+              <span className="text-muted-foreground text-xs">
+                {t("allowedTypesHint")}
+              </span>
             </button>
           ) : null}
 
@@ -259,7 +276,9 @@ export function ImportSurveyResultsDialog({
                   <p className="text-destructive text-lg font-semibold tabular-nums">
                     {otherErrors.length}
                   </p>
-                  <p className="text-muted-foreground text-xs">{tCommon("otherFailures")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {tCommon("otherFailures")}
+                  </p>
                 </div>
               </div>
 

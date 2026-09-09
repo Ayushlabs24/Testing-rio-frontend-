@@ -137,7 +137,7 @@
       "triggerLabel": "اتصل بنا",
       "title": "اتصل بنا",
       "description": "هل تواجه مشكلة في تسجيل الدخول أو لديك سؤال؟ أرسل لنا رسالة وسنرد عليك عبر البريد الإلكتروني.",
-      "organizationLabel": "الكيان",
+      "organizationLabel": "كيان",
       "organizationPlaceholder": "اختر كيان",
       "organizationLoading": "جارٍ تحميل الكيانات...",
       "organizationsError": "تعذّر تحميل قائمة الكيانات. يرجى المحاولة لاحقًا.",
@@ -180,6 +180,31 @@
       "purposeMin": "يرجى تقديم مزيد من التفاصيل (10 أحرف على الأقل).",
       "usePolicyRequired": "يرجى فتح شروط الاستخدام وقراءتها، ثم تحديد المربع للموافقة عليها.",
       "dataSharingRequired": "يرجى فتح سياسة مشاركة البيانات وقراءتها، ثم تحديد المربع للموافقة عليها."
+    },
+    "apiErrors": {
+      "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      "ACCOUNT_LOCKED": "تم قفل حسابك مؤقتًا. يرجى المحاولة مرة أخرى لاحقًا.",
+      "USER_DISABLED": "حساب المستخدم هذا معطّل.",
+      "ORG_INACTIVE": "هذا الكيان غير نشط.",
+      "UNAUTHENTICATED": "المصادقة مطلوبة. يرجى تسجيل الدخول مرة أخرى.",
+      "INVALID_CURRENT_PASSWORD": "كلمة المرور الحالية غير صحيحة.",
+      "INVALID_RESET_TOKEN": "رابط إعادة التعيين هذا غير صالح أو منتهي الصلاحية.",
+      "INVALID_SECTOR": "يجب أن يطابق القطاع أحد المجالات النشطة، أو اختر \"أخرى\".",
+      "INVALID_ROLE": "دور هذا المستخدم غير معروف.",
+      "EMAIL_ALREADY_REGISTERED": "يوجد حساب بهذا البريد الإلكتروني بالفعل.",
+      "ORGANIZATION_ALREADY_REGISTERED": "يوجد كيان بهذا الرقم التسجيلي بالفعل.",
+      "REGISTRATION_NUMBER_NOT_RECOGNISED": "هذا الرقم غير موجود في سجل الكيانات الوطني.",
+      "CONSENT_VERSION_STALE": "تم تحديث نموذج الموافقة منذ تحميلك لهذه الصفحة. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
+      "NO_ACTIVE_CONSENT_POLICY": "لا توجد سياسة موافقة نشطة لمشاركة البيانات مُعدّة حاليًا.",
+      "OTP_INCORRECT": "رمز غير صحيح. يرجى التحقق والمحاولة مرة أخرى.",
+      "OTP_EXPIRED": "انتهت صلاحية هذا الرمز. يرجى طلب رمز جديد.",
+      "OTP_ALREADY_USED": "تم استخدام هذا الرمز بالفعل. يرجى طلب رمز جديد.",
+      "OTP_TOO_MANY_ATTEMPTS": "عدد محاولات كبير جدًا. يرجى طلب رمز جديد.",
+      "OTP_CHALLENGE_NOT_FOUND": "تعذّر العثور على طلب هذا الرمز. يرجى طلب رمز جديد.",
+      "OTP_NOT_VERIFIED": "يرجى التحقق من رمزك أولاً.",
+      "ORG_NOT_FOUND": "تعذّر العثور على هذا الكيان.",
+      "NO_CONTACT_RECIPIENT": "لا تتوفر جهة اتصال لهذا الكيان حاليًا.",
+      "CONTACT_DELIVERY_FAILED": "تعذّر إرسال رسالتك الآن. يرجى المحاولة مرة أخرى لاحقًا."
     }
   },
   "app": {
@@ -243,8 +268,8 @@
       "redirecting": "جارٍ إعادة التوجيه..."
     },
     "sidebar": {
-      "dashboard": "لوحة التحكم",
-      "organization": "الكيان",
+      "dashboard": "لوحة التحكم الكاملة",
+      "organization": "كيان",
       "roles": "الأدوار",
       "users": "المستخدمون",
       "audit": "سجل التدقيق",
@@ -256,7 +281,7 @@
       "methodologyConfig": "إعدادات المنهجية",
       "priorityDashboard": "لوحة الأولويات",
       "reports": "التقارير",
-      "ncnpReport": "التقرير المجمّع لـ NCNP",
+      "ncnpReport": "التقرير المجمّع لـ إن سي إن بي",
       "archive": "الأرشيف",
       "sharing": "المشاركة",
       "initiatives": "المبادرات",
@@ -285,8 +310,8 @@
       "sharingAlertRejectedStudy": "تم رفض طلبك لـ \"{title}\"",
       "sharingAlertRejectedReport": "تم رفض طلبك لـ \"{title}\"",
       "sharingAlertReasonPrefix": "السبب: {reason}",
-      "ncnpReportAlertPendingReview": "تقرير NCNP المجمّع بانتظار مراجعتك",
-      "ncnpReportAlertReadyToPublish": "تقرير NCNP المجمّع جاهز للنشر",
+      "ncnpReportAlertPendingReview": "تقرير إن سي إن بي المجمّع بانتظار مراجعتك",
+      "ncnpReportAlertReadyToPublish": "تقرير إن سي إن بي المجمّع جاهز للنشر",
       "questionBankAlertDeactivated": "تم إلغاء تفعيل السؤال {questionId} — بانتظار مراجعتك",
       "questionBankAlertCreated": "سؤال جديد {questionId} — بانتظار مراجعتك",
       "questionBankAlertEdited": "تم تعديل السؤال {questionId} — بانتظار مراجعتك",
@@ -294,6 +319,7 @@
       "questionBankAlertRejected": "تم رفض السؤال {questionId}"
     },
     "footer": {
+      "brandName": "ريو",
       "rightsReserved": "جميع الحقوق محفوظة.",
       "version": "الإصدار {version}"
     },
@@ -301,7 +327,7 @@
       "title": "مرحبًا، {name}",
       "description": "إليك ما يجري في مساحة عملك.",
       "stats": {
-        "organizations": "الكيان",
+        "organizations": "كيان",
         "users": "المستخدمون",
         "roles": "الأدوار",
         "modules": "الوحدات",
@@ -369,7 +395,7 @@
           "reportsShared": "التقارير المشتركة",
           "pendingSharingRequests": "طلبات المشاركة المعلّقة"
         },
-        "orgColumn": "الكيان",
+        "orgColumn": "كيان",
         "activeStudyColumn": "الدراسة النشطة",
         "latestReportColumn": "أحدث تقرير",
         "sharingStatusColumn": "حالة المشاركة",
@@ -402,7 +428,7 @@
       },
       "systemReviewer": {
         "title": "مرحبًا، {name}",
-        "description": "مراجعاتك المعلّقة للتقرير المجمّع لـ NCNP وإشعاراتها.",
+        "description": "مراجعاتك المعلّقة للتقرير المجمّع لـ إن سي إن بي وإشعاراتها.",
         "stats": {
           "total": "إجمالي التقارير",
           "pendingReview": "بانتظار المراجعة",
@@ -410,7 +436,7 @@
           "released": "منشور",
           "rejected": "مرفوض"
         },
-        "pendingReviewsHeading": "مراجعات NCNP المعلّقة",
+        "pendingReviewsHeading": "مراجعات إن سي إن بي المعلّقة",
         "noPendingReviews": "لا توجد تقارير بانتظار مراجعتك حاليًا.",
         "generatedByColumn": "أُنشئ بواسطة",
         "generatedAtColumn": "تاريخ الإنشاء",
@@ -421,8 +447,8 @@
         "notificationsHeading": "الإشعارات",
         "noNotifications": "لا توجد إشعارات جديدة.",
         "alertType": {
-          "ncnp_report_pending_review": "تقرير مجمّع لـ NCNP بانتظار مراجعتك",
-          "ncnp_report_ready_to_publish": "تقرير مجمّع لـ NCNP معتمد وجاهز للنشر"
+          "ncnp_report_pending_review": "تقرير مجمّع لـ إن سي إن بي بانتظار مراجعتك",
+          "ncnp_report_ready_to_publish": "تقرير مجمّع لـ إن سي إن بي معتمد وجاهز للنشر"
         }
       },
       "researchOfficer": {
@@ -867,7 +893,7 @@
         }
       },
       "organization": {
-        "title": "الكيان",
+        "title": "كيان",
         "description": "إدارة ملف كيانك.",
         "edit": "تعديل",
         "cancel": "إلغاء",
@@ -943,7 +969,7 @@
           "data_analyst": "محلل البيانات",
           "system_admin": "مسؤول النظام",
           "read_only_viewer": "مشاهد للقراءة فقط",
-          "center_supervisor": "مشرف المركز (مشرف NCNP)",
+          "center_supervisor": "مشرف المركز (مشرف إن سي إن بي)",
           "system_reviewer": "مراجع النظام",
           "citizen_guest": "مواطن / مستفيد (زائر)"
         },
@@ -955,8 +981,8 @@
           "data_analyst": "يعالج البيانات، ويراجع جودتها، ويُعِدّ التقارير ولوحات التحكم.",
           "system_admin": "يدير الحسابات والأدوار والصلاحيات وسجل التدقيق وإعدادات التهيئة.",
           "read_only_viewer": "يطّلع على المخرجات المصرَّح بها دون تعديل.",
-          "center_supervisor": "صلاحية اطّلاع ومتابعة عبر الكيانات لمراقبة الدراسات والبيانات والتقارير والتقرير الموحَّد لـ NCNP — دون صلاحية تعديل بيانات الكيان.",
-          "system_reviewer": "يراجع التقرير الموحَّد لـ NCNP — يوافق عليه أو يرفضه (مع ملاحظات إلزامية) قبل نشره من قبل مسؤول النظام. للقراءة فقط في كل ما عدا ذلك.",
+          "center_supervisor": "صلاحية اطّلاع ومتابعة عبر الكيانات لمراقبة الدراسات والبيانات والتقارير والتقرير الموحَّد لـ إن سي إن بي — دون صلاحية تعديل بيانات الكيان.",
+          "system_reviewer": "يراجع التقرير الموحَّد لـ إن سي إن بي — يوافق عليه أو يرفضه (مع ملاحظات إلزامية) قبل نشره من قبل مسؤول النظام. للقراءة فقط في كل ما عدا ذلك.",
           "citizen_guest": "يستجيب للاستبيانات عبر التحقق برمز لمرة واحدة (OTP)؛ لا يملك وصولاً داخلياً إلى التطبيق."
         },
         "access": {
@@ -982,7 +1008,7 @@
           "reportsDashboards": "التقارير ولوحات التحكم",
           "archiveSharingAudit": "الأرشيف والمشاركة والتدقيق",
           "surveyBuilder": "منشئ الاستبيانات",
-          "ncnpReport": "التقرير المجمّع لـ NCNP",
+          "ncnpReport": "التقرير المجمّع لـ إن سي إن بي",
           "systemLogs": "سجلات النظام",
           "backups": "النسخ الاحتياطية",
           "auditLog": "سجل التدقيق",
@@ -1000,11 +1026,11 @@
         },
         "grants": {
           "heading": "أذونات الصلاحيات الممنوحة",
-          "note": "RIO-RBAC-002 — مشرف المركز/الهيئة الوطنية للأعمال الخيرية (NCNP) للقراءة فقط في كل مكان افتراضيًا. الإذن الممنوح هنا هو الطريقة الوحيدة التي يحصل بها هذا الدور على إجراء تعديل/إنشاء/اعتماد محدد، يُطبَّق على جميع الكيانات، مع إمكانية تحديد مدة زمنية محددة له.",
+          "note": "RIO-RBAC-002 — مشرف المركز/الهيئة الوطنية للأعمال الخيرية (إن سي إن بي) للقراءة فقط في كل مكان افتراضيًا. الإذن الممنوح هنا هو الطريقة الوحيدة التي يحصل بها هذا الدور على إجراء تعديل/إنشاء/اعتماد محدد، يُطبَّق على جميع الكيانات، مع إمكانية تحديد مدة زمنية محددة له.",
           "newGrant": "إذن جديد",
           "granteeLabel": "الممنوح له",
-          "granteePlaceholder": "اختر مشرف مركز/NCNP",
-          "noSupervisors": "لم يتم العثور على مستخدمي مشرف مركز/NCNP.",
+          "granteePlaceholder": "اختر مشرف مركز/إن سي إن بي",
+          "noSupervisors": "لم يتم العثور على مستخدمي مشرف مركز/إن سي إن بي.",
           "permissionLabel": "الصلاحية",
           "moduleLabel": "الوحدة",
           "modulePlaceholder": "اختر وحدة",
@@ -1066,7 +1092,7 @@
         "title": "المستخدمون",
         "description": "كل من لديه صلاحية وصول إلى هذا الكيان.",
         "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني...",
-        "filterOrganizationLabel": "الكيان",
+        "filterOrganizationLabel": "كيان",
         "filterOrganizationAll": "كل الكيانات",
         "noResults": "لم يتم العثور على مستخدمين.",
         "newUser": "مستخدم جديد",
@@ -1119,7 +1145,7 @@
       "organizations": {
         "title": "الكيانات",
         "description": "كل كيان على المنصة.",
-        "nameColumn": "الكيان",
+        "nameColumn": "كيان",
         "regionColumn": "المنطقة",
         "sectorColumn": "القطاع",
         "membersColumn": "الأعضاء",
@@ -1249,7 +1275,7 @@
           "prune_backups": "تطبيق سياسة الاحتفاظ بالنسخ"
         },
         "entities": {
-          "organization": "الكيان",
+          "organization": "كيان",
           "user": "المستخدم",
           "study": "الدراسة",
           "need": "الاحتياج",
@@ -1263,7 +1289,7 @@
           "evidence_document": "مستند الأدلة",
           "evidence_document_summary": "ملخص مستند الأدلة",
           "combined_report_summary": "الملخص المجمّع للتقرير",
-          "ncnp_report": "التقرير المجمّع لـ NCNP",
+          "ncnp_report": "التقرير المجمّع لـ إن سي إن بي",
           "question": "عنصر بنك الأسئلة",
           "need_decision": "قرار",
           "consent_policy": "سياسة الموافقة"
@@ -1449,7 +1475,26 @@
         "surveyScopeLabel": "نطاق الاستبيان (اختياري)",
         "surveyScopePlaceholder": "جميع استبيانات هذه الدراسة",
         "surveyScopeAll": "جميع استبيانات هذه الدراسة",
-        "stillNeeded": "ما زال مطلوبًا: {fields}"
+        "stillNeeded": "ما زال مطلوبًا: {fields}",
+        "reportTypeNames": {
+          "RPT01": "تقرير الاستبيان الفردي",
+          "RPT02": "التقرير الجماعي / لوحة التحكم",
+          "RPT03": "تقرير الأولوية القصوى",
+          "RPT04": "الاحتياجات حسب المجال",
+          "RPT05": "الاحتياجات حسب المحافظة",
+          "RPT06": "التصفية حسب المنطقة/المحافظة",
+          "RPT07": "الاحتياجات حسب الجنس",
+          "RPT08": "نتائج مؤشرات الأداء",
+          "RPT09": "ترتيب الأولوية",
+          "RPT10": "تقرير جودة البيانات",
+          "RPT11": "عرض الدراسات السابقة",
+          "RPT12": "حالة مشاركة التقرير",
+          "RPT13": "الملخص التنفيذي",
+          "RPT14": "تقرير القرية",
+          "RPT15": "تقرير الاستبيان ولوحة التحكم",
+          "RPT16": "تقرير الأدلة والدرجات المجمّع",
+          "RPT17": "تقرير مستند إلى وثائق الأدلة"
+        }
       },
       "content": {
         "reportLabel": "تقييم احتياجات المجتمع",
@@ -1510,7 +1555,7 @@
         "orgTopPriorities": "أعلى أولويات الكيان",
         "comparison": "هذا الاستبيان مقابل الكيان",
         "thisSurvey": "هذا الاستبيان",
-        "organisation": "الكيان",
+        "organisation": "كيان",
         "cov": {
           "needs": "الاحتياجات في الدراسة",
           "coveredHere": "مشمولة هنا",
@@ -2065,7 +2110,11 @@
         "submit": "رفع",
         "submitting": "جارٍ الرفع...",
         "missingFields": "يرجى تعبئة عنوان الدراسة والتاريخ والمؤلف وإصدار المنهجية وإرفاق ملف.",
-        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+        "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+        "apiErrors": {
+          "FILE_REQUIRED": "الملف مطلوب.",
+          "MISSING_FIELDS": "عنوان الدراسة وتاريخها والمؤلف وإصدار المنهجية كلها مطلوبة."
+        }
       }
     },
     "sharing": {
@@ -2086,7 +2135,7 @@
       "noSharedReports": "لم تتم مشاركة أي دراسات معك بعد.",
       "loadError": "تعذّر تحميل طلبات المشاركة. يرجى المحاولة مرة أخرى.",
       "studyColumn": "الدراسة",
-      "orgColumn": "الكيان",
+      "orgColumn": "كيان",
       "roleColumn": "العلاقة",
       "roleOwner": "المالك",
       "roleRequester": "الطالب",
@@ -2106,7 +2155,7 @@
       "view": "عرض الدراسة المشتركة",
       "create": {
         "title": "طلب الوصول إلى دراسة",
-        "ownerOrgLabel": "الكيان",
+        "ownerOrgLabel": "كيان",
         "ownerOrgPlaceholder": "ابحث عن كيان...",
         "ownerOrgSearchPlaceholder": "ابحث بالاسم",
         "ownerOrgEmpty": "لم يتم العثور على كيانات مطابقة.",
@@ -2174,7 +2223,7 @@
         "label": "الصفحة {page} من {count}"
       },
       "reportColumn": "التقرير",
-      "orgColumn": "الكيان",
+      "orgColumn": "كيان",
       "roleColumn": "العلاقة",
       "roleOwner": "المالك",
       "roleRequester": "الطالب",
@@ -2194,7 +2243,7 @@
       "view": "عرض التقرير المشترك",
       "create": {
         "title": "طلب الوصول إلى تقرير",
-        "ownerOrgLabel": "الكيان",
+        "ownerOrgLabel": "كيان",
         "ownerOrgPlaceholder": "ابحث عن كيان...",
         "ownerOrgSearchPlaceholder": "ابحث بالاسم",
         "ownerOrgEmpty": "لم يتم العثور على كيانات مطابقة.",
@@ -2585,7 +2634,7 @@
       "form": {
         "createTitle": "دراسة جديدة",
         "createDescription": "امنح الدراسة عنوانًا — حدد احتياجها وأدلتها لاحقًا.",
-        "organizationLabel": "الكيان",
+        "organizationLabel": "كيان",
         "organizationPlaceholder": "اختر الكيان الذي تنتمي إليه هذه الدراسة",
         "organizationHint": "بصفتك مسؤول النظام، اختر الكيان الذي تنتمي إليه هذه الدراسة — ستطابق المحافظات/المراكز أدناه نطاق ذلك الكيان.",
         "editTitle": "تعديل الدراسة",
@@ -2954,6 +3003,15 @@
         "cancel": "إلغاء",
         "close": "إغلاق",
         "genericError": "حدث خطأ ما أثناء استيراد هذا الملف. يرجى المحاولة مرة أخرى.",
+        "apiErrors": {
+          "NO_FILE": "الملف مطلوب.",
+          "UNSUPPORTED_FILE_TYPE": "يتم دعم ملفات CSV و XLS و XLSX و PDF فقط.",
+          "PDF_PARSING_FAILED": "تعذّرت قراءة ملف PDF هذا. يرجى التحقق من الملف والمحاولة مرة أخرى.",
+          "SURVEY_PARSING_FAILED": "تعذّرت قراءة هذا المستند. يرجى التحقق من الملف والمحاولة مرة أخرى.",
+          "STUDY_NOT_FOUND": "تعذّر العثور على هذه الدراسة.",
+          "EMPTY_PAYLOAD": "عنصر احتياج واحد على الأقل مطلوب.",
+          "IMPORT_TOO_LARGE": "يحتوي هذا الملف على صفوف أكثر من اللازم لعملية استيراد واحدة."
+        },
         "totalRows": "إجمالي الصفوف",
         "imported": "المستوردة",
         "failed": "الفاشلة",
@@ -4336,7 +4394,7 @@
         "emailPlaceholder": "sarah@ngo.org",
         "roleLabel": "الدور",
         "rolePlaceholder": "اختر دورًا...",
-        "organizationLabel": "الكيان",
+        "organizationLabel": "كيان",
         "submit": "إرسال الدعوة",
         "submitting": "جارٍ الإرسال...",
         "cancel": "إلغاء",
@@ -4395,6 +4453,7 @@
     "studies": {
       "title": "دراسات الكيان",
       "platformTitle": "جميع دراسات المنصة",
+      "cycleLabel": "الدورة رقم {number}",
       "searchPlaceholder": "البحث في الدراسات بالاسم...",
       "filterOrganization": "تصفية حسب الكيان",
       "filterStatus": "تصفية حسب الحالة",
@@ -4402,7 +4461,7 @@
       "allStatuses": "جميع الحالات",
       "columns": {
         "name": "اسم الدراسة",
-        "organization": "الكيان",
+        "organization": "كيان",
         "village": "القرى / الجغرافيا",
         "surveysCount": "الاستبيانات المرتبطة",
         "status": "حالة الدراسة",
@@ -4446,7 +4505,7 @@
       "columns": {
         "name": "عنوان الاستبيان",
         "linkedStudy": "الدراسة المرتبطة",
-        "organization": "الكيان",
+        "organization": "كيان",
         "targetVillage": "القرية المستهدفة",
         "sector": "القطاع / المجال",
         "status": "الحالة",
@@ -4467,7 +4526,7 @@
       "drawer": {
         "title": "تفاصيل الاستبيان ونتائج الاستجابات",
         "surveyInfo": "نظرة عامة على الاستبيان",
-        "organization": "الكيان",
+        "organization": "كيان",
         "linkedStudy": "الدراسة المرتبطة",
         "village": "القرية المستهدفة",
         "domainCategory": "القطاع / المجال",
@@ -4529,7 +4588,7 @@
       "allSectors": "جميع القطاعات",
       "columns": {
         "title": "عنوان الدراسة / التقرير",
-        "organization": "الكيان",
+        "organization": "كيان",
         "region": "المنطقة",
         "sector": "القطاع / المجال",
         "kind": "نوع الإدخال",
@@ -4604,7 +4663,7 @@
       "paginationShowing": "عرض {start} - {end} من {total} حدث",
       "paginationPage": "الصفحة {current} من {total}",
       "entityTypes": {
-        "organization": "الكيان",
+        "organization": "كيان",
         "user": "المستخدم",
         "study": "الدراسة",
         "report": "التقرير",
@@ -4621,7 +4680,7 @@
       "columns": {
         "timestamp": "الطابع الزمني",
         "actor": "الفاعل",
-        "organization": "الكيان",
+        "organization": "كيان",
         "action": "الإجراء",
         "entity": "نوع الجهة والتسمية",
         "result": "النتيجة / الحالة",
@@ -4751,7 +4810,7 @@
         "message": "الرسالة",
         "status": "الحالة",
         "duration": "المدة",
-        "organization": "الكيان",
+        "organization": "كيان",
         "actions": "إجراءات"
       },
       "detail": {
@@ -4761,7 +4820,7 @@
         "context": "السياق",
         "copyJson": "نسخ JSON",
         "requestId": "معرّف الطلب",
-        "organization": "الكيان",
+        "organization": "كيان",
         "actor": "الفاعل",
         "ipAddress": "عنوان IP",
         "userAgent": "وكيل المستخدم",
@@ -4828,18 +4887,18 @@
       "emptyState": "لا توجد تنبيهات حوكمة حديثة في هذه الفئة."
     },
     "ncnpReport": {
-      "title": "التقرير المجمّع لـ NCNP",
+      "title": "التقرير المجمّع لـ إن سي إن بي",
       "eyebrow": "منصة RIO — المجلس الوطني لشراكات الكيانات غير الحكومية",
       "doctype": "تجميع على مستوى المنصة — نظرة عامة على تقييم الاحتياجات على مستوى المملكة",
-      "description": "يجمّع هذا التقرير نظرة عامة وطنية على مستوى المملكة للاحتياجات والكيانات والدراسات والاستبيانات العامة والاستجابات عبر منصة NCNP للفترة المشمولة بالتقرير المحددة. يحتوي على مقاييس مجمَّعة فقط — للاطلاع على السجلات الفردية، راجع القسم ذي الصلة داخل التطبيق.",
-      "forbidden": "يمكن لمستخدمي NCNP فقط عرض هذا التقرير.",
+      "description": "يجمّع هذا التقرير نظرة عامة وطنية على مستوى المملكة للاحتياجات والكيانات والدراسات والاستبيانات العامة والاستجابات عبر منصة إن سي إن بي للفترة المشمولة بالتقرير المحددة. يحتوي على مقاييس مجمَّعة فقط — للاطلاع على السجلات الفردية، راجع القسم ذي الصلة داخل التطبيق.",
+      "forbidden": "يمكن لمستخدمي إن سي إن بي فقط عرض هذا التقرير.",
       "loadError": "تعذّر تحميل التقرير. حاول مرة أخرى.",
       "generatedAt": "أُنشئ في {date}",
       "generatedBy": "أُنشئ بواسطة",
       "reportId": "معرّف التقرير",
       "region": "المنطقة",
       "allRegions": "جميع المناطق",
-      "footerDisclaimer": "يحتوي هذا التقرير على مقاييس مجمَّعة فقط. السجلات التفصيلية متاحة داخل تطبيق NCNP.",
+      "footerDisclaimer": "يحتوي هذا التقرير على مقاييس مجمَّعة فقط. السجلات التفصيلية متاحة داخل تطبيق إن سي إن بي.",
       "condensedScope": "آخر {days} يومًا · {region}",
       "page1Title": "الملخص التنفيذي",
       "page2Title": "نظرة عامة على الكيانات",
@@ -4851,7 +4910,7 @@
       "page5Title": "تحليلات الاستجابات",
       "page5Description": "اتجاه الاستجابات على مستوى المنصة، والتوزيع الجغرافي والديموغرافي، والكيانات الأكثر تلقيًا للاستجابات.",
       "orgSummaryTitle": "ملخص الكيانات",
-      "orgSummaryColOrg": "الكيان",
+      "orgSummaryColOrg": "كيان",
       "orgSummaryColStudies": "الدراسات",
       "orgSummaryCaption": "ثلاثة تصنيفات منفصلة لأفضل 5 — قائمة واحدة مرتبة حسب مقياس واحد قد تخفي كيانات متفوقة في مقاييس أخرى.",
       "orgSummaryByStudies": "أفضل الكيانات — حسب الدراسات",
@@ -5006,15 +5065,15 @@
         "approve": "اعتماد",
         "reject": "رفض",
         "publish": "نشر",
-        "approveDialogTitle": "اعتماد هذا التقرير المجمّع لـ NCNP",
-        "rejectDialogTitle": "رفض هذا التقرير المجمّع لـ NCNP",
+        "approveDialogTitle": "اعتماد هذا التقرير المجمّع لـ إن سي إن بي",
+        "rejectDialogTitle": "رفض هذا التقرير المجمّع لـ إن سي إن بي",
         "reviewerNotesLabel": "ملاحظات المراجع",
         "reviewerNotesRequired": "أدخل ملاحظات المراجع قبل المتابعة.",
         "cancel": "إلغاء",
         "confirmApprove": "اعتماد",
         "confirmReject": "رفض",
         "actionError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-        "listTitle": "التقارير المجمّعة لـ NCNP",
+        "listTitle": "التقارير المجمّعة لـ إن سي إن بي",
         "listDescription": "كل تقرير تم إنشاؤه وسجل مراجعته.",
         "statusColumn": "الحالة",
         "generatedColumn": "تاريخ الإنشاء",
@@ -5023,7 +5082,7 @@
         "view": "عرض",
         "noReports": "لم يتم إنشاء أي تقارير بعد.",
         "loadError": "تعذّر تحميل هذا التقرير. يرجى المحاولة مرة أخرى.",
-        "backToList": "العودة إلى التقارير المجمّعة لـ NCNP",
+        "backToList": "العودة إلى التقارير المجمّعة لـ إن سي إن بي",
         "generatedByOn": "أنشأه {name} في {date}",
         "reviewerLabel": "المراجع",
         "reviewedOnLabel": "تاريخ المراجعة",
@@ -5068,79 +5127,6 @@
         "file_upload": "مستند مرفوع",
         "citizen_input": "مدخلات المواطن",
         "field_survey": "استبيان ميداني"
-      }
-    },
-    "backups": {
-      "title": "النسخ الاحتياطية",
-      "description": "كل محاولة نسخ احتياطي مع حجمها ومدتها وبصمتها. السؤال الذي تجيب عنه هذه الشاشة ليس هل تمت النسخ، بل هل يمكن الاستعادة.",
-      "loadError": "تعذر تحميل سجل النسخ الاحتياطية.",
-      "empty": "لا توجد عمليات نسخ مسجّلة بعد.",
-      "running": "جارٍ التنفيذ…",
-      "runDatabase": "نسخ قاعدة البيانات",
-      "runAttachments": "نسخ المرفقات",
-      "runSucceeded": "اكتمل نسخ {kind}.",
-      "runFailed": "فشلت عملية النسخ: {error}",
-      "runError": "تعذر إكمال الطلب.",
-      "verify": "تحقق",
-      "prune": "تطبيق سياسة الاحتفاظ",
-      "pruned": "تم حذف {count} من العمليات. يُحتفظ دائمًا بأحدث نسخة ناجحة من كل نوع.",
-      "summary": {
-        "lastDatabase": "آخر نسخ لقاعدة البيانات",
-        "lastAttachments": "آخر نسخ للمرفقات",
-        "failures": "حالات الفشل خلال 7 أيام",
-        "stored": "المخزّن على القرص",
-        "never": "لم يحدث"
-      },
-      "noDatabaseBackup": {
-        "title": "لم تنجح أي نسخة لقاعدة البيانات إطلاقًا.",
-        "detail": "لا يستطيع pg_dump قراءة قاعدة البيانات بدور التطبيق — فأمن الصفوف مفروض على 43 جدولًا ولا يجوز لأي دور تطبيق تجاوزه. يجب أن يشغّل مسؤول قاعدة البيانات الملف scripts/sql/nfr010-backup-role.sql لإنشاء الدور cnap_backup، ثم يُضبط BACKUP_DATABASE_URL عليه. حتى ذلك الحين تُنسخ المرفقات فقط."
-      },
-      "kind": {
-        "database": "قاعدة البيانات",
-        "attachments": "المرفقات"
-      },
-      "status": {
-        "running": "قيد التنفيذ",
-        "succeeded": "نجحت",
-        "failed": "فشلت"
-      },
-      "trigger": {
-        "schedule": "مجدولة",
-        "manual": "يدوية"
-      },
-      "table": {
-        "started": "البداية",
-        "kind": "النوع",
-        "status": "الحالة",
-        "size": "الحجم",
-        "duration": "المدة",
-        "trigger": "المصدر",
-        "retention": "يُحتفظ حتى",
-        "integrity": "السلامة",
-        "files": "{count} ملف",
-        "pruned": "تم الحذف"
-      },
-      "integrity": {
-        "ok": "البصمة مطابقة",
-        "CHECKSUM_MISMATCH": "البصمة غير مطابقة — الملف تالف",
-        "SIZE_CHANGED": "تغيّر الحجم منذ كتابته",
-        "FILE_MISSING": "الملف غير موجود على القرص",
-        "FILE_PRUNED": "تم حذف الملف",
-        "RUN_DID_NOT_SUCCEED": "لم تنجح هذه العملية",
-        "NO_ARTEFACT_RECORDED": "لا يوجد ملف مسجل",
-        "RUN_NOT_FOUND": "العملية غير موجودة",
-        "unknown": "تعذر التحقق"
-      },
-      "pagination": {
-        "previous": "السابق",
-        "next": "التالي",
-        "label": "صفحة {page} من {count}"
-      },
-      "filters": {
-        "kind": "النوع",
-        "allKinds": "كل الأنواع",
-        "status": "الحالة",
-        "allStatuses": "كل الحالات"
       }
     },
     "backups": {

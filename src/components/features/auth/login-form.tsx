@@ -12,12 +12,13 @@ import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useRouter } from "@/i18n/navigation";
-import { ApiError } from "@/services/api/types";
+import { AUTH_API_ERROR_CODES, getApiErrorMessage } from "@/lib/api-error-message";
 import { authService } from "@/services/auth/auth.service";
 
 export function LoginForm() {
   const t = useTranslations("auth.login");
   const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.apiErrors");
   const router = useRouter();
   const { setSession } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,7 +43,9 @@ export function LoginForm() {
       setSession(session);
       router.push("/dashboard");
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(
+        getApiErrorMessage(error, AUTH_API_ERROR_CODES, tErrors, t("genericError")),
+      );
     }
   };
 

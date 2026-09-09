@@ -3,6 +3,8 @@
 import { ClipboardList, Search, Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,17 +141,23 @@ export function OrgStudiesTab({ organizationId }: OrgStudiesTabProps) {
                 <TableRow key={study.id}>
                   <TableCell className="text-foreground font-medium">
                     <div>
-                      <p>{study.title}</p>
+                      <p>
+                        <AutoTranslate text={study.title} />
+                      </p>
                       <span className="text-muted-foreground font-mono text-[10px]">
-                        Cycle #{study.cycleNumber}
+                        {t("cycleLabel", { number: study.cycleNumber })}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {study.villages.length > 0 ? study.villages.join(", ") : "—"}
+                    {study.villages.length > 0 ? (
+                      <AutoTranslate text={study.villages.join(", ")} />
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground font-mono text-xs">
-                    {new Date(study.createdAt).toLocaleDateString()}
+                    <FormattedDate value={study.createdAt} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="gap-1 text-xs" disabled>

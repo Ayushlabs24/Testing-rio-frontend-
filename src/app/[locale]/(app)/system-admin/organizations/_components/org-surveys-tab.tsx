@@ -3,6 +3,7 @@
 import { ClipboardEdit, Search, Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ interface OrgSurveysTabProps {
 
 export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
   const t = useTranslations("systemAdmin.surveys");
+  const tStatus = useTranslations("app.studies.survey.status");
   const [surveys, setSurveys] = useState<SurveyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -139,14 +141,16 @@ export function OrgSurveysTab({ organizationId }: OrgSurveysTabProps) {
               pagedSurveys.map((survey) => (
                 <TableRow key={survey.id}>
                   <TableCell className="text-foreground font-medium">
-                    {survey.title}
+                    <AutoTranslate text={survey.title} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {survey.studyTitle ?? "—"}
+                    {survey.studyTitle ? <AutoTranslate text={survey.studyTitle} /> : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {survey.status}
+                    <Badge variant="outline" className="text-xs">
+                      {tStatus.has(survey.status)
+                        ? tStatus(survey.status as Parameters<typeof tStatus>[0])
+                        : survey.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">

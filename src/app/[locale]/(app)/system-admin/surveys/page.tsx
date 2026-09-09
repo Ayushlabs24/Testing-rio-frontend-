@@ -44,6 +44,7 @@ interface SurveyItem {
 
 export default function SystemAdminSurveysPage() {
   const t = useTranslations("systemAdmin.surveys");
+  const tNeedStatus = useTranslations("app.studies.status");
   const [surveys, setSurveys] = useState<SurveyItem[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
@@ -172,24 +173,32 @@ export default function SystemAdminSurveysPage() {
                     filteredSurveys.map((survey) => (
                       <TableRow key={survey.id}>
                         <TableCell className="text-foreground font-medium">
-                          {survey.title}
+                          <AutoTranslate text={survey.title} />
                         </TableCell>
                         <TableCell className="text-foreground text-xs font-medium">
-                          {survey.orgName ?? "—"}
+                          {survey.orgName ? <AutoTranslate text={survey.orgName} /> : "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {survey.studyTitle ?? "—"}
+                          {survey.studyTitle ? (
+                            <AutoTranslate text={survey.studyTitle} />
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
                             className={
                               survey.status === "survey_published"
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-700 capitalize dark:text-emerald-400"
-                                : "text-xs capitalize"
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-400"
+                                : "text-xs"
                             }
                           >
-                            {survey.status.replace("_", " ")}
+                            {tNeedStatus.has(survey.status)
+                              ? tNeedStatus(
+                                  survey.status as Parameters<typeof tNeedStatus>[0],
+                                )
+                              : survey.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-primary font-mono text-xs font-bold">

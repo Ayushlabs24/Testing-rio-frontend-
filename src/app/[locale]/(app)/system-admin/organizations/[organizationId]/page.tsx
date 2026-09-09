@@ -22,6 +22,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState, useMemo, useCallback } from "react";
 import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/lib/bilingual";
+import { formatDate } from "@/lib/format-date";
 import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -79,6 +80,17 @@ export default function SystemAdminOrganizationDetailPage({
   const tOrgs = useTranslations("systemAdmin.organizations");
   const tNgo = useTranslations("systemAdmin.ngoAdmin");
   const tUsers = useTranslations("systemAdmin.users");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
+  // Client-reported gap (2026-09-10) — this page showed the backend's raw
+  // English role name (e.g. "NGO Admin") instead of resolving it through the
+  // same `app.settings.roles.roleNames` dictionary every other role display
+  // in the app already uses (see app-topbar.tsx). `key` is missing for a
+  // custom/unrecognised role, hence the fallback to the raw name.
+  const roleLabel = useCallback(
+    (key: string, fallbackName: string) =>
+      tRoleNames.has(key) ? tRoleNames(key) : fallbackName,
+    [tRoleNames],
+  );
 
   const [organization, setOrganization] = useState<OrganizationSummary | null>(null);
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
@@ -277,8 +289,7 @@ export default function SystemAdminOrganizationDetailPage({
               </span>
               <span>•</span>
               <span>
-                {tOrgs("table.createdDate")}:{" "}
-                {new Date(organization.createdAt).toLocaleDateString()}
+                {tOrgs("table.createdDate")}: {formatDate(organization.createdAt, locale)}
               </span>
             </div>
           </div>
@@ -428,7 +439,9 @@ export default function SystemAdminOrganizationDetailPage({
                     </p>
                     {hasNgoAdmin ? (
                       <div className="mt-1">
-                        <p className="text-foreground font-semibold">{ngoAdminName}</p>
+                        <p className="text-foreground font-semibold">
+                          {ngoAdminName ? <AutoTranslate text={ngoAdminName} /> : null}
+                        </p>
                         <p className="text-muted-foreground text-xs">
                           {ngoAdminEmail ?? "—"}
                         </p>
@@ -441,19 +454,19 @@ export default function SystemAdminOrganizationDetailPage({
                   </div>
 
                   {currentNgoAdmin ? (
-                    <div className="border-border/50 grid grid-cols-2 gap-2 border-t pt-2 text-xs">
-                      <div>
+                    <div className="border-border/50 flex flex-col gap-2 border-t pt-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-muted-foreground">{tNgo("status")}:</span>
-                        <Badge variant="outline" className="ml-1.5 capitalize">
-                          {currentNgoAdmin.status}
+                        <Badge variant="outline">
+                          {tUsers(`statusBadges.${currentNgoAdmin.status}` as never)}
                         </Badge>
                       </div>
-                      <div>
+                      <div className="flex flex-wrap items-baseline gap-1">
                         <span className="text-muted-foreground">
                           {tNgo("assignedDate")}:
                         </span>
-                        <span className="ml-1 font-mono">
-                          {new Date(currentNgoAdmin.createdAt).toLocaleDateString()}
+                        <span className="font-mono">
+                          {formatDate(currentNgoAdmin.createdAt, locale)}
                         </span>
                       </div>
                     </div>
@@ -571,7 +584,7 @@ export default function SystemAdminOrganizationDetailPage({
                       <SelectItem value="all">{tUsers("allRoles")}</SelectItem>
                       {availableRoles.map((r) => (
                         <SelectItem key={r.key} value={r.key}>
-                          {r.name}
+                          {roleLabel(r.key, r.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -642,7 +655,7 @@ export default function SystemAdminOrganizationDetailPage({
                                 </span>
                                 {isNgoAdmin ? (
                                   <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
-                                    NGO Admin
+                                    {tNgo("usersTab.badgeAdmin")}
                                   </Badge>
                                 ) : null}
                               </div>
@@ -651,7 +664,9 @@ export default function SystemAdminOrganizationDetailPage({
                               {user.email}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{user.role.name}</Badge>
+                              <Badge variant="outline">
+                                {roleLabel(user.role.key, user.role.name)}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -668,7 +683,7 @@ export default function SystemAdminOrganizationDetailPage({
                               </Badge>
                             </TableCell>
                             <TableCell className="text-muted-foreground font-mono text-xs">
-                              {new Date(user.createdAt).toLocaleDateString()}
+                              {formatDate(user.createdAt, locale)}
                             </TableCell>
                             <TableCell className="text-right">
                               {canEdit ? (

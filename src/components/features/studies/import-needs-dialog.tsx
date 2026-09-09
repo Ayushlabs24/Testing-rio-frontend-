@@ -12,13 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  getApiErrorMessage,
+  NEEDS_IMPORT_API_ERROR_CODES,
+} from "@/lib/api-error-message";
 import { extensionOf } from "@/lib/file-utils";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
-import type {
-  ImportNeedsResult,
-  ParsedPdfNeedItem,
-} from "@/services/needs/needs.types";
+import type { ImportNeedsResult, ParsedPdfNeedItem } from "@/services/needs/needs.types";
 import { EditableNeedsPreviewTable, ErrorTable } from "./needs-import-shared";
 
 const ALLOWED_EXTENSIONS = [".csv", ".xls", ".xlsx", ".pdf"];
@@ -47,6 +47,7 @@ export function ImportNeedsDialog({
   onImported: () => void;
 }) {
   const t = useTranslations("app.studies.import");
+  const tErrors = useTranslations("app.studies.import.apiErrors");
   const fileInputRef = useRef<HTMLInputElement>(null);
   // A ref, not just the `importing` state — a state update only takes
   // effect on the next render, so a second click landing before that render
@@ -99,7 +100,14 @@ export function ImportNeedsDialog({
         const preview = await needsService.previewPdfFromFile(studyId, selected);
         setPdfNeeds(preview.needs);
       } catch (error) {
-        setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+        setSubmitError(
+          getApiErrorMessage(
+            error,
+            NEEDS_IMPORT_API_ERROR_CODES,
+            tErrors,
+            t("genericError"),
+          ),
+        );
         setPdfNeeds(null);
       } finally {
         setParsingPdf(false);
@@ -148,7 +156,14 @@ export function ImportNeedsDialog({
         setTimeout(() => handleOpenChange(false), 1200);
       }
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+      setSubmitError(
+        getApiErrorMessage(
+          error,
+          NEEDS_IMPORT_API_ERROR_CODES,
+          tErrors,
+          t("genericError"),
+        ),
+      );
     } finally {
       importInFlightRef.current = false;
       setImporting(false);
@@ -203,7 +218,9 @@ export function ImportNeedsDialog({
               <span className="text-foreground text-sm font-medium">
                 {file ? file.name : t("chooseFile")}
               </span>
-              <span className="text-muted-foreground text-xs">{t("allowedTypesHint")}</span>
+              <span className="text-muted-foreground text-xs">
+                {t("allowedTypesHint")}
+              </span>
             </button>
           ) : null}
 
@@ -222,7 +239,9 @@ export function ImportNeedsDialog({
           {parsingPdf ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Loader2 className="text-primary size-8 animate-spin" />
-              <p className="text-foreground mt-3 text-sm font-medium">{t("parsingPdf")}</p>
+              <p className="text-foreground mt-3 text-sm font-medium">
+                {t("parsingPdf")}
+              </p>
             </div>
           ) : null}
 
@@ -274,7 +293,9 @@ export function ImportNeedsDialog({
                   <p className="text-foreground text-lg font-semibold tabular-nums">
                     {duplicateErrors.length}
                   </p>
-                  <p className="text-muted-foreground text-xs">{t("duplicatesSkipped")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("duplicatesSkipped")}
+                  </p>
                 </div>
                 <div className="border-border rounded-md border p-3">
                   <p className="text-destructive text-lg font-semibold tabular-nums">
@@ -289,14 +310,18 @@ export function ImportNeedsDialog({
                   <p className="text-foreground text-sm font-medium">
                     {t("duplicatesSkipped")}
                   </p>
-                  <p className="text-muted-foreground text-xs">{t("duplicatesSkippedNote")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("duplicatesSkippedNote")}
+                  </p>
                   <ErrorTable rows={duplicateErrors} destructive={false} />
                 </div>
               ) : null}
 
               {otherErrors.length > 0 ? (
                 <div className="space-y-1.5">
-                  <p className="text-foreground text-sm font-medium">{t("otherFailures")}</p>
+                  <p className="text-foreground text-sm font-medium">
+                    {t("otherFailures")}
+                  </p>
                   <ErrorTable rows={otherErrors} destructive />
                 </div>
               ) : null}

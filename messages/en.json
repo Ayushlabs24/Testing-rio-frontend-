@@ -180,6 +180,31 @@
       "purposeMin": "Please give us a little more detail (at least 10 characters).",
       "usePolicyRequired": "Please open and read the Terms of Use, then tick the box to accept it.",
       "dataSharingRequired": "Please open and read the Data-Sharing Policy, then tick the box to consent to it."
+    },
+    "apiErrors": {
+      "INVALID_CREDENTIALS": "Invalid email or password.",
+      "ACCOUNT_LOCKED": "Your account is temporarily locked. Please try again later.",
+      "USER_DISABLED": "This user account is disabled.",
+      "ORG_INACTIVE": "This organization is not active.",
+      "UNAUTHENTICATED": "Authentication is required. Please sign in again.",
+      "INVALID_CURRENT_PASSWORD": "Current password is incorrect.",
+      "INVALID_RESET_TOKEN": "This reset link is invalid or has expired.",
+      "INVALID_SECTOR": "Sector must match an active domain, or choose \"Other\".",
+      "INVALID_ROLE": "This user's role is not recognised.",
+      "EMAIL_ALREADY_REGISTERED": "An account with this email already exists.",
+      "ORGANIZATION_ALREADY_REGISTERED": "An organization with this registration number already exists.",
+      "REGISTRATION_NUMBER_NOT_RECOGNISED": "This number isn't in the national entity registry.",
+      "CONSENT_VERSION_STALE": "The consent form has been updated since you loaded this page. Please refresh and try again.",
+      "NO_ACTIVE_CONSENT_POLICY": "No active data-sharing consent policy is configured.",
+      "OTP_INCORRECT": "Invalid code. Please check and try again.",
+      "OTP_EXPIRED": "This code has expired. Please request a new one.",
+      "OTP_ALREADY_USED": "This code has already been used. Please request a new one.",
+      "OTP_TOO_MANY_ATTEMPTS": "Too many attempts. Please request a new code.",
+      "OTP_CHALLENGE_NOT_FOUND": "This code request could not be found. Please request a new one.",
+      "OTP_NOT_VERIFIED": "Please verify your code first.",
+      "ORG_NOT_FOUND": "This organization could not be found.",
+      "NO_CONTACT_RECIPIENT": "This organization has no contact available right now.",
+      "CONTACT_DELIVERY_FAILED": "We could not send your message right now. Please try again later."
     }
   },
   "app": {
@@ -294,6 +319,7 @@
       "questionBankAlertRejected": "Question {questionId} was rejected"
     },
     "footer": {
+      "brandName": "Rio",
       "rightsReserved": "All rights reserved.",
       "version": "v{version}"
     },
@@ -1439,7 +1465,26 @@
         "surveyScopeLabel": "Survey scope (optional)",
         "surveyScopePlaceholder": "All surveys in this study",
         "surveyScopeAll": "All surveys in this study",
-        "stillNeeded": "Still needed: {fields}"
+        "stillNeeded": "Still needed: {fields}",
+        "reportTypeNames": {
+          "RPT01": "Individual Survey Report",
+          "RPT02": "Collective Report / Dashboard",
+          "RPT03": "Top-Priority Report",
+          "RPT04": "Domain-wise Needs",
+          "RPT05": "Governorate-wise Needs",
+          "RPT06": "Region/Governorate Filtering",
+          "RPT07": "Gender-wise Needs",
+          "RPT08": "KPI Results",
+          "RPT09": "Priority Ranking",
+          "RPT10": "Data-Quality Report",
+          "RPT11": "Previous Studies View",
+          "RPT12": "Report Sharing Status",
+          "RPT13": "Executive Summary",
+          "RPT14": "Village Report",
+          "RPT15": "Survey & Dashboard Report",
+          "RPT16": "Combined Evidence & Score Report",
+          "RPT17": "Evidence Document-Based Report"
+        }
       },
       "content": {
         "reportLabel": "Community Needs Assessment",
@@ -2055,7 +2100,11 @@
         "submit": "Upload",
         "submitting": "Uploading...",
         "missingFields": "Please fill in the study title, date, author, methodology version, and attach a file.",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "apiErrors": {
+          "FILE_REQUIRED": "A file is required.",
+          "MISSING_FIELDS": "Title, study date, author, and methodology version are required."
+        }
       }
     },
     "sharing": {
@@ -2944,6 +2993,15 @@
         "cancel": "Cancel",
         "close": "Close",
         "genericError": "Something went wrong importing this file. Please try again.",
+        "apiErrors": {
+          "NO_FILE": "A file is required.",
+          "UNSUPPORTED_FILE_TYPE": "Only CSV, XLS, XLSX and PDF files are supported.",
+          "PDF_PARSING_FAILED": "This PDF could not be read. Please check the file and try again.",
+          "SURVEY_PARSING_FAILED": "This document could not be read. Please check the file and try again.",
+          "STUDY_NOT_FOUND": "This study could not be found.",
+          "EMPTY_PAYLOAD": "At least one need item is required.",
+          "IMPORT_TOO_LARGE": "This file has too many rows for a single import."
+        },
         "totalRows": "Total rows",
         "imported": "Imported",
         "failed": "Failed",
@@ -4385,6 +4443,7 @@
     "studies": {
       "title": "Organization Studies",
       "platformTitle": "All Platform Studies",
+      "cycleLabel": "Cycle #{number}",
       "searchPlaceholder": "Search studies by name...",
       "filterOrganization": "Filter by Organization",
       "filterStatus": "Filter by Status",
@@ -5058,79 +5117,6 @@
         "file_upload": "Uploaded Document",
         "citizen_input": "Citizen Input",
         "field_survey": "Field Survey"
-      }
-    },
-    "backups": {
-      "title": "Backups",
-      "description": "Every backup attempt, with its size, duration and checksum. The question this screen answers is not whether a backup ran, but whether one can be restored.",
-      "loadError": "Couldn't load the backup history.",
-      "empty": "No backup runs recorded yet.",
-      "running": "Working…",
-      "runDatabase": "Back up database",
-      "runAttachments": "Back up attachments",
-      "runSucceeded": "{kind} backup completed.",
-      "runFailed": "The backup failed: {error}",
-      "runError": "The request could not be completed.",
-      "verify": "Verify",
-      "prune": "Apply retention",
-      "pruned": "{count} run(s) pruned. The newest successful backup of each kind is always kept.",
-      "summary": {
-        "lastDatabase": "Database last backed up",
-        "lastAttachments": "Attachments last backed up",
-        "failures": "Failures in the last 7 days",
-        "stored": "Stored on disk",
-        "never": "Never"
-      },
-      "noDatabaseBackup": {
-        "title": "No database backup has ever succeeded.",
-        "detail": "pg_dump cannot read this database as an application role — row-level security is forced on 43 tables, and no application role may bypass it. A superuser must run scripts/sql/nfr010-backup-role.sql to create the cnap_backup role, and BACKUP_DATABASE_URL must point at it. Until then only attachments are being backed up."
-      },
-      "kind": {
-        "database": "Database",
-        "attachments": "Attachments"
-      },
-      "status": {
-        "running": "Running",
-        "succeeded": "Succeeded",
-        "failed": "Failed"
-      },
-      "trigger": {
-        "schedule": "Scheduled",
-        "manual": "Manual"
-      },
-      "table": {
-        "started": "Started",
-        "kind": "Kind",
-        "status": "Status",
-        "size": "Size",
-        "duration": "Duration",
-        "trigger": "Trigger",
-        "retention": "Keep until",
-        "integrity": "Integrity",
-        "files": "{count} file(s)",
-        "pruned": "Pruned"
-      },
-      "integrity": {
-        "ok": "Checksum matches",
-        "CHECKSUM_MISMATCH": "Checksum does NOT match — this file is corrupt",
-        "SIZE_CHANGED": "Size has changed since it was written",
-        "FILE_MISSING": "File is missing from disk",
-        "FILE_PRUNED": "File was pruned",
-        "RUN_DID_NOT_SUCCEED": "This run did not succeed",
-        "NO_ARTEFACT_RECORDED": "No artefact recorded",
-        "RUN_NOT_FOUND": "Run not found",
-        "unknown": "Could not be verified"
-      },
-      "pagination": {
-        "previous": "Previous",
-        "next": "Next",
-        "label": "Page {page} of {count}"
-      },
-      "filters": {
-        "kind": "Kind",
-        "allKinds": "All kinds",
-        "status": "Status",
-        "allStatuses": "All statuses"
       }
     },
     "backups": {

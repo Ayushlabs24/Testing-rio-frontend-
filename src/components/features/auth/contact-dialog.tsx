@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError } from "@/services/api/types";
+import { AUTH_API_ERROR_CODES, getApiErrorMessage } from "@/lib/api-error-message";
 import { contactService } from "@/services/contact/contact.service";
 import type { OrganizationOption } from "@/services/contact/contact.types";
 
@@ -46,6 +46,7 @@ import type { OrganizationOption } from "@/services/contact/contact.types";
 export function ContactDialog() {
   const t = useTranslations("auth.contact");
   const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.apiErrors");
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -108,7 +109,9 @@ export function ContactDialog() {
       setSentTo(values.email);
       reset();
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(
+        getApiErrorMessage(error, AUTH_API_ERROR_CODES, tErrors, t("genericError")),
+      );
     }
   };
 

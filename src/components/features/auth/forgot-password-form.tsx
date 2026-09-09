@@ -10,12 +10,13 @@ import { LoadingButton } from "@/components/common/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
-import { ApiError } from "@/services/api/types";
+import { AUTH_API_ERROR_CODES, getApiErrorMessage } from "@/lib/api-error-message";
 import { authService } from "@/services/auth/auth.service";
 
 export function ForgotPasswordForm() {
   const t = useTranslations("auth.forgotPassword");
   const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.apiErrors");
   const [formError, setFormError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -37,7 +38,9 @@ export function ForgotPasswordForm() {
       await authService.forgotPassword(values);
       setSent(true);
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(
+        getApiErrorMessage(error, AUTH_API_ERROR_CODES, tErrors, t("genericError")),
+      );
     }
   };
 

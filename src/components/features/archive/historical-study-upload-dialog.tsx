@@ -23,7 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiError } from "@/services/api/types";
+import {
+  getApiErrorMessage,
+  HISTORICAL_UPLOAD_API_ERROR_CODES,
+} from "@/lib/api-error-message";
 import { geographyService } from "@/services/geography/geography.service";
 import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 import { historicalStudiesService } from "@/services/historical-studies/historical-studies.service";
@@ -65,6 +68,7 @@ export function HistoricalStudyUploadDialog({
   onUploaded: () => void;
 }) {
   const t = useTranslations("app.archive.uploadHistorical");
+  const tErrors = useTranslations("app.archive.uploadHistorical.apiErrors");
   const tGeo = useTranslations("app.geography");
   const locale = useLocale() as AppLocale;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,7 +162,14 @@ export function HistoricalStudyUploadDialog({
       onOpenChange(false);
       onUploaded();
     } catch (err) {
-      setError(err instanceof ApiError && err.code ? err.message : t("genericError"));
+      setError(
+        getApiErrorMessage(
+          err,
+          HISTORICAL_UPLOAD_API_ERROR_CODES,
+          tErrors,
+          t("genericError"),
+        ),
+      );
     } finally {
       setSubmitting(false);
     }

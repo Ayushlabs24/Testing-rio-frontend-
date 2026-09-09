@@ -295,7 +295,8 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                 <SelectContent>
                   {supervisors.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
-                      {u.name} — {u.organizationName}
+                      <AutoTranslate text={u.name} /> —{" "}
+                      <AutoTranslate text={u.organizationName} />
                     </SelectItem>
                   ))}
                 </SelectContent>
