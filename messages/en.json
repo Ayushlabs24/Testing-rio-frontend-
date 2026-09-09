@@ -1954,7 +1954,9 @@
           "auditTrail": "Audit Trail",
           "open": "Open >",
           "contentsHint": "Click a box to open that section. Each section has a link back to this page.",
-          "contentsHintLayers": "Click a box to open that section; Close returns here. Sections stay hidden until opened, which requires Adobe Acrobat Reader — a browser's built-in PDF viewer cannot open them."
+          "contentsHintLayers": "Click a box to open that section; Close returns here. Sections stay hidden until opened, which requires Adobe Acrobat Reader — a browser's built-in PDF viewer cannot open them.",
+          "backToContents": "< Contents",
+          "close": "< Close"
         },
         "drilldownByDomain": "Drill-down by Domain",
         "drilldownByDomainSub": "Domain to indicator detail",
