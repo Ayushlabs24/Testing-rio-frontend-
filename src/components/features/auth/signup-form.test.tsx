@@ -630,7 +630,11 @@ describe("SignupForm registration number (NIC registry)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("still falls back to the form-wide banner for errors that aren't about this field", async () => {
+  it("falls back to the form-wide banner, translated, for errors that aren't about this field", async () => {
+    // A code the client-error dictionary doesn't recognise: must render the
+    // translated generic fallback, never the backend's raw English message
+    // (client-reported gap, 2026-09-09 — an untranslated backend message was
+    // reaching the Arabic UI verbatim).
     vi.mocked(authService.signup).mockRejectedValue(
       new ApiError({ message: "Server exploded", status: 500, code: "INTERNAL_ERROR" }),
     );
@@ -638,7 +642,25 @@ describe("SignupForm registration number (NIC registry)", () => {
     const user = await fillEverything(NIC_NUMBER);
     await user.click(screen.getByRole("button", { name: en.auth.signup.submit }));
 
-    expect(await screen.findByText("Server exploded")).toBeInTheDocument();
+    expect(await screen.findByText(en.auth.signup.genericError)).toBeInTheDocument();
+    expect(screen.queryByText("Server exploded")).not.toBeInTheDocument();
+  });
+
+  it("translates a recognised API error code instead of showing the backend's raw message", async () => {
+    vi.mocked(authService.signup).mockRejectedValue(
+      new ApiError({
+        message: "An account with this email already exists.",
+        status: 409,
+        code: "EMAIL_ALREADY_REGISTERED",
+      }),
+    );
+    render(<SignupForm />);
+    const user = await fillEverything(NIC_NUMBER);
+    await user.click(screen.getByRole("button", { name: en.auth.signup.submit }));
+
+    expect(
+      await screen.findByText(en.auth.apiErrors.EMAIL_ALREADY_REGISTERED),
+    ).toBeInTheDocument();
   });
 });
 

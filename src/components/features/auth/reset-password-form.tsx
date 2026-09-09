@@ -12,13 +12,14 @@ import { PasswordRequirements } from "@/components/features/auth/password-requir
 import { LoadingButton } from "@/components/common/loading-button";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
+import { AUTH_API_ERROR_CODES, getApiErrorMessage } from "@/lib/api-error-message";
 import { newPasswordSchema } from "@/lib/password-policy";
-import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
 
 export function ResetPasswordForm() {
   const t = useTranslations("auth.resetPassword");
   const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.apiErrors");
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [formError, setFormError] = useState<string | null>(null);
@@ -52,7 +53,9 @@ export function ResetPasswordForm() {
       await authService.resetPassword({ token, password: values.password });
       setDone(true);
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(
+        getApiErrorMessage(error, AUTH_API_ERROR_CODES, tErrors, t("genericError")),
+      );
     }
   };
 

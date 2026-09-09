@@ -180,6 +180,31 @@
       "purposeMin": "Please give us a little more detail (at least 10 characters).",
       "usePolicyRequired": "Please open and read the Terms of Use, then tick the box to accept it.",
       "dataSharingRequired": "Please open and read the Data-Sharing Policy, then tick the box to consent to it."
+    },
+    "apiErrors": {
+      "INVALID_CREDENTIALS": "Invalid email or password.",
+      "ACCOUNT_LOCKED": "Your account is temporarily locked. Please try again later.",
+      "USER_DISABLED": "This user account is disabled.",
+      "ORG_INACTIVE": "This organization is not active.",
+      "UNAUTHENTICATED": "Authentication is required. Please sign in again.",
+      "INVALID_CURRENT_PASSWORD": "Current password is incorrect.",
+      "INVALID_RESET_TOKEN": "This reset link is invalid or has expired.",
+      "INVALID_SECTOR": "Sector must match an active domain, or choose \"Other\".",
+      "INVALID_ROLE": "This user's role is not recognised.",
+      "EMAIL_ALREADY_REGISTERED": "An account with this email already exists.",
+      "ORGANIZATION_ALREADY_REGISTERED": "An organization with this registration number already exists.",
+      "REGISTRATION_NUMBER_NOT_RECOGNISED": "This number isn't in the national entity registry.",
+      "CONSENT_VERSION_STALE": "The consent form has been updated since you loaded this page. Please refresh and try again.",
+      "NO_ACTIVE_CONSENT_POLICY": "No active data-sharing consent policy is configured.",
+      "OTP_INCORRECT": "Invalid code. Please check and try again.",
+      "OTP_EXPIRED": "This code has expired. Please request a new one.",
+      "OTP_ALREADY_USED": "This code has already been used. Please request a new one.",
+      "OTP_TOO_MANY_ATTEMPTS": "Too many attempts. Please request a new code.",
+      "OTP_CHALLENGE_NOT_FOUND": "This code request could not be found. Please request a new one.",
+      "OTP_NOT_VERIFIED": "Please verify your code first.",
+      "ORG_NOT_FOUND": "This organization could not be found.",
+      "NO_CONTACT_RECIPIENT": "This organization has no contact available right now.",
+      "CONTACT_DELIVERY_FAILED": "We could not send your message right now. Please try again later."
     }
   },
   "app": {
@@ -1860,7 +1885,11 @@
         "submit": "Upload",
         "submitting": "Uploading...",
         "missingFields": "Please fill in the study title, date, author, methodology version, and attach a file.",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "apiErrors": {
+          "FILE_REQUIRED": "A file is required.",
+          "MISSING_FIELDS": "Title, study date, author, and methodology version are required."
+        }
       }
     },
     "sharing": {
@@ -2749,6 +2778,15 @@
         "cancel": "Cancel",
         "close": "Close",
         "genericError": "Something went wrong importing this file. Please try again.",
+        "apiErrors": {
+          "NO_FILE": "A file is required.",
+          "UNSUPPORTED_FILE_TYPE": "Only CSV, XLS, XLSX and PDF files are supported.",
+          "PDF_PARSING_FAILED": "This PDF could not be read. Please check the file and try again.",
+          "SURVEY_PARSING_FAILED": "This document could not be read. Please check the file and try again.",
+          "STUDY_NOT_FOUND": "This study could not be found.",
+          "EMPTY_PAYLOAD": "At least one need item is required.",
+          "IMPORT_TOO_LARGE": "This file has too many rows for a single import."
+        },
         "totalRows": "Total rows",
         "imported": "Imported",
         "failed": "Failed",
