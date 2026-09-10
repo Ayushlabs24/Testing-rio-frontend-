@@ -436,6 +436,44 @@
         },
         "recentStudiesHeading": "Recent Studies",
         "noStudies": "No studies yet — create one to get started."
+      },
+      "needsMap": {
+        "title": "Needs by location",
+        "description": "Colour shows the highest priority present. Size shows how many needs.",
+        "level": {
+          "region": "By region",
+          "governorate": "By governorate",
+          "center": "By center"
+        },
+        "band": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "unscored": "Not yet scored"
+        },
+        "filter": {
+          "sector": "Sector",
+          "allSectors": "All sectors",
+          "urgency": "Urgency",
+          "allUrgencies": "All urgencies",
+          "status": "Status",
+          "allStatuses": "All statuses"
+        },
+        "needsCount": "{count, plural, =0 {No needs} one {# need} other {# needs}}",
+        "initiativesCount": "{count, plural, =0 {No initiatives} one {# initiative} other {# initiatives}}",
+        "sizeHint": "Larger circle = more needs",
+        "noPlaces": "No locations match these filters.",
+        "loadFailed": "The needs map could not be loaded.",
+        "coverage": "Showing {plotted} of {total} needs on the map.",
+        "coverageMissingLocation": "{count, plural, one {# need has no location recorded} other {# needs have no location recorded}}.",
+        "coverageMissingCoordinates": "{count, plural, one {# place has no map coordinates yet} other {# places have no map coordinates yet}}.",
+        "approximate": "Approximate — within {km}km",
+        "approximateLegend": "Approximate location",
+        "linkedInitiatives": "Linked initiatives",
+        "moreInitiatives": "and {count} more",
+        "statNeeds": "Needs",
+        "statPriority": "Priority breakdown"
       }
     },
     "evidence": {

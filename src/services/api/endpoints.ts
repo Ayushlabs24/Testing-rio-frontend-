@@ -314,6 +314,11 @@ export const endpoints = {
     list: "/archive",
     byId: (id: string) => `/archive/${id}`,
   },
+  // RIO-FR-008 — the needs map. `level` decides the grain (region /
+  // governorate / center) without needing a different endpoint per level.
+  geographicDashboard: {
+    map: "/geographic-dashboard/map",
+  },
   historicalStudies: {
     list: "/historical-studies",
     create: "/historical-studies",
