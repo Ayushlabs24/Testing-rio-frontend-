@@ -319,6 +319,11 @@ export const endpoints = {
     list: "/archive",
     byId: (id: string) => `/archive/${id}`,
   },
+  // RIO-FR-008 — the needs map. `level` decides the grain (region /
+  // governorate / center) without needing a different endpoint per level.
+  geographicDashboard: {
+    map: "/geographic-dashboard/map",
+  },
   // RIO-FR-013 pre-platform study uploads, and RIO-DATA-002 importing one
   // of them into the unified dashboard as real Need rows.
   historicalStudies: {

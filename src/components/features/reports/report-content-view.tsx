@@ -6,6 +6,7 @@ import { useMemo, type ReactNode } from "react";
 import { localizeReportText } from "@/lib/report-narrative-i18n";
 import { formatDate, formatNumber } from "@/lib/format-date";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import type { AppLocale } from "@/i18n/routing";
 import {
   Accordion,
@@ -412,7 +413,7 @@ function Section({
   children,
 }: {
   icon: ReactNode;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -431,6 +432,7 @@ function Section({
 export function ReportContentView({ report }: { report: Report }) {
   const t = useTranslations("app.reports.content");
   const locale = useLocale() as AppLocale;
+  const { localizedDomain } = useDomainArabicMap();
   // Built once per render, now that `t`/`locale` exist — see each factory's
   // own comment for why these can't be plain module-level constants.
   const domainCols = domainColumns(t);
@@ -499,7 +501,11 @@ export function ReportContentView({ report }: { report: Report }) {
           </Section>
         ) : null}
         {flat.tables.map((tbl) => (
-          <Section key={tbl.name} icon={<Table2 className="size-4" />} title={tbl.name}>
+          <Section
+            key={tbl.name}
+            icon={<Table2 className="size-4" />}
+            title={<AutoTranslate text={tbl.name} />}
+          >
             <DataTable rows={tbl.rows as Dict[]} />
           </Section>
         ))}
@@ -1124,7 +1130,8 @@ export function ReportContentView({ report }: { report: Report }) {
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-medium">{t("profile")}</p>
               <RadarChart
-                axes={domains.map((d) => scalar(d.name))}
+                ariaLabel={t("profile")}
+                axes={domains.map((d) => localizedDomain(scalar(d.name)))}
                 max={100}
                 series={[
                   {

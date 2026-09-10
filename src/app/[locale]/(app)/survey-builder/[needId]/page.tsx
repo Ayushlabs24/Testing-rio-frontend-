@@ -61,6 +61,7 @@ import { methodologyConfigService } from "@/services/methodology-config/methodol
 import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import {
   REJECTION_REASON_LABELS,
   surveysService,
@@ -110,6 +111,7 @@ export default function SurveyBuilderDetailPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.surveyBuilder.detail");
+  const tApiErr = useTranslations("apiErrors");
   const tClassification = useTranslations("app.studies.classification");
   const locale = useLocale() as AppLocale;
   const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
@@ -484,7 +486,7 @@ export default function SurveyBuilderDetailPage({
       );
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setManualClassifying(false);
     }
@@ -502,7 +504,7 @@ export default function SurveyBuilderDetailPage({
       );
       setSurvey(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSavingMethodologyVersion(false);
     }
@@ -541,7 +543,7 @@ export default function SurveyBuilderDetailPage({
       setSurvey(updated);
       setMessage(t("saved"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSavingSampleDescription(false);
     }
@@ -745,7 +747,7 @@ export default function SurveyBuilderDetailPage({
       loadDraftFromSurvey(updated);
       setMessage(t("saved"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -769,7 +771,7 @@ export default function SurveyBuilderDetailPage({
       );
       setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -791,7 +793,7 @@ export default function SurveyBuilderDetailPage({
       );
       setSurvey(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setCreatingNewVersion(false);
     }
@@ -887,7 +889,7 @@ export default function SurveyBuilderDetailPage({
       setMessage(t("approvedMessage"));
       setApproveOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -936,7 +938,7 @@ export default function SurveyBuilderDetailPage({
       setMessage(t("approvedMessage"));
       setApproveOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setApprovingSubmitted(false);
     }
@@ -961,7 +963,7 @@ export default function SurveyBuilderDetailPage({
       loadDraftFromSurvey(published);
       setMessage(t("publishedMessage"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setPublishing(false);
     }
@@ -1034,7 +1036,7 @@ export default function SurveyBuilderDetailPage({
       setRejectOpen(false);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setRejecting(false);
     }
@@ -2106,7 +2108,13 @@ export default function SurveyBuilderDetailPage({
                                 {t("questionLabel")}
                               </p>
                               <p dir="auto" className="text-foreground text-sm">
-                                <AutoTranslate text={q.questionText} />
+                                <AutoTranslate
+                                  text={localizedText(
+                                    q.questionText,
+                                    q.questionTextAr,
+                                    locale,
+                                  )}
+                                />
                               </p>
                             </div>
 

@@ -13,6 +13,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { needSummaryService } from "@/services/needs/need-summary.service";
 import type { NeedSummary } from "@/services/needs/need-summary.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * RIO-AI-003 — the reviewer's view of a suggested need-description summary.
@@ -37,6 +38,7 @@ import type { NeedSummary } from "@/services/needs/need-summary.types";
  */
 export function NeedSummarySection({ needId }: { needId: string }) {
   const t = useTranslations("app.studies.needSummary");
+  const tApiErr = useTranslations("apiErrors");
   const canReview = usePermission("aiReview", "approve");
 
   const [summary, setSummary] = useState<NeedSummary | null>(null);
@@ -92,7 +94,7 @@ export function NeedSummarySection({ needId }: { needId: string }) {
         apply(await needSummaryService.regenerate(needId));
       }
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setBusy(null);
     }

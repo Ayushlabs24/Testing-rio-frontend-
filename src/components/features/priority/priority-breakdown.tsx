@@ -23,6 +23,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { priorityService } from "@/services/priority/priority.service";
 import type { PriorityScore } from "@/services/priority/priority.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * RIO-FR-003 AC 2 — "all score components are individually visible to the
@@ -46,6 +47,7 @@ export function PriorityBreakdown({
   onScoreUpdated: (next: PriorityScore) => void;
 }) {
   const t = useTranslations("app.priorityDashboard.breakdown");
+  const tApiErr = useTranslations("apiErrors");
   const canOverride = usePermission("priorityScoring", "approve");
 
   const [open, setOpen] = useState(false);
@@ -77,7 +79,7 @@ export function PriorityBreakdown({
       setOpen(false);
       setReason("");
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -94,7 +96,7 @@ export function PriorityBreakdown({
     try {
       onScoreUpdated(await priorityService.approve(score.id));
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setApproving(false);
     }

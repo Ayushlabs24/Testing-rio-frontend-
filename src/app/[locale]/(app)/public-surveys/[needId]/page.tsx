@@ -65,11 +65,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const LABEL_MAX_LENGTH = 150;
 
@@ -112,6 +112,7 @@ function LinkRow({
   onDeactivated: () => void;
 }) {
   const t = useTranslations("app.publicSurveys.detail");
+  const tApiErr = useTranslations("apiErrors");
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -140,7 +141,7 @@ function LinkRow({
       await publicSurveysService.shareLinkByEmail(needId, link.id, emailValue.trim());
       setEmailSent(true);
     } catch (error) {
-      setEmailError(error instanceof ApiError ? error.message : t("genericError"));
+      setEmailError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     } finally {
       setEmailSending(false);
     }
@@ -345,6 +346,7 @@ export default function PublicSurveyDetailPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.publicSurveys.detail");
+  const tApiErr = useTranslations("apiErrors");
   const canCreate = usePermission("studySurvey", "create");
   const canWrite = usePermission("studySurvey", "write");
 
@@ -432,7 +434,7 @@ export default function PublicSurveyDetailPage({
       handleCreateOpenChange(false);
       load();
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     } finally {
       setCreating(false);
     }

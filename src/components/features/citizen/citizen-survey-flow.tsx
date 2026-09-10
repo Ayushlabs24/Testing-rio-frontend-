@@ -27,8 +27,8 @@ import type {
   ResolvedSurvey,
   SurveySessionStep,
 } from "@/services/citizen/citizen.types";
-import { ApiError } from "@/services/api/types";
 import { consentService } from "@/services/consent/consent.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import {
   consentPolicyTextFor,
   type ActiveConsentPolicy,
@@ -152,6 +152,7 @@ function ScaleStars({ value, max }: { value: number; max: number }) {
 
 export function CitizenSurveyFlow({ token }: { token: string }) {
   const t = useTranslations("citizen.survey");
+  const tApiErr = useTranslations("apiErrors");
   // Which language the notice is read in — recorded with the acceptance, for
   // the same reason the version is: together they pin exactly what was
   // agreed to. Narrowed exhaustively, as elsewhere.
@@ -341,7 +342,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       setDevCode(result.codeTexted ? null : (result.code ?? null));
       setPhase("otp");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -365,7 +366,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       // already has a link to one published before that guard existed.
       setPhase(questions.length === 0 ? "review" : "questions");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -435,7 +436,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       });
       setTerminal("submitted");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
       setTerminal(null);
     } finally {
       setSubmitting(false);
@@ -943,8 +944,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
                 className="flex items-start justify-between gap-3 py-3.5"
               >
                 <div className="min-w-0 flex-1 space-y-1">
+                  {/* Same locale resolution as the question screen above —
+                      client-supplied `textAr` first, AutoTranslate fallback
+                      for a custom question with no such column. */}
                   <p dir="auto" className="text-muted-foreground text-xs">
-                    {question.text}
+                    <AutoTranslate
+                      text={localizedText(question.text, question.textAr, consentLocale)}
+                    />
                   </p>
                   {scaleMax && scaleValue >= 0 ? (
                     <ScaleStars value={scaleValue + 1} max={scaleMax} />

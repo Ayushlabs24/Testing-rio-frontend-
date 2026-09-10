@@ -3,6 +3,7 @@
 import { Building2, Calendar, ClipboardList, MapPin, Layers } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -127,7 +128,7 @@ export function StudyDetailDrawer({
                     <span>{t("createdDate")}</span>
                   </div>
                   <p className="text-foreground font-mono font-medium">
-                    {new Date(data.createdAt).toLocaleDateString()}
+                    <FormattedDate value={data.createdAt} />
                   </p>
                 </Card>
               </div>

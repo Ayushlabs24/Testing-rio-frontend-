@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useLocale } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
+import { geographyService } from "@/services/geography/geography.service";
 import type { NcnpNamedBreakdown } from "@/services/ncnp-report/ncnp-report.types";
 
 // Same dynamic import (SSR disabled, Leaflet needs `window`) and the same
@@ -63,17 +67,44 @@ interface RegionMapProps {
 }
 
 export function RegionMap({ data, unitLabel }: RegionMapProps) {
+  const locale = useLocale() as AppLocale;
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
 
-  const markers = data
-    .filter((d) => KSA_REGION_COORDS[d.code])
-    .map((d) => ({
-      regionId: d.id,
-      name: d.name,
-      lat: KSA_REGION_COORDS[d.code]!.lat,
-      lng: KSA_REGION_COORDS[d.code]!.lng,
-      studyCount: d.count, // field name is generic-by-reuse — see LeafletMapContainer's unitLabel prop
-    }));
+  // The NCNP payload is not backend-localized (see this file's header note):
+  // `d.name` is always the English region name. Resolve each one to its
+  // `name_ar` from the Region master list so the Arabic report's map labels
+  // match the rest of the page. Non-fatal — falls back to the English name.
+  const [regionNameAr, setRegionNameAr] = useState<Map<string, string | null>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    geographyService
+      .listRegions()
+      .then((regions) => {
+        if (!cancelled) {
+          setRegionNameAr(new Map(regions.map((r) => [r.id, r.nameAr])));
+        }
+      })
+      .catch(() => {
+        // Non-fatal — English names remain.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const markers = useMemo(
+    () =>
+      data
+        .filter((d) => KSA_REGION_COORDS[d.code])
+        .map((d) => ({
+          regionId: d.id,
+          name: localizedName({ name: d.name, nameAr: regionNameAr.get(d.id) }, locale),
+          lat: KSA_REGION_COORDS[d.code]!.lat,
+          lng: KSA_REGION_COORDS[d.code]!.lng,
+          studyCount: d.count, // field name is generic-by-reuse — see LeafletMapContainer's unitLabel prop
+        })),
+    [data, regionNameAr, locale],
+  );
   const maxCount = Math.max(1, ...markers.map((m) => m.studyCount));
 
   return (

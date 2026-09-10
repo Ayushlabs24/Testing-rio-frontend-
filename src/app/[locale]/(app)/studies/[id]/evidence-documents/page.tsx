@@ -150,13 +150,12 @@ export default function EvidenceDocumentsPage({
         versions.find((v) => v.id === studyData.methodologyVersionId)?.name ?? null,
       );
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to load evidence documents data.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.loadData");
       setLoadError(errorMsg);
     } finally {
       setLoading(false);
     }
-  }, [studyId]);
+  }, [studyId, t]);
 
   useEffect(() => {
     let active = true;
@@ -225,21 +224,19 @@ export default function EvidenceDocumentsPage({
         ),
       );
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to update report inclusion.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.updateInclusion");
       setActionError(errorMsg);
     }
   };
 
   const handleDelete = async (docId: string) => {
     if (!canWrite) return;
-    if (!confirm("Are you sure you want to delete this evidence document?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       await evidenceDocumentsService.deleteDocument(studyId, docId);
       await loadData();
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to delete evidence document.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.deleteDocument");
       alert(errorMsg);
     }
   };
@@ -268,8 +265,7 @@ export default function EvidenceDocumentsPage({
       setCurrentSummary(summary);
       setEditedSummaryJson(summary.officerEditedOutputJson || summary.aiOutputJson);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to generate AI Document Summary.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.generateSummary");
       alert(errorMsg);
       setSummaryModalOpen(false);
     } finally {
@@ -298,8 +294,7 @@ export default function EvidenceDocumentsPage({
       setEditingSummary(false);
       await loadData();
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to confirm document summary.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.confirmSummary");
       alert(errorMsg);
     } finally {
       setConfirmingSummary(false);
@@ -316,8 +311,7 @@ export default function EvidenceDocumentsPage({
       });
       router.push(`/reports/${report.id}`);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to generate Document-Based Report.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.generateReport");
       alert(errorMsg);
     } finally {
       setGeneratingReport(false);
@@ -577,10 +571,7 @@ export default function EvidenceDocumentsPage({
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>{t("uploadButton")}</DialogTitle>
-              <DialogDescription>
-                Upload supporting text-based documents (.txt, .docx, text PDF, .csv,
-                .xlsx).
-              </DialogDescription>
+              <DialogDescription>{t("uploadDialogDescription")}</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleUploadSubmit} className="space-y-4">
@@ -598,7 +589,7 @@ export default function EvidenceDocumentsPage({
                   onChange={(e) =>
                     setUploadForm({ ...uploadForm, title: e.target.value })
                   }
-                  placeholder="e.g. Health Infrastructure Field Assessment"
+                  placeholder={t("placeholders.title")}
                 />
               </div>
 
@@ -625,12 +616,18 @@ export default function EvidenceDocumentsPage({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="FIELD_REPORT">Field Report</SelectItem>
-                      <SelectItem value="ASSESSMENT_NOTE">Assessment Note</SelectItem>
-                      <SelectItem value="INTERVIEW_TRANSCRIPT">
-                        Interview Transcript
+                      <SelectItem value="FIELD_REPORT">
+                        {t("documentTypeValues.FIELD_REPORT")}
                       </SelectItem>
-                      <SelectItem value="STATISTICAL_TABLE">Statistical Table</SelectItem>
+                      <SelectItem value="ASSESSMENT_NOTE">
+                        {t("documentTypeValues.ASSESSMENT_NOTE")}
+                      </SelectItem>
+                      <SelectItem value="INTERVIEW_TRANSCRIPT">
+                        {t("documentTypeValues.INTERVIEW_TRANSCRIPT")}
+                      </SelectItem>
+                      <SelectItem value="STATISTICAL_TABLE">
+                        {t("documentTypeValues.STATISTICAL_TABLE")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -642,7 +639,7 @@ export default function EvidenceDocumentsPage({
                     onChange={(e) =>
                       setUploadForm({ ...uploadForm, sourceReferenceId: e.target.value })
                     }
-                    placeholder="REF-2026-001"
+                    placeholder={t("placeholders.refId")}
                   />
                 </div>
               </div>
@@ -666,7 +663,7 @@ export default function EvidenceDocumentsPage({
                   onChange={(e) =>
                     setUploadForm({ ...uploadForm, description: e.target.value })
                   }
-                  placeholder="Optional brief description of evidence context..."
+                  placeholder={t("placeholders.description")}
                 />
               </div>
 
@@ -676,10 +673,10 @@ export default function EvidenceDocumentsPage({
                   variant="outline"
                   onClick={() => setUploadDialogOpen(false)}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button type="submit" disabled={uploading}>
-                  {uploading ? "Uploading..." : "Upload & Parse"}
+                  {uploading ? t("uploading") : t("uploadSubmit")}
                 </Button>
               </div>
             </form>
@@ -690,9 +687,18 @@ export default function EvidenceDocumentsPage({
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetContent className="w-full max-w-2xl overflow-y-auto sm:max-w-2xl">
             <SheetHeader>
-              <SheetTitle>{selectedDoc?.title}</SheetTitle>
+              <SheetTitle>
+                <AutoTranslate text={selectedDoc?.title ?? ""} />
+              </SheetTitle>
               <SheetDescription>
-                Ref: {selectedDoc?.sourceReferenceId} • Type: {selectedDoc?.documentType}
+                {t("refType", {
+                  ref: selectedDoc?.sourceReferenceId ?? "",
+                  type: selectedDoc?.documentType
+                    ? t.has(`documentTypeValues.${selectedDoc.documentType}`)
+                      ? t(`documentTypeValues.${selectedDoc.documentType}`)
+                      : selectedDoc.documentType
+                    : "",
+                })}
               </SheetDescription>
             </SheetHeader>
 
@@ -700,17 +706,17 @@ export default function EvidenceDocumentsPage({
               <div className="mt-6 space-y-6">
                 <div>
                   <h3 className="text-foreground mb-2 text-sm font-semibold">
-                    Extracted Text
+                    {t("sections.extractedText")}
                   </h3>
                   <div className="bg-muted/30 max-h-80 overflow-y-auto rounded-lg border p-4 font-mono text-xs whitespace-pre-wrap">
-                    {selectedDoc.extractedText || "No text extracted."}
+                    {selectedDoc.extractedText || t("noTextExtracted")}
                   </div>
                 </div>
 
                 {selectedDoc.chunks && selectedDoc.chunks.length > 0 && (
                   <div>
                     <h3 className="text-foreground mb-2 text-sm font-semibold">
-                      Ordered Chunks ({selectedDoc.chunks.length})
+                      {t("orderedChunksHeading", { count: selectedDoc.chunks.length })}
                     </h3>
                     <div className="space-y-2">
                       {selectedDoc.chunks.map((chunk) => (
@@ -719,7 +725,8 @@ export default function EvidenceDocumentsPage({
                           className="bg-card rounded-md border p-3 text-xs"
                         >
                           <p className="text-primary font-semibold">
-                            {chunk.sectionReference || `Chunk #${chunk.chunkIndex + 1}`}
+                            {chunk.sectionReference ||
+                              t("chunkFallback", { index: chunk.chunkIndex + 1 })}
                           </p>
                           <p className="text-muted-foreground mt-1 line-clamp-3">
                             {chunk.chunkText}
@@ -740,14 +747,16 @@ export default function EvidenceDocumentsPage({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="text-primary size-5" />
-                AI Document Summary — {activeDocForSummary?.title}
+                {t("aiDocumentSummaryTitle", {
+                  title: activeDocForSummary?.title ?? "",
+                })}
               </DialogTitle>
             </DialogHeader>
 
             {generatingSummary ? (
               <div className="text-muted-foreground flex flex-col items-center gap-2 p-8 text-center text-sm">
                 <RefreshCw className="text-primary size-6 animate-spin" />
-                Analyzing extracted document text and generating qualitative summary...
+                {t("analyzingSummary")}
               </div>
             ) : currentSummary ? (
               <div className="space-y-6 pt-2">
@@ -759,7 +768,11 @@ export default function EvidenceDocumentsPage({
                         : "secondary"
                     }
                   >
-                    Status: {currentSummary.status}
+                    {t("statusLabel", {
+                      status: t.has(`summaryStatusValues.${currentSummary.status}`)
+                        ? t(`summaryStatusValues.${currentSummary.status}`)
+                        : currentSummary.status,
+                    })}
                   </Badge>
                   {canAi && currentSummary.status !== "OFFICER_CONFIRMED" && (
                     <Button
@@ -768,7 +781,7 @@ export default function EvidenceDocumentsPage({
                       onClick={() => setEditingSummary(!editingSummary)}
                     >
                       <Edit3 className="mr-1 size-3.5" />
-                      {editingSummary ? "Preview" : "Edit Draft"}
+                      {editingSummary ? t("preview") : t("editDraft")}
                     </Button>
                   )}
                 </div>
@@ -777,7 +790,7 @@ export default function EvidenceDocumentsPage({
                 {editingSummary && canAi ? (
                   <div className="space-y-4">
                     <div>
-                      <Label>Executive Summary</Label>
+                      <Label>{t("sections.executiveSummary")}</Label>
                       <Textarea
                         rows={4}
                         value={String(editedSummaryJson?.summary || "")}
@@ -794,16 +807,16 @@ export default function EvidenceDocumentsPage({
                   <div className="space-y-4 text-xs">
                     <div>
                       <h4 className="text-foreground mb-1 text-sm font-semibold">
-                        Summary
+                        {t("sections.summary")}
                       </h4>
                       <p className="text-muted-foreground">
-                        {String(editedSummaryJson?.summary || "")}
+                        <AutoTranslate text={String(editedSummaryJson?.summary || "")} />
                       </p>
                     </div>
 
                     <div>
                       <h4 className="text-foreground mb-1 text-sm font-semibold">
-                        Key Findings
+                        {t("sections.keyFindings")}
                       </h4>
                       <ul className="text-muted-foreground list-disc space-y-1 pl-4">
                         {(
@@ -812,7 +825,9 @@ export default function EvidenceDocumentsPage({
                           )[]) || []
                         ).map((f: Record<string, unknown> | string, i: number) => (
                           <li key={i}>
-                            {typeof f === "string" ? f : String(f.finding || "")}
+                            <AutoTranslate
+                              text={typeof f === "string" ? f : String(f.finding || "")}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -820,7 +835,7 @@ export default function EvidenceDocumentsPage({
 
                     <div>
                       <h4 className="text-foreground mb-1 text-sm font-semibold">
-                        Supporting Statements
+                        {t("sections.supportingStatements")}
                       </h4>
                       <div className="space-y-2">
                         {(
@@ -834,7 +849,11 @@ export default function EvidenceDocumentsPage({
                           >
                             <p className="text-foreground font-medium">
                               &quot;
-                              {typeof s === "string" ? s : String(s.statement || "")}
+                              <AutoTranslate
+                                text={
+                                  typeof s === "string" ? s : String(s.statement || "")
+                                }
+                              />
                               &quot;
                             </p>
                             <p className="text-muted-foreground mt-0.5 text-[10px]">
@@ -857,7 +876,7 @@ export default function EvidenceDocumentsPage({
                       className="gap-2"
                     >
                       <CheckCircle2 className="size-4" />
-                      {confirmingSummary ? "Confirming..." : "Officer Confirm Summary"}
+                      {confirmingSummary ? t("confirming") : t("officerConfirmSummary")}
                     </Button>
                   </div>
                 )}

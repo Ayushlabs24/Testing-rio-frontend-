@@ -23,6 +23,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { reportsService } from "@/services/reports/reports.service";
 import { EXPORTABLE_STATUSES, type Report } from "@/services/reports/reports.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 type ButtonVariant = "outline" | "ghost";
 
@@ -78,6 +79,7 @@ export function ReportActions({
   size?: "sm" | "default";
 }) {
   const t = useTranslations("app.reports");
+  const tApiErr = useTranslations("apiErrors");
   // The exported document follows the language the user is reading the app
   // in, so a report opened in Arabic downloads in Arabic.
   const locale = useLocale() as "en" | "ar";
@@ -102,7 +104,7 @@ export function ReportActions({
       onChanged();
       return true;
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : t(fallback));
+      onError(resolveApiErrorMessage(err, tApiErr, t(fallback)));
       return false;
     }
   }

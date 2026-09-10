@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/lib/bilingual";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -393,7 +394,7 @@ export default function SystemAdminOrganizationsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
-                        {new Date(org.createdAt).toLocaleDateString()}
+                        <FormattedDate value={org.createdAt} />
                       </TableCell>
                       <TableCell
                         className="text-right"

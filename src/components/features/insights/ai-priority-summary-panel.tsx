@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Sparkles,
   CheckCircle2,
@@ -18,6 +18,9 @@ import {
   FileText,
 } from "lucide-react";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
+import { formatDateTime } from "@/lib/format-date";
+import type { AppLocale } from "@/i18n/routing";
 import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,6 +72,7 @@ export function AiPrioritySummaryPanel({
   hasPriorityScoring?: boolean;
 }) {
   const t = useTranslations("PriorityDashboard.summaryPanel");
+  const locale = useLocale() as AppLocale;
   const canCreate = usePermission("priorityScoring", "create");
   const canWrite = usePermission("priorityScoring", "write");
   const { localizedDomain } = useDomainArabicMap();
@@ -505,7 +509,8 @@ export function AiPrioritySummaryPanel({
                 </span>
                 <span>•</span>
                 <span>
-                  {t("generatedLabel")}: {new Date(record.generatedAt).toLocaleString()}
+                  {t("generatedLabel")}:{" "}
+                  <FormattedDate value={record.generatedAt} withTime />
                 </span>
               </div>
 
@@ -602,7 +607,7 @@ export function AiPrioritySummaryPanel({
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
-                        {new Date(s.updatedAt || s.createdAt).toLocaleString()}
+                        <FormattedDate value={s.updatedAt || s.createdAt} withTime />
                       </TableCell>
                       <TableCell className="space-x-1 text-right">
                         <Button
@@ -650,9 +655,7 @@ export function AiPrioritySummaryPanel({
             <DialogDescription className="text-xs">
               {t("savedOnDate", {
                 date: viewSummary
-                  ? new Date(
-                      viewSummary.updatedAt || viewSummary.createdAt,
-                    ).toLocaleString()
+                  ? formatDateTime(viewSummary.updatedAt || viewSummary.createdAt, locale)
                   : "",
               })}
             </DialogDescription>
@@ -715,7 +718,7 @@ export function AiPrioritySummaryPanel({
                     {tStatus(h.status)}
                   </Badge>
                   <span className="text-muted-foreground">
-                    {new Date(h.generatedAt).toLocaleString()}
+                    <FormattedDate value={h.generatedAt} withTime />
                   </span>
                 </div>
                 <p className="text-muted-foreground text-[11px]">

@@ -46,11 +46,11 @@ import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { ApiError } from "@/services/api/types";
 import { evidenceService } from "@/services/evidence/evidence.service";
 import type { Evidence } from "@/services/evidence/evidence.types";
 import { needsService } from "@/services/needs/needs.service";
 import { EVIDENCE_EDITABLE_STATUSES } from "@/services/needs/needs.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 // RIO-FR-Add-01: mirrors the backend's own allowlist/limits exactly (see
 // EvidenceStorageService) — rejecting client-side is just a faster,
@@ -138,6 +138,7 @@ function DropzoneAndQueue({
   onUploaded: (evidence: Evidence) => void;
 }) {
   const t = useTranslations("app.evidence");
+  const tApiErr = useTranslations("apiErrors");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const controllersRef = useRef(new Map<string, AbortController>());
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -167,7 +168,7 @@ function DropzoneAndQueue({
         controllersRef.current.delete(item.localId);
         updateItem(item.localId, {
           status: "error",
-          error: error instanceof ApiError ? error.message : t("uploadFailed"),
+          error: resolveApiErrorMessage(error, tApiErr, t("uploadFailed")),
           retryable: true,
         });
       });
@@ -340,6 +341,7 @@ function DeleteEvidenceAlert({
   onDeleted: (id: string) => void;
 }) {
   const t = useTranslations("app.evidence");
+  const tApiErr = useTranslations("apiErrors");
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -352,7 +354,7 @@ function DeleteEvidenceAlert({
       onDeleted(item.id);
       setOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("deleteError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("deleteError")));
     } finally {
       setIsDeleting(false);
     }
@@ -386,6 +388,7 @@ function DeleteEvidenceAlert({
 
 function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: string }) {
   const t = useTranslations("app.evidence");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale();
   // A Reviewer/Approver only holds `dataCollection: read` (see role-matrix.ts)
   // — they can see what's been uploaded but never add/replace/remove it,
@@ -421,7 +424,7 @@ function EvidenceUploadScreen({ studyId, needId }: { studyId: string; needId: st
       })
       .catch((error) => {
         if (cancelled) return;
-        setLoadError(error instanceof ApiError ? error.message : t("loadError"));
+        setLoadError(resolveApiErrorMessage(error, tApiErr, t("loadError")));
       });
     return () => {
       cancelled = true;

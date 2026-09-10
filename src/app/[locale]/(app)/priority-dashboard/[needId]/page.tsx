@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
 import { actAsOrgOptions } from "@/lib/act-as-org";
-import { ApiError } from "@/services/api/types";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
 import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
@@ -55,6 +54,7 @@ import { DocumentBasedSummaryTab } from "@/components/features/priority/document
 import { CombinedSummaryTab } from "@/components/features/priority/combined-summary-tab";
 import { NeedDecisionsPanel } from "@/components/features/priority/need-decisions-panel";
 import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const CONSOLIDATED = "consolidated";
 const NONE = "none";
@@ -79,6 +79,7 @@ export default function PriorityDetailInsightsPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("PriorityDashboard.detailPage");
+  const tApiErr = useTranslations("apiErrors");
   // Same level.* dictionary the main Priority Dashboard and Village
   // Comparison pages already use for this exact enum — priorityStatus
   // arrives upper-cased ("MEDIUM") from the API.
@@ -185,9 +186,7 @@ export default function PriorityDetailInsightsPage({
       const results = await responseQualityService.assess(needId, surveyLinkId);
       setQualityResults(results);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to assess response quality",
-      );
+      setError(resolveApiErrorMessage(err, tApiErr, t("assessQualityError")));
     } finally {
       setAssessing(false);
     }
@@ -235,7 +234,7 @@ export default function PriorityDetailInsightsPage({
         );
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("recalculateError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("recalculateError")));
     } finally {
       setScoring(false);
     }

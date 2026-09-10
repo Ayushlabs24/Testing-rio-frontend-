@@ -44,6 +44,7 @@ export function AssignNgoAdminDialog({
   onAssigned,
 }: AssignNgoAdminDialogProps) {
   const t = useTranslations("systemAdmin.ngoAdmin.dialog");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
   const [mode, setMode] = useState<"select" | "invite">("select");
 
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
@@ -162,7 +163,10 @@ export function AssignNgoAdminDialog({
                   <SelectContent>
                     {orgUsers.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
-                        {u.name} ({u.email}) — {u.role.name}
+                        {u.name} ({u.email}) —{" "}
+                        {tRoleNames.has(u.role.key)
+                          ? tRoleNames(u.role.key as Parameters<typeof tRoleNames>[0])
+                          : u.role.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

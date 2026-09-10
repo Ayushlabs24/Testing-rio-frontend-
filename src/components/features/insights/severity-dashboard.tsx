@@ -18,6 +18,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,9 +46,9 @@ import {
   VillagePriorityResult,
   DomainPriorityComponent,
 } from "@/services/priority/severity-scoring.service";
-import { ApiError } from "@/services/api/types";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 interface SeverityDashboardProps {
   studyId: string;
@@ -61,6 +62,7 @@ export function SeverityDashboard({
   villages,
 }: SeverityDashboardProps) {
   const t = useTranslations("PriorityDashboard.severityDashboard");
+  const tApiErr = useTranslations("apiErrors");
   const { localizedDomain } = useDomainArabicMap();
   const canRecalculate = usePermission("priorityScoring", "create");
 
@@ -117,9 +119,7 @@ export function SeverityDashboard({
         setPriorityData(null);
       }
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to load severity dashboard.",
-      );
+      setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ export function SeverityDashboard({
       await severityScoringService.recalculate(studyId, surveyId);
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Recalculating failed.");
+      setError(resolveApiErrorMessage(err, tApiErr, t("recalculateError")));
     } finally {
       setRecalculating(false);
     }
@@ -565,7 +565,7 @@ export function SeverityDashboard({
                     </span>
                     <span>
                       {t("calculated")}{" "}
-                      {new Date(priorityData.calculatedAt).toLocaleDateString()}
+                      <FormattedDate value={priorityData.calculatedAt} />
                     </span>
                   </div>
 
@@ -801,7 +801,7 @@ export function SeverityDashboard({
                   </span>
                 </DialogTitle>
                 <DialogDescription className="text-foreground pt-2 text-sm font-medium">
-                  {questionDetail.questionText}
+                  <AutoTranslate text={questionDetail.questionText} />
                 </DialogDescription>
               </DialogHeader>
 

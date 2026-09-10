@@ -27,6 +27,7 @@ import type { Governorate } from "@/services/geography/geography.types";
 import type { MethodologyVersion } from "@/services/priority/severity-scoring.service";
 import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import type { Study } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 export interface StudyFormValues {
   title: string;
@@ -91,6 +92,7 @@ export function StudyForm({
   onCancel,
 }: StudyFormProps) {
   const t = useTranslations("app.studies.form");
+  const tApiErr = useTranslations("apiErrors");
   const tValidation = useTranslations("app.studies.validation");
   const locale = useLocale() as AppLocale;
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -198,7 +200,7 @@ export function StudyForm({
       await onSubmit(values);
     } catch (error) {
       setSubmitError(
-        error instanceof ApiError ? error.message : tValidation("titleRequired"),
+        resolveApiErrorMessage(error, tApiErr, tValidation("titleRequired")),
       );
     }
   });

@@ -51,7 +51,6 @@ import {
 import { Link, useRouter } from "@/i18n/navigation";
 import { REPORTS_PAGE_SIZE, REPORTS_PAGE_SIZE_OPTIONS } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import {
   ncnpReportReviewService,
@@ -68,6 +67,7 @@ import {
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 import { surveysService, type SurveyListItem } from "@/services/surveys/surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const ALL = "all";
 
@@ -97,6 +97,7 @@ function GenerateReportDialog({
   onGenerated: () => void;
 }) {
   const t = useTranslations("app.reports.create");
+  const tApiErr = useTranslations("apiErrors");
   const tReportTypes = useTranslations("app.reports.create.reportTypeNames");
   // Client-reported gap (2026-09-10) — the report-type Combobox listed the
   // hardcoded English `REPORT_TYPE_META[code].name` (e.g. "Individual Survey
@@ -235,7 +236,7 @@ function GenerateReportDialog({
       handleOpenChange(false);
       onGenerated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setGenerating(false);
     }
@@ -368,6 +369,7 @@ function GenerateReportDialog({
 
 export default function ReportsPage() {
   const t = useTranslations("app.reports");
+  const tApiErr = useTranslations("apiErrors");
   const tr = useTranslations("systemAdmin.ncnpReport.review");
   const router = useRouter();
   const canCreate = usePermission("reportsDashboards", "create");
@@ -438,7 +440,7 @@ export default function ReportsPage() {
       const created = await ncnpReportReviewService.generate();
       router.push(`/reports/${created.id}?type=consolidated`);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : tr("actionError"));
+      setActionError(resolveApiErrorMessage(err, tApiErr, tr("actionError")));
       setGeneratingConsolidated(false);
     }
   }

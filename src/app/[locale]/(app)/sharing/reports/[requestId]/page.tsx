@@ -14,6 +14,7 @@ import { ApiError } from "@/services/api/types";
 import { reportSharingService } from "@/services/report-sharing/report-sharing.service";
 import type { SharedReportSnapshot } from "@/services/report-sharing/report-sharing.types";
 import type { Report, ReportTypeCode } from "@/services/reports/reports.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 // Same document (cover + numbered sections, charts, tables) the owner's own
 // Report Preview page renders — a shared report must look identical to the
@@ -56,6 +57,7 @@ function toReport(snapshot: SharedReportSnapshot): Report {
 
 function SharedReportScreen({ requestId }: { requestId: string }) {
   const t = useTranslations("app.reportSharing.sharedReport");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [snapshot, setSnapshot] = useState<SharedReportSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ function SharedReportScreen({ requestId }: { requestId: string }) {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : t("loadError"));
+        setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
       });
     return () => {
       cancelled = true;

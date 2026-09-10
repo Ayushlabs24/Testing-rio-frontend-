@@ -42,13 +42,13 @@ import { METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE } from "@/config/pagination";
 import { CleaningSettingsPanel } from "@/components/features/data-quality/cleaning-settings-panel";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { ApiError } from "@/services/api/types";
 import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
 import type {
   MethodologyConfig,
   MethodologyConfigHistoryEntry,
 } from "@/services/methodology-config/methodology-config.types";
 import { studyConfigService } from "@/services/study-config/study-config.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   CreateStudyConfigOptionPayload,
   StudyConfigOption,
@@ -74,6 +74,7 @@ function VersionCard({
   onChanged: (updated: MethodologyConfig) => void;
 }) {
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   const [editOpen, setEditOpen] = useState(false);
   const [versionInput, setVersionInput] = useState(config.version);
   const [saving, setSaving] = useState(false);
@@ -91,7 +92,7 @@ function VersionCard({
       onChanged(updated);
       setEditOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -120,7 +121,7 @@ function VersionCard({
       onChanged(updated);
       setReviewDialogMode(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     }
   }
 
@@ -306,6 +307,7 @@ function VersionCard({
 // there was no UI anywhere to see it, only the single current row.
 function ConfigHistoryCard() {
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<MethodologyConfigHistoryEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -322,7 +324,7 @@ function ConfigHistoryCard() {
         // as a quiet empty state, or a real outage looks identical to a
         // brand-new config with nothing recorded.
         setHistory(null);
-        setLoadError(err instanceof ApiError ? err.message : t("historyLoadError"));
+        setLoadError(resolveApiErrorMessage(err, tApiErr, t("historyLoadError")));
       });
   }
 
@@ -465,6 +467,7 @@ function ConfigurableOptionsCard({
   setActive: (id: string, isActive: boolean) => Promise<StudyConfigOption>;
 }) {
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [options, setOptions] = useState<StudyConfigOption[] | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -507,7 +510,7 @@ function ConfigurableOptionsCard({
       setAddOpen(false);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setAdding(false);
     }
@@ -520,7 +523,7 @@ function ConfigurableOptionsCard({
       await setActive(option.id, !option.isActive);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setTogglingId(null);
     }
@@ -543,7 +546,7 @@ function ConfigurableOptionsCard({
       setEditing(null);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSavingEdit(false);
     }
@@ -686,6 +689,7 @@ export function MethodologyConfigTab() {
   // a DIFFERENT grant from this page's own write permission.
   const canTuneCleaning = usePermission("dataQuality", "write");
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   // Client-reported gap (2026-09-10) — each Strategic Axis's domain-list
   // subtitle (e.g. "Livelihood, Culture") is a plain denormalized English
   // name list on MethodologyConfig, same shape `useDomainArabicMap` already
@@ -904,7 +908,7 @@ export function MethodologyConfigTab() {
       applyConfig(updated);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }

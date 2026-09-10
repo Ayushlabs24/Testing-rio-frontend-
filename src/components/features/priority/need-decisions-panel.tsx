@@ -37,6 +37,7 @@ import type {
 } from "@/services/need-decisions/need-decisions.types";
 import { studyConfigService } from "@/services/study-config/study-config.service";
 import type { StudyConfigOption } from "@/services/study-config/study-config.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const STATUS_OPTIONS: DecisionStatus[] = [
   "open",
@@ -55,6 +56,7 @@ interface NeedDecisionsPanelProps {
 
 export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProps) {
   const t = useTranslations("PriorityDashboard.decisions");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [decisions, setDecisions] = useState<NeedDecision[] | null>(null);
   const [decisionTypes, setDecisionTypes] = useState<StudyConfigOption[]>([]);
@@ -80,9 +82,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
         setDecisions(d);
         setDecisionTypes(types.filter((o) => o.isActive));
       })
-      .catch((err) =>
-        setLoadError(err instanceof ApiError ? err.message : t("loadError")),
-      );
+      .catch((err) => setLoadError(resolveApiErrorMessage(err, tApiErr, t("loadError"))));
   }
 
   useEffect(() => {
@@ -113,9 +113,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
       setFormError(
         err instanceof ApiError && err.code === "NO_APPROVED_PRIORITY_SCORE"
           ? t("noApprovedScoreError")
-          : err instanceof ApiError
-            ? err.message
-            : t("genericError"),
+          : resolveApiErrorMessage(err, tApiErr, t("genericError")),
       );
     } finally {
       setSaving(false);

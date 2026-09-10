@@ -41,6 +41,7 @@ import { usersService } from "@/services/users/users.service";
 import type { PlatformUser } from "@/services/users/users.types";
 import { PERMISSION_MODULES } from "@/types/permissions";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const ACTIONS: PermissionAction[] = [
   "read",
@@ -59,6 +60,7 @@ const ACTIONS: PermissionAction[] = [
 // screen: a grant always applies across every entity.
 export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
   const t = useTranslations("app.settings.roles.grants");
+  const tApiErr = useTranslations("apiErrors");
   // Module labels come from the one shared dictionary (app.settings.roles.
   // modules) — this card used to read its own separate app.settings.roles.
   // grants.modules copy, and the two drifted (one missing entries the other
@@ -89,7 +91,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
     permissionGrantsService
       .list()
       .then(setGrants)
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("loadError")));
+      .catch((err) => setError(resolveApiErrorMessage(err, tApiErr, t("loadError"))));
   }
 
   useEffect(() => {
@@ -128,7 +130,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
       resetForm();
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t("genericError"));
+      setFormError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -140,7 +142,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
       await permissionGrantsService.revoke(id);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setRevokingId(null);
     }

@@ -1,7 +1,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import type { AppLocale } from "@/i18n/routing";
-import { formatDateTime } from "@/lib/format-date";
+import { formatDateTime, formatNumber } from "@/lib/format-date";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import {
   Table,
   TableBody,
@@ -134,6 +136,11 @@ export function NcnpReportContentView({
 }) {
   const t = useTranslations("systemAdmin.ncnpReport");
   const locale = useLocale() as AppLocale;
+  // The NCNP payload is not backend-localized — Domain/Sub-domain names
+  // arrive as denormalized English strings, resolved here against the master
+  // list's own `nameAr`. Org/region/village/need-title strings have no such
+  // column and go through <AutoTranslate> instead.
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   // Reuses the Priority Dashboard's own level labels (`level.high` etc.)
   // rather than duplicating them here — same pattern as
   // village-comparison/page.tsx's VillageCard. The API sends this field
@@ -254,43 +261,43 @@ export function NcnpReportContentView({
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {summary.totals.organizations.toLocaleString()}
+                {formatNumber(summary.totals.organizations, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("totalOrganizations")}</p>
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {summary.totals.studies.toLocaleString()}
+                {formatNumber(summary.totals.studies, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("totalStudies")}</p>
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {summary.totals.surveys.toLocaleString()}
+                {formatNumber(summary.totals.surveys, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("totalPublicSurveys")}</p>
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {summary.totals.responses.toLocaleString()}
+                {formatNumber(summary.totals.responses, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("totalResponses")}</p>
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {summary.totals.needs.toLocaleString()}
+                {formatNumber(summary.totals.needs, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("totalNeeds")}</p>
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {publicLinkStatus.open.toLocaleString()}
+                {formatNumber(publicLinkStatus.open, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("openSurveys")}</p>
             </div>
             <div className="border-border/60 bg-muted/20 rounded-xl border p-4">
               <p className="text-foreground text-3xl font-bold tabular-nums">
-                {publicLinkStatus.closed.toLocaleString()}
+                {formatNumber(publicLinkStatus.closed, locale)}
               </p>
               <p className="text-muted-foreground text-xs">{t("closedSurveys")}</p>
             </div>
@@ -398,18 +405,22 @@ export function NcnpReportContentView({
                   >
                     <div>
                       <p className="text-foreground text-sm font-semibold">
-                        {i + 1}. {n.needTitle}
+                        {i + 1}. <AutoTranslate text={n.needTitle} />
                       </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs">
-                        {[
-                          n.organizationName,
-                          n.domain,
-                          n.primaryGap
-                            ? t("primaryGapLabel", { gap: n.primaryGap })
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
+                      <p className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-1.5 text-xs">
+                        <AutoTranslate text={n.organizationName} />
+                        {n.domain ? (
+                          <>
+                            <span aria-hidden>·</span>
+                            <span>{localizedDomain(n.domain)}</span>
+                          </>
+                        ) : null}
+                        {n.primaryGap ? (
+                          <>
+                            <span aria-hidden>·</span>
+                            <span>{t("primaryGapLabel", { gap: n.primaryGap })}</span>
+                          </>
+                        ) : null}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
@@ -549,7 +560,9 @@ export function NcnpReportContentView({
                       key={o.organizationId}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="text-foreground">{o.organizationName}</span>
+                      <span className="text-foreground">
+                        <AutoTranslate text={o.organizationName} />
+                      </span>
                       <span className="text-muted-foreground text-xs">
                         {o.lastActivity
                           ? formatDate(o.lastActivity, locale)
@@ -658,7 +671,7 @@ export function NcnpReportContentView({
             locale={locale}
             items={needDomains.map((d) => ({
               id: d.domainCode,
-              name: d.domainName,
+              name: localizedDomain(d.domainName),
               count: d.needCount,
             }))}
             limit={needDomains.length}
@@ -701,7 +714,9 @@ export function NcnpReportContentView({
               <TableBody>
                 {studyOverview.topOrgsByStudyCount.map((o) => (
                   <TableRow key={o.organizationId}>
-                    <TableCell className="font-medium">{o.organizationName}</TableCell>
+                    <TableCell className="font-medium">
+                      <AutoTranslate text={o.organizationName} />
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {o.studyCount}
                     </TableCell>
@@ -778,7 +793,7 @@ export function NcnpReportContentView({
             locale={locale}
             items={needSubDomains.map((d, i) => ({
               id: `${d.domainName}-${d.subDomainName}-${i}`,
-              name: `${d.domainName} — ${d.subDomainName}`,
+              name: `${localizedDomain(d.domainName)} — ${localizedSubDomain(d.subDomainName)}`,
               count: d.needCount,
             }))}
             limit={GEO_LIST_LIMIT}
@@ -807,8 +822,10 @@ export function NcnpReportContentView({
                 <TableBody>
                   {domainRegionIntersections.map((c, i) => (
                     <TableRow key={`${c.regionName}-${c.domainName}-${i}`}>
-                      <TableCell className="font-medium">{c.regionName}</TableCell>
-                      <TableCell>{c.domainName}</TableCell>
+                      <TableCell className="font-medium">
+                        <AutoTranslate text={c.regionName} />
+                      </TableCell>
+                      <TableCell>{localizedDomain(c.domainName)}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {c.needCount}
                       </TableCell>
@@ -973,12 +990,14 @@ export function NcnpReportContentView({
                   const status = statusByRegionMap.get(r.regionId);
                   return (
                     <TableRow key={r.regionId}>
-                      <TableCell className="font-medium">{r.regionName}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {r.surveyCount.toLocaleString()}
+                      <TableCell className="font-medium">
+                        <AutoTranslate text={r.regionName} />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {r.responseCount.toLocaleString()}
+                        {formatNumber(r.surveyCount, locale)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(r.responseCount, locale)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {r.avgResponsesPerSurvey.toFixed(1)}
@@ -1182,7 +1201,7 @@ export function NcnpReportContentView({
             locale={locale}
             items={priorityOverview.domainComparison.map((d) => ({
               id: d.domainKey,
-              name: d.domainName,
+              name: localizedDomain(d.domainName),
               count: Math.round(d.avgPerformanceScore),
             }))}
             limit={priorityOverview.domainComparison.length}
@@ -1209,7 +1228,9 @@ export function NcnpReportContentView({
               <TableBody>
                 {priorityOverview.topPriorityVillages.map((v) => (
                   <TableRow key={`${v.studyId}-${v.surveyId}-${v.villageId}`}>
-                    <TableCell className="font-medium">{v.villageId}</TableCell>
+                    <TableCell className="font-medium">
+                      <AutoTranslate text={v.villageId} />
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {v.priorityScore.toFixed(1)}
                     </TableCell>
@@ -1259,8 +1280,10 @@ export function NcnpReportContentView({
                 <TableBody>
                   {criticalNeeds.priorityNeeds.map((n) => (
                     <TableRow key={n.needId}>
-                      <TableCell className="font-medium">{n.needTitle}</TableCell>
-                      <TableCell>{n.domain ?? "—"}</TableCell>
+                      <TableCell className="font-medium">
+                        <AutoTranslate text={n.needTitle} />
+                      </TableCell>
+                      <TableCell>{n.domain ? localizedDomain(n.domain) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {n.priorityScore.toFixed(1)}
                       </TableCell>
@@ -1365,11 +1388,11 @@ export function NcnpReportContentView({
           <span className="flex flex-col">
             <span>
               <b className="text-foreground text-base tabular-nums">
-                {summary.totals.organizations.toLocaleString()}
+                {formatNumber(summary.totals.organizations, locale)}
               </b>{" "}
               {t("totalOrganizations")}
               <span className="text-success ml-1 font-semibold tabular-nums">
-                (+{summary.newThisPeriod.organizations.current.toLocaleString()})
+                (+{formatNumber(summary.newThisPeriod.organizations.current, locale)})
               </span>
             </span>
             <span className="text-muted-foreground/80 text-[10px]">
@@ -1379,11 +1402,11 @@ export function NcnpReportContentView({
           <span className="flex flex-col">
             <span>
               <b className="text-foreground text-base tabular-nums">
-                {summary.totals.studies.toLocaleString()}
+                {formatNumber(summary.totals.studies, locale)}
               </b>{" "}
               {t("totalStudies")}
               <span className="text-success ml-1 font-semibold tabular-nums">
-                (+{summary.newThisPeriod.studies.current.toLocaleString()})
+                (+{formatNumber(summary.newThisPeriod.studies.current, locale)})
               </span>
             </span>
             <span className="text-muted-foreground/80 text-[10px]">
@@ -1393,11 +1416,11 @@ export function NcnpReportContentView({
           <span className="flex flex-col">
             <span>
               <b className="text-foreground text-base tabular-nums">
-                {summary.totals.surveys.toLocaleString()}
+                {formatNumber(summary.totals.surveys, locale)}
               </b>{" "}
               {t("totalSurveys")}
               <span className="text-success ml-1 font-semibold tabular-nums">
-                (+{summary.newThisPeriod.surveys.current.toLocaleString()})
+                (+{formatNumber(summary.newThisPeriod.surveys.current, locale)})
               </span>
             </span>
             <span className="text-muted-foreground/80 text-[10px]">
@@ -1407,11 +1430,11 @@ export function NcnpReportContentView({
           <span className="flex flex-col">
             <span>
               <b className="text-foreground text-base tabular-nums">
-                {summary.totals.responses.toLocaleString()}
+                {formatNumber(summary.totals.responses, locale)}
               </b>{" "}
               {t("totalResponses")}
               <span className="text-success ml-1 font-semibold tabular-nums">
-                (+{summary.newThisPeriod.responses.current.toLocaleString()})
+                (+{formatNumber(summary.newThisPeriod.responses.current, locale)})
               </span>
             </span>
             <span className="text-muted-foreground/80 text-[10px]">

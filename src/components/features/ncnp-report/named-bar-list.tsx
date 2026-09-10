@@ -6,9 +6,15 @@ import {
 } from "@/components/ui/tooltip";
 import type { AppLocale } from "@/i18n/routing";
 import { formatNumber } from "@/lib/format-date";
+import { AutoTranslate } from "@/components/common/auto-translate";
 
 interface NamedBarListItem {
   id: string;
+  /** May be user/master data (org name, region name, domain name) in either
+   * language — the NCNP report payload is not backend-localized, so it's
+   * rendered through AutoTranslate here. Pass an already-resolved string
+   * (e.g. `localizedDomain(...)`) when a proper master-data translation
+   * exists; AutoTranslate is a no-op once the script already matches. */
   name: string;
   count: number;
 }
@@ -57,11 +63,11 @@ export function NamedBarList({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-muted-foreground w-32 shrink-0 truncate text-right text-sm">
-                    {item.name}
+                    <AutoTranslate text={item.name} />
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs text-wrap">
-                  {item.name}
+                  <AutoTranslate text={item.name} />
                 </TooltipContent>
               </Tooltip>
               <div className="bg-muted h-3 flex-1 overflow-hidden rounded-full">

@@ -42,10 +42,10 @@ import {
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   SurveyResponseDetail,
   SurveyResponseSummary,
@@ -178,6 +178,7 @@ export default function SurveyResponsesPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.publicSurveys.responses");
+  const tApiErr = useTranslations("apiErrors");
   const canExport = usePermission("studySurvey", "export");
 
   const [need, setNeed] = useState<Need | null>(null);
@@ -238,7 +239,7 @@ export default function SurveyResponsesPage({
     try {
       await publicSurveysService.exportResponses(needId, format);
     } catch (err) {
-      setExportError(err instanceof ApiError ? err.message : t("exportError"));
+      setExportError(resolveApiErrorMessage(err, tApiErr, t("exportError")));
     } finally {
       setExporting(false);
     }

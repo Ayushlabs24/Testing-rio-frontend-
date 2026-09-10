@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { sharingService } from "@/services/sharing/sharing.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   OrgLookupResult,
   SharedStudySnapshot,
@@ -63,6 +64,7 @@ function CreateRequestDialog({
   onCreated: () => void;
 }) {
   const t = useTranslations("app.sharing.create");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [orgOptions, setOrgOptions] = useState<OrgLookupResult[]>([]);
   // Combobox items take a plain string label, not JSX — a Combobox has no
@@ -163,7 +165,7 @@ function CreateRequestDialog({
       setNoteError(null);
       onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -246,22 +248,31 @@ function SharedStudyDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("app.sharing.sharedStudy");
+  const tStudyStatus = useTranslations("app.studies.status");
   return (
     <Dialog open={snapshot !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{snapshot?.title ?? t("title")}</DialogTitle>
+          <DialogTitle>
+            {snapshot?.title ? <AutoTranslate text={snapshot.title} /> : t("title")}
+          </DialogTitle>
         </DialogHeader>
         {snapshot ? (
           <div className="space-y-3 text-sm">
             <div>
               <p className="text-muted-foreground text-xs">{t("statusLabel")}</p>
-              <p>{snapshot.status}</p>
+              <p>
+                {tStudyStatus.has(snapshot.status)
+                  ? tStudyStatus(snapshot.status as Parameters<typeof tStudyStatus>[0])
+                  : snapshot.status}
+              </p>
             </div>
             {snapshot.needStatement ? (
               <div>
                 <p className="text-muted-foreground text-xs">{t("needStatementLabel")}</p>
-                <p>{snapshot.needStatement}</p>
+                <p>
+                  <AutoTranslate text={snapshot.needStatement} />
+                </p>
               </div>
             ) : null}
             <div>
@@ -294,6 +305,7 @@ export type SharingInnerTab =
 
 export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab } = {}) {
   const t = useTranslations("app.sharing");
+  const tApiErr = useTranslations("apiErrors");
   const { session } = useAuth();
   const canCreate = usePermission("archiveSharingAudit", "create");
   const canApprove = usePermission("archiveSharingAudit", "approve");
@@ -386,9 +398,7 @@ export function StudySharingPanel({ initialTab }: { initialTab?: SharingInnerTab
       const result = await sharingService.getSharedStudy(id);
       setSnapshot(result);
     } catch (err) {
-      setActionError(
-        err instanceof ApiError ? err.message : t("sharedStudy.genericError"),
-      );
+      setActionError(resolveApiErrorMessage(err, tApiErr, t("sharedStudy.genericError")));
     }
   }
 

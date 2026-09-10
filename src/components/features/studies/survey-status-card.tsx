@@ -20,6 +20,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import type { NeedStatus } from "@/services/needs/needs.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 type CreateMode = "ai" | "manual";
 
@@ -49,6 +50,7 @@ export function SurveyStatusCard({
   aiSuggestedSubDomain?: string | null;
 }) {
   const t = useTranslations("app.studies.survey");
+  const tApiErr = useTranslations("apiErrors");
   const canWrite = usePermission("surveyBuilder", "write");
   const router = useRouter();
 
@@ -92,7 +94,7 @@ export function SurveyStatusCard({
       }
       router.push(`/survey-builder/${needId}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
       setCreating(false);
     }
   }
@@ -105,7 +107,7 @@ export function SurveyStatusCard({
       const updated = await surveysService.submitForApproval(survey.id);
       setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }

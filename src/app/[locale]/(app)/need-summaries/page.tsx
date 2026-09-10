@@ -26,6 +26,7 @@ import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { needSummaryService } from "@/services/needs/need-summary.service";
 import type { NeedSummary } from "@/services/needs/need-summary.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * RIO-AI-003's reviewer queue — every suggested summary awaiting a decision.
@@ -42,6 +43,7 @@ import type { NeedSummary } from "@/services/needs/need-summary.types";
  */
 export default function NeedSummariesPage() {
   const t = useTranslations("app.needSummaries");
+  const tApiErr = useTranslations("apiErrors");
 
   const [items, setItems] = useState<NeedSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -120,7 +122,7 @@ export default function NeedSummariesPage() {
       setSelected(new Set());
       await load();
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setConfirming(false);
     }

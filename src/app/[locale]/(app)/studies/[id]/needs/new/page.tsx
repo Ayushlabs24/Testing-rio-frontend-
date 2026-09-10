@@ -28,6 +28,7 @@ import { evidenceService } from "@/services/evidence/evidence.service";
 import { needsService } from "@/services/needs/needs.service";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 interface NeedFormValues {
   title: string;
@@ -80,6 +81,7 @@ function fileExtensionOf(fileName: string): string {
 export default function CreateNeedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: studyId } = use(params);
   const t = useTranslations("app.studies.need");
+  const tApiErr = useTranslations("apiErrors");
   const tGeo = useTranslations("app.geography");
   const locale = useLocale() as AppLocale;
   const tValidation = useTranslations("app.studies.validation");
@@ -273,7 +275,7 @@ export default function CreateNeedPage({ params }: { params: Promise<{ id: strin
       // unmounts on the route change.
       await new Promise<void>(() => {});
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+      setSubmitError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     }
   });
 

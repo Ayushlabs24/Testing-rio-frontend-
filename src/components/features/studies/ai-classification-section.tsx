@@ -54,6 +54,7 @@ import { domainsService } from "@/services/domains/domains.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need, NeedStatus } from "@/services/needs/needs.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -87,6 +88,7 @@ export function AiClassificationSection({
   onNeedUpdated?: (need: Need) => void;
 }) {
   const t = useTranslations("app.studies.classification");
+  const tApiErr = useTranslations("apiErrors");
   const canReview = usePermission("aiReview", "approve");
   const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   const { session } = useAuth();
@@ -401,7 +403,7 @@ export function AiClassificationSection({
       const updated = await needsService.getById(need.id);
       onNeedUpdated?.(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("classifyError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("classifyError")));
     } finally {
       setRetrying(false);
     }
@@ -463,7 +465,7 @@ export function AiClassificationSection({
       await aiReviewService.approve(need.id, {}, actAsOrgOptions(need.orgId));
       await reloadAfterDecision();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("approveError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("approveError")));
     } finally {
       setApproving(false);
     }
@@ -487,7 +489,7 @@ export function AiClassificationSection({
       setOverriding(false);
       await reloadAfterDecision();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("overrideError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("overrideError")));
     } finally {
       setDecidingModify(false);
     }
@@ -508,7 +510,7 @@ export function AiClassificationSection({
       setRejectCommentsError(null);
       await reloadAfterDecision();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("rejectError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("rejectError")));
     } finally {
       setRejecting(false);
     }
@@ -524,7 +526,7 @@ export function AiClassificationSection({
       );
       setSurvey(created);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("regenerateSurveyError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("regenerateSurveyError")));
     } finally {
       setRegenerating(false);
     }
@@ -552,7 +554,7 @@ export function AiClassificationSection({
       onNeedUpdated?.(updated);
       setOverriding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("overrideError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("overrideError")));
     } finally {
       setOverridePreviewLoading(false);
     }

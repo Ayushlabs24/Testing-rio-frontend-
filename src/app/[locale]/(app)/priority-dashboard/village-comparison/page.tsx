@@ -12,11 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { cn } from "@/lib/utils";
-import { ApiError } from "@/services/api/types";
 import { priorityService } from "@/services/priority/priority.service";
 import type { VillageComparisonEntry } from "@/services/priority/priority.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 // Same critical/high/medium/low → variant mapping the main Priority
 // Dashboard list uses (see LEVEL_VARIANT there) — the API sends this field
@@ -163,6 +163,7 @@ function VillageCard({
 
 export default function VillageComparisonPage() {
   const t = useTranslations("app.villageComparison");
+  const tApiErr = useTranslations("apiErrors");
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [selectedStudyIds, setSelectedStudyIds] = useState<string[]>([]);
   const [entries, setEntries] = useState<VillageComparisonEntry[] | null>(null);
@@ -183,7 +184,7 @@ export default function VillageComparisonPage() {
     try {
       setEntries(await priorityService.compareVillages(studyIds));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("loadError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
     } finally {
       setLoading(false);
     }

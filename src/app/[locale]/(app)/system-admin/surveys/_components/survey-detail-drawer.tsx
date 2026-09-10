@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -244,7 +245,7 @@ export function SurveyDetailDrawer({
                     <Card key={q.id} className="space-y-1 p-3 text-xs">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-foreground font-semibold">
-                          {idx + 1}. {q.questionText}
+                          {idx + 1}. <AutoTranslate text={q.questionText} />
                         </p>
                         {q.isRequired ? (
                           <Badge

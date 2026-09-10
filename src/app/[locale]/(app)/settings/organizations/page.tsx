@@ -63,6 +63,8 @@ function OrganizationDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("app.settings.organizations");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
+  const tUserStatus = useTranslations("app.settings.users.status");
   const [organization, setOrganization] = useState<OrganizationSummary | null>(null);
   const [members, setMembers] = useState<OrgUser[] | null>(null);
 
@@ -163,10 +165,18 @@ function OrganizationDetailSheet({
                             </p>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">{member.role.name}</Badge>
+                            <Badge variant="secondary">
+                              {tRoleNames.has(member.role.key)
+                                ? tRoleNames(
+                                    member.role.key as Parameters<typeof tRoleNames>[0],
+                                  )
+                                : member.role.name}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {member.status}
+                            {tUserStatus.has(member.status)
+                              ? tUserStatus(member.status)
+                              : member.status}
                           </TableCell>
                         </TableRow>
                       ))

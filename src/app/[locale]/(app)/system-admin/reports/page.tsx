@@ -4,6 +4,7 @@ import { BarChart3, Search, Eye, Download, Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
 import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ interface ReportItem {
 
 export default function SystemAdminReportsPage() {
   const t = useTranslations("systemAdmin.reports");
+  const tReportStatus = useTranslations("app.reports.status");
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
@@ -182,18 +184,22 @@ export default function SystemAdminReportsPage() {
                       return (
                         <TableRow key={report.id}>
                           <TableCell className="text-foreground font-medium">
-                            {report.title}
+                            <AutoTranslate text={report.title} />
                           </TableCell>
                           <TableCell className="text-muted-foreground font-mono text-xs">
                             {report.reportType}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {report.status}
+                            <Badge variant="outline" className="text-xs">
+                              {tReportStatus.has(report.status)
+                                ? tReportStatus(
+                                    report.status as Parameters<typeof tReportStatus>[0],
+                                  )
+                                : report.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground font-mono text-xs">
-                            {new Date(report.generatedAt).toLocaleDateString()}
+                            <FormattedDate value={report.generatedAt} />
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">

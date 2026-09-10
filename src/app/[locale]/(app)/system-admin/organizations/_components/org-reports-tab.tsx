@@ -3,6 +3,8 @@
 import { BarChart3, Search, Eye, Download } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +39,7 @@ interface OrgReportsTabProps {
 
 export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
   const t = useTranslations("systemAdmin.reports");
+  const tReportStatus = useTranslations("app.reports.status");
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,18 +155,22 @@ export function OrgReportsTab({ organizationId }: OrgReportsTabProps) {
                 return (
                   <TableRow key={report.id}>
                     <TableCell className="text-foreground font-medium">
-                      {report.title}
+                      <AutoTranslate text={report.title} />
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">
                       {report.reportType}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {report.status}
+                      <Badge variant="outline" className="text-xs">
+                        {tReportStatus.has(report.status)
+                          ? tReportStatus(
+                              report.status as Parameters<typeof tReportStatus>[0],
+                            )
+                          : report.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">
-                      {new Date(report.generatedAt).toLocaleDateString()}
+                      <FormattedDate value={report.generatedAt} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

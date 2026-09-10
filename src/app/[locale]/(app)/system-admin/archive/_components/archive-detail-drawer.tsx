@@ -1,6 +1,7 @@
 "use client";
 
 import { X, FileText } from "lucide-react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
@@ -56,6 +57,9 @@ export function ArchiveDetailDrawer({
   onClose,
 }: ArchiveDetailDrawerProps) {
   const t = useTranslations("systemAdmin.archive");
+  const tArchiveEnum = useTranslations("app.archive");
+  const tReportStatus = useTranslations("app.reports.status");
+  const tAuditActions = useTranslations("app.settings.audit.actions");
   const [data, setData] = useState<ArchiveDetailData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -118,13 +122,19 @@ export function ArchiveDetailDrawer({
               {/* Status Banner */}
               <div className="border-primary/20 bg-primary/5 flex items-center justify-between rounded-lg border p-4">
                 <div>
-                  <h3 className="text-foreground text-sm font-semibold">{data.title}</h3>
+                  <h3 className="text-foreground text-sm font-semibold">
+                    <AutoTranslate text={data.title} />
+                  </h3>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    {data.organizationName} • {data.region.join(", ")}
+                    <AutoTranslate text={data.organizationName} />
+                    {" • "}
+                    {data.region.join(", ")}
                   </p>
                 </div>
-                <Badge variant="outline" className="text-xs capitalize">
-                  {data.status}
+                <Badge variant="outline" className="text-xs">
+                  {tArchiveEnum.has(`statusValues.${data.status}`)
+                    ? tArchiveEnum(`statusValues.${data.status}`)
+                    : data.status}
                 </Badge>
               </div>
 
@@ -200,13 +210,19 @@ export function ArchiveDetailDrawer({
                         className="border-border flex items-center justify-between rounded border p-2.5 text-xs"
                       >
                         <div>
-                          <p className="text-foreground font-medium">{report.title}</p>
+                          <p className="text-foreground font-medium">
+                            <AutoTranslate text={report.title} />
+                          </p>
                           <span className="text-muted-foreground font-mono text-[10px]">
                             {report.reportType}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {report.status}
+                        <Badge variant="outline" className="text-[10px]">
+                          {tReportStatus.has(report.status)
+                            ? tReportStatus(
+                                report.status as Parameters<typeof tReportStatus>[0],
+                              )
+                            : report.status}
                         </Badge>
                       </div>
                     ))}
@@ -226,10 +242,14 @@ export function ArchiveDetailDrawer({
                       className="bg-muted/40 flex items-center justify-between rounded p-2 text-[11px]"
                     >
                       <span className="text-foreground font-mono font-medium">
-                        {audit.action}
+                        {tAuditActions.has(audit.action)
+                          ? tAuditActions(
+                              audit.action as Parameters<typeof tAuditActions>[0],
+                            )
+                          : audit.action}
                       </span>
                       <span className="text-muted-foreground font-mono">
-                        {new Date(audit.createdAt).toLocaleDateString()}
+                        <FormattedDate value={audit.createdAt} />
                       </span>
                     </div>
                   ))}

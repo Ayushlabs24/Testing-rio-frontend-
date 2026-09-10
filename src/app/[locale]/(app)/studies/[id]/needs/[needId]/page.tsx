@@ -43,6 +43,7 @@ import type { AppLocale } from "@/i18n/routing";
 import { formatNumber } from "@/lib/format-date";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 interface NeedFormValues {
   title: string;
@@ -168,6 +169,7 @@ function NeedDetailsCard({
   onDeleted: () => void;
 }) {
   const t = useTranslations("app.studies.need");
+  const tApiErr = useTranslations("apiErrors");
   const tGeo = useTranslations("app.geography");
   const tSource = useTranslations("app.studies.source");
   const tDelete = useTranslations("app.studies.need.delete");
@@ -263,7 +265,7 @@ function NeedDetailsCard({
       onSaved(updated);
       setEditing(false);
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+      setSubmitError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     }
   });
 

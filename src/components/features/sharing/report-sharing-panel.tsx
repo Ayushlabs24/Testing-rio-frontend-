@@ -45,6 +45,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { reportSharingService } from "@/services/report-sharing/report-sharing.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   OrgLookupResult,
   ReportLookupResult,
@@ -73,6 +74,7 @@ function CreateReportSharingRequestDialog({
   onCreated: () => void;
 }) {
   const t = useTranslations("app.reportSharing.create");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [orgOptions, setOrgOptions] = useState<OrgLookupResult[]>([]);
   // Combobox items take a plain string label, not JSX — resolved once per
@@ -173,7 +175,7 @@ function CreateReportSharingRequestDialog({
       setNoteError(null);
       onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }

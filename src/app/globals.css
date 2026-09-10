@@ -131,3 +131,17 @@
     display: none;
   }
 }
+
+/* Leaflet stacks its own panes and controls between z-index 200 and 1000
+   (see leaflet.css). Those sit in the page's root stacking context, so a
+   dropdown rendered into a portal at z-50 — every Select, Popover and
+   Tooltip in the app — loses to the map and gets clipped behind it.
+
+   `isolation: isolate` gives the map container its own stacking context, so
+   Leaflet's internal ordering still works exactly as before but stops
+   competing with page-level overlays. Applied to the container itself so
+   every map is covered, rather than patching each component. */
+.leaflet-container {
+  isolation: isolate;
+  z-index: 0;
+}

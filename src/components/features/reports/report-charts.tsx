@@ -213,11 +213,15 @@ export function RadarChart({
   series,
   max,
   size = 280,
+  ariaLabel = "Domain profile",
 }: {
   axes: string[];
   series: Array<{ name: string; values: number[]; color: string }>;
   max: number;
   size?: number;
+  /** Localized accessible name for the figure — the caller has the
+   * translation context, this pure chart component does not. */
+  ariaLabel?: string;
 }) {
   const cx = size / 2;
   const cy = size / 2;
@@ -239,7 +243,7 @@ export function RadarChart({
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         role="img"
-        aria-label="Domain profile"
+        aria-label={ariaLabel}
       >
         {[0.25, 0.5, 0.75, 1].map((f) => (
           <polygon
