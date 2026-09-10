@@ -89,6 +89,17 @@ function scalar(v: unknown, key?: string): string {
 function num(v: unknown): number | null {
   return typeof v === "number" ? v : null;
 }
+// Priority / severity tiers are a fixed enum (CRITICAL … NEGLIGIBLE, SEVERE …
+// MINIMAL) — translate them deterministically from the i18n catalog, not via
+// the free-text AI path, which tends to leave short all-caps tokens ("LOW")
+// unchanged. Falls back to the raw value for anything outside the enum.
+type TierT = ((key: string) => string) & { has: (key: string) => boolean };
+function tierText(v: unknown, t: TierT): string {
+  const key = String(v ?? "")
+    .trim()
+    .toUpperCase();
+  return key && t.has(`tierValue.${key}`) ? t(`tierValue.${key}`) : scalar(v);
+}
 function toBars(rows: Dict[], labelKey: string, valueKey: string) {
   return rows
     .filter((r) => typeof r[valueKey] === "number")
@@ -124,8 +135,12 @@ function KeyValues({ obj, exclude = [] }: { obj: Dict; exclude?: string[] }) {
     <div className="divide-border divide-y">
       {rows.map(([k, v]) => (
         <div key={k} className="flex items-center justify-between gap-4 py-2 text-sm">
-          <span className="text-muted-foreground">{label(k)}</span>
-          <span className="text-foreground text-right font-medium">{scalar(v)}</span>
+          <span className="text-muted-foreground">
+            <AutoTranslate text={label(k)} />
+          </span>
+          <span dir="auto" className="text-foreground text-right font-medium">
+            <AutoTranslate text={scalar(v)} />
+          </span>
         </div>
       ))}
     </div>
@@ -147,7 +162,7 @@ function DataTable({ rows, columns }: { rows: Dict[]; columns?: ColSpec[] }) {
           <TableRow>
             {cols.map((c) => (
               <TableHead key={c.key} className="whitespace-nowrap">
-                {c.label ?? label(c.key)}
+                <AutoTranslate text={c.label ?? label(c.key)} />
               </TableHead>
             ))}
           </TableRow>
@@ -161,7 +176,11 @@ function DataTable({ rows, columns }: { rows: Dict[]; columns?: ColSpec[] }) {
                   dir="auto"
                   className="text-sm break-words whitespace-normal"
                 >
-                  {c.format ? c.format(r) : scalar(r[c.key], c.key)}
+                  {c.format ? (
+                    c.format(r)
+                  ) : (
+                    <AutoTranslate text={scalar(r[c.key], c.key)} />
+                  )}
                 </TableCell>
               ))}
             </TableRow>
@@ -343,12 +362,15 @@ function ResponseQualityBlock({ rq }: { rq: Dict }) {
   const t = useTranslations("app.reports.content");
   const pct = (v: unknown) => (typeof v === "number" ? `${v.toFixed(2)}%` : scalar(v));
   const rows: Array<{ label: string; value: string; wide?: boolean }> = [
-    { label: t("rq2.overallConfidence"), value: scalar(rq.overallConfidence) },
+    {
+      label: t("rq2.overallConfidence"),
+      value: tierText(rq.overallConfidence, t as TierT),
+    },
     { label: t("cov.submitted"), value: scalar(rq.submittedResponses) },
     { label: t("cov.valid"), value: scalar(rq.validResponses) },
     { label: t("rq2.validResponseRate"), value: `${scalar(rq.validResponseRatePct)}%` },
     { label: t("dq.dontKnow"), value: pct(rq.dontKnowRate) },
-    { label: t("rq2.dontKnowBand"), value: scalar(rq.dontKnowBand) },
+    { label: t("rq2.dontKnowBand"), value: tierText(rq.dontKnowBand, t as TierT) },
   ];
   // RIO-FR-024: the study's own signed-off sample-size target — absent
   // entirely (not just null) for studies created before this field existed,
@@ -584,8 +606,8 @@ export function ReportContentView({ report }: { report: Report }) {
       node: (
         <div className="space-y-4">
           {ai?.executiveSummary ? (
-            <p className="text-foreground text-sm leading-relaxed">
-              {scalar(ai.executiveSummary)}
+            <p dir="auto" className="text-foreground text-sm leading-relaxed">
+              <AutoTranslate text={scalar(ai.executiveSummary)} />
             </p>
           ) : null}
           <div className="flex flex-wrap items-center gap-5">
@@ -594,7 +616,7 @@ export function ReportContentView({ report }: { report: Report }) {
                 value={needsIndex}
                 max={100}
                 label={t("needsIndex")}
-                sub={scalar(severity?.label)}
+                sub={tierText(severity?.label, t as TierT)}
                 scaleNote={t("scale.severity")}
               />
             ) : null}
@@ -610,7 +632,7 @@ export function ReportContentView({ report }: { report: Report }) {
                   className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
                   style={{ background: priorityColor(priorityStatus) }}
                 >
-                  {priorityStatus} {t("priority")}
+                  {tierText(priorityStatus, t as TierT)} {t("priority")}
                 </span>
               </div>
             ) : null}
@@ -910,7 +932,7 @@ export function ReportContentView({ report }: { report: Report }) {
             {
               label: t("cov.valid"),
               value: scalar(rq.validResponses),
-              sub: scalar(rq.overallConfidence),
+              sub: tierText(rq.overallConfidence, t as TierT),
             },
           ]}
         />
@@ -1099,8 +1121,11 @@ export function ReportContentView({ report }: { report: Report }) {
                 <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                   {label}
                 </p>
-                <p className="text-foreground mt-1 text-sm font-semibold break-words">
-                  {scalar(value)}
+                <p
+                  dir="auto"
+                  className="text-foreground mt-1 text-sm font-semibold break-words"
+                >
+                  <AutoTranslate text={scalar(value)} />
                 </p>
               </div>
             ))}
@@ -2129,7 +2154,7 @@ export function ReportContentView({ report }: { report: Report }) {
                             value={pri}
                             max={100}
                             label={t("priorityScore")}
-                            sub={scalar(score.priorityStatus)}
+                            sub={tierText(score.priorityStatus, t as TierT)}
                           />
                         ) : null}
                       </div>
@@ -2388,7 +2413,7 @@ export function ReportContentView({ report }: { report: Report }) {
               {
                 label: t("dq.dontKnow"),
                 value: `${scalar(rq.dontKnowRatePct)}%`,
-                sub: scalar(rq.dontKnowBand),
+                sub: tierText(rq.dontKnowBand, t as TierT),
               },
               {
                 label: t("dq.confidence"),
@@ -2572,7 +2597,9 @@ export function ReportContentView({ report }: { report: Report }) {
                 <dt className="text-muted-foreground text-[11px] tracking-wide uppercase">
                   {m.k}
                 </dt>
-                <dd className="text-foreground text-sm font-medium">{m.v}</dd>
+                <dd dir="auto" className="text-foreground text-sm font-medium">
+                  <AutoTranslate text={m.v} />
+                </dd>
               </div>
             ))}
           </dl>

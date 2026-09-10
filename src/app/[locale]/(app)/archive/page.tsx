@@ -591,7 +591,7 @@ export default function ArchivePage() {
                       {tDetail("entityLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.organizationName}
+                      <AutoTranslate text={detailEntry.organizationName} />
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -599,7 +599,11 @@ export default function ArchivePage() {
                       {tUpload("regionLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.region.join(", ") || tDetail("notAvailable")}
+                      {detailEntry.region.length ? (
+                        <AutoTranslate text={detailEntry.region.join(", ")} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -607,8 +611,11 @@ export default function ArchivePage() {
                       {tGeo("governorateLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.governorateNames?.join(", ") ||
-                        tDetail("notAvailable")}
+                      {detailEntry.governorateNames?.length ? (
+                        <AutoTranslate text={detailEntry.governorateNames.join(", ")} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -616,7 +623,11 @@ export default function ArchivePage() {
                       {tGeo("centerLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.centerNames?.join(", ") || tDetail("notAvailable")}
+                      {detailEntry.centerNames?.length ? (
+                        <AutoTranslate text={detailEntry.centerNames.join(", ")} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -624,7 +635,11 @@ export default function ArchivePage() {
                       {tUpload("subjectLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.sector ?? tDetail("notAvailable")}
+                      {detailEntry.sector ? (
+                        <AutoTranslate text={detailEntry.sector} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -640,7 +655,11 @@ export default function ArchivePage() {
                       {tUpload("authorLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.author ?? tDetail("notAvailable")}
+                      {detailEntry.author ? (
+                        <AutoTranslate text={detailEntry.author} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -648,7 +667,11 @@ export default function ArchivePage() {
                       {tUpload("methodologyVersionLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.methodologyVersionLabel ?? tDetail("notAvailable")}
+                      {detailEntry.methodologyVersionLabel ? (
+                        <AutoTranslate text={detailEntry.methodologyVersionLabel} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -656,7 +679,11 @@ export default function ArchivePage() {
                       {tDetail("uploadedByLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.uploadedByName ?? tDetail("notAvailable")}
+                      {detailEntry.uploadedByName ? (
+                        <AutoTranslate text={detailEntry.uploadedByName} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">

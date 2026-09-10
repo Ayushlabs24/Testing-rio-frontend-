@@ -9,7 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
@@ -34,7 +34,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AutoTranslate } from "@/components/common/auto-translate";
-import { isEntityLabelTranslatable, type AuditEntityType } from "@/config/audit";
+import {
+  isEntityLabelTranslatable,
+  localizeAuditReportPhrases,
+  type AuditEntityType,
+} from "@/config/audit";
 import { apiClient } from "@/services/api/client";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
@@ -136,6 +140,7 @@ function resolveAuditItemLabel(
 
 export default function SystemAdminAuditLogPage() {
   const t = useTranslations("systemAdmin.auditLog");
+  const locale = useLocale();
   // Bug found in the 2026-09-08 bilingual audit: `formatAuditActionLabel`
   // has always supported an optional translator argument, but nothing in
   // this file ever obtained one — every call fell straight through to the
@@ -415,10 +420,17 @@ export default function SystemAdminAuditLogPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs font-medium">
-                          {item.organizationId
-                            ? (orgMap.get(item.organizationId)?.name ??
-                              item.organizationId.slice(0, 8) + "...")
-                            : t("globalScope")}
+                          {item.organizationId ? (
+                            orgMap.get(item.organizationId)?.name ? (
+                              <AutoTranslate
+                                text={orgMap.get(item.organizationId)!.name}
+                              />
+                            ) : (
+                              item.organizationId.slice(0, 8) + "..."
+                            )
+                          ) : (
+                            t("globalScope")
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[11px] font-medium">
@@ -433,7 +445,9 @@ export default function SystemAdminAuditLogPage() {
                                 isEntityLabelTranslatable(
                                   item.entityType as AuditEntityType,
                                 ) ? (
-                                <AutoTranslate text={label.text} />
+                                <AutoTranslate
+                                  text={localizeAuditReportPhrases(label.text, locale)}
+                                />
                               ) : (
                                 label.text
                               );

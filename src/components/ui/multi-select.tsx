@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,6 +78,7 @@ export function MultiSelect({
   onOpenChange,
   singleLine = false,
 }: MultiSelectProps) {
+  const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [chipsExpanded, setChipsExpanded] = React.useState(false);
@@ -308,7 +310,7 @@ export function MultiSelect({
             }}
             className="hover:bg-accent hover:text-accent-foreground w-full cursor-pointer rounded-md px-2.5 py-1.5 text-center text-sm font-medium"
           >
-            {doneLabel ?? "Done"}
+            {doneLabel ?? tCommon("done")}
           </button>
         </div>
       </PopoverContent>

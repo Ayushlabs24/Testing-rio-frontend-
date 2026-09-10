@@ -1698,6 +1698,17 @@
         "scale": {
           "severity": "0-100 · higher = worse"
         },
+        "tierValue": {
+          "CRITICAL": "Critical",
+          "HIGH": "High",
+          "MEDIUM": "Medium",
+          "LOW": "Low",
+          "NEGLIGIBLE": "Negligible",
+          "SEVERE": "Severe",
+          "MODERATE": "Moderate",
+          "MINIMAL": "Minimal",
+          "NONE": "None"
+        },
         "calculationBasis": "Calculation Basis",
         "cb": {
           "needsIndexWorking": "Needs Index — working",
@@ -2331,7 +2342,18 @@
       "withdraw": "Withdraw",
       "expiryColumn": "Expires",
       "noExpiry": "No expiry",
-      "expiryInputLabel": "Optional expiry date"
+      "expiryInputLabel": "Optional expiry date",
+      "detailDialog": {
+        "title": "Sharing request details"
+      },
+      "approveDialog": {
+        "title": "Approve sharing request",
+        "expiryLabel": "Expiry date (optional)",
+        "expiryHint": "Leave blank for no expiry. You can withdraw access at any time.",
+        "cancel": "Cancel",
+        "confirm": "Approve",
+        "approving": "Approving…"
+      }
     },
     "initiatives": {
       "title": "Initiatives",
@@ -2346,7 +2368,8 @@
         "completed": "Completed",
         "planned": "Planned",
         "on_hold": "On Hold",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "archived": "Archived"
       },
       "linkedNeedsColumn": "Linked Needs",
       "visibilityColumn": "Visibility",
@@ -2787,6 +2810,11 @@
           "linkAction": "Link to Initiative",
           "unlinkAction": "Unlink",
           "unlinking": "Unlinking...",
+          "unlinkConfirmTitle": "Unlink this initiative?",
+          "unlinkConfirmBody": "Are you sure you want to unlink this initiative from this need? The analytical status will go back to Open gap.",
+          "unlinkConfirmCancel": "Cancel",
+          "unlinkConfirmAction": "Unlink",
+          "unlinkSuccess": "Initiative unlinked.",
           "noLinks": "Not linked to any initiative yet.",
           "loadError": "Couldn't load linked initiatives. Please try again.",
           "genericError": "Something went wrong. Please try again."
@@ -3713,6 +3741,7 @@
     "appName": "Rio",
     "loading": "Loading...",
     "close": "Close",
+    "done": "Done",
     "error": "Something went wrong. Please try again.",
     "nationalCenter": "National Center",
     "ncnpBrandName": "NCNP"

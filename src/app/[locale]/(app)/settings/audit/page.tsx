@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, History, Lock, Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
@@ -33,6 +33,7 @@ import {
 import {
   AUDIT_ACTIONS,
   isEntityLabelTranslatable,
+  localizeAuditReportPhrases,
   type AuditAction,
 } from "@/config/audit";
 import { AutoTranslate } from "@/components/common/auto-translate";
@@ -139,6 +140,7 @@ export default function AuditSettingsPage() {
   const t = useTranslations("app.settings.audit");
   const tActions = useTranslations("app.settings.audit.actions");
   const tEntities = useTranslations("app.settings.audit.entities");
+  const locale = useLocale();
   const tDatePresets = useTranslations("app.settings.audit.datePresets");
   const canExport = usePermission("archiveSharingAudit", "export");
   // Results are stamped with the request that produced them, so "is this
@@ -463,7 +465,12 @@ export default function AuditSettingsPage() {
                                 `${(event.entityType || "Record").charAt(0).toUpperCase() + (event.entityType || "Record").slice(1)} (${event.entityLabel.slice(0, 8)})`
                               ) : event.entityLabel &&
                                 isEntityLabelTranslatable(event.entityType) ? (
-                                <AutoTranslate text={event.entityLabel} />
+                                <AutoTranslate
+                                  text={localizeAuditReportPhrases(
+                                    event.entityLabel,
+                                    locale,
+                                  )}
+                                />
                               ) : (
                                 event.entityLabel || event.entityType
                               )}

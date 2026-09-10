@@ -1,7 +1,7 @@
 "use client";
 
 import { Link2, Plus, Unlink } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +28,7 @@ import { AutoTranslate } from "@/components/common/auto-translate";
 import { ApiError } from "@/services/api/types";
 import { initiativesService } from "@/services/initiatives/initiatives.service";
 import type { Initiative } from "@/services/initiatives/initiatives.types";
+import { translationService } from "@/services/translation/translation.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 
@@ -35,7 +46,14 @@ function LinkInitiativeDialog({
   onLinked: () => void;
 }) {
   const t = useTranslations("app.studies.need.linkInitiative");
+  const locale = useLocale();
   const [options, setOptions] = useState<Initiative[]>([]);
+  // Combobox item labels are plain strings, so <AutoTranslate> can't be hung
+  // off them — resolve name + owning-org name through the same translation
+  // endpoint once per list (same pattern as report-sharing-panel's org combo).
+  const [labelById, setLabelById] = useState<Map<string, { name: string; org: string }>>(
+    new Map(),
+  );
   // Starts true, not reset in an effect — the mount site remounts this
   // dialog fresh (via a bumped `key`) on every open, so a mount always
   // starts open and about to fetch (matches the pattern in
@@ -48,7 +66,27 @@ function LinkInitiativeDialog({
   useEffect(() => {
     initiativesService
       .list()
-      .then((rows) => setOptions(rows.filter((r) => !excludeIds.has(r.id))))
+      .then(async (rows) => {
+        const list = rows.filter((r) => !excludeIds.has(r.id));
+        setOptions(list);
+        if (locale !== "ar") return;
+        const entries = await Promise.all(
+          list.map(async (o) => {
+            const [name, org] = await Promise.all([
+              translationService
+                .translate(o.name, "ar")
+                .then((r) => r.translatedText)
+                .catch(() => o.name),
+              translationService
+                .translate(o.orgName, "ar")
+                .then((r) => r.translatedText)
+                .catch(() => o.orgName),
+            ]);
+            return [o.id, { name, org }] as const;
+          }),
+        );
+        setLabelById(new Map(entries));
+      })
       .catch(() => setOptions([]))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,8 +117,8 @@ function LinkInitiativeDialog({
           <Combobox
             items={options.map((o) => ({
               value: o.id,
-              label: o.name,
-              description: o.orgName,
+              label: labelById.get(o.id)?.name ?? o.name,
+              description: labelById.get(o.id)?.org ?? o.orgName,
             }))}
             value={selectedId}
             onSelect={setSelectedId}
@@ -129,6 +167,10 @@ export function NeedInitiativeLinkSection({
   const [dialogKey, setDialogKey] = useState(0);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
   const [unlinkError, setUnlinkError] = useState<string | null>(null);
+  // Client feedback: unlink is a confirmed action with a visible success
+  // message afterwards (both locales).
+  const [confirmUnlinkId, setConfirmUnlinkId] = useState<string | null>(null);
+  const [unlinkSuccess, setUnlinkSuccess] = useState(false);
 
   function load() {
     initiativesService
@@ -163,10 +205,14 @@ export function NeedInitiativeLinkSection({
   async function unlink(initiativeId: string) {
     setUnlinkingId(initiativeId);
     setUnlinkError(null);
+    setUnlinkSuccess(false);
     try {
       await initiativesService.unlinkNeed(need.id, initiativeId);
+      setConfirmUnlinkId(null);
       load();
       refreshNeed();
+      setUnlinkSuccess(true);
+      window.setTimeout(() => setUnlinkSuccess(false), 4000);
     } catch (err) {
       setUnlinkError(
         err instanceof ApiError && err.code ? err.message : t("genericError"),
@@ -223,7 +269,7 @@ export function NeedInitiativeLinkSection({
                     <AutoTranslate text={initiative.name} />
                   </p>
                   <p className="text-muted-foreground truncate text-xs">
-                    {initiative.orgName}
+                    <AutoTranslate text={initiative.orgName} />
                   </p>
                 </div>
                 {canManage ? (
@@ -232,7 +278,7 @@ export function NeedInitiativeLinkSection({
                     variant="ghost"
                     className="text-destructive shrink-0 gap-1.5"
                     disabled={unlinkingId === initiative.id}
-                    onClick={() => unlink(initiative.id)}
+                    onClick={() => setConfirmUnlinkId(initiative.id)}
                   >
                     <Unlink className="size-3.5" />
                     {unlinkingId === initiative.id ? t("unlinking") : t("unlinkAction")}
@@ -243,8 +289,39 @@ export function NeedInitiativeLinkSection({
           </ul>
         )}
 
+        {unlinkSuccess ? (
+          <p role="status" className="text-sm font-medium text-emerald-600">
+            {t("unlinkSuccess")}
+          </p>
+        ) : null}
         {unlinkError ? <p className="text-destructive text-sm">{unlinkError}</p> : null}
       </CardContent>
+
+      <AlertDialog
+        open={confirmUnlinkId !== null}
+        onOpenChange={(next) => !next && setConfirmUnlinkId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("unlinkConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("unlinkConfirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unlinkingId !== null}>
+              {t("unlinkConfirmCancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={unlinkingId !== null}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmUnlinkId) void unlink(confirmUnlinkId);
+              }}
+            >
+              {unlinkingId !== null ? t("unlinking") : t("unlinkConfirmAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <LinkInitiativeDialog
         key={dialogKey}

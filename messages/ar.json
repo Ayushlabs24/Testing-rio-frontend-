@@ -1698,6 +1698,17 @@
         "scale": {
           "severity": "0-100 · الأعلى = الأسوأ"
         },
+        "tierValue": {
+          "CRITICAL": "حرجة",
+          "HIGH": "عالية",
+          "MEDIUM": "متوسطة",
+          "LOW": "منخفضة",
+          "NEGLIGIBLE": "ضئيلة",
+          "SEVERE": "شديدة",
+          "MODERATE": "معتدلة",
+          "MINIMAL": "طفيفة",
+          "NONE": "لا يوجد"
+        },
         "calculationBasis": "أساس الحساب",
         "cb": {
           "needsIndexWorking": "مؤشر الاحتياجات — خطوات الحساب",
@@ -2331,7 +2342,18 @@
       "withdraw": "سحب",
       "expiryColumn": "تنتهي في",
       "noExpiry": "بدون انتهاء",
-      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)"
+      "expiryInputLabel": "تاريخ انتهاء اختياري (إن وجد)",
+      "detailDialog": {
+        "title": "تفاصيل طلب المشاركة"
+      },
+      "approveDialog": {
+        "title": "الموافقة على طلب المشاركة",
+        "expiryLabel": "تاريخ الانتهاء (اختياري)",
+        "expiryHint": "اتركه فارغاً لعدم وجود تاريخ انتهاء. يمكنك سحب الوصول في أي وقت.",
+        "cancel": "إلغاء",
+        "confirm": "موافقة",
+        "approving": "جارٍ الموافقة…"
+      }
     },
     "initiatives": {
       "title": "المبادرات",
@@ -2346,7 +2368,8 @@
         "completed": "مكتملة",
         "planned": "مخطط له",
         "on_hold": "معلّق",
-        "cancelled": "ملغى"
+        "cancelled": "ملغى",
+        "archived": "مؤرشفة"
       },
       "linkedNeedsColumn": "الاحتياجات المرتبطة",
       "visibilityColumn": "الظهور",
@@ -2787,6 +2810,11 @@
           "linkAction": "ربط بمبادرة",
           "unlinkAction": "إلغاء الربط",
           "unlinking": "جارٍ إلغاء الربط...",
+          "unlinkConfirmTitle": "إلغاء ربط هذه المبادرة؟",
+          "unlinkConfirmBody": "هل أنت متأكد من إلغاء ربط هذه المبادرة بهذا الاحتياج؟ ستعود الحالة التحليلية إلى «فجوة مفتوحة».",
+          "unlinkConfirmCancel": "إلغاء",
+          "unlinkConfirmAction": "إلغاء الربط",
+          "unlinkSuccess": "تم إلغاء ربط المبادرة.",
           "noLinks": "لم يتم ربطها بأي مبادرة بعد.",
           "loadError": "تعذّر تحميل المبادرات المرتبطة. يرجى المحاولة مرة أخرى.",
           "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
@@ -3713,6 +3741,7 @@
     "appName": "Rio",
     "loading": "جارٍ التحميل...",
     "close": "إغلاق",
+    "done": "تم",
     "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
     "nationalCenter": "المركز الوطني",
     "ncnpBrandName": "إن سي إن بي"

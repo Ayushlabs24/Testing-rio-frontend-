@@ -5,6 +5,8 @@ import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { ReportContentView } from "@/components/features/reports/report-content-view";
@@ -61,6 +63,9 @@ function SharedReportScreen({ requestId }: { requestId: string }) {
   const locale = useLocale() as AppLocale;
   const [snapshot, setSnapshot] = useState<SharedReportSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The owner org name is interpolated into an otherwise-translated sentence,
+  // so translate it on its own rather than wrapping the whole string.
+  const { text: ownerOrgName } = useAutoTranslate(snapshot?.ownerOrgName ?? "");
 
   useEffect(() => {
     let cancelled = false;
@@ -98,9 +103,9 @@ function SharedReportScreen({ requestId }: { requestId: string }) {
       ) : (
         <>
           <PageHeader
-            title={snapshot.title}
+            title={<AutoTranslate text={snapshot.title} />}
             description={t("sharedByLabel", {
-              org: snapshot.ownerOrgName,
+              org: ownerOrgName || snapshot.ownerOrgName,
               date: formatDateTime(snapshot.generatedAt, locale),
             })}
             actions={<Badge variant="secondary">{t("viewOnlyBadge")}</Badge>}

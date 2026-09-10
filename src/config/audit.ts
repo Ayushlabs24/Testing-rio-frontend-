@@ -133,3 +133,33 @@ export function isEntityLabelTranslatable(entityType: AuditEntityType): boolean 
   ]);
   return !NEVER_TRANSLATE.has(entityType);
 }
+
+/**
+ * Report-type names are baked into some `entityLabel` sentences in English by
+ * the backend (e.g. a report-sharing request's label embeds
+ * `… — Evidence Document Report`). The AI free-text translator that
+ * `<AutoTranslate>` uses reliably renders the surrounding Arabic sentence but
+ * tends to leave these fixed English phrases untouched. Substitute them
+ * deterministically first (Arabic UI only) so nothing English is left behind;
+ * the values mirror `messages/ar.json` → `app.reports.content.reportTitle.*`.
+ */
+const REPORT_TYPE_PHRASES_AR: ReadonlyArray<readonly [string, string]> = [
+  ["Combined Quantitative & Evidence Report", "التقرير المجمّع الكمي والأدلة"],
+  ["Domain-wise Needs Report", "تقرير الاحتياجات حسب المجال"],
+  ["Survey & Dashboard Report", "تقرير الاستبيان ولوحة التحكم"],
+  ["Individual Survey Report", "تقرير المسح الفردي"],
+  ["Regional Needs Report", "تقرير الاحتياجات الإقليمية"],
+  ["Evidence Document Report", "تقرير مستندات الأدلة"],
+  ["Top-Priority Report", "تقرير الأولويات العليا"],
+  ["Data-Quality Report", "تقرير جودة البيانات"],
+  ["Executive Summary", "الملخص التنفيذي"],
+  ["Collective Report", "التقرير الجماعي"],
+  ["Village Report", "تقرير القرية"],
+];
+
+export function localizeAuditReportPhrases(label: string, locale: string): string {
+  if (locale !== "ar" || !label) return label;
+  let out = label;
+  for (const [en, ar] of REPORT_TYPE_PHRASES_AR) out = out.split(en).join(ar);
+  return out;
+}

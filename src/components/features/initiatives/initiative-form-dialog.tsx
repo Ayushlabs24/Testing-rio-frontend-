@@ -120,7 +120,7 @@ export function InitiativeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{editing ? t("editTitle") : t("title")}</DialogTitle>
         </DialogHeader>
