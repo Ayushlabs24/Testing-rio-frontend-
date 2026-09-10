@@ -276,7 +276,7 @@ export function GenerateSummaryModal({
                     <SelectItem value="">{t("allVillagesConsolidated")}</SelectItem>
                     {villages.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {v}
+                        <AutoTranslate text={v} />
                       </SelectItem>
                     ))}
                   </SelectContent>

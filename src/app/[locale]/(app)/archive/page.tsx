@@ -329,7 +329,7 @@ export default function ArchivePage() {
                     <SelectItem value={ALL}>{t("filterVillageAll")}</SelectItem>
                     {allVillages.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {v}
+                        <AutoTranslate text={v} />
                       </SelectItem>
                     ))}
                   </SelectContent>

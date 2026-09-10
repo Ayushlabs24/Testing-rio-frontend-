@@ -126,7 +126,7 @@ function VillageChips({ villages }: { villages: string[] }) {
       {villages.map((village) => (
         <Badge key={village} variant="secondary" className="gap-1">
           <MapPin className="size-3" />
-          {village}
+          <AutoTranslate text={village} />
         </Badge>
       ))}
     </div>
@@ -142,7 +142,10 @@ function CompactNameList({ names }: { names: string[] }) {
   if (names.length === 0) return <span className="text-muted-foreground">—</span>;
   return (
     <span className="text-foreground truncate" title={names.join(", ")}>
-      {names[0]}
+      {/* Names can be master data already resolved to the locale
+          (governorate/center via localizedName — a no-op here) or free-text
+          villages that still need translating on a language switch. */}
+      <AutoTranslate text={names[0]} />
       {names.length > 1 ? (
         <span className="text-muted-foreground"> +{names.length - 1}</span>
       ) : null}

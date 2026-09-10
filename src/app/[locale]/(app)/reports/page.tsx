@@ -337,7 +337,7 @@ function GenerateReportDialog({
                 <SelectContent>
                   {villages.map((village) => (
                     <SelectItem key={village} value={village}>
-                      {village}
+                      <AutoTranslate text={village} />
                     </SelectItem>
                   ))}
                 </SelectContent>
