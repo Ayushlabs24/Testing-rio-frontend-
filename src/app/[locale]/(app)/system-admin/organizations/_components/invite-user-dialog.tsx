@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneNumberInput } from "@/components/common/phone-number-input";
 import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import {
   Select,
@@ -51,6 +52,11 @@ export function InviteUserDialog({
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  // RIO MFA — optional at invite time, for any role (including Center
+  // Supervisor, assigned from this exact dialog): capturing it here is what
+  // makes "Sign in with OTP" available to that user later. Same field/
+  // behavior as the org's own Settings > Users invite dialog.
+  const [mobileNumber, setMobileNumber] = useState("");
   const [roleId, setRoleId] = useState("");
   const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
@@ -90,6 +96,7 @@ export function InviteUserDialog({
   const resetForm = () => {
     setName("");
     setEmail("");
+    setMobileNumber("");
     setErrorMsg("");
   };
 
@@ -110,6 +117,7 @@ export function InviteUserDialog({
         name: name.trim(),
         email: email.trim(),
         roleId,
+        mobileNumber: mobileNumber.trim() ? mobileNumber.trim() : undefined,
       });
 
       resetForm();
@@ -224,6 +232,19 @@ export function InviteUserDialog({
                 placeholder={t("emailPlaceholder")}
                 required
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-mobile">{t("mobileNumberLabel")}</Label>
+              <PhoneNumberInput
+                id="invite-mobile"
+                value={mobileNumber}
+                onChange={setMobileNumber}
+                countryLabel={t("mobileNumberCountryLabel")}
+                countrySearchPlaceholder={t("countrySearchPlaceholder")}
+                countryEmptyText={t("countryEmptyText")}
+              />
+              <p className="text-muted-foreground text-xs">{t("mobileNumberHint")}</p>
             </div>
 
             <div className="space-y-1.5">
