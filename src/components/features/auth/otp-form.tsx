@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -21,10 +21,20 @@ export function OtpForm() {
   const router = useRouter();
   const { setSession } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const [identifier, setIdentifier] = useState<string | null>(null);
 
+  // RIO MFA — accepts either an email or a mobile number, whichever the
+  // account has on file (see AuthService.requestLoginOtp on the backend).
+  // Loosely bounded rather than a strict email/E.164 union: the backend is
+  // the source of truth for whether it actually matches an eligible
+  // account, and a generic "at least 3 non-space characters" catches empty
+  // submits without rejecting a validly-formatted value on the client only
+  // to disagree with the server about what's valid.
   const requestSchema = z.object({
-    email: z.string().email({ message: tValidation("emailInvalid") }),
+    identifier: z
+      .string()
+      .trim()
+      .min(3, { message: tValidation("identifierRequired") }),
   });
   type RequestValues = z.infer<typeof requestSchema>;
 
@@ -34,7 +44,7 @@ export function OtpForm() {
     setFormError(null);
     try {
       await authService.requestOtp(values);
-      setEmail(values.email);
+      setIdentifier(values.identifier);
     } catch (error) {
       setFormError(
         getApiErrorMessage(error, AUTH_API_ERROR_CODES, tErrors, t("genericError")),
@@ -51,9 +61,9 @@ export function OtpForm() {
 
   const onVerifySubmit = async (values: VerifyValues) => {
     setFormError(null);
-    if (!email) return;
+    if (!identifier) return;
     try {
-      const session = await authService.verifyOtp({ email, code: values.code });
+      const session = await authService.verifyOtp({ identifier, code: values.code });
       setSession(session);
       router.push("/dashboard");
     } catch (error) {
@@ -63,13 +73,13 @@ export function OtpForm() {
     }
   };
 
-  if (email) {
+  if (identifier) {
     return (
       <div className="w-full max-w-sm">
         <div className="mb-8 space-y-1.5">
           <h1 className="text-foreground text-2xl font-semibold">{t("verifyTitle")}</h1>
           <p className="text-muted-foreground text-sm">
-            {t("verifyDescription", { email })}
+            {t("verifyDescription", { identifier })}
           </p>
         </div>
 
@@ -82,9 +92,39 @@ export function OtpForm() {
                 id="code"
                 inputMode="numeric"
                 maxLength={6}
-                placeholder={t("codePlaceholder")}
+                // No placeholder — an empty 6-digit box reads clearly enough
+                // on its own.
+                //
+                // autoComplete="off" rather than "one-time-code": Chrome (at
+                // least as of this writing) still offers its own saved
+                // phone-number suggestions on a short numeric field
+                // regardless of the "one-time-code" token, and can autofill
+                // a value longer than `maxLength` — confirmed by an actual
+                // user hitting this. "off" is the blunter instruction but
+                // the one that's actually respected here; it costs us the
+                // nice-to-have SMS auto-read some browsers offer for
+                // "one-time-code", which isn't wired up on the backend yet
+                // anyway.
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                // data-1p-ignore / data-lpignore: opt out of 1Password's and
+                // LastPass's autofill too — password managers routinely
+                // ignore autoComplete="off" on their own.
+                data-1p-ignore="true"
+                data-lpignore="true"
                 className="h-11 pr-4 pl-10 text-base tracking-widest"
-                {...verifyForm.register("code")}
+                {...verifyForm.register("code", {
+                  // Belt-and-suspenders for the "bypasses maxLength" case
+                  // above: whatever lands in the field (typed or
+                  // autofilled), only digits and only the first 6 of them
+                  // ever reach form state.
+                  onChange: (event: ChangeEvent<HTMLInputElement>) => {
+                    const sanitized = event.target.value.replace(/\D/g, "").slice(0, 6);
+                    if (sanitized !== event.target.value) event.target.value = sanitized;
+                  },
+                })}
               />
             </div>
             {verifyForm.formState.errors.code ? (
@@ -107,10 +147,10 @@ export function OtpForm() {
 
         <button
           type="button"
-          onClick={() => setEmail(null)}
+          onClick={() => setIdentifier(null)}
           className="text-muted-foreground hover:text-foreground mt-5 w-full cursor-pointer text-center text-sm underline-offset-4 hover:underline"
         >
-          {t("useDifferentEmail")}
+          {t("useDifferentIdentifier")}
         </button>
       </div>
     );
@@ -125,22 +165,29 @@ export function OtpForm() {
 
       <form onSubmit={requestForm.handleSubmit(onRequestSubmit)} className="space-y-6">
         <div className="space-y-2.5">
-          <Label htmlFor="email">{t("emailLabel")}</Label>
+          <Label htmlFor="identifier">{t("identifierLabel")}</Label>
           <div className="relative">
             <Mail className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
             <Input
-              id="email"
-              type="email"
-              placeholder={t("emailPlaceholder")}
+              id="identifier"
+              type="text"
+              placeholder={t("identifierPlaceholder")}
               className="h-11 pr-4 pl-10 text-base"
-              {...requestForm.register("email")}
+              {...requestForm.register("identifier")}
             />
           </div>
-          {requestForm.formState.errors.email ? (
+          {requestForm.formState.errors.identifier ? (
             <p className="text-destructive text-sm">
-              {requestForm.formState.errors.email.message}
+              {requestForm.formState.errors.identifier.message}
             </p>
-          ) : null}
+          ) : (
+            // Persistent hint rather than packing this into the placeholder
+            // — a placeholder that long just gets clipped at this card's
+            // width (no room for it to wrap), while a normal paragraph
+            // wraps onto a second line and stays visible once the field is
+            // focused/filled, which is exactly when it's most useful.
+            <p className="text-muted-foreground text-xs">{t("identifierHint")}</p>
+          )}
         </div>
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}

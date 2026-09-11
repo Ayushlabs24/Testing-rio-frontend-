@@ -76,11 +76,16 @@ function toSessionContext(context: AuthedContext, token: string): SessionContext
 }
 
 export async function mockRequestOtp({
-  email,
+  identifier,
 }: RequestOtpPayload): Promise<{ message: string }> {
   await mockDelay();
-  if (!findUserByEmail(email)) {
-    throw new ApiError({ message: "No account found for this email.", status: 404 });
+  // Mock DB only indexes by email — a mobile-number identifier simply never
+  // matches here, same "no such account" outcome a real mismatch would get.
+  if (!findUserByEmail(identifier)) {
+    throw new ApiError({
+      message: "No account found for this email or mobile number.",
+      status: 404,
+    });
   }
   // Deliberately not logged — a real OTP is never written to the console
   // even in the mock path. Retrieve it via mockOtpCodeForTests() instead.
@@ -88,11 +93,11 @@ export async function mockRequestOtp({
 }
 
 export async function mockVerifyOtp({
-  email,
+  identifier,
   code,
 }: VerifyOtpPayload): Promise<SessionContext> {
   await mockDelay();
-  const user = findUserByEmail(email);
+  const user = findUserByEmail(identifier);
   if (!user || code !== MOCK_OTP_CODE) {
     throw new ApiError({ message: "Invalid or expired code.", status: 401 });
   }

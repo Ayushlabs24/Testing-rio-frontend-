@@ -57,7 +57,6 @@
       "registrationNumberPlaceholder": "e.g. 1234567890",
       "verifyRegistrationNumber": "Verify",
       "registrationNumberVerified": "Verified against the national entity registry.",
-      "completeAllFieldsHint": "Fill in every required field and verify your registration number to continue.",
       "verifyToUnlockHint": "Verify your registration number to fill in the rest of the form.",
       "entityDetailsLegend": "Entity details",
       "emailLabel": "Email",
@@ -82,7 +81,14 @@
       "dataSharingDialogTitle": "Data-Sharing Policy",
       "scrollHint": "Scroll to the end to continue.",
       "policyReadConfirm": "I have read this",
-      "mustReadHint": "Open and read the {policy} to enable this checkbox."
+      "mustReadHint": "Open and read the {policy} to enable this checkbox.",
+      "mobileNumberLabel": "Mobile number (optional)",
+      "mobileNumberPlaceholder": "+9665XXXXXXXX",
+      "mobileNumberHint": "Lets you sign in with a one-time code sent by SMS instead of a password.",
+      "mobileNumberCountryLabel": "Country code",
+      "signInWithOtp": "Sign in with OTP instead",
+      "countrySearchPlaceholder": "Search country...",
+      "countryEmptyText": "No country found."
     },
     "forgotPassword": {
       "heroTitle": "We'll get you back in",
@@ -116,22 +122,23 @@
     },
     "otp": {
       "heroTitle": "Sign in without a password",
-      "heroSubtitle": "We'll send a one-time code to your email.",
+      "heroSubtitle": "We'll send a one-time code to your email or mobile number.",
       "title": "Sign in with OTP",
-      "description": "Enter your email to receive a one-time code.",
-      "emailLabel": "Work email",
-      "emailPlaceholder": "you@organisation.org",
+      "description": "Enter your email or mobile number to receive a one-time code.",
       "sendCode": "Send code",
       "sending": "Sending...",
       "genericError": "Something went wrong. Please try again.",
       "backToLogin": "Back to sign in",
       "verifyTitle": "Enter your code",
-      "verifyDescription": "We sent a 6-digit code to {email}.",
+      "verifyDescription": "We sent a 6-digit code to {identifier}.",
       "codeLabel": "One-time code",
       "codePlaceholder": "123456",
       "verify": "Verify and sign in",
       "verifying": "Verifying...",
-      "useDifferentEmail": "Use a different email"
+      "identifierLabel": "Email or mobile number",
+      "identifierPlaceholder": "you@organisation.org",
+      "useDifferentIdentifier": "Use a different email or mobile number",
+      "identifierHint": "For a mobile number, include the country code (e.g. +9665XXXXXXXX)."
     },
     "contact": {
       "triggerLabel": "Contact us",
@@ -179,7 +186,8 @@
       "centerIdsRequired": "Select at least one center.",
       "purposeMin": "Please give us a little more detail (at least 10 characters).",
       "usePolicyRequired": "Please open and read the Terms of Use, then tick the box to accept it.",
-      "dataSharingRequired": "Please open and read the Data-Sharing Policy, then tick the box to consent to it."
+      "dataSharingRequired": "Please open and read the Data-Sharing Policy, then tick the box to consent to it.",
+      "identifierRequired": "Enter your email or mobile number."
     },
     "apiErrors": {
       "INVALID_CREDENTIALS": "Invalid email or password.",
@@ -1179,7 +1187,13 @@
           "previous": "Previous",
           "next": "Next",
           "label": "Page {page} of {count}"
-        }
+        },
+        "mobileNumberLabel": "Mobile number (optional)",
+        "mobileNumberPlaceholder": "5XXXXXXXX",
+        "mobileNumberHint": "Lets this user sign in with a one-time code sent by SMS instead of a password.",
+        "mobileNumberCountryLabel": "Country code",
+        "countrySearchPlaceholder": "Search country...",
+        "countryEmptyText": "No country found."
       },
       "organizations": {
         "title": "Organizations",

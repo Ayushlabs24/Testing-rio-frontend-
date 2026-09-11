@@ -460,7 +460,6 @@ describe("SignupForm registration number (NIC registry)", () => {
     );
 
     await waitFor(() => expect(submit).toBeDisabled());
-    expect(screen.getByText(en.auth.signup.completeAllFieldsHint)).toBeInTheDocument();
   });
 
   it("accepts a number typed with separators — the server normalizes it", async () => {

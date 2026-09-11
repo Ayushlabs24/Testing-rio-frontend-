@@ -57,7 +57,6 @@
       "registrationNumberPlaceholder": "مثال: 7011038218",
       "verifyRegistrationNumber": "تحقّق",
       "registrationNumberVerified": "تم التحقق من الرقم في سجل الكيانات الوطني.",
-      "completeAllFieldsHint": "أكمل جميع الحقول المطلوبة وتحقّق من رقم التسجيل للمتابعة.",
       "verifyToUnlockHint": "تحقّق من رقم التسجيل لإكمال بقية النموذج.",
       "entityDetailsLegend": "بيانات المنشأة",
       "emailLabel": "البريد الإلكتروني",
@@ -82,7 +81,14 @@
       "dataSharingDialogTitle": "سياسة مشاركة البيانات",
       "scrollHint": "مرّر إلى نهاية النص للمتابعة.",
       "policyReadConfirm": "لقد قرأت هذا",
-      "mustReadHint": "افتح {policy} واقرأها لتفعيل مربع الاختيار."
+      "mustReadHint": "افتح {policy} واقرأها لتفعيل مربع الاختيار.",
+      "mobileNumberLabel": "رقم الجوال (اختياري)",
+      "mobileNumberPlaceholder": "+9665XXXXXXXX",
+      "mobileNumberHint": "يتيح لك تسجيل الدخول برمز لمرة واحدة يُرسل عبر رسالة نصية بدلاً من كلمة المرور.",
+      "mobileNumberCountryLabel": "رمز الدولة",
+      "signInWithOtp": "تسجيل الدخول برمز مؤقت بدلاً من ذلك",
+      "countrySearchPlaceholder": "ابحث عن دولة...",
+      "countryEmptyText": "لم يتم العثور على دولة."
     },
     "forgotPassword": {
       "heroTitle": "سنعيدك إلى حسابك",
@@ -116,22 +122,23 @@
     },
     "otp": {
       "heroTitle": "سجّل الدخول بدون كلمة مرور",
-      "heroSubtitle": "سنرسل رمزًا لمرة واحدة إلى بريدك الإلكتروني.",
+      "heroSubtitle": "سنرسل رمزًا لمرة واحدة إلى بريدك الإلكتروني أو رقم جوالك.",
       "title": "تسجيل الدخول برمز مؤقت",
-      "description": "أدخل بريدك الإلكتروني لتلقي رمز لمرة واحدة.",
-      "emailLabel": "بريد العمل الإلكتروني",
-      "emailPlaceholder": "name@example.com",
+      "description": "أدخل بريدك الإلكتروني أو رقم جوالك لتلقي رمز لمرة واحدة.",
       "sendCode": "إرسال الرمز",
       "sending": "جارٍ الإرسال...",
       "genericError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
       "backToLogin": "العودة إلى تسجيل الدخول",
       "verifyTitle": "أدخل الرمز الخاص بك",
-      "verifyDescription": "أرسلنا رمزًا مكوّنًا من 6 أرقام إلى {email}.",
+      "verifyDescription": "أرسلنا رمزًا مكوّنًا من 6 أرقام إلى {identifier}.",
       "codeLabel": "الرمز المؤقت",
       "codePlaceholder": "123456",
       "verify": "تحقق وسجّل الدخول",
       "verifying": "جارٍ التحقق...",
-      "useDifferentEmail": "استخدام بريد إلكتروني مختلف"
+      "identifierLabel": "البريد الإلكتروني أو رقم الجوال",
+      "identifierPlaceholder": "you@organisation.org",
+      "useDifferentIdentifier": "استخدام بريد إلكتروني أو رقم جوال مختلف",
+      "identifierHint": "لرقم الجوال، أضف رمز الدولة (مثال: +9665XXXXXXXX)."
     },
     "contact": {
       "triggerLabel": "اتصل بنا",
@@ -179,7 +186,8 @@
       "centerIdsRequired": "اختر مركزًا واحدًا على الأقل.",
       "purposeMin": "يرجى تقديم مزيد من التفاصيل (10 أحرف على الأقل).",
       "usePolicyRequired": "يرجى فتح شروط الاستخدام وقراءتها، ثم تحديد المربع للموافقة عليها.",
-      "dataSharingRequired": "يرجى فتح سياسة مشاركة البيانات وقراءتها، ثم تحديد المربع للموافقة عليها."
+      "dataSharingRequired": "يرجى فتح سياسة مشاركة البيانات وقراءتها، ثم تحديد المربع للموافقة عليها.",
+      "identifierRequired": "أدخل بريدك الإلكتروني أو رقم جوالك."
     },
     "apiErrors": {
       "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -1179,7 +1187,13 @@
           "previous": "السابق",
           "next": "التالي",
           "label": "الصفحة {page} من {count}"
-        }
+        },
+        "mobileNumberLabel": "رقم الجوال (اختياري)",
+        "mobileNumberPlaceholder": "5XXXXXXXX",
+        "mobileNumberHint": "يتيح لهذا المستخدم تسجيل الدخول برمز لمرة واحدة يُرسل عبر رسالة نصية بدلاً من كلمة المرور.",
+        "mobileNumberCountryLabel": "رمز الدولة",
+        "countrySearchPlaceholder": "ابحث عن دولة...",
+        "countryEmptyText": "لم يتم العثور على دولة."
       },
       "organizations": {
         "title": "الكيانات",

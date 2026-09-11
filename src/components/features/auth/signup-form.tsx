@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LoadingButton } from "@/components/common/loading-button";
+import { PhoneNumberInput } from "@/components/common/phone-number-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -415,6 +416,12 @@ export function SignupForm() {
         message: tValidation("registrationNumberFormat"),
       }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
+    // RIO MFA — optional; lets the new NGO Admin use "Sign in with OTP"
+    // over SMS from day one. No format validation beyond "not just
+    // whitespace" — the backend normalizes it the same way a citizen
+    // survey mobile number is normalized, and is the actual source of
+    // truth for whether it's deliverable.
+    mobileNumber: z.string(),
     regionId: z.string().min(1, { message: tValidation("regionRequired") }),
     governorateIds: z
       .array(z.string())
@@ -441,12 +448,13 @@ export function SignupForm() {
     setError,
     clearErrors,
     control,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       sector: "",
       otherSector: "",
+      mobileNumber: "",
       regionId: "",
       governorateIds: [],
       centerIds: [],
@@ -525,6 +533,7 @@ export function SignupForm() {
 
   const organizationName = useWatch({ control, name: "organizationName" });
   const email = useWatch({ control, name: "email" });
+  const mobileNumber = useWatch({ control, name: "mobileNumber" });
   const acceptedUsePolicy = useWatch({ control, name: "acceptedUsePolicy" });
   const acceptedDataSharing = useWatch({ control, name: "acceptedDataSharing" });
 
@@ -660,6 +669,7 @@ export function SignupForm() {
         purpose: values.sector === "other" ? values.otherSector : undefined,
         registrationNumber: values.registrationNumber,
         email: values.email,
+        mobileNumber: values.mobileNumber.trim() ? values.mobileNumber.trim() : undefined,
         regionId: values.regionId,
         governorateIds: values.governorateIds,
         centerIds: values.centerIds,
@@ -714,12 +724,12 @@ export function SignupForm() {
 
   return (
     <div className="w-full max-w-lg">
-      <div className="mb-6 space-y-1.5">
+      <div className="mb-4 space-y-1">
         <h1 className="text-foreground text-2xl font-semibold">{t("title")}</h1>
         <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div className="space-y-2">
           <Label htmlFor="organizationName">
             {t("organizationNameLabel")} <span className="text-destructive">*</span>
@@ -792,7 +802,7 @@ export function SignupForm() {
             order — rather than threading a `disabled` prop through six
             different widgets. The point is to stop anyone filling in a long
             form on behalf of an entity that can't register at all. */}
-        <fieldset disabled={!isRegistrationNumberVerified} className="space-y-4">
+        <fieldset disabled={!isRegistrationNumberVerified} className="space-y-3">
           <legend className="sr-only">{t("entityDetailsLegend")}</legend>
 
           {!isRegistrationNumberVerified ? (
@@ -801,31 +811,59 @@ export function SignupForm() {
             </p>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="sector">
-              {t("sectorLabel")} <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={selectedSector}
-              onValueChange={(value) =>
-                setValue("sector", value, { shouldValidate: true })
-              }
-            >
-              <SelectTrigger id="sector" className="w-full">
-                <SelectValue placeholder={t("sectorPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {sectorOptions.map((sector) => (
-                  <SelectItem key={sector.name} value={sector.name}>
-                    {localizedName(sector, consentLocale)}
-                  </SelectItem>
-                ))}
-                <SelectItem value="other">{tSectors("other")}</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.sector ? (
-              <p className="text-destructive text-sm">{errors.sector.message}</p>
-            ) : null}
+          {/* Side by side — neither depends on the other, and pairing them
+            cuts a full row of vertical scroll off the form. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sector">
+                {t("sectorLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={selectedSector}
+                onValueChange={(value) =>
+                  setValue("sector", value, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger id="sector" className="w-full">
+                  <SelectValue placeholder={t("sectorPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectorOptions.map((sector) => (
+                    <SelectItem key={sector.name} value={sector.name}>
+                      {localizedName(sector, consentLocale)}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="other">{tSectors("other")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.sector ? (
+                <p className="text-destructive text-sm">{errors.sector.message}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="region">
+                {tGeo("administrativeRegionLabel")}{" "}
+                <span className="text-destructive">*</span>
+              </Label>
+              <Combobox
+                aria-label={tGeo("administrativeRegionLabel")}
+                items={regions.map((r) => ({
+                  value: r.id,
+                  label: localizedName(r, consentLocale),
+                }))}
+                value={regionId || null}
+                onSelect={(value) =>
+                  setValue("regionId", value, { shouldValidate: true })
+                }
+                placeholder={tGeo("administrativeRegionPlaceholder")}
+                searchPlaceholder={tGeo("administrativeRegionSearchPlaceholder")}
+                emptyText={tGeo("administrativeRegionEmpty")}
+              />
+              {errors.regionId ? (
+                <p className="text-destructive text-sm">{errors.regionId.message}</p>
+              ) : null}
+            </div>
           </div>
 
           {selectedSector === "other" ? (
@@ -839,104 +877,112 @@ export function SignupForm() {
             </div>
           ) : null}
 
-          {/* Stacked full-width, not a side-by-side grid — Governorate/Center
-            chip lists can wrap to several rows once many are selected. */}
-          <div className="space-y-2">
-            <Label htmlFor="region">
-              {tGeo("administrativeRegionLabel")}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <Combobox
-              aria-label={tGeo("administrativeRegionLabel")}
-              items={regions.map((r) => ({
-                value: r.id,
-                label: localizedName(r, consentLocale),
-              }))}
-              value={regionId || null}
-              onSelect={(value) => setValue("regionId", value, { shouldValidate: true })}
-              placeholder={tGeo("administrativeRegionPlaceholder")}
-              searchPlaceholder={tGeo("administrativeRegionSearchPlaceholder")}
-              emptyText={tGeo("administrativeRegionEmpty")}
-            />
-            {errors.regionId ? (
-              <p className="text-destructive text-sm">{errors.regionId.message}</p>
-            ) : null}
+          {/* Side by side — Center's options depend on Governorate, but a
+            chip list that wraps to a second line inside its own column
+            still saves more vertical space than two full-width rows. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>
+                {tGeo("governorateLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <MultiSelect
+                options={governorates.map((g) => ({
+                  value: g.id,
+                  label: localizedName(g, consentLocale),
+                }))}
+                values={governorateIds}
+                onChange={(next) =>
+                  setValue("governorateIds", next, { shouldValidate: true })
+                }
+                placeholder={
+                  regionId ? tGeo("governoratePlaceholder") : tGeo("selectRegionFirst")
+                }
+                searchPlaceholder={tGeo("governorateSearchPlaceholder")}
+                emptyText={tGeo("governorateEmpty")}
+                removeAriaLabel={(governorate) =>
+                  tGeo("removeGovernorateSelection", { governorate })
+                }
+                disabled={!regionId}
+                singleLine
+                maxVisibleChips={2}
+              />
+              {errors.governorateIds ? (
+                <p className="text-destructive text-sm">
+                  {errors.governorateIds.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                {tGeo("centerLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <MultiSelect
+                options={centers.map((c) => ({
+                  value: c.id,
+                  label: localizedName(c, consentLocale),
+                }))}
+                values={centerIds}
+                onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
+                placeholder={
+                  governorateIds.length > 0
+                    ? tGeo("centerPlaceholder")
+                    : tGeo("selectGovernorateFirst")
+                }
+                searchPlaceholder={tGeo("centerSearchPlaceholder")}
+                emptyText={tGeo("centerEmpty")}
+                removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
+                disabled={governorateIds.length === 0}
+                singleLine
+                maxVisibleChips={2}
+              />
+              {errors.centerIds ? (
+                <p className="text-destructive text-sm">{errors.centerIds.message}</p>
+              ) : null}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>
-              {tGeo("governorateLabel")} <span className="text-destructive">*</span>
-            </Label>
-            <MultiSelect
-              options={governorates.map((g) => ({
-                value: g.id,
-                label: localizedName(g, consentLocale),
-              }))}
-              values={governorateIds}
-              onChange={(next) =>
-                setValue("governorateIds", next, { shouldValidate: true })
-              }
-              placeholder={
-                regionId ? tGeo("governoratePlaceholder") : tGeo("selectRegionFirst")
-              }
-              searchPlaceholder={tGeo("governorateSearchPlaceholder")}
-              emptyText={tGeo("governorateEmpty")}
-              removeAriaLabel={(governorate) =>
-                tGeo("removeGovernorateSelection", { governorate })
-              }
-              disabled={!regionId}
-            />
-            {errors.governorateIds ? (
-              <p className="text-destructive text-sm">{errors.governorateIds.message}</p>
-            ) : null}
-          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                {t("emailLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder={t("emailPlaceholder")}
+                {...register("email")}
+              />
+              {errors.email ? (
+                <p className="text-destructive text-sm">{errors.email.message}</p>
+              ) : null}
+            </div>
 
-          <div className="space-y-2">
-            <Label>
-              {tGeo("centerLabel")} <span className="text-destructive">*</span>
-            </Label>
-            <MultiSelect
-              options={centers.map((c) => ({
-                value: c.id,
-                label: localizedName(c, consentLocale),
-              }))}
-              values={centerIds}
-              onChange={(next) => setValue("centerIds", next, { shouldValidate: true })}
-              placeholder={
-                governorateIds.length > 0
-                  ? tGeo("centerPlaceholder")
-                  : tGeo("selectGovernorateFirst")
-              }
-              searchPlaceholder={tGeo("centerSearchPlaceholder")}
-              emptyText={tGeo("centerEmpty")}
-              removeAriaLabel={(center) => tGeo("removeCenterSelection", { center })}
-              disabled={governorateIds.length === 0}
-            />
-            {errors.centerIds ? (
-              <p className="text-destructive text-sm">{errors.centerIds.message}</p>
-            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="mobileNumber">{t("mobileNumberLabel")}</Label>
+              <PhoneNumberInput
+                id="mobileNumber"
+                value={mobileNumber}
+                onChange={(value) =>
+                  setValue("mobileNumber", value, { shouldValidate: true })
+                }
+                countryLabel={t("mobileNumberCountryLabel")}
+                countrySearchPlaceholder={t("countrySearchPlaceholder")}
+                countryEmptyText={t("countryEmptyText")}
+                aria-invalid={errors.mobileNumber ? true : undefined}
+              />
+              {errors.mobileNumber ? (
+                <p className="text-destructive text-sm">{errors.mobileNumber.message}</p>
+              ) : null}
+            </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              {t("emailLabel")} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder={t("emailPlaceholder")}
-              {...register("email")}
-            />
-            {errors.email ? (
-              <p className="text-destructive text-sm">{errors.email.message}</p>
-            ) : null}
-          </div>
+          <p className="text-muted-foreground -mt-2 text-xs">{t("mobileNumberHint")}</p>
 
           {/* RIO-DATA-001 — the two consents, accepted as part of registration
             itself. Each opens its live policy in a dialog that must be read
             to the end before its checkbox unlocks, so the acceptance is never
             a tick against unseen wording. */}
-          <fieldset className="border-border space-y-4 border-t pt-5">
+          <fieldset className="border-border space-y-3 border-t pt-4">
             <legend className="sr-only">{t("consentLegend")}</legend>
 
             <ConsentCheckbox
@@ -983,17 +1029,6 @@ export function SignupForm() {
 
         {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
-        {/* Says why the button is dead. A disabled control with no stated
-            reason strands anyone who can't spot the one thing they missed —
-            most often the Verify step, which no other form here has.
-            Only shown once the user has started filling the form so it
-            doesn't read as a pre-emptive error on first load. */}
-        {policies && isDirty && !isFormComplete ? (
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t("completeAllFieldsHint")}
-          </p>
-        ) : null}
-
         <LoadingButton
           type="submit"
           className="h-11 w-full gap-2 px-6"
@@ -1008,7 +1043,7 @@ export function SignupForm() {
         />
       </form>
 
-      <p className="text-muted-foreground mt-8 text-center text-sm">
+      <p className="text-muted-foreground mt-6 text-center text-sm">
         {t("haveAccount")}{" "}
         <Link
           href="/"
@@ -1017,6 +1052,12 @@ export function SignupForm() {
           {t("signIn")}
         </Link>
       </p>
+      <Link
+        href="/otp"
+        className="text-muted-foreground hover:text-foreground mt-2 block w-full text-center text-sm underline-offset-4 hover:underline"
+      >
+        {t("signInWithOtp")}
+      </Link>
     </div>
   );
 }

@@ -10,6 +10,8 @@ export interface OrgUser {
   id: string;
   name: string;
   email: string;
+  /** RIO MFA — null when this user hasn't supplied one (no OTP-over-SMS sign-in). */
+  mobileNumber: string | null;
   role: UserRoleSummary;
   status: UserStatus;
   createdAt: string;
@@ -19,6 +21,8 @@ export interface CreateUserPayload {
   name: string;
   email: string;
   roleId: string;
+  /** RIO MFA — optional; enables "Sign in with OTP" over SMS for this user. */
+  mobileNumber?: string;
 }
 
 /** Same pattern as signup: a temporary password is generated server-side,
@@ -39,6 +43,8 @@ export interface UpdateUserPayload {
   name?: string;
   roleId?: string;
   status?: UserStatus;
+  /** RIO MFA — set/change/clear ('' clears it) an existing user's mobile number. */
+  mobileNumber?: string;
 }
 
 export interface UpdateUserStatusPayload {

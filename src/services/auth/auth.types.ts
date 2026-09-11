@@ -102,6 +102,9 @@ export interface SignupPayload {
   purpose?: string;
   registrationNumber: string;
   email: string;
+  /** RIO MFA — optional; enables "Sign in with OTP" over SMS for this NGO
+   * Admin from day one. */
+  mobileNumber?: string;
   /** KSA Geographic Reference hierarchy — mandatory at signup so the org's
    * scope is configured from the start (still editable later via
    * Settings > Organization). */
@@ -150,11 +153,14 @@ export interface ResetPasswordPayload {
   password: string;
 }
 
+/** RIO MFA — `identifier` is either the account's email or its mobile
+ * number; the backend decides which channel to use by matching it against
+ * the stored email/mobileNumber (see AuthService.requestLoginOtp). */
 export interface RequestOtpPayload {
-  email: string;
+  identifier: string;
 }
 
 export interface VerifyOtpPayload {
-  email: string;
+  identifier: string;
   code: string;
 }
