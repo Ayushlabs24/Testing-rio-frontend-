@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { BackButton } from "@/components/common/back-button";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -10,11 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { cn } from "@/lib/utils";
-import { ApiError } from "@/services/api/types";
 import { priorityService } from "@/services/priority/priority.service";
 import type { VillageComparisonEntry } from "@/services/priority/priority.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 // Same critical/high/medium/low → variant mapping the main Priority
 // Dashboard list uses (see LEVEL_VARIANT there) — the API sends this field
@@ -53,12 +55,13 @@ function VillageCard({
   // etc.) rather than duplicating them here — the API sends this field
   // upper-cased ("HIGH"), same as statusVariant above normalizes for.
   const tLevel = useTranslations("app.priorityDashboard");
+  const { localizedDomain } = useDomainArabicMap();
   return (
     <Card className="flex flex-col">
       <CardHeader className="gap-3 pb-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-foreground text-base font-semibold break-words">
-            {entry.village}
+            <AutoTranslate text={entry.village} />
           </h3>
           {entry.priorityStatus ? (
             <Badge variant={statusVariant(entry.priorityStatus)} className="shrink-0">
@@ -126,7 +129,7 @@ function VillageCard({
           <div className="flex flex-wrap gap-1">
             {Object.entries(entry.needTypeCounts).map(([domain, count]) => (
               <Badge key={domain} variant="secondary" className="text-xs">
-                {domain} ({count})
+                {localizedDomain(domain)} ({count})
               </Badge>
             ))}
           </div>
@@ -146,7 +149,8 @@ function VillageCard({
                   variant={dc.triggeredOverride ? "destructive" : "outline"}
                   className="text-xs"
                 >
-                  {dc.domainNameSnapshot}: {Math.round(dc.domainSeverityScore)}
+                  {localizedDomain(dc.domainNameSnapshot)}:{" "}
+                  {Math.round(dc.domainSeverityScore)}
                 </Badge>
               ))}
             </div>
@@ -159,6 +163,7 @@ function VillageCard({
 
 export default function VillageComparisonPage() {
   const t = useTranslations("app.villageComparison");
+  const tApiErr = useTranslations("apiErrors");
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [selectedStudyIds, setSelectedStudyIds] = useState<string[]>([]);
   const [entries, setEntries] = useState<VillageComparisonEntry[] | null>(null);
@@ -179,7 +184,7 @@ export default function VillageComparisonPage() {
     try {
       setEntries(await priorityService.compareVillages(studyIds));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("loadError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
     } finally {
       setLoading(false);
     }

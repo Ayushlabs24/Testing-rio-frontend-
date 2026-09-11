@@ -3,6 +3,7 @@
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -40,6 +41,7 @@ import { usersService } from "@/services/users/users.service";
 import type { PlatformUser } from "@/services/users/users.types";
 import { PERMISSION_MODULES } from "@/types/permissions";
 import type { PermissionAction, PermissionModule } from "@/types/permissions";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const ACTIONS: PermissionAction[] = [
   "read",
@@ -58,6 +60,12 @@ const ACTIONS: PermissionAction[] = [
 // screen: a grant always applies across every entity.
 export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
   const t = useTranslations("app.settings.roles.grants");
+  const tApiErr = useTranslations("apiErrors");
+  // Module labels come from the one shared dictionary (app.settings.roles.
+  // modules) — this card used to read its own separate app.settings.roles.
+  // grants.modules copy, and the two drifted (one missing entries the other
+  // had). Merged 2026-09-08 so there's only one list to keep in sync.
+  const tModules = useTranslations("app.settings.roles.modules");
   const [grants, setGrants] = useState<PermissionGrant[] | null>(null);
   const [supervisors, setSupervisors] = useState<PlatformUser[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +91,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
     permissionGrantsService
       .list()
       .then(setGrants)
-      .catch((err) => setError(err instanceof ApiError ? err.message : t("loadError")));
+      .catch((err) => setError(resolveApiErrorMessage(err, tApiErr, t("loadError"))));
   }
 
   useEffect(() => {
@@ -122,7 +130,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
       resetForm();
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : t("genericError"));
+      setFormError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -134,7 +142,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
       await permissionGrantsService.revoke(id);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setRevokingId(null);
     }
@@ -199,16 +207,20 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                 pagedGrants.map((grant) => (
                   <TableRow key={grant.id}>
                     <TableCell className="text-foreground font-medium">
-                      {grant.granteeName ?? grant.granteeId}
+                      {grant.granteeName ? (
+                        <AutoTranslate text={grant.granteeName} />
+                      ) : (
+                        t("unknownGrantee")
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {t(`modules.${grant.module}`)} — {t(`actionNames.${grant.action}`)}
+                      {tModules(grant.module)} — {t(`actionNames.${grant.action}`)}
                     </TableCell>
                     <TableCell
                       className="text-muted-foreground max-w-xs truncate text-sm"
                       title={grant.reason}
                     >
-                      {grant.reason}
+                      <AutoTranslate text={grant.reason} />
                     </TableCell>
                     <TableCell>
                       {grant.revokedAt ? (
@@ -289,7 +301,8 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                 <SelectContent>
                   {supervisors.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
-                      {u.name} — {u.organizationName}
+                      <AutoTranslate text={u.name} /> —{" "}
+                      <AutoTranslate text={u.organizationName} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -311,7 +324,7 @@ export function PermissionGrantsCard({ canWrite }: { canWrite: boolean }) {
                   <SelectContent>
                     {PERMISSION_MODULES.map((m) => (
                       <SelectItem key={m} value={m}>
-                        {t(`modules.${m}`)}
+                        {tModules(m)}
                       </SelectItem>
                     ))}
                   </SelectContent>

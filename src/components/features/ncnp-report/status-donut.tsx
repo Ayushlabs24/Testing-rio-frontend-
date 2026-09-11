@@ -1,3 +1,6 @@
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
+
 interface DonutSegment {
   label: string;
   count: number;
@@ -12,13 +15,14 @@ interface DonutSegment {
 interface StatusDonutProps {
   segments: DonutSegment[];
   centerLabel: string;
+  locale: AppLocale;
 }
 
 function resolveColor(colorVar: string): string {
   return colorVar.startsWith("--") ? `var(${colorVar})` : colorVar;
 }
 
-export function StatusDonut({ segments, centerLabel }: StatusDonutProps) {
+export function StatusDonut({ segments, centerLabel, locale }: StatusDonutProps) {
   const total = segments.reduce((sum, s) => sum + s.count, 0);
   let cursor = 0;
   const stops = segments.map((s) => {
@@ -39,7 +43,7 @@ export function StatusDonut({ segments, centerLabel }: StatusDonutProps) {
       >
         <div className="bg-card absolute inset-7 flex flex-col items-center justify-center rounded-full px-2 text-center">
           <span className="text-foreground text-2xl font-bold tabular-nums">
-            {total.toLocaleString()}
+            {formatNumber(total, locale)}
           </span>
           <span className="text-muted-foreground mt-0.5 text-[9px] leading-tight tracking-wide uppercase">
             {centerLabel}
@@ -55,7 +59,7 @@ export function StatusDonut({ segments, centerLabel }: StatusDonutProps) {
             />
             <span className="text-muted-foreground">{s.label}</span>
             <span className="text-foreground ml-auto pl-3 font-semibold tabular-nums">
-              {s.count.toLocaleString()}
+              {formatNumber(s.count, locale)}
               {total > 0 ? ` · ${Math.round((s.count / total) * 100)}%` : ""}
             </span>
           </div>

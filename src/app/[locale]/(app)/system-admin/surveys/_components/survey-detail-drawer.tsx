@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -112,11 +113,17 @@ export function SurveyDetailDrawer({
             {/* Header Banner */}
             <div className="border-primary/20 bg-primary/5 flex items-start justify-between rounded-lg border p-4">
               <div>
-                <h3 className="text-foreground mb-1 text-base font-bold">{data.title}</h3>
+                <h3 className="text-foreground mb-1 text-base font-bold">
+                  <AutoTranslate text={data.title} />
+                </h3>
                 <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-primary font-medium">{data.domainCategory}</span>
+                  <span className="text-primary font-medium">
+                    <AutoTranslate text={data.domainCategory} />
+                  </span>
                   <span>•</span>
-                  <span>{data.village}</span>
+                  <span>
+                    <AutoTranslate text={data.village} />
+                  </span>
                   {data.orgName ? (
                     <>
                       <span>•</span>
@@ -167,7 +174,9 @@ export function SurveyDetailDrawer({
                     <MapPin className="size-3.5" />
                     <span>{t("village")}</span>
                   </div>
-                  <p className="text-foreground font-medium">{data.village}</p>
+                  <p className="text-foreground font-medium">
+                    <AutoTranslate text={data.village} />
+                  </p>
                 </Card>
 
                 <Card className="p-3">
@@ -244,7 +253,7 @@ export function SurveyDetailDrawer({
                     <Card key={q.id} className="space-y-1 p-3 text-xs">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-foreground font-semibold">
-                          {idx + 1}. {q.questionText}
+                          {idx + 1}. <AutoTranslate text={q.questionText} />
                         </p>
                         {q.isRequired ? (
                           <Badge

@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { QuestionResponseCard } from "@/components/features/surveys/question-response-card";
 import { SurveyResponseSummaryCard } from "@/components/features/surveys/survey-response-summary-card";
 import { computeQuestionStats, type StatsQuestion } from "@/lib/survey-response-stats";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
@@ -120,6 +121,8 @@ export default function SurveyResponseSummaryPage({
 
   const loaded = responses !== null;
   const hasResponses = (responses ?? []).length > 0;
+  // PageHeader's `title` is a plain string, not JSX.
+  const needTitle = useAutoTranslate(need?.title).text;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -128,7 +131,7 @@ export default function SurveyResponseSummaryPage({
           <BackButton href={`/public-surveys/${needId}`} label={t("backToSurvey")} />
         </div>
 
-        <PageHeader title={need?.title ?? ""} description={t("description")} />
+        <PageHeader title={need?.title ? needTitle : ""} description={t("description")} />
 
         {!loaded ? (
           <div className="mt-6 space-y-6">

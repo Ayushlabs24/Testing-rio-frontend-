@@ -3,6 +3,7 @@
 import { Download, Eye, MessageSquareText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { BackButton } from "@/components/common/back-button";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
@@ -39,11 +40,12 @@ import {
   SURVEY_RESPONSES_PAGE_SIZE_OPTIONS,
 } from "@/config/pagination";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   SurveyResponseDetail,
   SurveyResponseSummary,
@@ -148,14 +150,14 @@ function ResponseDetailBody({
             {detail.answers.map((answer) => (
               <div key={answer.questionId} className="space-y-1.5">
                 <p dir="auto" className="text-muted-foreground text-xs font-medium">
-                  {answer.questionText}
+                  <AutoTranslate text={answer.questionText} />
                 </p>
                 <div
                   dir="auto"
                   className="border-border bg-muted/40 rounded-md border px-3.5 py-2 text-sm whitespace-pre-wrap"
                 >
                   {answer.answer && answer.answer.trim() ? (
-                    answer.answer
+                    <AutoTranslate text={answer.answer} />
                   ) : (
                     <span className="text-muted-foreground">{t("noAnswer")}</span>
                   )}
@@ -176,9 +178,12 @@ export default function SurveyResponsesPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.publicSurveys.responses");
+  const tApiErr = useTranslations("apiErrors");
   const canExport = usePermission("studySurvey", "export");
 
   const [need, setNeed] = useState<Need | null>(null);
+  // PageHeader's `title` is a plain string, not JSX.
+  const needTitle = useAutoTranslate(need?.title).text;
   const [responses, setResponses] = useState<SurveyResponseSummary[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -234,7 +239,7 @@ export default function SurveyResponsesPage({
     try {
       await publicSurveysService.exportResponses(needId, format);
     } catch (err) {
-      setExportError(err instanceof ApiError ? err.message : t("exportError"));
+      setExportError(resolveApiErrorMessage(err, tApiErr, t("exportError")));
     } finally {
       setExporting(false);
     }
@@ -251,7 +256,7 @@ export default function SurveyResponsesPage({
         </div>
 
         <PageHeader
-          title={need?.title ?? ""}
+          title={need?.title ? needTitle : ""}
           description={t("description")}
           actions={
             canExport && total > 0 ? (

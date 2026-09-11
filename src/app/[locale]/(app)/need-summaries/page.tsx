@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -25,6 +26,7 @@ import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { needSummaryService } from "@/services/needs/need-summary.service";
 import type { NeedSummary } from "@/services/needs/need-summary.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * RIO-AI-003's reviewer queue — every suggested summary awaiting a decision.
@@ -41,6 +43,7 @@ import type { NeedSummary } from "@/services/needs/need-summary.types";
  */
 export default function NeedSummariesPage() {
   const t = useTranslations("app.needSummaries");
+  const tApiErr = useTranslations("apiErrors");
 
   const [items, setItems] = useState<NeedSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -119,7 +122,7 @@ export default function NeedSummariesPage() {
       setSelected(new Set());
       await load();
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setConfirming(false);
     }
@@ -200,7 +203,11 @@ export default function NeedSummariesPage() {
                               href={`/studies/${item.studyId}/needs/${item.needId}`}
                               className="text-primary text-sm font-medium hover:underline"
                             >
-                              {item.needTitle ?? item.needId}
+                              {item.needTitle ? (
+                                <AutoTranslate text={item.needTitle} />
+                              ) : (
+                                item.needId
+                              )}
                             </Link>
                             {/* AC 5 — a summary with a failed check is the one
                                 worth opening rather than bulk-confirming. */}
@@ -220,7 +227,7 @@ export default function NeedSummariesPage() {
                                 and the whole text is one click away on the need
                                 page. `title` keeps it readable on hover. */}
                             <span className="line-clamp-3" title={item.effectiveText}>
-                              {item.effectiveText}
+                              <AutoTranslate text={item.effectiveText} />
                             </span>
                           </TableCell>
                           <TableCell className="text-muted-foreground align-top text-xs break-words whitespace-normal">

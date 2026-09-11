@@ -1,6 +1,9 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
+import { isEntityLabelTranslatable, type AuditEntityType } from "@/config/audit";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +37,21 @@ interface AuditListResponse {
   offset: number;
 }
 
-function formatActionLabel(action: string): string {
+// Bug found in the 2026-09-08 bilingual audit (fourth independent copy of
+// this exact class of bug — dashboard widget, System Admin Audit Log page,
+// and this org-level tab all had their own hand-rolled formatter that never
+// consulted i18n at all). Resolves through the same `app.settings.audit.
+// actions` dictionary everywhere else does, falling back to title-casing
+// only when a label is genuinely missing.
+function formatActionLabel(action: string, tActions: (key: string) => string): string {
+  try {
+    const translated = tActions(action);
+    if (translated && !translated.startsWith("app.settings.audit.actions.")) {
+      return translated;
+    }
+  } catch {
+    // fall through to the title-cased fallback below
+  }
   return action
     .replace(/^SYSTEM_ADMIN_/, "")
     .replace(/_/g, " ")
@@ -48,6 +65,8 @@ interface OrgAuditHistoryTabProps {
 
 export function OrgAuditHistoryTab({ organizationId }: OrgAuditHistoryTabProps) {
   const t = useTranslations("systemAdmin.auditLog");
+  const tActions = useTranslations("app.settings.audit.actions");
+  const tEntities = useTranslations("app.settings.audit.entities");
   const [items, setItems] = useState<AuditItem[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -120,12 +139,14 @@ export function OrgAuditHistoryTab({ organizationId }: OrgAuditHistoryTabProps) 
               items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                    {new Date(item.createdAt).toLocaleString()}
+                    <FormattedDate value={item.createdAt} withTime />
                   </TableCell>
                   <TableCell className="text-foreground text-xs font-medium">
                     {item.actor ? (
                       <div>
-                        <span>{item.actor.name}</span>
+                        <span>
+                          <AutoTranslate text={item.actor.name} />
+                        </span>
                         <span className="text-muted-foreground block font-mono text-[10px]">
                           {item.actor.email}
                         </span>
@@ -138,15 +159,21 @@ export function OrgAuditHistoryTab({ organizationId }: OrgAuditHistoryTabProps) 
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="text-[11px] font-medium">
-                      {formatActionLabel(item.action)}
+                      {formatActionLabel(item.action, tActions)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs">
                     <span className="text-foreground block font-semibold break-words">
-                      {item.entityLabel}
+                      {isEntityLabelTranslatable(item.entityType as AuditEntityType) ? (
+                        <AutoTranslate text={item.entityLabel} />
+                      ) : (
+                        item.entityLabel
+                      )}
                     </span>
                     <span className="text-muted-foreground block font-mono text-[10px] capitalize">
-                      {item.entityType}
+                      {tEntities.has(item.entityType)
+                        ? tEntities(item.entityType)
+                        : item.entityType}
                     </span>
                   </TableCell>
                 </TableRow>

@@ -60,6 +60,12 @@ export interface NcnpPublicLinkStatus {
 
 export interface NcnpNamedBreakdown {
   id: string;
+  /** The master-data row's own stable `code` (Region 1-13, Governorate/Center
+   *  codes from the KSA Geographic Reference), stringified. Mirrors the
+   *  backend type — `name` is a DISPLAY value, so anything that needs to
+   *  IDENTIFY a geography row (the region map's coordinate lookup) keys on
+   *  this instead and keeps working once names render in Arabic. */
+  code: string;
   name: string;
   count: number;
 }

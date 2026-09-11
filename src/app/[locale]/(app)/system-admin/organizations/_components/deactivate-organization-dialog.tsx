@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,7 +66,7 @@ export function DeactivateOrganizationDialog({
             <DialogTitle>{t("title")}</DialogTitle>
           </div>
           <DialogDescription className="text-foreground pt-2 font-medium">
-            {organization.name}
+            <AutoTranslate text={organization.name} />
           </DialogDescription>
         </DialogHeader>
 

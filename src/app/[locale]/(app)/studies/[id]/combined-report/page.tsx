@@ -11,6 +11,8 @@ import {
   FileText,
   Edit3,
 } from "lucide-react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { BackButton } from "@/components/common/back-button";
@@ -47,6 +49,14 @@ export default function CombinedReportPage({
   const t = useTranslations("CombinedReport");
   const router = useRouter();
 
+  // Combined-summary status arrives as a backend enum string; render its
+  // localized label, falling back to the raw value if a new status is added
+  // server-side before its key exists here.
+  const summaryStatusLabel = (status: string | null | undefined) => {
+    const key = status ?? "NOT_GENERATED";
+    return t.has(`summaryStatusValues.${key}`) ? t(`summaryStatusValues.${key}`) : key;
+  };
+
   const canAi = usePermission("aiReview", "write");
 
   const [context, setContext] = useState<CombinedReportContext | null>(null);
@@ -78,13 +88,12 @@ export default function CombinedReportPage({
         );
       }
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to load combined report context.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.loadContext");
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
-  }, [studyId]);
+  }, [studyId, t]);
 
   useEffect(() => {
     let active = true;
@@ -108,11 +117,11 @@ export default function CombinedReportPage({
 
   const handleGenerateCombinedSummary = async () => {
     if (!context?.confirmedScoreSummary) {
-      alert("Confirm the Score-Based Summary before generating a Combined Summary.");
+      alert(t("scoreSummarySection.unconfirmedWarning"));
       return;
     }
     if (selectedDocSummaryIds.length === 0) {
-      alert("Select at least one confirmed Document Summary.");
+      alert(t("errors.selectOneDocSummary"));
       return;
     }
 
@@ -126,8 +135,7 @@ export default function CombinedReportPage({
       setEditedJson(summary.officerEditedOutputJson || summary.aiOutputJson);
       await loadData();
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to generate Combined Summary.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.generateSummary");
       alert(errorMsg);
     } finally {
       setGenerating(false);
@@ -153,8 +161,7 @@ export default function CombinedReportPage({
       setEditing(false);
       await loadData();
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to confirm combined summary.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.confirmSummary");
       alert(errorMsg);
     } finally {
       setConfirming(false);
@@ -163,7 +170,7 @@ export default function CombinedReportPage({
 
   const handleGenerateReportPreview = async () => {
     if (!activeSummary || activeSummary.status !== "OFFICER_CONFIRMED") {
-      alert("Confirm the Combined Summary before generating the report preview.");
+      alert(t("errors.confirmBeforePreview"));
       return;
     }
     setGeneratingReport(true);
@@ -174,8 +181,7 @@ export default function CombinedReportPage({
       });
       router.push(`/reports/${report.id}`);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to generate report preview.";
+      const errorMsg = err instanceof Error ? err.message : t("errors.generatePreview");
       alert(errorMsg);
     } finally {
       setGeneratingReport(false);
@@ -216,23 +222,33 @@ export default function CombinedReportPage({
                 {t("studyName")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                {context?.study.title || "..."}
+                {context?.study.title ? (
+                  <AutoTranslate text={context.study.title} />
+                ) : (
+                  "..."
+                )}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs font-medium uppercase">
-                Entity / Org
+                {t("contextEntityOrg")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                {context?.study.orgName || "..."}
+                {context?.study.orgName ? (
+                  <AutoTranslate text={context.study.orgName} />
+                ) : (
+                  "..."
+                )}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs font-medium uppercase">
-                Region / Governorate
+                {t("contextRegionGovernorate")}
               </p>
               <p className="text-foreground text-base font-semibold">
-                {context?.study.region} — {context?.study.governorate}
+                <AutoTranslate text={context?.study.region ?? ""} />
+                {" — "}
+                <AutoTranslate text={context?.study.governorate ?? ""} />
               </p>
             </div>
             <div>
@@ -249,7 +265,7 @@ export default function CombinedReportPage({
                 }
                 className="mt-1"
               >
-                {activeSummary?.status || "NOT_GENERATED"}
+                {summaryStatusLabel(activeSummary?.status)}
               </Badge>
             </div>
           </CardContent>
@@ -268,7 +284,7 @@ export default function CombinedReportPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Gauge className="text-primary size-5" />
-                Score-Based Summary Status
+                {t("scoreSummaryStatusTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -278,18 +294,22 @@ export default function CombinedReportPage({
                     <span className="text-muted-foreground text-xs font-medium">
                       {t("confirmationStatus")}
                     </span>
-                    <Badge variant="default">OFFICER_CONFIRMED</Badge>
+                    <Badge variant="default">
+                      {t("summaryStatusValues.OFFICER_CONFIRMED")}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between border-b pb-2">
                     <span className="text-muted-foreground text-xs font-medium">
                       {t("confirmedTimestamp")}
                     </span>
                     <span className="text-xs font-semibold">
-                      {context?.confirmedScoreSummary?.officerConfirmedAt
-                        ? new Date(
-                            context.confirmedScoreSummary.officerConfirmedAt,
-                          ).toLocaleDateString()
-                        : "Confirmed"}
+                      {context?.confirmedScoreSummary?.officerConfirmedAt ? (
+                        <FormattedDate
+                          value={context.confirmedScoreSummary.officerConfirmedAt}
+                        />
+                      ) : (
+                        t("confirmedFallback")
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -297,7 +317,7 @@ export default function CombinedReportPage({
                       {t("methodologyVersion")}
                     </span>
                     <span className="text-xs font-semibold">
-                      {context?.study.methodologyVersion}
+                      <AutoTranslate text={context?.study.methodologyVersion} />
                     </span>
                   </div>
                 </div>
@@ -315,14 +335,13 @@ export default function CombinedReportPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="text-primary size-5" />
-                Confirmed Document Summaries Selection
+                {t("docSummariesSelectionTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {context?.confirmedDocumentSummaries.length === 0 ? (
                 <p className="text-muted-foreground text-xs">
-                  No officer-confirmed document summaries available. Confirm at least one
-                  document summary first.
+                  {t("noConfirmedDocSummaries")}
                 </p>
               ) : (
                 <Table>
@@ -330,8 +349,8 @@ export default function CombinedReportPage({
                     <TableRow>
                       <TableHead className="w-10">{t("table.select")}</TableHead>
                       <TableHead>{t("table.documentTitle")}</TableHead>
-                      <TableHead>Ref ID</TableHead>
-                      <TableHead>Type</TableHead>
+                      <TableHead>{t("table.refId")}</TableHead>
+                      <TableHead>{t("table.type")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -348,11 +367,15 @@ export default function CombinedReportPage({
                           />
                         </TableCell>
                         <TableCell className="text-xs font-semibold">
-                          {doc.documentTitle}
+                          <AutoTranslate text={doc.documentTitle} />
                         </TableCell>
                         <TableCell className="text-xs">{doc.sourceReferenceId}</TableCell>
                         <TableCell className="text-xs">
-                          <Badge variant="outline">{doc.documentType}</Badge>
+                          <Badge variant="outline">
+                            {t.has(`documentTypeValues.${doc.documentType}`)
+                              ? t(`documentTypeValues.${doc.documentType}`)
+                              : doc.documentType}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -382,7 +405,7 @@ export default function CombinedReportPage({
             <CardHeader className="flex flex-row items-center justify-between border-b">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Sparkles className="text-primary size-5" />
-                AI Combined Summary
+                {t("aiCombinedSummaryTitle")}
               </CardTitle>
               <div className="flex gap-2">
                 {canAi && activeSummary.status !== "OFFICER_CONFIRMED" && (
@@ -392,7 +415,7 @@ export default function CombinedReportPage({
                     onClick={() => setEditing(!editing)}
                   >
                     <Edit3 className="mr-1 size-4" />
-                    {editing ? "Preview" : "Edit Draft"}
+                    {editing ? t("preview") : t("editDraft")}
                   </Button>
                 )}
                 {canAi && activeSummary.status !== "OFFICER_CONFIRMED" && (
@@ -402,7 +425,7 @@ export default function CombinedReportPage({
                     disabled={confirming}
                   >
                     <CheckCircle2 className="mr-1 size-4" />
-                    {confirming ? "Confirming..." : t("confirmButton")}
+                    {confirming ? t("confirming") : t("confirmButton")}
                   </Button>
                 )}
               </div>
@@ -411,7 +434,7 @@ export default function CombinedReportPage({
               {editing ? (
                 <div className="space-y-4">
                   <div>
-                    <Label>Executive Summary</Label>
+                    <Label>{t("metrics.executiveSummary")}</Label>
                     <Textarea
                       rows={5}
                       value={String(editedJson?.executiveSummary || "")}
@@ -426,10 +449,10 @@ export default function CombinedReportPage({
                   {/* Executive Summary */}
                   <div>
                     <h3 className="text-foreground mb-1 text-sm font-semibold">
-                      1. Executive Summary
+                      {t("sectionHeadings.executiveSummary")}
                     </h3>
                     <p className="text-muted-foreground leading-relaxed">
-                      {String(editedJson?.executiveSummary || "")}
+                      <AutoTranslate text={String(editedJson?.executiveSummary || "")} />
                     </p>
                   </div>
 
@@ -440,12 +463,12 @@ export default function CombinedReportPage({
                     return (
                       <div>
                         <h3 className="text-foreground mb-2 text-sm font-semibold">
-                          2. Score-Based Findings (Quantitative)
+                          {t("sectionHeadings.scoreBasedFindings")}
                         </h3>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-muted/40 rounded-md p-3">
                             <span className="text-muted-foreground text-[10px] font-bold uppercase">
-                              Severity Score
+                              {t("metrics.severityScore")}
                             </span>
                             <p className="text-foreground text-lg font-bold">
                               {String(sb?.overallSeverityScore ?? "")}
@@ -453,7 +476,7 @@ export default function CombinedReportPage({
                           </div>
                           <div className="bg-muted/40 rounded-md p-3">
                             <span className="text-muted-foreground text-[10px] font-bold uppercase">
-                              Priority Score
+                              {t("metrics.priorityScore")}
                             </span>
                             <p className="text-foreground text-lg font-bold">
                               {String(sb?.priorityScore ?? "")}
@@ -461,7 +484,7 @@ export default function CombinedReportPage({
                           </div>
                           <div className="bg-muted/40 rounded-md p-3">
                             <span className="text-muted-foreground text-[10px] font-bold uppercase">
-                              Priority Status
+                              {t("metrics.priorityStatus")}
                             </span>
                             <Badge className="mt-1">
                               {String(sb?.priorityStatus ?? "")}
@@ -475,7 +498,7 @@ export default function CombinedReportPage({
                   {/* Document-Based Evidence */}
                   <div>
                     <h3 className="text-foreground mb-2 text-sm font-semibold">
-                      3. Document-Based Evidence (Qualitative)
+                      {t("sectionHeadings.documentBasedEvidence")}
                     </h3>
                     <div className="space-y-2">
                       {(
@@ -486,11 +509,13 @@ export default function CombinedReportPage({
                       ).map((ev: Record<string, unknown>, i: number) => (
                         <div key={i} className="bg-card rounded-md border p-3">
                           <p className="text-foreground font-semibold">
-                            {String(ev.documentTitle || "")} (Ref:{" "}
-                            {String(ev.sourceReferenceId || "")})
+                            <AutoTranslate text={String(ev.documentTitle || "")} />{" "}
+                            {t("refPrefix", {
+                              ref: String(ev.sourceReferenceId || ""),
+                            })}
                           </p>
                           <p className="text-muted-foreground mt-1">
-                            {String(ev.keyEvidenceFinding || "")}
+                            <AutoTranslate text={String(ev.keyEvidenceFinding || "")} />
                           </p>
                         </div>
                       ))}
@@ -500,7 +525,7 @@ export default function CombinedReportPage({
                   {/* Recommendations */}
                   <div>
                     <h3 className="text-foreground mb-2 text-sm font-semibold">
-                      4. Recommendations
+                      {t("sectionHeadings.recommendations")}
                     </h3>
                     <ul className="text-muted-foreground list-disc space-y-1 pl-4">
                       {(
@@ -509,9 +534,16 @@ export default function CombinedReportPage({
                         )[]) || []
                       ).map((r: Record<string, unknown> | string, i: number) => (
                         <li key={i}>
-                          {typeof r === "string"
-                            ? r
-                            : `${String(r.intervention || "")} (${String(r.priority || "")} Priority)`}
+                          {typeof r === "string" ? (
+                            <AutoTranslate text={r} />
+                          ) : (
+                            <>
+                              <AutoTranslate text={String(r.intervention || "")} />{" "}
+                              {t("priorityParenthetical", {
+                                priority: String(r.priority || ""),
+                              })}
+                            </>
+                          )}
                         </li>
                       ))}
                     </ul>

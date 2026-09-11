@@ -1,3 +1,6 @@
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
+
 export interface TrendAnnotation {
   /** Must match a point's `month` (YYYY-MM) exactly to render. */
   month: string;
@@ -7,6 +10,7 @@ export interface TrendAnnotation {
 interface TrendLineChartProps {
   points: Array<{ month: string; count: number }>;
   emptyText: string;
+  locale: AppLocale;
   /**
    * Known-event markers (campaign launches, platform changes, ...) drawn as
    * a vertical line + label at the matching month. There is no structured
@@ -22,6 +26,7 @@ export function TrendLineChart({
   points,
   emptyText,
   annotations = [],
+  locale,
 }: TrendLineChartProps) {
   if (points.length === 0) {
     return <p className="text-muted-foreground text-sm">{emptyText}</p>;
@@ -78,7 +83,7 @@ export function TrendLineChart({
             textAnchor="middle"
             className="fill-foreground text-[13px] font-bold"
           >
-            {point.count.toLocaleString()}
+            {formatNumber(point.count, locale)}
           </text>
         </svg>
         <p className="text-muted-foreground mt-1 text-center text-xs">{point.month}</p>

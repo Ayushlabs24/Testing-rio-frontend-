@@ -21,9 +21,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { consentService } from "@/services/consent/consent.service";
 import { consentPolicyTextFor } from "@/services/consent/consent.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   ConsentKind,
   ConsentLocale,
@@ -196,6 +196,7 @@ function PolicyCard({
   onChanged: () => void;
 }) {
   const t = useTranslations("app.settings.methodology.consent");
+  const tApiErr = useTranslations("apiErrors");
   // Both translations are edited together now, so this is only used by the
   // read-only viewer of the published wording — it shows the version the
   // reader of this page would themselves be served. Narrowed exhaustively
@@ -289,7 +290,7 @@ function PolicyCard({
       await action();
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setter(false);
     }
@@ -329,7 +330,7 @@ function PolicyCard({
       setReviewMode(null);
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     }
   }
 
@@ -721,6 +722,7 @@ function PolicyCard({
 
 export function ConsentPoliciesTab() {
   const t = useTranslations("app.settings.methodology.consent");
+  const tApiErr = useTranslations("apiErrors");
   const canWrite = usePermission("onboardingConsent", "write");
   const canCreate = usePermission("onboardingConsent", "create");
   const canApprove = usePermission("onboardingConsent", "approve");
@@ -743,7 +745,7 @@ export function ConsentPoliciesTab() {
         // empty state would look identical to a platform with no consent
         // policy configured at all, which is an outage, not a blank slate.
         setVersions(null);
-        setLoadError(err instanceof ApiError ? err.message : t("loadError"));
+        setLoadError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
       });
   }
 

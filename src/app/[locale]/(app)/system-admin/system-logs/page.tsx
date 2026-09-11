@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Link } from "@/i18n/navigation";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Button } from "@/components/ui/button";
@@ -420,10 +422,16 @@ export default function SystemLogsPage() {
                         className="hover:bg-muted flex w-full items-center justify-between gap-3 rounded px-2 py-1 text-left"
                       >
                         <span className="text-foreground font-mono text-xs">
-                          {failure.eventCode}
+                          {t.has(`eventCodes.${failure.eventCode}`)
+                            ? t(
+                                `eventCodes.${failure.eventCode}` as Parameters<
+                                  typeof t
+                                >[0],
+                              )
+                            : failure.eventCode}
                         </span>
                         <span className="text-muted-foreground truncate text-xs">
-                          {failure.sampleMessage}
+                          <AutoTranslate text={failure.sampleMessage} />
                         </span>
                         <span className="text-muted-foreground shrink-0 font-mono text-[11px]">
                           {t("topFailures.occurrences", { count: failure.count })}
@@ -477,7 +485,7 @@ export default function SystemLogsPage() {
                     <SelectItem value={ALL}>{t("allOrganizations")}</SelectItem>
                     {organizations.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -562,7 +570,7 @@ export default function SystemLogsPage() {
                     items.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                          {new Date(item.createdAt).toLocaleString()}
+                          <FormattedDate value={item.createdAt} withTime />
                         </TableCell>
                         <TableCell>
                           <SystemLogLevelBadge level={item.level} />
@@ -571,15 +579,23 @@ export default function SystemLogsPage() {
                           {t(`categories.${item.category}`)}
                         </TableCell>
                         <TableCell className="text-foreground font-mono text-xs">
-                          {item.source}
+                          {t.has(`sources.${item.source}`)
+                            ? t(`sources.${item.source}` as Parameters<typeof t>[0])
+                            : item.source}
                         </TableCell>
                         <TableCell className="max-w-md text-xs">
                           <span className="text-foreground block break-words whitespace-normal">
-                            {item.message}
+                            <AutoTranslate text={item.message} />
                           </span>
                           {item.eventCode && (
                             <span className="text-muted-foreground block font-mono text-[10px]">
-                              {item.eventCode}
+                              {t.has(`eventCodes.${item.eventCode}`)
+                                ? t(
+                                    `eventCodes.${item.eventCode}` as Parameters<
+                                      typeof t
+                                    >[0],
+                                  )
+                                : item.eventCode}
                             </span>
                           )}
                         </TableCell>
@@ -592,7 +608,11 @@ export default function SystemLogsPage() {
                             : "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {item.organizationName ?? t("globalScope")}
+                          {item.organizationName ? (
+                            <AutoTranslate text={item.organizationName} />
+                          ) : (
+                            t("globalScope")
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { usePermission } from "@/hooks/use-permission";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { CollectiveDashboard } from "@/components/features/dashboard/collective-dashboard";
 import { ResearchOfficerDashboard } from "@/components/features/dashboard/research-officer-dashboard";
@@ -19,6 +20,7 @@ import { ReviewerDashboard } from "@/components/features/dashboard/reviewer-dash
 import { SystemReviewerDashboard } from "@/components/features/dashboard/system-reviewer-dashboard";
 import { StatCard } from "@/components/features/dashboard/stat-card";
 import { GeographicDistribution } from "@/components/features/dashboard/geographic-distribution";
+import { HistoricalComparison } from "@/components/features/dashboard/historical-comparison";
 import SystemAdminDashboardPage from "../system-admin/dashboard/page";
 import { SupervisorDashboard } from "@/components/features/dashboard/supervisor-dashboard";
 import { organizationsService } from "@/services/organizations/organizations.service";
@@ -31,6 +33,7 @@ import { PERMISSION_MODULES } from "@/types/permissions";
 export default function DashboardPage() {
   const t = useTranslations("app.dashboard");
   const { session } = useAuth();
+  const userName = useAutoTranslate(session?.user.name).text;
   const isCrossEntity = session?.role.crossEntity ?? false;
   const canReadUsers = usePermission("entityTeam", "read");
   const canReadRoles = usePermission("rolesPermissions", "read");
@@ -75,16 +78,16 @@ export default function DashboardPage() {
     return <SystemAdminDashboardPage />;
   }
   if (session?.role.key === "center_supervisor") {
-    return <SupervisorDashboard userName={session.user.name} />;
+    return <SupervisorDashboard userName={userName} />;
   }
   if (session?.role.key === "human_reviewer") {
-    return <ReviewerDashboard userName={session.user.name} />;
+    return <ReviewerDashboard userName={userName} />;
   }
   if (session?.role.key === "ngo_research_officer") {
-    return <ResearchOfficerDashboard userName={session.user.name} />;
+    return <ResearchOfficerDashboard userName={userName} />;
   }
   if (session?.role.key === "system_reviewer") {
-    return <SystemReviewerDashboard userName={session.user.name} />;
+    return <SystemReviewerDashboard userName={userName} />;
   }
 
   /* ── NGO Admin Dashboard ────────────────────────────────────────────── */
@@ -94,7 +97,7 @@ export default function DashboardPage() {
         {/* ── Page Header ───────────────────────────────────────────────── */}
         <div>
           <h1 className="text-foreground text-2xl font-bold tracking-tight">
-            {t("title", { name: session?.user.name ?? "" })}
+            {t("title", { name: userName })}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {t(isCrossEntity ? "descriptionGlobal" : "description")}
@@ -161,6 +164,12 @@ export default function DashboardPage() {
 
         {/* ── Geographic Distribution Section ───────────────────────────── */}
         <GeographicDistribution variant="ngo" />
+
+        {/* ── Prior-study comparison (RIO-DATA-002) ────────────────────── */}
+        {/* Imported prior-study needs land in this same dashboard, so the
+            comparison sits beside the current-data panels rather than on a
+            page of its own. */}
+        <HistoricalComparison />
 
         {/* ── Collective Dashboard (NGO Analytics) ─────────────────────── */}
         {canReadReports ? <CollectiveDashboard /> : null}

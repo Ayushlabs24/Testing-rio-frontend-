@@ -9,7 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { reportsService } from "@/services/reports/reports.service";
 import { EXPORTABLE_STATUSES, type Report } from "@/services/reports/reports.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 type ButtonVariant = "outline" | "ghost";
 
@@ -78,6 +79,10 @@ export function ReportActions({
   size?: "sm" | "default";
 }) {
   const t = useTranslations("app.reports");
+  const tApiErr = useTranslations("apiErrors");
+  // The exported document follows the language the user is reading the app
+  // in, so a report opened in Arabic downloads in Arabic.
+  const locale = useLocale() as "en" | "ar";
   const canWrite = usePermission("reportsDashboards", "write");
   const canApprove = usePermission("reportsDashboards", "approve");
   const canExport = usePermission("reportsDashboards", "export");
@@ -99,7 +104,7 @@ export function ReportActions({
       onChanged();
       return true;
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : t(fallback));
+      onError(resolveApiErrorMessage(err, tApiErr, t(fallback)));
       return false;
     }
   }
@@ -182,7 +187,10 @@ export function ReportActions({
           // gray document glyphs.
           className="text-destructive hover:text-destructive"
           onClick={() =>
-            run(() => reportsService.download(report.id, "pdf"), "detail.exportError")
+            run(
+              () => reportsService.download(report.id, "pdf", locale),
+              "detail.exportError",
+            )
           }
         />
       ) : null}
@@ -194,7 +202,10 @@ export function ReportActions({
           iconSize={iconSize}
           className="text-success hover:text-success"
           onClick={() =>
-            run(() => reportsService.download(report.id, "excel"), "detail.exportError")
+            run(
+              () => reportsService.download(report.id, "excel", locale),
+              "detail.exportError",
+            )
           }
         />
       ) : null}

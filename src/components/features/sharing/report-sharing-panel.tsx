@@ -1,9 +1,12 @@
 "use client";
 
-import { Plus, Share2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Plus, Share2, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
 import { useAuth } from "@/components/providers/auth-provider";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { translationService } from "@/services/translation/translation.service";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
 import type { SharingInnerTab } from "@/components/features/sharing/study-sharing-panel";
@@ -42,6 +45,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/services/api/types";
 import { reportSharingService } from "@/services/report-sharing/report-sharing.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   OrgLookupResult,
   ReportLookupResult,
@@ -70,53 +74,98 @@ function CreateReportSharingRequestDialog({
   onCreated: () => void;
 }) {
   const t = useTranslations("app.reportSharing.create");
+  const tApiErr = useTranslations("apiErrors");
+  const locale = useLocale() as AppLocale;
   const [orgOptions, setOrgOptions] = useState<OrgLookupResult[]>([]);
+  // Combobox items take a plain string label, not JSX — resolved once per
+  // lookup through the same translation endpoint AutoTranslate itself
+  // calls, since a Combobox has no "one item visible" render to hang
+  // <AutoTranslate> off (see study-sharing-panel's identical pattern).
+  const [orgLabelById, setOrgLabelById] = useState<Map<string, string>>(new Map());
   const [orgLoading, setOrgLoading] = useState(false);
   const [ownerOrgId, setOwnerOrgId] = useState<string | null>(null);
 
   const [reportOptions, setReportOptions] = useState<ReportLookupResult[]>([]);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportId, setReportId] = useState<string | null>(null);
+  // A report's stored title carries a mixed/other-language string (the study
+  // name is Arabic, the report-type suffix English). Resolve each to the
+  // current UI locale so the picker never shows a half-translated label.
+  const [reportLabelById, setReportLabelById] = useState<Map<string, string>>(new Map());
 
   const [note, setNote] = useState("");
   const [noteError, setNoteError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function loadOrgLabels(orgs: OrgLookupResult[]) {
+    if (locale !== "ar") return;
+    const entries = await Promise.all(
+      orgs.map(async (o) => {
+        try {
+          const result = await translationService.translate(o.name, locale);
+          return [o.id, result.translatedText] as const;
+        } catch {
+          return [o.id, o.name] as const;
+        }
+      }),
+    );
+    setOrgLabelById((prev) => new Map([...prev, ...entries]));
+  }
+
   useEffect(() => {
     if (!open) return;
     async function loadOrgs() {
       setOrgLoading(true);
       try {
-        setOrgOptions(await reportSharingService.lookupOrganizations(""));
+        const orgs = await reportSharingService.lookupOrganizations("");
+        setOrgOptions(orgs);
+        void loadOrgLabels(orgs);
       } finally {
         setOrgLoading(false);
       }
     }
     loadOrgs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
     async function loadReports() {
       if (!ownerOrgId) {
         setReportOptions([]);
+        setReportLabelById(new Map());
         return;
       }
       setReportLoading(true);
       setReportId(null);
       try {
-        setReportOptions(await reportSharingService.lookupReportsForOrg(ownerOrgId));
+        const reports = await reportSharingService.lookupReportsForOrg(ownerOrgId);
+        setReportOptions(reports);
+        const entries = await Promise.all(
+          reports.map(async (r) => {
+            try {
+              const res = await translationService.translate(r.title, locale);
+              return [r.id, res.translatedText] as const;
+            } catch {
+              return [r.id, r.title] as const;
+            }
+          }),
+        );
+        setReportLabelById(new Map(entries));
       } finally {
         setReportLoading(false);
       }
     }
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerOrgId]);
 
   async function handleOrgQueryChange(query: string) {
     setOrgLoading(true);
     try {
-      setOrgOptions(await reportSharingService.lookupOrganizations(query));
+      const orgs = await reportSharingService.lookupOrganizations(query);
+      setOrgOptions(orgs);
+      void loadOrgLabels(orgs);
     } finally {
       setOrgLoading(false);
     }
@@ -144,7 +193,7 @@ function CreateReportSharingRequestDialog({
       setNoteError(null);
       onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -152,7 +201,7 @@ function CreateReportSharingRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
@@ -160,7 +209,10 @@ function CreateReportSharingRequestDialog({
           <div className="space-y-2">
             <Label>{t("ownerOrgLabel")}</Label>
             <Combobox
-              items={orgOptions.map((o) => ({ value: o.id, label: o.name }))}
+              items={orgOptions.map((o) => ({
+                value: o.id,
+                label: orgLabelById.get(o.id) ?? o.name,
+              }))}
               value={ownerOrgId}
               onSelect={setOwnerOrgId}
               onQueryChange={handleOrgQueryChange}
@@ -174,7 +226,10 @@ function CreateReportSharingRequestDialog({
           <div className="space-y-2">
             <Label>{t("reportLabel")}</Label>
             <Combobox
-              items={reportOptions.map((r) => ({ value: r.id, label: r.title }))}
+              items={reportOptions.map((r) => ({
+                value: r.id,
+                label: reportLabelById.get(r.id) ?? r.title,
+              }))}
               value={reportId}
               onSelect={setReportId}
               loading={reportLoading}
@@ -239,7 +294,13 @@ export function ReportSharingPanel({
   const [createOpen, setCreateOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
-  const [expiryDrafts, setExpiryDrafts] = useState<Record<string, string>>({});
+  // RIO-FR-014 (client feedback) — Approve opens a small dialog to set the
+  // optional expiry date, instead of an always-visible inline date field.
+  const [approveTargetId, setApproveTargetId] = useState<string | null>(null);
+  // RIO-FR-014 (client feedback) — the Purpose / Reject-reason columns can hold
+  // a paragraph; clicking a row opens the full request with nothing truncated,
+  // on every tab (incoming / outgoing / approved / rejected).
+  const [detailRequest, setDetailRequest] = useState<ReportSharingRequest | null>(null);
   // `session` (and so `isCrossEntity`) isn't known yet on first render — it
   // loads asynchronously from useAuth() — so the right default tab for a
   // cross-entity role can't be picked once and stored: that would lock in
@@ -302,18 +363,13 @@ export function ReportSharingPanel({
     "expired",
   ];
 
-  async function handleApprove(id: string) {
+  async function handleApprove(id: string, expiresAt?: string) {
     setActionError(null);
     try {
-      const expiresAtDraft = expiryDrafts[id];
       await reportSharingService.approve(id, {
-        expiresAt: expiresAtDraft ? new Date(expiresAtDraft).toISOString() : undefined,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
       });
-      setExpiryDrafts((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
+      setApproveTargetId(null);
       load();
     } catch (err) {
       setActionError(
@@ -379,33 +435,36 @@ export function ReportSharingPanel({
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table className="table-fixed">
+            {/* min-w keeps every column at its natural width and lets the
+                container scroll horizontally, instead of squeezing the last
+                columns until Requested/actions overlap (client UI feedback). */}
+            <Table className="min-w-[64rem] table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-64">{t("reportColumn")}</TableHead>
+                  <TableHead className="w-52">{t("reportColumn")}</TableHead>
                   {options.showBothOrgs ? (
                     <>
-                      <TableHead className="w-40">{t("ownerOrgColumn")}</TableHead>
-                      <TableHead className="w-40">{t("requestingOrgColumn")}</TableHead>
+                      <TableHead className="w-36">{t("ownerOrgColumn")}</TableHead>
+                      <TableHead className="w-36">{t("requestingOrgColumn")}</TableHead>
                     </>
                   ) : (
-                    <TableHead className="w-40">{t("orgColumn")}</TableHead>
+                    <TableHead className="w-36">{t("orgColumn")}</TableHead>
                   )}
                   {options.showRole ? (
-                    <TableHead className="w-28">{t("roleColumn")}</TableHead>
+                    <TableHead className="w-24">{t("roleColumn")}</TableHead>
                   ) : null}
                   {options.showPurpose ? (
-                    <TableHead className="w-56">{t("purposeColumn")}</TableHead>
+                    <TableHead className="w-44">{t("purposeColumn")}</TableHead>
                   ) : null}
                   {options.showRejectReason ? (
-                    <TableHead className="w-56">{t("rejectReasonColumn")}</TableHead>
+                    <TableHead className="w-44">{t("rejectReasonColumn")}</TableHead>
                   ) : null}
                   {options.showExpiry ? (
-                    <TableHead className="w-44">{t("expiryColumn")}</TableHead>
+                    <TableHead className="w-40">{t("expiryColumn")}</TableHead>
                   ) : null}
-                  <TableHead className="w-28">{t("statusColumn")}</TableHead>
-                  <TableHead className="w-40">{t("requestedColumn")}</TableHead>
-                  <TableHead className="w-56" />
+                  <TableHead className="w-24">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-44">{t("requestedColumn")}</TableHead>
+                  <TableHead className="w-44" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -437,24 +496,40 @@ export function ReportSharingPanel({
                   pagedRows.map((request) => {
                     const isOwnerView = request.ownerOrgId === myOrgId;
                     return (
-                      <TableRow key={request.id}>
+                      <TableRow
+                        key={request.id}
+                        role="button"
+                        tabIndex={0}
+                        className="hover:bg-muted/40 cursor-pointer"
+                        onClick={() => setDetailRequest(request)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDetailRequest(request);
+                          }
+                        }}
+                      >
                         <TableCell className="py-4 text-sm font-medium break-words whitespace-normal">
-                          {request.reportTitle}
+                          <AutoTranslate text={request.reportTitle} />
                         </TableCell>
                         {options.showBothOrgs ? (
                           <>
                             <TableCell className="py-4 text-sm break-words whitespace-normal">
-                              {request.ownerOrgName}
+                              <AutoTranslate text={request.ownerOrgName} />
                             </TableCell>
                             <TableCell className="py-4 text-sm break-words whitespace-normal">
-                              {request.requestingOrgName}
+                              <AutoTranslate text={request.requestingOrgName} />
                             </TableCell>
                           </>
                         ) : (
                           <TableCell className="py-4 text-sm break-words whitespace-normal">
-                            {isOwnerView
-                              ? request.requestingOrgName
-                              : request.ownerOrgName}
+                            <AutoTranslate
+                              text={
+                                isOwnerView
+                                  ? request.requestingOrgName
+                                  : request.ownerOrgName
+                              }
+                            />
                           </TableCell>
                         )}
                         {options.showRole ? (
@@ -464,18 +539,22 @@ export function ReportSharingPanel({
                         ) : null}
                         {options.showPurpose ? (
                           <TableCell
-                            className="max-w-56 truncate text-sm"
+                            className="max-w-56 text-sm break-words whitespace-normal"
                             title={request.note ?? undefined}
                           >
-                            {request.note ?? "—"}
+                            {request.note ? <AutoTranslate text={request.note} /> : "—"}
                           </TableCell>
                         ) : null}
                         {options.showRejectReason ? (
                           <TableCell
-                            className="max-w-56 truncate text-sm"
+                            className="max-w-56 text-sm break-words whitespace-normal"
                             title={request.decisionNote ?? undefined}
                           >
-                            {request.decisionNote ?? "—"}
+                            {request.decisionNote ? (
+                              <AutoTranslate text={request.decisionNote} />
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                         ) : null}
                         {options.showExpiry ? (
@@ -497,41 +576,27 @@ export function ReportSharingPanel({
                         <TableCell className="text-muted-foreground text-sm">
                           <FormattedDate value={request.requestedAt} withTime />
                         </TableCell>
-                        <TableCell className="py-4">
+                        <TableCell className="py-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-col items-end gap-1.5">
-                            {options.showDecision && isOwnerView && canApprove ? (
-                              <input
-                                type="date"
-                                aria-label={t("expiryInputLabel")}
-                                title={t("expiryInputLabel")}
-                                className="border-input h-8 w-full max-w-40 rounded-md border bg-transparent px-2 text-sm"
-                                value={expiryDrafts[request.id] ?? ""}
-                                min={new Date().toISOString().slice(0, 10)}
-                                onChange={(e) =>
-                                  setExpiryDrafts((prev) => ({
-                                    ...prev,
-                                    [request.id]: e.target.value,
-                                  }))
-                                }
-                              />
-                            ) : null}
-                            <div className="flex flex-wrap justify-end gap-2">
+                            <div className="flex flex-nowrap items-center justify-end gap-2">
                               {options.showDecision && isOwnerView && canApprove ? (
                                 <>
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => handleApprove(request.id)}
+                                    className="shrink-0"
+                                    onClick={() => setApproveTargetId(request.id)}
                                   >
                                     {t("approve")}
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="text-destructive"
+                                    aria-label={t("reject")}
+                                    title={t("reject")}
+                                    className="text-destructive size-8 shrink-0 p-0"
                                     onClick={() => setRejectTargetId(request.id)}
                                   >
-                                    {t("reject")}
+                                    <X className="size-4" />
                                   </Button>
                                 </>
                               ) : null}
@@ -708,6 +773,96 @@ export function ReportSharingPanel({
         </TabsContent>
       </Tabs>
 
+      <Dialog
+        open={detailRequest !== null}
+        onOpenChange={(open) => !open && setDetailRequest(null)}
+      >
+        <DialogContent className="data-[state=closed]:!animate-none sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("detailDialog.title")}</DialogTitle>
+          </DialogHeader>
+          {detailRequest ? (
+            <div className="space-y-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t("reportColumn")}
+                </p>
+                <p dir="auto" className="text-foreground font-medium break-words">
+                  <AutoTranslate text={detailRequest.reportTitle} />
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("ownerOrgColumn")}
+                  </p>
+                  <p dir="auto" className="text-foreground break-words">
+                    <AutoTranslate text={detailRequest.ownerOrgName} />
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("requestingOrgColumn")}
+                  </p>
+                  <p dir="auto" className="text-foreground break-words">
+                    <AutoTranslate text={detailRequest.requestingOrgName} />
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("statusColumn")}
+                  </p>
+                  <Badge variant={STATUS_VARIANT[detailRequest.status]}>
+                    {t(`status.${detailRequest.status}`)}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("requestedColumn")}
+                  </p>
+                  <p className="text-foreground">
+                    <FormattedDate value={detailRequest.requestedAt} withTime />
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("expiryColumn")}
+                  </p>
+                  <p className="text-foreground">
+                    {detailRequest.expiresAt ? (
+                      <FormattedDate value={detailRequest.expiresAt} />
+                    ) : (
+                      t("noExpiry")
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t("purposeColumn")}
+                </p>
+                <p dir="auto" className="text-foreground break-words whitespace-pre-wrap">
+                  {detailRequest.note ? <AutoTranslate text={detailRequest.note} /> : "—"}
+                </p>
+              </div>
+              {detailRequest.decisionNote ? (
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t("rejectReasonColumn")}
+                  </p>
+                  <p
+                    dir="auto"
+                    className="text-foreground break-words whitespace-pre-wrap"
+                  >
+                    <AutoTranslate text={detailRequest.decisionNote} />
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <CreateReportSharingRequestDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -723,6 +878,75 @@ export function ReportSharingPanel({
         cancelLabel={t("rejectDialog.cancel")}
         confirmLabel={t("rejectDialog.confirm")}
       />
+      <ApproveRequestDialog
+        open={approveTargetId !== null}
+        onOpenChange={(open) => !open && setApproveTargetId(null)}
+        onConfirm={(expiresAt) => handleApprove(approveTargetId as string, expiresAt)}
+      />
     </div>
+  );
+}
+
+/** RIO-FR-014 — the owner sets the optional expiry date here, on Approve,
+ * rather than from an always-visible inline field in the table row. */
+function ApproveRequestDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (expiresAt: string | undefined) => Promise<void>;
+}) {
+  const t = useTranslations("app.reportSharing");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function confirm() {
+    setSubmitting(true);
+    try {
+      await onConfirm(expiresAt || undefined);
+      setExpiresAt("");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setExpiresAt("");
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("approveDialog.title")}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="report-sharing-approve-expiry">
+            {t("approveDialog.expiryLabel")}
+          </Label>
+          <input
+            id="report-sharing-approve-expiry"
+            type="date"
+            className="border-input h-9 w-full rounded-md border bg-transparent px-2.5 text-sm"
+            value={expiresAt}
+            min={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setExpiresAt(e.target.value)}
+          />
+          <p className="text-muted-foreground text-xs">{t("approveDialog.expiryHint")}</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t("approveDialog.cancel")}
+          </Button>
+          <Button onClick={confirm} disabled={submitting}>
+            {submitting ? t("approveDialog.approving") : t("approveDialog.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

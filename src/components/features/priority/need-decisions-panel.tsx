@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useLocale, useTranslations } from "next-intl";
 import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/lib/bilingual";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +37,7 @@ import type {
 } from "@/services/need-decisions/need-decisions.types";
 import { studyConfigService } from "@/services/study-config/study-config.service";
 import type { StudyConfigOption } from "@/services/study-config/study-config.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const STATUS_OPTIONS: DecisionStatus[] = [
   "open",
@@ -53,6 +56,7 @@ interface NeedDecisionsPanelProps {
 
 export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProps) {
   const t = useTranslations("PriorityDashboard.decisions");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [decisions, setDecisions] = useState<NeedDecision[] | null>(null);
   const [decisionTypes, setDecisionTypes] = useState<StudyConfigOption[]>([]);
@@ -78,9 +82,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
         setDecisions(d);
         setDecisionTypes(types.filter((o) => o.isActive));
       })
-      .catch((err) =>
-        setLoadError(err instanceof ApiError ? err.message : t("loadError")),
-      );
+      .catch((err) => setLoadError(resolveApiErrorMessage(err, tApiErr, t("loadError"))));
   }
 
   useEffect(() => {
@@ -111,9 +113,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
       setFormError(
         err instanceof ApiError && err.code === "NO_APPROVED_PRIORITY_SCORE"
           ? t("noApprovedScoreError")
-          : err instanceof ApiError
-            ? err.message
-            : t("genericError"),
+          : resolveApiErrorMessage(err, tApiErr, t("genericError")),
       );
     } finally {
       setSaving(false);
@@ -202,7 +202,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
                   </div>
                   {formError ? (
                     <p role="alert" className="text-destructive text-sm">
-                      {formError}
+                      <AutoTranslate text={formError} />
                     </p>
                   ) : null}
                 </div>
@@ -228,7 +228,11 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
           ) : null}
         </div>
 
-        {loadError ? <p className="text-destructive text-sm">{loadError}</p> : null}
+        {loadError ? (
+          <p className="text-destructive text-sm">
+            <AutoTranslate text={loadError} />
+          </p>
+        ) : null}
 
         {decisions === null ? (
           <div className="space-y-3" aria-busy="true" aria-live="polite">
@@ -259,7 +263,8 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
                       })()}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {t("responsiblePartyLabel")}: {decision.responsibleParty}
+                      {t("responsiblePartyLabel")}:{" "}
+                      <AutoTranslate text={decision.responsibleParty} />
                     </p>
                     <p className="text-muted-foreground text-xs">
                       {t("decisionDateLabel")}: {decision.decisionDate}
@@ -290,7 +295,9 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
                   )}
                 </div>
                 {decision.notes ? (
-                  <p className="text-muted-foreground mt-2 text-sm">{decision.notes}</p>
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    <AutoTranslate text={decision.notes} />
+                  </p>
                 ) : null}
                 <button
                   type="button"
@@ -310,7 +317,7 @@ export function NeedDecisionsPanel({ needId, canManage }: NeedDecisionsPanelProp
                     {decision.history.map((event) => (
                       <li key={event.id} className="text-muted-foreground text-xs">
                         <span className="tabular-nums">
-                          {new Date(event.changedAt).toLocaleString()}
+                          <FormattedDate value={event.changedAt} withTime />
                         </span>
                         {" — "}
                         {event.fromStatus

@@ -5,6 +5,8 @@ import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { PermissionGuard } from "@/components/layout/permission-guard";
 import { Badge } from "@/components/ui/badge";
 import { ReportContentView } from "@/components/features/reports/report-content-view";
@@ -14,6 +16,7 @@ import { ApiError } from "@/services/api/types";
 import { reportSharingService } from "@/services/report-sharing/report-sharing.service";
 import type { SharedReportSnapshot } from "@/services/report-sharing/report-sharing.types";
 import type { Report, ReportTypeCode } from "@/services/reports/reports.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 // Same document (cover + numbered sections, charts, tables) the owner's own
 // Report Preview page renders — a shared report must look identical to the
@@ -56,9 +59,13 @@ function toReport(snapshot: SharedReportSnapshot): Report {
 
 function SharedReportScreen({ requestId }: { requestId: string }) {
   const t = useTranslations("app.reportSharing.sharedReport");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [snapshot, setSnapshot] = useState<SharedReportSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The owner org name is interpolated into an otherwise-translated sentence,
+  // so translate it on its own rather than wrapping the whole string.
+  const { text: ownerOrgName } = useAutoTranslate(snapshot?.ownerOrgName ?? "");
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +76,7 @@ function SharedReportScreen({ requestId }: { requestId: string }) {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : t("loadError"));
+        setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
       });
     return () => {
       cancelled = true;
@@ -96,9 +103,9 @@ function SharedReportScreen({ requestId }: { requestId: string }) {
       ) : (
         <>
           <PageHeader
-            title={snapshot.title}
+            title={<AutoTranslate text={snapshot.title} />}
             description={t("sharedByLabel", {
-              org: snapshot.ownerOrgName,
+              org: ownerOrgName || snapshot.ownerOrgName,
               date: formatDateTime(snapshot.generatedAt, locale),
             })}
             actions={<Badge variant="secondary">{t("viewOnlyBadge")}</Badge>}

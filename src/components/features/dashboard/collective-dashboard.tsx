@@ -19,6 +19,8 @@ import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { localizeReportText } from "@/lib/report-narrative-i18n";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { formatDate } from "@/lib/format-date";
 import type { AppLocale } from "@/i18n/routing";
 import { Card, CardContent } from "@/components/ui/card";
@@ -340,6 +342,7 @@ const ANOMALY_STYLE: Record<
 export function CollectiveDashboard() {
   const t = useTranslations("app.dashboard.collective");
   const locale = useLocale() as AppLocale;
+  const { localizedDomain } = useDomainArabicMap();
   const [data, setData] = useState<Data | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -442,14 +445,14 @@ export function CollectiveDashboard() {
                           dir="auto"
                           className="max-w-md min-w-48 font-medium break-words whitespace-normal"
                         >
-                          {p.label}
+                          <AutoTranslate text={p.label} />
                         </TableCell>
-                        <TableCell>{p.domain}</TableCell>
+                        <TableCell>{localizedDomain(p.domain)}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {Math.round(p.severityScore)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {p.entity ?? "—"}
+                          {p.entity ? <AutoTranslate text={p.entity} /> : "—"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -500,7 +503,9 @@ export function CollectiveDashboard() {
                           className={`${ANOMALY_STYLE[a.severity]} size-4 shrink-0`}
                         />
                       )}
-                      <span className="text-foreground">{a.note}</span>
+                      <span className="text-foreground">
+                        <AutoTranslate text={a.note} />
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -516,9 +521,11 @@ export function CollectiveDashboard() {
               <ul className="space-y-2">
                 {exec.reviewerNotes.map((n, i) => (
                   <li key={i} className="border-border rounded-md border p-3 text-sm">
-                    <p className="text-foreground">{n.note}</p>
+                    <p className="text-foreground">
+                      <AutoTranslate text={n.note} />
+                    </p>
                     <p className="text-muted-foreground mt-1 text-xs">
-                      {n.author} · {formatDate(n.at, locale)}
+                      <AutoTranslate text={n.author} /> · {formatDate(n.at, locale)}
                     </p>
                   </li>
                 ))}

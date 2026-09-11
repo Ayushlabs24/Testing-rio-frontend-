@@ -23,13 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiError } from "@/services/api/types";
+import {
+  getApiErrorMessage,
+  HISTORICAL_UPLOAD_API_ERROR_CODES,
+} from "@/lib/api-error-message";
 import { geographyService } from "@/services/geography/geography.service";
 import type { Center, Governorate, Region } from "@/services/geography/geography.types";
 import { historicalStudiesService } from "@/services/historical-studies/historical-studies.service";
 
 const NONE = "__none__";
-const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"];
+// RIO-FR-013 shipped this as PDF/Word only, because an archived
+// pre-platform study was a document to read. RIO-DATA-002 then made the
+// archive an import source as well, and only one-need-per-row formats can
+// be imported into the dashboard — so a spreadsheet has to be uploadable in
+// the first place. The backend already accepted all of these
+// (EvidenceStorageService.ALLOWED_EXTENSIONS, which also checks the file
+// signature); it was only this picker that excluded them.
+const ALLOWED_EXTENSIONS = [".csv", ".xlsx", ".xls", ".pdf", ".doc", ".docx"];
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -54,10 +64,11 @@ export function HistoricalStudyUploadDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sectorOptions: string[];
+  sectorOptions: { name: string; nameAr: string | null }[];
   onUploaded: () => void;
 }) {
   const t = useTranslations("app.archive.uploadHistorical");
+  const tErrors = useTranslations("app.archive.uploadHistorical.apiErrors");
   const tGeo = useTranslations("app.geography");
   const locale = useLocale() as AppLocale;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,7 +162,14 @@ export function HistoricalStudyUploadDialog({
       onOpenChange(false);
       onUploaded();
     } catch (err) {
-      setError(err instanceof ApiError && err.code ? err.message : t("genericError"));
+      setError(
+        getApiErrorMessage(
+          err,
+          HISTORICAL_UPLOAD_API_ERROR_CODES,
+          tErrors,
+          t("genericError"),
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -270,8 +288,8 @@ export function HistoricalStudyUploadDialog({
                 <SelectContent>
                   <SelectItem value={NONE}>{t("subjectPlaceholder")}</SelectItem>
                   {sectorOptions.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
+                    <SelectItem key={s.name} value={s.name}>
+                      {localizedName(s, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>

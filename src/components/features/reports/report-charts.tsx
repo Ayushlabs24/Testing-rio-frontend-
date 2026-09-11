@@ -1,5 +1,7 @@
 "use client";
 
+import { AutoTranslate } from "@/components/common/auto-translate";
+
 // Small, dependency-free chart primitives for the report viewer, styled with
 // the app's theme-aware --chart-* tokens (light/dark safe). Categorical hues
 // are assigned in fixed order, never cycled; every chart carries a legend with
@@ -22,10 +24,20 @@ export function StatTiles({
           key={`${it.label}-${i}`}
           className="border-border bg-muted/30 rounded-lg border p-3"
         >
-          <p className="text-foreground text-xl font-semibold tabular-nums">{it.value}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{it.label}</p>
+          <p dir="auto" className="text-foreground text-xl font-semibold tabular-nums">
+            {typeof it.value === "string" && /\p{L}{2,}/u.test(it.value) ? (
+              <AutoTranslate text={it.value} />
+            ) : (
+              it.value
+            )}
+          </p>
+          <p dir="auto" className="text-muted-foreground mt-0.5 text-xs">
+            <AutoTranslate text={it.label} />
+          </p>
           {it.sub ? (
-            <p className="text-muted-foreground/80 mt-0.5 text-[11px]">{it.sub}</p>
+            <p dir="auto" className="text-muted-foreground/80 mt-0.5 text-[11px]">
+              <AutoTranslate text={it.sub} />
+            </p>
           ) : null}
         </div>
       ))}
@@ -50,8 +62,12 @@ export function GroupedBarChart({
       <div className="space-y-3">
         {groups.map((group, gi) => (
           <div key={`${group}-${gi}`} className="space-y-1">
-            <p className="text-muted-foreground truncate text-xs" title={group}>
-              {group}
+            <p
+              dir="auto"
+              className="text-muted-foreground truncate text-xs"
+              title={group}
+            >
+              <AutoTranslate text={group} />
             </p>
             {series.map((s) => (
               <div
@@ -82,7 +98,7 @@ export function GroupedBarChart({
             className="text-muted-foreground flex items-center gap-1.5 text-xs"
           >
             <span className="size-2.5 rounded-sm" style={{ background: s.color }} />
-            {s.name}
+            <AutoTranslate text={s.name} />
           </span>
         ))}
       </div>
@@ -105,8 +121,8 @@ export function BarChart({
           key={`${b.label}-${i}`}
           className="grid grid-cols-[10rem_1fr_2.5rem] items-center gap-3 text-sm"
         >
-          <span className="text-muted-foreground truncate" title={b.label}>
-            {b.label}
+          <span dir="auto" className="text-muted-foreground truncate" title={b.label}>
+            <AutoTranslate text={b.label} />
           </span>
           <div className="bg-muted h-3 overflow-hidden rounded-full">
             <div
@@ -198,7 +214,9 @@ export function Gauge({
           </text>
         ) : null}
       </svg>
-      <p className="text-foreground mt-1.5 text-center text-xs font-medium">{label}</p>
+      <p dir="auto" className="text-foreground mt-1.5 text-center text-xs font-medium">
+        <AutoTranslate text={label} />
+      </p>
       {scaleNote ? (
         <p className="text-muted-foreground text-center text-[11px]">{scaleNote}</p>
       ) : null}
@@ -213,11 +231,15 @@ export function RadarChart({
   series,
   max,
   size = 280,
+  ariaLabel = "Domain profile",
 }: {
   axes: string[];
   series: Array<{ name: string; values: number[]; color: string }>;
   max: number;
   size?: number;
+  /** Localized accessible name for the figure — the caller has the
+   * translation context, this pure chart component does not. */
+  ariaLabel?: string;
 }) {
   const cx = size / 2;
   const cy = size / 2;
@@ -239,7 +261,7 @@ export function RadarChart({
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         role="img"
-        aria-label="Domain profile"
+        aria-label={ariaLabel}
       >
         {[0.25, 0.5, 0.75, 1].map((f) => (
           <polygon
@@ -296,7 +318,9 @@ export function RadarChart({
           {series.map((s) => (
             <li key={s.name} className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full" style={{ background: s.color }} />
-              <span className="text-muted-foreground">{s.name}</span>
+              <span className="text-muted-foreground">
+                <AutoTranslate text={s.name} />
+              </span>
             </li>
           ))}
         </ul>
@@ -393,7 +417,9 @@ export function DonutChart({
                 className="size-2.5 shrink-0 rounded-full"
                 style={{ background: colorVars[i % colorVars.length] }}
               />
-              <span className="text-muted-foreground">{d.label}</span>
+              <span dir="auto" className="text-muted-foreground">
+                <AutoTranslate text={d.label} />
+              </span>
               <span className="text-foreground font-medium tabular-nums">
                 {d.value} ({pct}%)
               </span>

@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 
 // A genuinely heavy, below-the-fold, conditionally-rendered widget (only
 // shown inside the "View QR" dialog, not on initial page load) — code-split
@@ -63,11 +65,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
 import { publicSurveysService } from "@/services/public-surveys/public-surveys.service";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const LABEL_MAX_LENGTH = 150;
 
@@ -110,6 +112,7 @@ function LinkRow({
   onDeactivated: () => void;
 }) {
   const t = useTranslations("app.publicSurveys.detail");
+  const tApiErr = useTranslations("apiErrors");
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -138,7 +141,7 @@ function LinkRow({
       await publicSurveysService.shareLinkByEmail(needId, link.id, emailValue.trim());
       setEmailSent(true);
     } catch (error) {
-      setEmailError(error instanceof ApiError ? error.message : t("genericError"));
+      setEmailError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     } finally {
       setEmailSending(false);
     }
@@ -156,7 +159,7 @@ function LinkRow({
         className="max-w-48 truncate py-4 text-sm font-medium"
         title={link.label}
       >
-        {link.label}
+        <AutoTranslate text={link.label} />
       </TableCell>
       <TableCell className="text-muted-foreground text-sm">
         <FormattedDate value={link.createdAt} />
@@ -264,7 +267,9 @@ function LinkRow({
         <Dialog open={qrOpen} onOpenChange={setQrOpen}>
           <DialogContent className="sm:max-w-xs">
             <DialogHeader>
-              <DialogTitle>{link.label}</DialogTitle>
+              <DialogTitle>
+                <AutoTranslate text={link.label} />
+              </DialogTitle>
             </DialogHeader>
             <div className="flex justify-center py-2">
               <div className="bg-background rounded-md border p-3">
@@ -341,6 +346,7 @@ export default function PublicSurveyDetailPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.publicSurveys.detail");
+  const tApiErr = useTranslations("apiErrors");
   const canCreate = usePermission("studySurvey", "create");
   const canWrite = usePermission("studySurvey", "write");
 
@@ -428,7 +434,7 @@ export default function PublicSurveyDetailPage({
       handleCreateOpenChange(false);
       load();
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     } finally {
       setCreating(false);
     }
@@ -449,6 +455,9 @@ export default function PublicSurveyDetailPage({
   // with nothing in it — disabled until at least one of this need's links
   // has actually collected a response, not just once the survey is live.
   const hasResponses = (links ?? []).some((link) => link.responseCount > 0);
+  // PageHeader's `title` is a plain string, not JSX — resolved through the
+  // hook rather than wrapped in <AutoTranslate> at the call site.
+  const needTitle = useAutoTranslate(need?.title).text;
 
   return (
     <PermissionGuard module="studySurvey" action="read">
@@ -457,7 +466,7 @@ export default function PublicSurveyDetailPage({
           <BackButton href="/public-surveys" label={t("backToList")} />
         </div>
         <PageHeader
-          title={need?.title ?? ""}
+          title={need?.title ? needTitle : ""}
           description={t("description")}
           actions={
             <>

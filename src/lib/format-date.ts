@@ -60,3 +60,20 @@ export function formatDateTime(value: string | Date, locale: AppLocale): string 
   }).format(date);
   return `${datePart}${SEPARATOR[locale]}${timePart}`;
 }
+
+/**
+ * Every plain number rendered in the UI (a count, a percentage, a population
+ * figure) should go through this rather than a bare `.toLocaleString()` —
+ * with no arguments, `.toLocaleString()` resolves to the *browser's* locale,
+ * not the app's, so a user with an Arabic OS/browser locale but the app set
+ * to English (or vice versa) would see digit grouping — and, worse, actual
+ * Eastern Arabic-Indic digits (١٢٣) — that silently disagrees with the
+ * language they picked in the app. Same reasoning as `formatDate` above:
+ * Western/Latin digits regardless of UI language (client-reviewed decision,
+ * numerals weren't requested to switch), grouping separator localized.
+ */
+export function formatNumber(value: number, locale: AppLocale): string {
+  return new Intl.NumberFormat(intlLocale(locale), { numberingSystem: "latn" }).format(
+    value,
+  );
+}

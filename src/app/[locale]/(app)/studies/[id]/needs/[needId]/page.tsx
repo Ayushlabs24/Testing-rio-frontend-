@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, MapPin, Pencil, Trash2, UploadCloud } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -11,7 +11,9 @@ import { NeedSummarySection } from "@/components/features/studies/need-summary-s
 // Commented out with its usage below — see the note at the mount site.
 import { NeedPriorityInputs } from "@/components/features/studies/need-priority-inputs";
 import { NeedInitiativeLinkSection } from "@/components/features/studies/need-initiative-link-section";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
+import { localizedName } from "@/lib/bilingual";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { NeedStatusBadge } from "@/components/features/studies/study-status-badge";
 import { BackButton } from "@/components/common/back-button";
@@ -27,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { usePermission } from "@/hooks/use-permission";
 import { useStudyGovernorates, useStudyCenters } from "@/hooks/use-study-geography";
 import { cn } from "@/lib/utils";
@@ -36,8 +39,11 @@ import { evidenceService } from "@/services/evidence/evidence.service";
 import { needsService } from "@/services/needs/needs.service";
 import { NEED_EDITABLE_STATUSES, type Need } from "@/services/needs/needs.types";
 import type { Governorate, Center } from "@/services/geography/geography.types";
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
 import { studiesService } from "@/services/studies/studies.service";
 import type { Study } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 interface NeedFormValues {
   title: string;
@@ -65,7 +71,7 @@ function VillageChips({ villages }: { villages: string[] }) {
       {villages.map((village) => (
         <Badge key={village} variant="secondary" className="gap-1">
           <MapPin className="size-3" />
-          {village}
+          <AutoTranslate text={village} />
         </Badge>
       ))}
     </div>
@@ -163,10 +169,12 @@ function NeedDetailsCard({
   onDeleted: () => void;
 }) {
   const t = useTranslations("app.studies.need");
+  const tApiErr = useTranslations("apiErrors");
   const tGeo = useTranslations("app.geography");
   const tSource = useTranslations("app.studies.source");
   const tDelete = useTranslations("app.studies.need.delete");
   const tValidation = useTranslations("app.studies.validation");
+  const locale = useLocale() as AppLocale;
   const [editing, setEditing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -257,7 +265,7 @@ function NeedDetailsCard({
       onSaved(updated);
       setEditing(false);
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t("genericError"));
+      setSubmitError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     }
   });
 
@@ -268,7 +276,7 @@ function NeedDetailsCard({
       <CardContent className="space-y-4 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-foreground min-w-0 truncate text-sm font-semibold">
-            {need.title}
+            <AutoTranslate text={need.title} />
           </h2>
           <div className="flex flex-wrap items-center gap-2">
             <NeedStatusBadge status={need.status} />
@@ -354,7 +362,10 @@ function NeedDetailsCard({
               <div className="space-y-2">
                 <Label>{tGeo("governorateLabel")}</Label>
                 <MultiSelect
-                  options={studyGovernorates.map((g) => ({ value: g.id, label: g.name }))}
+                  options={studyGovernorates.map((g) => ({
+                    value: g.id,
+                    label: localizedName(g, locale),
+                  }))}
                   values={governorateIds}
                   onChange={(next) => {
                     setValue("governorateIds", next, { shouldValidate: true });
@@ -387,7 +398,10 @@ function NeedDetailsCard({
                 <div className="space-y-2">
                   <Label>{tGeo("centerLabel")}</Label>
                   <MultiSelect
-                    options={centerOptions.map((c) => ({ value: c.id, label: c.name }))}
+                    options={centerOptions.map((c) => ({
+                      value: c.id,
+                      label: localizedName(c, locale),
+                    }))}
                     values={centerIds}
                     onChange={(next) =>
                       setValue("centerIds", next, { shouldValidate: true })
@@ -507,17 +521,22 @@ function NeedDetailsCard({
               <p className="text-muted-foreground text-xs font-medium">
                 {t("statementLabel")}
               </p>
-              <FilledTextBlock>{need.statement}</FilledTextBlock>
+              <FilledTextBlock>
+                <AutoTranslate text={need.statement} />
+              </FilledTextBlock>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <FilledField label={tGeo("governorateLabel")}>
                 {need.governorateIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {need.governorateIds.map((id) => (
-                      <Badge key={id} variant="secondary">
-                        {studyGovernorates.find((g) => g.id === id)?.name ?? id}
-                      </Badge>
-                    ))}
+                    {need.governorateIds.map((id) => {
+                      const governorate = studyGovernorates.find((g) => g.id === id);
+                      return (
+                        <Badge key={id} variant="secondary">
+                          {governorate ? localizedName(governorate, locale) : id}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -526,11 +545,14 @@ function NeedDetailsCard({
               <FilledField label={tGeo("centerLabel")}>
                 {need.centerIds.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {need.centerIds.map((id) => (
-                      <Badge key={id} variant="secondary">
-                        {studyCenters.find((c) => c.id === id)?.name ?? id}
-                      </Badge>
-                    ))}
+                    {need.centerIds.map((id) => {
+                      const center = studyCenters.find((c) => c.id === id);
+                      return (
+                        <Badge key={id} variant="secondary">
+                          {center ? localizedName(center, locale) : id}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -545,21 +567,21 @@ function NeedDetailsCard({
                 {need.affectedPopulation === null ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  need.affectedPopulation.toLocaleString()
+                  formatNumber(need.affectedPopulation, locale)
                 )}
               </FilledField>
               <FilledField label={t("affectedPeopleLabel")}>
                 {need.affectedPeople === null ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  need.affectedPeople.toLocaleString()
+                  formatNumber(need.affectedPeople, locale)
                 )}
               </FilledField>
               <FilledField label={t("affectedHouseholdsLabel")}>
                 {need.affectedHouseholds === null ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
-                  need.affectedHouseholds.toLocaleString()
+                  formatNumber(need.affectedHouseholds, locale)
                 )}
               </FilledField>
               <FilledField label={t("systemReferenceIdLabel")}>
@@ -594,6 +616,10 @@ export default function NeedWorkspacePage({
   const canManageInitiativeLinks = usePermission("initiatives", "write");
 
   const [need, setNeed] = useState<Need | null>(null);
+  // Dynamic AI translation (Approach 3 hybrid) — the page header takes a
+  // plain string, not a node, so this is read via the hook rather than the
+  // <AutoTranslate> component used further down for the statement.
+  const translatedTitle = useAutoTranslate(need?.title).text;
   const [study, setStudy] = useState<Study | null>(null);
   // Distinct from `study` itself — a failed fetch must still let the page
   // render (with governorates/centers falling back to empty) instead of
@@ -695,7 +721,7 @@ export default function NeedWorkspacePage({
         <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
           {t("needEyebrow")}
         </p>
-        <PageHeader title={need.title} />
+        <PageHeader title={translatedTitle} />
 
         {failedEvidenceNames.length > 0 ? (
           <div

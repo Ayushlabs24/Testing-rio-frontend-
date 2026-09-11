@@ -29,6 +29,16 @@ export function LanguageSwitcher() {
 
   return (
     <DropdownMenu>
+      {/* A thin top progress bar while the locale switch is in flight, so the
+          re-render + background translation never reads as a frozen or blank
+          screen. Route-level `loading.tsx` skeletons take over from there. */}
+      {isPending ? (
+        <div
+          className="bg-primary/70 fixed inset-x-0 top-0 z-[100] h-0.5 animate-pulse"
+          role="progressbar"
+          aria-label={t("switcherLabel")}
+        />
+      ) : null}
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
@@ -38,7 +48,7 @@ export function LanguageSwitcher() {
           title={t("switcherLabel")}
           disabled={isPending}
         >
-          <Languages className="size-4" />
+          <Languages className={isPending ? "size-4 animate-pulse" : "size-4"} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

@@ -3,6 +3,7 @@
 import { Building2, Eye, Users2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
@@ -62,6 +63,8 @@ function OrganizationDetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("app.settings.organizations");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
+  const tUserStatus = useTranslations("app.settings.users.status");
   const [organization, setOrganization] = useState<OrganizationSummary | null>(null);
   const [members, setMembers] = useState<OrgUser[] | null>(null);
 
@@ -84,7 +87,9 @@ function OrganizationDetailSheet({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <SheetTitle>{organization.name}</SheetTitle>
+                  <SheetTitle>
+                    <AutoTranslate text={organization.name} />
+                  </SheetTitle>
                   <SheetDescription>
                     {t("membersCount", { count: organization.memberCount })}
                   </SheetDescription>
@@ -160,10 +165,18 @@ function OrganizationDetailSheet({
                             </p>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">{member.role.name}</Badge>
+                            <Badge variant="secondary">
+                              {tRoleNames.has(member.role.key)
+                                ? tRoleNames(
+                                    member.role.key as Parameters<typeof tRoleNames>[0],
+                                  )
+                                : member.role.name}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {member.status}
+                            {tUserStatus.has(member.status)
+                              ? tUserStatus(member.status)
+                              : member.status}
                           </TableCell>
                         </TableRow>
                       ))
@@ -347,7 +360,7 @@ export default function OrganizationsSettingsPage() {
                       onClick={() => openDetail(organization.id)}
                     >
                       <TableCell className="text-foreground font-medium">
-                        {organization.name}
+                        <AutoTranslate text={organization.name} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {organization.region.join(", ")}

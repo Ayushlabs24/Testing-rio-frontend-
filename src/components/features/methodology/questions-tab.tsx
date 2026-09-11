@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreVertical, Plus, Search } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import type { AppLocale } from "@/i18n/routing";
@@ -64,6 +65,17 @@ interface EditFormState {
 }
 
 const ANSWER_OPTION_TYPES: QuestionAnswerType[] = ["select", "multiselect", "checklist"];
+
+// Maps the raw answer-type enum to the same "create.answerType*" labels the
+// create form already uses — the detail panel below used to print the raw
+// enum value (e.g. "open_ended") verbatim.
+const ANSWER_TYPE_LABEL_KEY: Record<QuestionAnswerType, string> = {
+  select: "create.answerTypeSelect",
+  multiselect: "create.answerTypeMultiselect",
+  numeric: "create.answerTypeNumeric",
+  checklist: "create.answerTypeChecklist",
+  open_ended: "create.answerTypeOpenEnded",
+};
 
 interface CreateFormState {
   questionId: string;
@@ -470,7 +482,11 @@ export function QuestionsTab() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                        {q.submittedAt ? new Date(q.submittedAt).toLocaleString() : "—"}
+                        {q.submittedAt ? (
+                          <FormattedDate value={q.submittedAt} withTime />
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -1123,7 +1139,13 @@ export function QuestionsTab() {
                   <p className="text-muted-foreground text-xs font-medium">
                     {t("detail.answerType")}
                   </p>
-                  <p className="text-foreground text-sm">{detailQuestion.answerType}</p>
+                  <p className="text-foreground text-sm">
+                    {t(
+                      ANSWER_TYPE_LABEL_KEY[
+                        detailQuestion.answerType as QuestionAnswerType
+                      ] as Parameters<typeof t>[0],
+                    )}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-medium">

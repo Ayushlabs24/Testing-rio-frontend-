@@ -17,6 +17,9 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -43,9 +46,9 @@ import {
   VillagePriorityResult,
   DomainPriorityComponent,
 } from "@/services/priority/severity-scoring.service";
-import { ApiError } from "@/services/api/types";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 interface SeverityDashboardProps {
   studyId: string;
@@ -59,6 +62,8 @@ export function SeverityDashboard({
   villages,
 }: SeverityDashboardProps) {
   const t = useTranslations("PriorityDashboard.severityDashboard");
+  const tApiErr = useTranslations("apiErrors");
+  const { localizedDomain } = useDomainArabicMap();
   const canRecalculate = usePermission("priorityScoring", "create");
 
   const [selectedVillage, setSelectedVillage] = useState<string>("consolidated");
@@ -114,9 +119,7 @@ export function SeverityDashboard({
         setPriorityData(null);
       }
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to load severity dashboard.",
-      );
+      setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
     } finally {
       setLoading(false);
     }
@@ -129,7 +132,7 @@ export function SeverityDashboard({
       await severityScoringService.recalculate(studyId, surveyId);
       await loadDashboard();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Recalculating failed.");
+      setError(resolveApiErrorMessage(err, tApiErr, t("recalculateError")));
     } finally {
       setRecalculating(false);
     }
@@ -527,7 +530,7 @@ export function SeverityDashboard({
                           {t("criticalOverrideTitle")}
                         </p>
                         <p className="text-muted-foreground mt-0.5 text-xs">
-                          {priorityData.overrideReason}
+                          <AutoTranslate text={priorityData.overrideReason} />
                         </p>
                       </div>
                     </div>
@@ -562,7 +565,7 @@ export function SeverityDashboard({
                     </span>
                     <span>
                       {t("calculated")}{" "}
-                      {new Date(priorityData.calculatedAt).toLocaleDateString()}
+                      <FormattedDate value={priorityData.calculatedAt} />
                     </span>
                   </div>
 
@@ -611,7 +614,7 @@ export function SeverityDashboard({
                                 )}
                               >
                                 <TableCell className="py-2 font-semibold">
-                                  {comp.domainNameSnapshot}
+                                  {localizedDomain(comp.domainNameSnapshot)}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground py-2 text-right tabular-nums">
                                   {comp.domainSeverityScore.toFixed(1)}
@@ -704,10 +707,10 @@ export function SeverityDashboard({
                               {item.rank}
                             </TableCell>
                             <TableCell className="text-foreground text-sm font-semibold">
-                              {item.kpi}
+                              <AutoTranslate text={item.kpi} />
                             </TableCell>
                             <TableCell className="text-muted-foreground text-xs">
-                              {item.domain}
+                              {localizedDomain(item.domain)}
                             </TableCell>
                             <TableCell className="text-right font-black tabular-nums">
                               <span className={scoreColors.text}>
@@ -798,7 +801,7 @@ export function SeverityDashboard({
                   </span>
                 </DialogTitle>
                 <DialogDescription className="text-foreground pt-2 text-sm font-medium">
-                  {questionDetail.questionText}
+                  <AutoTranslate text={questionDetail.questionText} />
                 </DialogDescription>
               </DialogHeader>
 

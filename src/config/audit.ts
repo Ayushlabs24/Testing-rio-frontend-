@@ -61,6 +61,18 @@ export const AUDIT_ENTITY_TYPES = [
   // Configuration. Distinct from `consent` the action, which is a user
   // accepting one of these versions.
   "consent_policy",
+  // The remaining six were emitted by the backend (grep `entityType: '` in
+  // Project-RIO-Backend/src/modules) but missing from this union entirely —
+  // found during the 2026-09-08 bilingual audit while classifying which
+  // `entityLabel` values are safe to auto-translate. Harmless at runtime
+  // (this type only describes the shape, it isn't validated against it), but
+  // worth keeping complete so this list is the actual source of truth again.
+  "initiative",
+  "need_decision",
+  "priority_score",
+  "question",
+  "ncnp_report",
+  "backup_run",
 ] as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
@@ -82,4 +94,72 @@ export const AUDIT_ENTITY_MODULE: Record<AuditEntityType, PermissionModule> = {
   report: "reportsDashboards",
   sharing_request: "archiveSharingAudit",
   consent_policy: "onboardingConsent",
+  initiative: "initiatives",
+  need_decision: "priorityScoring",
+  priority_score: "priorityScoring",
+  question: "surveyBuilder",
+  ncnp_report: "ncnpReport",
+  backup_run: "backups",
 };
+
+/**
+ * Whether an audit event's `entityLabel` is safe to run through
+ * `<AutoTranslate>` (2026-09-08 bilingual audit). `entityLabel` is NOT
+ * uniformly one kind of thing — inspected every call site that sets it in
+ * Project-RIO-Backend/src/modules and found it's a genuine mix:
+ *  - a proper identifier for some entity types (a user's email, an
+ *    uploaded file's filename, a Need's own UUID for `priority_score`) —
+ *    must NEVER be translated, same policy as everywhere else in the app.
+ *    An organization's registered name used to be grouped here too, but
+ *    NOT any more — client reversal 2026-09-08: org names get translated,
+ *    same as person names (see use-auto-translate.ts's doc comment);
+ *  - real user-typed content (a Study/Need/Report/Initiative/Question title)
+ *    or a server-composed English sentence that embeds one (e.g. sharing.
+ *    service.ts's `Sharing request for study "${title}" ...`, need-decisions.
+ *    service.ts's `${decisionType} — ${needTitle}`, ncnp-report-review.
+ *    service.ts's `NCNP Compiled Report approved`) for the rest — these
+ *    read in English regardless of UI locale today, and translating the
+ *    whole label (title and surrounding phrase together) reads correctly in
+ *    Arabic since it's one sentence, not two things concatenated on screen.
+ */
+export function isEntityLabelTranslatable(entityType: AuditEntityType): boolean {
+  const NEVER_TRANSLATE: ReadonlySet<AuditEntityType> = new Set([
+    // "organization" REMOVED — client reversal 2026-09-08: org names must be
+    // translated too, same as everywhere else in the app (see
+    // use-auto-translate.ts's own doc comment for the full history).
+    "user",
+    "evidence",
+    "priority_score",
+  ]);
+  return !NEVER_TRANSLATE.has(entityType);
+}
+
+/**
+ * Report-type names are baked into some `entityLabel` sentences in English by
+ * the backend (e.g. a report-sharing request's label embeds
+ * `… — Evidence Document Report`). The AI free-text translator that
+ * `<AutoTranslate>` uses reliably renders the surrounding Arabic sentence but
+ * tends to leave these fixed English phrases untouched. Substitute them
+ * deterministically first (Arabic UI only) so nothing English is left behind;
+ * the values mirror `messages/ar.json` → `app.reports.content.reportTitle.*`.
+ */
+const REPORT_TYPE_PHRASES_AR: ReadonlyArray<readonly [string, string]> = [
+  ["Combined Quantitative & Evidence Report", "التقرير المجمّع الكمي والأدلة"],
+  ["Domain-wise Needs Report", "تقرير الاحتياجات حسب المجال"],
+  ["Survey & Dashboard Report", "تقرير الاستبيان ولوحة التحكم"],
+  ["Individual Survey Report", "تقرير المسح الفردي"],
+  ["Regional Needs Report", "تقرير الاحتياجات الإقليمية"],
+  ["Evidence Document Report", "تقرير مستندات الأدلة"],
+  ["Top-Priority Report", "تقرير الأولويات العليا"],
+  ["Data-Quality Report", "تقرير جودة البيانات"],
+  ["Executive Summary", "الملخص التنفيذي"],
+  ["Collective Report", "التقرير الجماعي"],
+  ["Village Report", "تقرير القرية"],
+];
+
+export function localizeAuditReportPhrases(label: string, locale: string): string {
+  if (locale !== "ar" || !label) return label;
+  let out = label;
+  for (const [en, ar] of REPORT_TYPE_PHRASES_AR) out = out.split(en).join(ar);
+  return out;
+}

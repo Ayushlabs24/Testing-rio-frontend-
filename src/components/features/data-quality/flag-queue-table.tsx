@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +28,20 @@ const SEVERITY_DOT: Record<CleaningSeverity, string> = {
   out_of_vocabulary: "bg-amber-500",
 };
 
+// `flag.field` is a finite, backend-defined set (see the rules in
+// data-cleaning/rules/*.ts) — `village[0]`, `village[1]`, ... included, with
+// the index kept as-is since it's positional, not translatable content.
+export function describeField(
+  field: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  const villageMatch = /^village\[(\d+)\]$/.exec(field);
+  if (villageMatch) return `${t("fields.village")}[${villageMatch[1]}]`;
+  return t.has(`fields.${field}`)
+    ? t(`fields.${field}` as Parameters<typeof t>[0])
+    : field;
+}
+
 interface FlagQueueTableProps {
   flags: CleaningFlag[];
   canDecide: boolean;
@@ -34,6 +50,18 @@ interface FlagQueueTableProps {
 
 export function FlagQueueTable({ flags, canDecide, onReview }: FlagQueueTableProps) {
   const t = useTranslations("app.dataQuality");
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
+  // Domain/Sub-domain are master data with an exact, canonical Arabic name —
+  // resolved that way instead of AI-translated, so the value shown here
+  // always matches what every other Domain display in the app shows for the
+  // same name. Every other flagged field (village, contact, ...) has no such
+  // master-data table, so those fall back to AutoTranslate.
+  const localizeFieldValue = (field: string, value: string) =>
+    field === "domain"
+      ? localizedDomain(value)
+      : field === "subDomain"
+        ? localizedSubDomain(value)
+        : null;
 
   if (flags.length === 0) {
     return (
@@ -57,16 +85,16 @@ export function FlagQueueTable({ flags, canDecide, onReview }: FlagQueueTablePro
         <TableBody>
           {flags.map((flag) => (
             <TableRow key={flag.id}>
-              <TableCell className="max-w-[240px]">
-                <span dir="auto" className="block truncate text-sm">
-                  {flag.entityLabel ?? "—"}
+              <TableCell className="max-w-xs min-w-[220px]">
+                <span dir="auto" className="block text-sm break-words whitespace-normal">
+                  {flag.entityLabel ? <AutoTranslate text={flag.entityLabel} /> : "—"}
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {t(`source.${flag.source}`)}
                 </span>
               </TableCell>
 
-              <TableCell className="font-mono text-xs">{flag.field}</TableCell>
+              <TableCell className="text-sm">{describeField(flag.field, t)}</TableCell>
 
               <TableCell>
                 <span className="flex items-center gap-2">
@@ -86,9 +114,13 @@ export function FlagQueueTable({ flags, canDecide, onReview }: FlagQueueTablePro
                 )}
               </TableCell>
 
-              <TableCell className="max-w-[200px]">
-                <span dir="auto" className="block truncate text-sm">
-                  {flag.originalValue ?? (
+              <TableCell className="max-w-[220px] min-w-[160px]">
+                <span dir="auto" className="block text-sm break-words whitespace-normal">
+                  {flag.originalValue ? (
+                    (localizeFieldValue(flag.field, flag.originalValue) ?? (
+                      <AutoTranslate text={flag.originalValue} />
+                    ))
+                  ) : (
                     <span className="text-muted-foreground italic">{t("noValue")}</span>
                   )}
                 </span>
@@ -100,10 +132,15 @@ export function FlagQueueTable({ flags, canDecide, onReview }: FlagQueueTablePro
                 )}
               </TableCell>
 
-              <TableCell className="max-w-[200px]">
+              <TableCell className="max-w-[220px] min-w-[160px]">
                 {flag.proposedValue !== null ? (
-                  <span dir="auto" className="block truncate text-sm">
-                    {flag.proposedValue}
+                  <span
+                    dir="auto"
+                    className="block text-sm break-words whitespace-normal"
+                  >
+                    {localizeFieldValue(flag.field, flag.proposedValue) ?? (
+                      <AutoTranslate text={flag.proposedValue} />
+                    )}
                   </span>
                 ) : flag.acceptable ? (
                   <span className="text-muted-foreground text-sm">

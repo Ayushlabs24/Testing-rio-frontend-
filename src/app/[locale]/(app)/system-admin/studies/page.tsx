@@ -3,6 +3,8 @@
 import { ClipboardList, Search, Eye, Building2, Layers } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +118,7 @@ export default function SystemAdminStudiesPage() {
                     <SelectItem value="all">{t("allOrganizations")}</SelectItem>
                     {organizations.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -170,17 +172,23 @@ export default function SystemAdminStudiesPage() {
                       <TableRow key={study.id}>
                         <TableCell className="text-foreground font-medium">
                           <div>
-                            <p>{study.title}</p>
+                            <p>
+                              <AutoTranslate text={study.title} />
+                            </p>
                             <span className="text-muted-foreground font-mono text-[10px]">
-                              Cycle #{study.cycleNumber}
+                              {t("cycleLabel", { number: study.cycleNumber })}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell className="text-foreground text-xs font-medium">
-                          {study.orgName ?? "—"}
+                          {study.orgName ? <AutoTranslate text={study.orgName} /> : "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {study.villages.length > 0 ? study.villages.join(", ") : "—"}
+                          {study.villages.length > 0 ? (
+                            <AutoTranslate text={study.villages.join(", ")} />
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="gap-1 font-mono text-xs">
@@ -189,7 +197,7 @@ export default function SystemAdminStudiesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground font-mono text-xs">
-                          {new Date(study.createdAt).toLocaleDateString()}
+                          <FormattedDate value={study.createdAt} />
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

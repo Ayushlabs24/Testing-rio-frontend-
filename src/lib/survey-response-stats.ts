@@ -33,27 +33,33 @@ export interface QuestionResponseStat {
   textAnswers: string[];
 }
 
-// Human-facing label for a question's answer type — what a researcher
-// should see instead of the raw stored value ("select", "checkbox", ...).
-// Mirrors CitizenService#mapAnswerTypeForCitizen's grouping on the backend,
-// since that's what actually determines how the citizen answered it (a
-// Question Bank "multiple_choice" type, despite its name, renders as a
-// single pick there — this label reflects that real behavior, not the raw
-// type name).
-const ANSWER_TYPE_LABELS: Record<string, string> = {
-  select: "Single Choice",
-  multiple_choice: "Single Choice",
-  checkbox: "Multiple Choice",
-  boolean: "Yes / No",
-  yes_no: "Yes / No",
-  rating: "Likert Scale",
-  numeric: "Numeric",
-  long_text: "Open Ended",
-  short_text: "Open Ended",
+// i18n key (under app.publicSurveys.responseSummary.answerTypes) for a
+// question's answer type — what a researcher should see instead of the raw
+// stored value ("select", "checkbox", ...). Mirrors
+// CitizenService#mapAnswerTypeForCitizen's grouping on the backend, since
+// that's what actually determines how the citizen answered it (a Question
+// Bank "multiple_choice" type, despite its name, renders as a single pick
+// there — this label reflects that real behavior, not the raw type name).
+const ANSWER_TYPE_LABEL_KEYS: Record<string, string> = {
+  select: "singleChoice",
+  multiple_choice: "singleChoice",
+  checkbox: "multipleChoice",
+  boolean: "yesNo",
+  yes_no: "yesNo",
+  rating: "likertScale",
+  numeric: "numeric",
+  long_text: "openEnded",
+  short_text: "openEnded",
 };
 
-export function describeAnswerType(answerType: string): string {
-  return ANSWER_TYPE_LABELS[answerType] ?? "Open Ended";
+// `t` is `app.publicSurveys.responseSummary`'s translator — this file is
+// plain (not a hook), so the caller's own `useTranslations` is threaded
+// through rather than called from here.
+export function describeAnswerType(
+  answerType: string,
+  t: (key: string) => string,
+): string {
+  return t(`answerTypes.${ANSWER_TYPE_LABEL_KEYS[answerType] ?? "openEnded"}`);
 }
 
 // Question Bank answer types that render as a fixed option set the citizen

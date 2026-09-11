@@ -3,6 +3,8 @@
 import { Building2, Calendar, ClipboardList, MapPin, Layers } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -117,7 +119,11 @@ export function StudyDetailDrawer({
                     <span>{t("villages")}</span>
                   </div>
                   <p className="text-foreground font-medium">
-                    {data.villages?.length ? data.villages.join(", ") : "—"}
+                    {data.villages?.length ? (
+                      <AutoTranslate text={data.villages.join(", ")} />
+                    ) : (
+                      "—"
+                    )}
                   </p>
                 </Card>
 
@@ -127,7 +133,7 @@ export function StudyDetailDrawer({
                     <span>{t("createdDate")}</span>
                   </div>
                   <p className="text-foreground font-mono font-medium">
-                    {new Date(data.createdAt).toLocaleDateString()}
+                    <FormattedDate value={data.createdAt} />
                   </p>
                 </Card>
               </div>
@@ -154,14 +160,16 @@ export function StudyDetailDrawer({
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="text-foreground text-xs font-semibold">
-                            {need.title}
+                            <AutoTranslate text={need.title} />
                           </p>
                           <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-[11px]">
                             <span className="text-primary font-medium">
-                              {need.domainCategory}
+                              <AutoTranslate text={need.domainCategory} />
                             </span>
                             <span>•</span>
-                            <span>{need.village}</span>
+                            <span>
+                              <AutoTranslate text={need.village} />
+                            </span>
                           </div>
                         </div>
                         <Badge

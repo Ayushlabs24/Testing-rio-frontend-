@@ -4,6 +4,8 @@ import { Shield, Building2, UserX, UserCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/services/api/client";
@@ -86,10 +88,10 @@ export function GovernanceWidget() {
                     className="flex items-center justify-between text-[11px]"
                   >
                     <span className="text-foreground truncate font-medium">
-                      {e.entityLabel}
+                      <AutoTranslate text={e.entityLabel} />
                     </span>
                     <span className="text-muted-foreground font-mono text-[10px]">
-                      {new Date(e.createdAt).toLocaleDateString()}
+                      <FormattedDate value={e.createdAt} />
                     </span>
                   </div>
                 ))}
@@ -118,7 +120,7 @@ export function GovernanceWidget() {
                       {e.entityLabel}
                     </span>
                     <span className="text-muted-foreground font-mono text-[10px]">
-                      {new Date(e.createdAt).toLocaleDateString()}
+                      <FormattedDate value={e.createdAt} />
                     </span>
                   </div>
                 ))}
@@ -147,7 +149,7 @@ export function GovernanceWidget() {
                       {e.entityLabel}
                     </span>
                     <span className="text-muted-foreground font-mono text-[10px]">
-                      {new Date(e.createdAt).toLocaleDateString()}
+                      <FormattedDate value={e.createdAt} />
                     </span>
                   </div>
                 ))}
@@ -171,7 +173,7 @@ export function GovernanceWidget() {
                   <div key={e.id} className="flex justify-between items-center text-[11px]">
                     <span className="font-medium truncate text-foreground">{e.entityLabel}</span>
                     <span className="text-muted-foreground font-mono text-[10px]">
-                      {new Date(e.createdAt).toLocaleDateString()}
+                      <FormattedDate value={e.createdAt} />
                     </span>
                   </div>
                 ))}

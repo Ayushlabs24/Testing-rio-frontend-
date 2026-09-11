@@ -16,6 +16,7 @@ import {
 import { ApiError } from "@/services/api/types";
 import { dataQualityService } from "@/services/data-quality/data-quality.service";
 import type { CleaningSettings } from "@/services/data-quality/data-quality.types";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 
 interface CleaningSettingsPanelProps {
   /** dataQuality:write — Q23 gives tuning to System Admin and Data Analyst. */
@@ -41,6 +42,7 @@ export function CleaningSettingsPanel({ canTune, onSaved }: CleaningSettingsPane
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const translatedVersion = useAutoTranslate(settings?.methodologyVersion ?? null).text;
 
   const load = useCallback(
     (signal?: AbortSignal) =>
@@ -118,7 +120,7 @@ export function CleaningSettingsPanel({ canTune, onSaved }: CleaningSettingsPane
           <h2 className="text-base font-semibold">{t("title")}</h2>
           <p className="text-muted-foreground text-sm">{t("description")}</p>
           <p className="text-muted-foreground text-xs">
-            {t("version", { version: settings.methodologyVersion ?? "—" })}
+            {t("version", { version: translatedVersion || "—" })}
           </p>
         </div>
 

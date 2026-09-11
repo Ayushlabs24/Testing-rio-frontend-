@@ -19,6 +19,7 @@ import {
   type UrgencyLevel,
 } from "@/services/needs/need-themes.service";
 import type { Need } from "@/services/needs/needs.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * RIO-FR-003 AC 1 — urgency, the one input the priority score needs that
@@ -46,6 +47,7 @@ export function NeedPriorityInputs({
   onNeedUpdated: (next: Need) => void;
 }) {
   const tU = useTranslations("app.studies.urgency");
+  const tApiErr = useTranslations("apiErrors");
   // const tT = useTranslations("app.studies.themes");  // with the hidden themes block
   const canEdit = usePermission("priorityScoring", "write");
 
@@ -62,7 +64,7 @@ export function NeedPriorityInputs({
       onNeedUpdated(await needThemesService.setUrgency(need.id, level));
       setSaved(true);
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : tU("saved"));
+      setError(resolveApiErrorMessage(err, tApiErr, tU("saved")));
     } finally {
       setSaving(false);
     }

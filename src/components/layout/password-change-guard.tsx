@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { newPasswordSchema } from "@/lib/password-policy";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * Blocks the app until a signup-issued temporary password has been
@@ -41,6 +42,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
   const { session, setSession } = useAuth();
   const router = useRouter();
   const t = useTranslations("app.passwordChange");
+  const tApiErr = useTranslations("apiErrors");
   const tValidation = useTranslations("auth.validation");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -80,7 +82,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
       setSession(updated);
       router.push("/dashboard");
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(resolveApiErrorMessage(error, tApiErr, t("genericError")));
     }
   };
 

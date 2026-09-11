@@ -41,6 +41,9 @@ export interface NeedsMapProps {
     empty: string;
     /** e.g. "approximate — within 40km". */
     approximate: (km: number) => string;
+    /** Priority band name — the raw enum value ("critical", "high", ...) is
+     *  never shown directly. */
+    band: (band: PriorityBand) => string;
   };
 }
 
@@ -70,7 +73,7 @@ function markerElement(
   root.setAttribute(
     "aria-label",
     `${point.name}: ${labels.needs(point.needCount)}, ${
-      point.priorityBand ?? labels.unscored
+      point.priorityBand ? labels.band(point.priorityBand) : labels.unscored
     }${point.isApproximate ? `, ${labels.approximate(Math.round((point.accuracyM ?? 0) / 1000))}` : ""}`,
   );
   root.addEventListener("keydown", (event) => {
@@ -187,7 +190,7 @@ export function NeedsMap({ points, selectedId, onSelect, labels }: NeedsMapProps
       marker.on("click", () => onSelect(point.id));
       marker.bindTooltip(
         `<strong>${point.name}</strong><br/>${labels.needs(point.needCount)}` +
-          `<br/>${point.priorityBand ?? labels.unscored}` +
+          `<br/>${point.priorityBand ? labels.band(point.priorityBand) : labels.unscored}` +
           (point.initiativeCount > 0
             ? `<br/>${labels.initiatives(point.initiativeCount)}`
             : "") +

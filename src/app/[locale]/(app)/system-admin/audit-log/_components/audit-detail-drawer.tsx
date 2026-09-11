@@ -1,6 +1,7 @@
 "use client";
 
 import { Shield, X, User, Building2, Tag, Key, Monitor, Lock } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ interface AuditDetailDrawerProps {
 
 export function AuditDetailDrawer({ eventId, open, onClose }: AuditDetailDrawerProps) {
   const t = useTranslations("systemAdmin.auditLog.drawer");
+  const tActions = useTranslations("app.settings.audit.actions");
   const [data, setData] = useState<AuditEventDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -105,8 +107,10 @@ export function AuditDetailDrawer({ eventId, open, onClose }: AuditDetailDrawerP
               {/* Event Header Banner */}
               <div className="border-primary/20 bg-primary/5 flex items-center justify-between rounded-lg border p-4">
                 <div>
-                  <Badge variant="outline" className="mb-1 font-mono text-xs uppercase">
-                    {data.action}
+                  <Badge variant="outline" className="mb-1 text-xs">
+                    {tActions.has(data.action)
+                      ? tActions(data.action as Parameters<typeof tActions>[0])
+                      : data.action}
                   </Badge>
                   <h3 className="text-foreground text-sm font-semibold">
                     {data.entityLabel}
@@ -118,7 +122,7 @@ export function AuditDetailDrawer({ eventId, open, onClose }: AuditDetailDrawerP
                 <div className="text-right text-xs">
                   <span className="text-muted-foreground block">{t("timestamp")}</span>
                   <span className="text-foreground font-mono font-medium">
-                    {new Date(data.createdAt).toLocaleString()}
+                    <FormattedDate value={data.createdAt} withTime />
                   </span>
                 </div>
               </div>

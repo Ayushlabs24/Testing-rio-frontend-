@@ -11,9 +11,11 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { localizedText } from "@/lib/bilingual";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,8 +27,8 @@ import type {
   ResolvedSurvey,
   SurveySessionStep,
 } from "@/services/citizen/citizen.types";
-import { ApiError } from "@/services/api/types";
 import { consentService } from "@/services/consent/consent.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import {
   consentPolicyTextFor,
   type ActiveConsentPolicy,
@@ -150,6 +152,7 @@ function ScaleStars({ value, max }: { value: number; max: number }) {
 
 export function CitizenSurveyFlow({ token }: { token: string }) {
   const t = useTranslations("citizen.survey");
+  const tApiErr = useTranslations("apiErrors");
   // Which language the notice is read in — recorded with the acceptance, for
   // the same reason the version is: together they pin exactly what was
   // agreed to. Narrowed exhaustively, as elsewhere.
@@ -339,7 +342,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       setDevCode(result.codeTexted ? null : (result.code ?? null));
       setPhase("otp");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -363,7 +366,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       // already has a link to one published before that guard existed.
       setPhase(questions.length === 0 ? "review" : "questions");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -433,7 +436,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
       });
       setTerminal("submitted");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
       setTerminal(null);
     } finally {
       setSubmitting(false);
@@ -507,7 +510,7 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               <p className="text-muted-foreground text-sm">
                 {t("welcome.conductedBy")}{" "}
                 <span className="text-foreground font-medium">
-                  {survey.organizationName}
+                  <AutoTranslate text={survey.organizationName} />
                 </span>
               </p>
             ) : null}
@@ -822,14 +825,23 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
               dir="auto"
               className="text-foreground text-lg leading-snug font-semibold"
             >
-              {question.text}
+              {/* `question.textAr` is the client-supplied Question Bank
+                  translation when one exists (localizedText resolves it for
+                  the current locale, same as every other master-data field
+                  in the app); AutoTranslate is the fallback for a custom
+                  question with no such column — see citizen.types.ts. When
+                  textAr already matches the locale, AutoTranslate is a
+                  same-script no-op, so wrapping unconditionally is safe. */}
+              <AutoTranslate
+                text={localizedText(question.text, question.textAr, consentLocale)}
+              />
               {question.required ? (
                 <span className="text-destructive ms-1">{t("form.requiredMark")}</span>
               ) : null}
             </Label>
             {question.type === "scale" || question.type === "single_choice" ? (
               <div className="flex flex-wrap gap-2">
-                {question.options?.map((option) => (
+                {question.options?.map((option, i) => (
                   <Button
                     key={option}
                     type="button"
@@ -837,13 +849,18 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
                     variant={answers[question.code] === option ? "default" : "outline"}
                     onClick={() => setAnswers({ ...answers, [question.code]: option })}
                   >
-                    {option}
+                    {/* The submitted/compared value is always the canonical
+                        English `option` above — only this label follows the
+                        locale (see optionsAr's own comment in citizen.types.ts). */}
+                    <AutoTranslate
+                      text={localizedText(option, question.optionsAr?.[i], consentLocale)}
+                    />
                   </Button>
                 ))}
               </div>
             ) : question.type === "multi_choice" ? (
               <div className="flex flex-wrap gap-2">
-                {question.options?.map((option) => {
+                {question.options?.map((option, i) => {
                   const selected = (answers[question.code] ?? "")
                     .split(", ")
                     .filter(Boolean);
@@ -861,7 +878,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
                         setAnswers({ ...answers, [question.code]: next.join(", ") });
                       }}
                     >
-                      {option}
+                      <AutoTranslate
+                        text={localizedText(
+                          option,
+                          question.optionsAr?.[i],
+                          consentLocale,
+                        )}
+                      />
                     </Button>
                   );
                 })}
@@ -921,8 +944,13 @@ export function CitizenSurveyFlow({ token }: { token: string }) {
                 className="flex items-start justify-between gap-3 py-3.5"
               >
                 <div className="min-w-0 flex-1 space-y-1">
+                  {/* Same locale resolution as the question screen above —
+                      client-supplied `textAr` first, AutoTranslate fallback
+                      for a custom question with no such column. */}
                   <p dir="auto" className="text-muted-foreground text-xs">
-                    {question.text}
+                    <AutoTranslate
+                      text={localizedText(question.text, question.textAr, consentLocale)}
+                    />
                   </p>
                   {scaleMax && scaleValue >= 0 ? (
                     <ScaleStars value={scaleValue + 1} max={scaleMax} />

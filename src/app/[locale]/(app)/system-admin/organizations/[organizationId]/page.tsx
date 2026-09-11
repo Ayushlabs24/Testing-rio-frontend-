@@ -18,8 +18,12 @@ import {
   UserX,
   Shield,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState, useMemo, useCallback } from "react";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
+import { formatDate } from "@/lib/format-date";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Link } from "@/i18n/navigation";
@@ -72,9 +76,21 @@ export default function SystemAdminOrganizationDetailPage({
 }) {
   const { organizationId } = use(params);
   const t = useTranslations("systemAdmin.detail");
+  const locale = useLocale() as AppLocale;
   const tOrgs = useTranslations("systemAdmin.organizations");
   const tNgo = useTranslations("systemAdmin.ngoAdmin");
   const tUsers = useTranslations("systemAdmin.users");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
+  // Client-reported gap (2026-09-10) — this page showed the backend's raw
+  // English role name (e.g. "NGO Admin") instead of resolving it through the
+  // same `app.settings.roles.roleNames` dictionary every other role display
+  // in the app already uses (see app-topbar.tsx). `key` is missing for a
+  // custom/unrecognised role, hence the fallback to the raw name.
+  const roleLabel = useCallback(
+    (key: string, fallbackName: string) =>
+      tRoleNames.has(key) ? tRoleNames(key) : fallbackName,
+    [tRoleNames],
+  );
 
   const [organization, setOrganization] = useState<OrganizationSummary | null>(null);
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
@@ -90,11 +106,13 @@ export default function SystemAdminOrganizationDetailPage({
   // RIO-FR-010: self-registration sets `regionId` (the real KSA Geographic
   // Reference), never the legacy free-text `region` array — resolve it by
   // id or a pending org's region silently shows blank.
-  const [regionNameById, setRegionNameById] = useState<Map<string, string>>(new Map());
+  const [regionNameById, setRegionNameById] = useState<
+    Map<string, { name: string; nameAr: string | null }>
+  >(new Map());
   useEffect(() => {
     geographyService
       .listRegions()
-      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r.name]))))
+      .then((rows) => setRegionNameById(new Map(rows.map((r) => [r.id, r]))))
       .catch(() => setRegionNameById(new Map()));
   }, []);
 
@@ -236,7 +254,9 @@ export default function SystemAdminOrganizationDetailPage({
         <div className="border-border bg-card mb-6 flex flex-col gap-4 rounded-lg border p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-foreground text-2xl font-bold">{organization.name}</h1>
+              <h1 className="text-foreground text-2xl font-bold">
+                <AutoTranslate text={organization.name} />
+              </h1>
               <Badge
                 variant={organization.isActive ? "default" : "outline"}
                 className={
@@ -261,13 +281,15 @@ export default function SystemAdminOrganizationDetailPage({
                 {organization.region.length > 0
                   ? organization.region.join(", ")
                   : (organization.regionId &&
-                      regionNameById.get(organization.regionId)) ||
+                      (() => {
+                        const region = regionNameById.get(organization.regionId!);
+                        return region ? localizedName(region, locale) : null;
+                      })()) ||
                     "—"}
               </span>
               <span>•</span>
               <span>
-                {tOrgs("table.createdDate")}:{" "}
-                {new Date(organization.createdAt).toLocaleDateString()}
+                {tOrgs("table.createdDate")}: {formatDate(organization.createdAt, locale)}
               </span>
             </div>
           </div>
@@ -417,7 +439,9 @@ export default function SystemAdminOrganizationDetailPage({
                     </p>
                     {hasNgoAdmin ? (
                       <div className="mt-1">
-                        <p className="text-foreground font-semibold">{ngoAdminName}</p>
+                        <p className="text-foreground font-semibold">
+                          {ngoAdminName ? <AutoTranslate text={ngoAdminName} /> : null}
+                        </p>
                         <p className="text-muted-foreground text-xs">
                           {ngoAdminEmail ?? "—"}
                         </p>
@@ -430,19 +454,19 @@ export default function SystemAdminOrganizationDetailPage({
                   </div>
 
                   {currentNgoAdmin ? (
-                    <div className="border-border/50 grid grid-cols-2 gap-2 border-t pt-2 text-xs">
-                      <div>
+                    <div className="border-border/50 flex flex-col gap-2 border-t pt-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-muted-foreground">{tNgo("status")}:</span>
-                        <Badge variant="outline" className="ml-1.5 capitalize">
-                          {currentNgoAdmin.status}
+                        <Badge variant="outline">
+                          {tUsers(`statusBadges.${currentNgoAdmin.status}` as never)}
                         </Badge>
                       </div>
-                      <div>
+                      <div className="flex flex-wrap items-baseline gap-1">
                         <span className="text-muted-foreground">
                           {tNgo("assignedDate")}:
                         </span>
-                        <span className="ml-1 font-mono">
-                          {new Date(currentNgoAdmin.createdAt).toLocaleDateString()}
+                        <span className="font-mono">
+                          {formatDate(currentNgoAdmin.createdAt, locale)}
                         </span>
                       </div>
                     </div>
@@ -560,7 +584,7 @@ export default function SystemAdminOrganizationDetailPage({
                       <SelectItem value="all">{tUsers("allRoles")}</SelectItem>
                       {availableRoles.map((r) => (
                         <SelectItem key={r.key} value={r.key}>
-                          {r.name}
+                          {roleLabel(r.key, r.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -614,7 +638,7 @@ export default function SystemAdminOrganizationDetailPage({
                           colSpan={6}
                           className="text-muted-foreground h-24 text-center"
                         >
-                          No users matching filter criteria.
+                          {tUsers("noFilterMatches")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -626,10 +650,12 @@ export default function SystemAdminOrganizationDetailPage({
                           <TableRow key={user.id}>
                             <TableCell className="text-foreground font-medium">
                               <div className="flex items-center gap-2">
-                                <span>{user.name}</span>
+                                <span>
+                                  <AutoTranslate text={user.name} />
+                                </span>
                                 {isNgoAdmin ? (
                                   <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
-                                    NGO Admin
+                                    {tNgo("usersTab.badgeAdmin")}
                                   </Badge>
                                 ) : null}
                               </div>
@@ -638,7 +664,9 @@ export default function SystemAdminOrganizationDetailPage({
                               {user.email}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{user.role.name}</Badge>
+                              <Badge variant="outline">
+                                {roleLabel(user.role.key, user.role.name)}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -655,7 +683,7 @@ export default function SystemAdminOrganizationDetailPage({
                               </Badge>
                             </TableCell>
                             <TableCell className="text-muted-foreground font-mono text-xs">
-                              {new Date(user.createdAt).toLocaleDateString()}
+                              {formatDate(user.createdAt, locale)}
                             </TableCell>
                             <TableCell className="text-right">
                               {canEdit ? (

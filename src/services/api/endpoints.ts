@@ -206,6 +206,7 @@ export const endpoints = {
   },
   domains: {
     public: "/domains/public",
+    publicTree: "/domains/public/tree",
     list: "/domains",
     tree: "/domains/tree",
     create: "/domains",
@@ -307,8 +308,12 @@ export const endpoints = {
     approve: (id: string) => `/reports/${id}/approve`,
     reject: (id: string) => `/reports/${id}/reject`,
     archive: (id: string) => `/reports/${id}/archive`,
-    export: (id: string, format: "pdf" | "excel") =>
-      `/reports/${id}/export?format=${format}`,
+    // `locale` is the language the user is viewing the app in, so the exported
+    // PDF/Excel reads the same as the screen it was requested from. Omitted for
+    // English — the API defaults to it, so the URL stays unchanged for the
+    // locale that was the only one before this.
+    export: (id: string, format: "pdf" | "excel", locale?: "en" | "ar") =>
+      `/reports/${id}/export?format=${format}${locale === "ar" ? "&locale=ar" : ""}`,
   },
   archive: {
     list: "/archive",
@@ -319,10 +324,13 @@ export const endpoints = {
   geographicDashboard: {
     map: "/geographic-dashboard/map",
   },
+  // RIO-FR-013 pre-platform study uploads, and RIO-DATA-002 importing one
+  // of them into the unified dashboard as real Need rows.
   historicalStudies: {
     list: "/historical-studies",
     create: "/historical-studies",
     file: (id: string) => `/historical-studies/${id}/file`,
+    import: (id: string) => `/historical-studies/${id}/import`,
   },
   sharing: {
     list: "/sharing-requests",
@@ -416,6 +424,12 @@ export const endpoints = {
   permissionGrants: {
     list: "/permission-grants",
     revoke: (id: string) => `/permission-grants/${id}/revoke`,
+  },
+  // RIO Arabic Localization — Approach 3 (Hybrid). Dynamic/user-typed
+  // content only — fixed master data uses its own name/nameAr columns
+  // instead (see @/lib/bilingual), never this endpoint.
+  translation: {
+    translate: "/translation",
   },
   methodologyConfig: {
     get: "/methodology-config",

@@ -1,5 +1,6 @@
 import { ListChecks } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,12 @@ export function SurveyResponseSummaryCard({
     <Card className="shadow-md">
       <CardContent className="flex flex-wrap items-start justify-between gap-6 p-6">
         <div className="space-y-1.5">
-          <p className="text-muted-foreground text-xs font-medium">{studyTitle}</p>
-          <h2 className="text-foreground text-lg font-semibold">{surveyTitle}</h2>
+          <p className="text-muted-foreground text-xs font-medium">
+            <AutoTranslate text={studyTitle} />
+          </p>
+          <h2 className="text-foreground text-lg font-semibold">
+            <AutoTranslate text={surveyTitle} />
+          </h2>
           <Badge
             variant={status === "DRAFT" ? "outline" : "default"}
             className={
@@ -43,7 +48,9 @@ export function SurveyResponseSummaryCard({
                 : undefined
             }
           >
-            {status}
+            {t.has(`versionStatus.${status}`)
+              ? t(`versionStatus.${status}` as Parameters<typeof t>[0])
+              : status}
           </Badge>
         </div>
 

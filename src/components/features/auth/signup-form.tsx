@@ -35,6 +35,7 @@ import {
   normalizeRegistrationNumber,
 } from "@/lib/registration-number";
 import { Link, useRouter } from "@/i18n/navigation";
+import { AUTH_API_ERROR_CODES, getApiErrorMessage } from "@/lib/api-error-message";
 import { ApiError } from "@/services/api/types";
 import { authService } from "@/services/auth/auth.service";
 import { consentService } from "@/services/consent/consent.service";
@@ -369,6 +370,7 @@ function ConsentCheckbox({
 export function SignupForm() {
   const t = useTranslations("auth.signup");
   const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.apiErrors");
   // "Other" is the one fixed label left — every other option is a live
   // Methodology Configuration domain name, displayed as-is (see
   // useSectorOptions).
@@ -695,7 +697,9 @@ export function SignupForm() {
         );
         return;
       }
-      setFormError(error instanceof ApiError ? error.message : t("genericError"));
+      setFormError(
+        getApiErrorMessage(error, AUTH_API_ERROR_CODES, tErrors, t("genericError")),
+      );
     }
   };
 
@@ -812,8 +816,8 @@ export function SignupForm() {
               </SelectTrigger>
               <SelectContent>
                 {sectorOptions.map((sector) => (
-                  <SelectItem key={sector} value={sector}>
-                    {sector}
+                  <SelectItem key={sector.name} value={sector.name}>
+                    {localizedName(sector, consentLocale)}
                   </SelectItem>
                 ))}
                 <SelectItem value="other">{tSectors("other")}</SelectItem>

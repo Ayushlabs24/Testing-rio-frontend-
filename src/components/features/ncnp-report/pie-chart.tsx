@@ -1,3 +1,6 @@
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
+
 interface PieSlice {
   label: string;
   count: number;
@@ -6,13 +9,14 @@ interface PieSlice {
 
 interface PieChartProps {
   slices: PieSlice[];
+  locale: AppLocale;
 }
 
 // A plain conic-gradient pie (no center cutout, unlike StatusDonut) — same
 // no-dependency dataviz convention as the rest of this report, offered as a
 // distinct chart shape from the donut/bar so not every breakdown on the page
 // looks identical.
-export function PieChart({ slices }: PieChartProps) {
+export function PieChart({ slices, locale }: PieChartProps) {
   const total = slices.reduce((sum, s) => sum + s.count, 0);
   let cursor = 0;
   const stops = slices.map((s) => {
@@ -40,7 +44,7 @@ export function PieChart({ slices }: PieChartProps) {
             />
             <span className="text-muted-foreground">{s.label}</span>
             <span className="text-foreground ml-auto pl-3 font-semibold tabular-nums">
-              {s.count.toLocaleString()}
+              {formatNumber(s.count, locale)}
               {total > 0 ? ` · ${Math.round((s.count / total) * 100)}%` : ""}
             </span>
           </div>

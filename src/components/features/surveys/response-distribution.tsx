@@ -1,3 +1,4 @@
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Progress } from "@/components/ui/progress";
 import type { QuestionOptionStat } from "@/lib/survey-response-stats";
 
@@ -16,7 +17,7 @@ export function ResponseDistribution({ options }: { options: QuestionOptionStat[
         <div key={option.label} className="space-y-1">
           <div className="flex items-baseline justify-between gap-3">
             <span dir="auto" className="text-foreground text-sm font-medium">
-              {option.label}
+              <AutoTranslate text={option.label} />
             </span>
             <span className="text-foreground text-sm font-semibold whitespace-nowrap tabular-nums">
               {option.count}{" "}

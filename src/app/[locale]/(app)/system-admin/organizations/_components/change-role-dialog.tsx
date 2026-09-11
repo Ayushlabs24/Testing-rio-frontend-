@@ -3,6 +3,7 @@
 import { Shield, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +44,7 @@ export function ChangeRoleDialog({
   onUpdated,
 }: ChangeRoleDialogProps) {
   const t = useTranslations("systemAdmin.users.changeRoleDialog");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
 
   const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -124,8 +126,10 @@ export function ChangeRoleDialog({
             </div>
             <DialogDescription className="pt-1 text-xs">
               {t("description")} —{" "}
-              <span className="text-foreground font-semibold">{user.name}</span> (
-              {user.email})
+              <span className="text-foreground font-semibold">
+                <AutoTranslate text={user.name} />
+              </span>{" "}
+              ({user.email})
             </DialogDescription>
           </DialogHeader>
 
@@ -147,7 +151,7 @@ export function ChangeRoleDialog({
                 <SelectContent>
                   {roles.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name}
+                      {tRoleNames.has(r.key) ? tRoleNames(r.key) : r.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

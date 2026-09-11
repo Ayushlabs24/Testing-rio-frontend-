@@ -3,6 +3,7 @@
 import { FileQuestion } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { DomainChips } from "@/components/common/domain-chips";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -30,11 +31,14 @@ import {
   SURVEY_BUILDER_PAGE_SIZE,
   SURVEY_BUILDER_PAGE_SIZE_OPTIONS,
 } from "@/config/pagination";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { Link } from "@/i18n/navigation";
 import { domainsService } from "@/services/domains/domains.service";
 import type { Domain } from "@/services/domains/domains.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { organizationsService } from "@/services/organizations/organizations.service";
+import type { OrganizationSummary } from "@/services/organizations/organizations.types";
 import { studiesService } from "@/services/studies/studies.service";
 import {
   surveysService,
@@ -52,6 +56,8 @@ interface Row {
   need: Need;
   studyTitle: string;
   survey: SurveyListItem;
+  orgId: string;
+  orgName: string;
 }
 
 const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
@@ -71,11 +77,14 @@ const STATUS_BADGE_CLASS: Record<Survey["status"], string | undefined> = {
 export default function SurveyBuilderPage() {
   const t = useTranslations("app.surveyBuilder");
   const tClassification = useTranslations("app.studies.classification");
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [domainFilter, setDomainFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
+  const [orgFilter, setOrgFilter] = useState<string>(ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(SURVEY_BUILDER_PAGE_SIZE);
 
@@ -84,6 +93,13 @@ export default function SurveyBuilderPage() {
       .list()
       .then(setDomains)
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    organizationsService
+      .listAll()
+      .then(setOrganizations)
+      .catch(() => setOrganizations([]));
   }, []);
 
   useEffect(() => {
@@ -118,12 +134,16 @@ export default function SurveyBuilderPage() {
               surveysByStudy[index].map((survey) => ({
                 survey,
                 studyTitle: study.title,
+                orgId: study.orgId,
+                orgName: study.orgName ?? "",
               })),
             )
-            .map(({ survey, studyTitle }) => ({
+            .map(({ survey, studyTitle, orgId, orgName }) => ({
               need: needById.get(survey.needId),
               studyTitle,
               survey,
+              orgId,
+              orgName,
             }))
             .filter((row): row is Row => row.need != null),
         );
@@ -146,9 +166,12 @@ export default function SurveyBuilderPage() {
           row.need.domain === domainFilter;
         if (!matchesDomain) return false;
       }
+      if (orgFilter !== ALL && row.orgId !== orgFilter) {
+        return false;
+      }
       return true;
     });
-  }, [rows, statusFilter, domainFilter]);
+  }, [rows, statusFilter, domainFilter, orgFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -179,7 +202,29 @@ export default function SurveyBuilderPage() {
                   <SelectItem value={ALL}>{t("filterDomainAll")}</SelectItem>
                   {domains.map((domain) => (
                     <SelectItem key={domain.id} value={domain.name}>
-                      {domain.name}
+                      {localizedDomain(domain.name)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={orgFilter}
+                onValueChange={(value) => {
+                  setOrgFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-full sm:w-56"
+                  aria-label={t("filterOrganizationLabel")}
+                >
+                  <SelectValue placeholder={t("filterOrganizationAll")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("filterOrganizationAll")}</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      <AutoTranslate text={org.name} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -211,10 +256,13 @@ export default function SurveyBuilderPage() {
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[16%]">{t("studyColumn")}</TableHead>
-                  <TableHead className="w-[20%]">{t("needColumn")}</TableHead>
-                  <TableHead className="w-[28%]">{t("domainColumn")}</TableHead>
-                  <TableHead className="w-[24%]">{t("statusColumn")}</TableHead>
+                  <TableHead className="w-[14%]">{t("studyColumn")}</TableHead>
+                  <TableHead className="w-[16%]">{t("needColumn")}</TableHead>
+                  <TableHead className="w-[18%]">
+                    {t("filterOrganizationLabel")}
+                  </TableHead>
+                  <TableHead className="w-[24%]">{t("domainColumn")}</TableHead>
+                  <TableHead className="w-[20%]">{t("statusColumn")}</TableHead>
                   <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
@@ -222,7 +270,7 @@ export default function SurveyBuilderPage() {
                 {rows === null ? (
                   Array.from({ length: 4 }).map((_, index) => (
                     <TableRow key={index}>
-                      {Array.from({ length: 5 }).map((__, cell) => (
+                      {Array.from({ length: 6 }).map((__, cell) => (
                         <TableCell key={cell} className="py-4">
                           <div className="bg-muted h-4 w-24 rounded" />
                         </TableCell>
@@ -232,7 +280,7 @@ export default function SurveyBuilderPage() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="text-muted-foreground h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2.5">
@@ -244,16 +292,19 @@ export default function SurveyBuilderPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paged.map(({ need, studyTitle, survey }) => (
+                  paged.map(({ need, studyTitle, survey, orgName }) => (
                     <TableRow key={survey.id}>
                       <TableCell className="py-4 align-middle text-sm font-medium break-words whitespace-normal">
-                        {studyTitle}
+                        <AutoTranslate text={studyTitle} />
                       </TableCell>
                       <TableCell className="align-middle text-sm break-words whitespace-normal">
-                        {need.title}
+                        <AutoTranslate text={need.title} />
                         <span className="text-muted-foreground ml-1.5 text-xs">
                           {t("versionLabel", { version: survey.version })}
                         </span>
+                      </TableCell>
+                      <TableCell className="align-middle text-sm break-words whitespace-normal">
+                        <AutoTranslate text={orgName} />
                       </TableCell>
                       <TableCell className="align-middle text-sm whitespace-normal">
                         {need.allDomainsSelected ? (
@@ -264,13 +315,15 @@ export default function SurveyBuilderPage() {
                         ) : need.needDomains.length > 0 ? (
                           <DomainChips
                             items={need.needDomains.map(
-                              (d) => `${d.domain} / ${d.subDomain}`,
+                              (d) =>
+                                `${localizedDomain(d.domain)} / ${localizedSubDomain(d.subDomain)}`,
                             )}
                             variant="secondary"
                           />
                         ) : need.domain && need.subDomain ? (
                           <span className="text-muted-foreground break-words">
-                            {need.domain} / {need.subDomain}
+                            {localizedDomain(need.domain)} /{" "}
+                            {localizedSubDomain(need.subDomain)}
                           </span>
                         ) : (
                           <Badge variant="outline">{t("noDomain")}</Badge>

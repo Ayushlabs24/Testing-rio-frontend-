@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { FileText, ShieldCheck, Tag } from "lucide-react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -175,7 +176,7 @@ export function SupportingEvidencePanel({
                     </Label>
                   </div>
                   <span className="text-muted-foreground text-[10px]">
-                    {new Date(item.uploadedAt).toLocaleDateString()}
+                    <FormattedDate value={item.uploadedAt} />
                   </span>
                 </div>
               </div>

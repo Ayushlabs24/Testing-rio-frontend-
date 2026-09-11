@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -45,7 +47,9 @@ export function InitiativeFormDialog({
   editing: Initiative | null;
 }) {
   const t = useTranslations("app.initiatives.create");
-  const [domains, setDomains] = useState<string[]>([]);
+  const tStatus = useTranslations("app.initiatives.statusValues");
+  const locale = useLocale() as AppLocale;
+  const [domains, setDomains] = useState<{ name: string; nameAr: string | null }[]>([]);
   // The mount site passes `key={formKey}`, bumped on every open — a fresh
   // instance per open is what lets these start from `editing` directly
   // instead of being reset synchronously in an effect (which
@@ -58,7 +62,11 @@ export function InitiativeFormDialog({
           geography: editing.geography ?? undefined,
           startDate: editing.startDate ?? undefined,
           expectedEndDate: editing.expectedEndDate ?? undefined,
-          status: editing.status,
+          // Legacy rows created before this was a fixed Select (see the
+          // status field below) can carry any casing (e.g. "Active") —
+          // lowercased here so it actually matches one of the Select's
+          // values instead of rendering as unselected/blank.
+          status: editing.status.toLowerCase(),
           fundingSource: editing.fundingSource ?? undefined,
           description: editing.description ?? undefined,
           budget: editing.budget ? Number(editing.budget) : undefined,
@@ -82,7 +90,7 @@ export function InitiativeFormDialog({
     // (via `key={formKey}`) on every open, so a mount always starts open.
     domainsService
       .listPublic()
-      .then((rows) => setDomains(rows.map((d) => d.name)))
+      .then((rows) => setDomains(rows.map((d) => ({ name: d.name, nameAr: d.nameAr }))))
       .catch(() => setDomains([]));
   }, []);
 
@@ -112,7 +120,7 @@ export function InitiativeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{editing ? t("editTitle") : t("title")}</DialogTitle>
         </DialogHeader>
@@ -149,8 +157,8 @@ export function InitiativeFormDialog({
                 <SelectContent>
                   <SelectItem value={NONE}>{t("domainPlaceholder")}</SelectItem>
                   {domains.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
+                    <SelectItem key={d.name} value={d.name}>
+                      {localizedName(d, locale)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -158,11 +166,26 @@ export function InitiativeFormDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="initiative-status">{t("statusLabel")}</Label>
-              <Input
-                id="initiative-status"
+              {/* Was a free-text <Input> — a status typed as "Active" (or any
+                  other spelling) could never be translated, since there was no
+                  fixed vocabulary to attach a label to. Now a fixed set,
+                  matching the values initiatives-panel.tsx already knows how
+                  to display translated. */}
+              <Select
                 value={form.status ?? "active"}
-                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              />
+                onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}
+              >
+                <SelectTrigger id="initiative-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["active", "on_hold", "completed", "cancelled"] as const).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {tStatus(s)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

@@ -2,7 +2,8 @@
 
 import { BarChart3, Eye, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -50,7 +51,6 @@ import {
 import { Link, useRouter } from "@/i18n/navigation";
 import { REPORTS_PAGE_SIZE, REPORTS_PAGE_SIZE_OPTIONS } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
-import { ApiError } from "@/services/api/types";
 import { needsService } from "@/services/needs/needs.service";
 import {
   ncnpReportReviewService,
@@ -67,6 +67,7 @@ import {
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 import { surveysService, type SurveyListItem } from "@/services/surveys/surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const ALL = "all";
 
@@ -85,11 +86,6 @@ type UnifiedRow =
       review: NcnpReportReviewSummary;
     };
 
-const REPORT_TYPE_ITEMS = GENERATABLE_REPORT_TYPES.map((code) => ({
-  value: code,
-  label: `${code} — ${REPORT_TYPE_META[code].name}`,
-}));
-
 /** Report type (searchable) + study + (for RPT14) village, in a modal. */
 function GenerateReportDialog({
   open,
@@ -101,6 +97,21 @@ function GenerateReportDialog({
   onGenerated: () => void;
 }) {
   const t = useTranslations("app.reports.create");
+  const tApiErr = useTranslations("apiErrors");
+  const tReportTypes = useTranslations("app.reports.create.reportTypeNames");
+  // Client-reported gap (2026-09-10) — the report-type Combobox listed the
+  // hardcoded English `REPORT_TYPE_META[code].name` (e.g. "Individual Survey
+  // Report") on an otherwise-Arabic dialog. `REPORT_TYPE_META` mirrors the
+  // backend's own English-only metadata one-for-one, so the label is built
+  // here instead, from a small fixed dictionary keyed by report code.
+  const reportTypeItems = useMemo(
+    () =>
+      GENERATABLE_REPORT_TYPES.map((code) => ({
+        value: code,
+        label: `${code} — ${tReportTypes(code)}`,
+      })),
+    [tReportTypes],
+  );
   const [reportType, setReportType] = useState<ReportTypeCode | null>(null);
   const [studyId, setStudyId] = useState<string>("");
   const [surveyId, setSurveyId] = useState<string>("");
@@ -225,7 +236,7 @@ function GenerateReportDialog({
       handleOpenChange(false);
       onGenerated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setGenerating(false);
     }
@@ -241,7 +252,7 @@ function GenerateReportDialog({
           <div className="space-y-2">
             <Label>{t("reportTypeLabel")}</Label>
             <Combobox
-              items={REPORT_TYPE_ITEMS}
+              items={reportTypeItems}
               value={reportType}
               onSelect={(value) => setReportType(value as ReportTypeCode)}
               placeholder={t("reportTypeLabel")}
@@ -269,7 +280,7 @@ function GenerateReportDialog({
                 <SelectContent>
                   {studies.map((study) => (
                     <SelectItem key={study.id} value={study.id}>
-                      {study.title}
+                      <AutoTranslate text={study.title} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -301,7 +312,8 @@ function GenerateReportDialog({
                   ) : null}
                   {(surveys ?? []).map((survey) => (
                     <SelectItem key={survey.id} value={survey.id}>
-                      {survey.title} — {survey.responseCount} {t("surveyResponsesSuffix")}
+                      <AutoTranslate text={survey.title} /> — {survey.responseCount}{" "}
+                      {t("surveyResponsesSuffix")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -325,7 +337,7 @@ function GenerateReportDialog({
                 <SelectContent>
                   {villages.map((village) => (
                     <SelectItem key={village} value={village}>
-                      {village}
+                      <AutoTranslate text={village} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -357,6 +369,7 @@ function GenerateReportDialog({
 
 export default function ReportsPage() {
   const t = useTranslations("app.reports");
+  const tApiErr = useTranslations("apiErrors");
   const tr = useTranslations("systemAdmin.ncnpReport.review");
   const router = useRouter();
   const canCreate = usePermission("reportsDashboards", "create");
@@ -427,7 +440,7 @@ export default function ReportsPage() {
       const created = await ncnpReportReviewService.generate();
       router.push(`/reports/${created.id}?type=consolidated`);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : tr("actionError"));
+      setActionError(resolveApiErrorMessage(err, tApiErr, tr("actionError")));
       setGeneratingConsolidated(false);
     }
   }
@@ -553,7 +566,7 @@ export default function ReportsPage() {
                   <SelectItem value={ALL}>{t("filterStudyAll")}</SelectItem>
                   {studies.map((study) => (
                     <SelectItem key={study.id} value={study.id}>
-                      {study.title}
+                      <AutoTranslate text={study.title} />
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -633,9 +646,11 @@ export default function ReportsPage() {
                         dir="auto"
                         className="max-w-sm py-4 text-sm font-medium break-words whitespace-normal"
                       >
-                        {row.category === "ngo"
-                          ? row.report.title
-                          : consolidatedReportId(row.review.generatedAt)}
+                        {row.category === "ngo" ? (
+                          <AutoTranslate text={row.report.title} />
+                        ) : (
+                          consolidatedReportId(row.review.generatedAt)
+                        )}
                       </TableCell>
                       {canSeeConsolidated ? (
                         <TableCell className="text-sm">

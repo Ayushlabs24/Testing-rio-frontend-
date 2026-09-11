@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/components/providers/auth-provider";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -117,6 +118,7 @@ function DetailRow({
 export default function OrganizationSettingsPage() {
   const t = useTranslations("app.settings.organization");
   const tSectors = useTranslations("app.settings.organization.sectors");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
   const sectorOptions = useSectorOptions();
   const locale = useLocale() as AppLocale;
   const { session, setSession } = useAuth();
@@ -292,7 +294,12 @@ export default function OrganizationSettingsPage() {
   const sectorDisplay =
     organization.sector === "other"
       ? organization.purpose || tSectors("other")
-      : (organization.sector ?? "—");
+      : organization.sector
+        ? (() => {
+            const match = sectorOptions.find((s) => s.name === organization.sector);
+            return match ? localizedName(match, locale) : organization.sector;
+          })()
+        : "—";
   const logoInitial = organization.name.charAt(0).toUpperCase();
 
   return (
@@ -363,10 +370,14 @@ export default function OrganizationSettingsPage() {
                   ) : (
                     <div className="space-y-2">
                       <h2 className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
-                        {organization.name}
+                        <AutoTranslate text={organization.name} />
                       </h2>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">{session.role.name}</Badge>
+                        <Badge variant="outline">
+                          {tRoleNames.has(session.role.key)
+                            ? tRoleNames(session.role.key)
+                            : session.role.name}
+                        </Badge>
                       </div>
                     </div>
                   )}
@@ -508,8 +519,8 @@ export default function OrganizationSettingsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {sectorOptions.map((sector) => (
-                            <SelectItem key={sector} value={sector}>
-                              {sector}
+                            <SelectItem key={sector.name} value={sector.name}>
+                              {localizedName(sector, locale)}
                             </SelectItem>
                           ))}
                           <SelectItem value="other">{tSectors("other")}</SelectItem>

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { BackButton } from "@/components/common/back-button";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -37,6 +38,7 @@ function NgoReportDetail({ id }: { id: string }) {
   const [report, setReport] = useState<Report | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const translatedTitle = useAutoTranslate(report?.title).text;
 
   function load() {
     reportsService
@@ -68,7 +70,7 @@ function NgoReportDetail({ id }: { id: string }) {
   return (
     <>
       <PageHeader
-        title={report.title}
+        title={translatedTitle}
         description={
           report.reviewedAt
             ? `${tp("generatedBy", { date: formatDateTime(report.generatedAt, locale) })} · ${tp("reviewedOn", { date: formatDateTime(report.reviewedAt, locale) })}`

@@ -8,8 +8,16 @@ export interface ResolvedSurvey {
   questions: Array<{
     code: string;
     text: string;
+    // RIO Arabic Localization (Approach 3, Hybrid) — the client-supplied
+    // Question Bank Arabic text/options, added 2026-09-08. Null for a
+    // custom/additional question, which has no manually-entered Arabic
+    // column — the citizen flow falls back to AI-translating `text` on
+    // demand in that case, same as everywhere else user-typed content
+    // needs this. Positionally parallel to `options` (same order).
+    textAr: string | null;
     type: "text" | "single_choice" | "multi_choice" | "scale";
     options?: string[];
+    optionsAr?: string[] | null;
     required: boolean;
   }>;
   questionCount: number;

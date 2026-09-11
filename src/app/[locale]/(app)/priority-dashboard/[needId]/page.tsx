@@ -2,9 +2,12 @@
 
 import { Gauge, ListChecks, AlertTriangle } from "lucide-react";
 import { use, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
 import { cn, formatDomainSummary } from "@/lib/utils";
+import { localizedName } from "@/lib/bilingual";
 import { BackButton } from "@/components/common/back-button";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import { PermissionGuard } from "@/components/layout/permission-guard";
@@ -31,7 +34,6 @@ import {
 } from "@/components/ui/table";
 import { usePermission } from "@/hooks/use-permission";
 import { actAsOrgOptions } from "@/lib/act-as-org";
-import { ApiError } from "@/services/api/types";
 import type { PublicSurveyLink } from "@/services/public-surveys/public-surveys.types";
 import { responseQualityService } from "@/services/response-quality/response-quality.service";
 import type { ResponseQualityResult } from "@/services/response-quality/response-quality.types";
@@ -52,6 +54,7 @@ import { DocumentBasedSummaryTab } from "@/components/features/priority/document
 import { CombinedSummaryTab } from "@/components/features/priority/combined-summary-tab";
 import { NeedDecisionsPanel } from "@/components/features/priority/need-decisions-panel";
 import { loadPriorityInsights, loadSurveyLinks } from "./load-insights";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const CONSOLIDATED = "consolidated";
 const NONE = "none";
@@ -65,8 +68,9 @@ const NONE = "none";
 // both the instant real fields/endpoints exist; nothing else needs to
 // change, since Severity (`priorityV2.priorityStatus`) and Affected Group
 // Size (`need.affectedPeople`/`affectedHouseholds`) already read real data.
-const PLACEHOLDER_URGENCY = "High";
-const PLACEHOLDER_THEME = "Water access";
+// Localized via t("scoreComponents.placeholderUrgencyValue"/"placeholderThemeValue")
+// at the render site below, not as bare literals here — this page's own
+// locale isn't available at module scope.
 
 export default function PriorityDetailInsightsPage({
   params,
@@ -75,6 +79,13 @@ export default function PriorityDetailInsightsPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("PriorityDashboard.detailPage");
+  const tApiErr = useTranslations("apiErrors");
+  // Same level.* dictionary the main Priority Dashboard and Village
+  // Comparison pages already use for this exact enum — priorityStatus
+  // arrives upper-cased ("MEDIUM") from the API.
+  const tLevel = useTranslations("app.priorityDashboard");
+  const locale = useLocale() as AppLocale;
+  const { localizedDomain } = useDomainArabicMap();
   // Client-confirmed (Aug 14): Quality Assessment is Data Analyst's action —
   // was aiReview:write (shared with Research Officer's unrelated Need-
   // classification-trigger use of that flag). Reuses canScore
@@ -175,9 +186,7 @@ export default function PriorityDetailInsightsPage({
       const results = await responseQualityService.assess(needId, surveyLinkId);
       setQualityResults(results);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to assess response quality",
-      );
+      setError(resolveApiErrorMessage(err, tApiErr, t("assessQualityError")));
     } finally {
       setAssessing(false);
     }
@@ -225,7 +234,7 @@ export default function PriorityDetailInsightsPage({
         );
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("recalculateError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("recalculateError")));
     } finally {
       setScoring(false);
     }
@@ -252,11 +261,13 @@ export default function PriorityDetailInsightsPage({
               : need && need.needDomains.length > 0
                 ? t("domainList", {
                     domains: formatDomainSummary(
-                      need.needDomains.map((d: { domain: string }) => d.domain),
+                      need.needDomains.map((d: { domain: string }) =>
+                        localizedDomain(d.domain),
+                      ),
                     ),
                   })
                 : need?.domain
-                  ? t("domainSingle", { domain: need.domain })
+                  ? t("domainSingle", { domain: localizedDomain(need.domain) })
                   : t("descriptionFallback")
           }
           actions={
@@ -434,7 +445,12 @@ export default function PriorityDetailInsightsPage({
                         }
                         className="px-3 py-1 text-sm font-bold tracking-wide uppercase"
                       >
-                        {priorityV2.priorityStatus} {t("prioritySuffix")}
+                        {tLevel(
+                          `level.${priorityV2.priorityStatus.toLowerCase()}` as Parameters<
+                            typeof tLevel
+                          >[0],
+                        )}{" "}
+                        {t("prioritySuffix")}
                       </Badge>
                     </div>
 
@@ -485,7 +501,11 @@ export default function PriorityDetailInsightsPage({
                             {t("scoreComponents.severity")}
                           </p>
                           <p className="text-foreground mt-1 text-lg font-bold">
-                            {priorityV2.priorityStatus}
+                            {tLevel(
+                              `level.${priorityV2.priorityStatus.toLowerCase()}` as Parameters<
+                                typeof tLevel
+                              >[0],
+                            )}
                           </p>
                         </div>
                         <div className="bg-muted/40 rounded-lg p-4">
@@ -498,7 +518,7 @@ export default function PriorityDetailInsightsPage({
                             </Badge>
                           </div>
                           <p className="text-foreground mt-1 text-lg font-bold">
-                            {PLACEHOLDER_URGENCY}
+                            {t("scoreComponents.placeholderUrgencyValue")}
                           </p>
                         </div>
                         <div className="bg-muted/40 rounded-lg p-4">
@@ -535,7 +555,7 @@ export default function PriorityDetailInsightsPage({
                             </Badge>
                           </div>
                           <p className="text-foreground mt-1 text-lg font-bold">
-                            {PLACEHOLDER_THEME}
+                            {t("scoreComponents.placeholderThemeValue")}
                           </p>
                         </div>
                       </div>
@@ -557,7 +577,7 @@ export default function PriorityDetailInsightsPage({
                         <div className="mt-2 flex flex-wrap gap-2">
                           {criticalOverrides.map((override, i) => (
                             <Badge key={i} variant="destructive">
-                              {override.domainNameSnapshot}:{" "}
+                              {localizedDomain(override.domainNameSnapshot)}:{" "}
                               {override.domainSeverityScore}
                             </Badge>
                           ))}
@@ -586,7 +606,7 @@ export default function PriorityDetailInsightsPage({
                           {(priorityV2.domainComponents || []).map((domain) => (
                             <TableRow key={domain.domainKey}>
                               <TableCell className="font-medium">
-                                {domain.domainNameSnapshot}
+                                {localizedDomain(domain.domainNameSnapshot)}
                               </TableCell>
                               <TableCell>{domain.domainSeverityScore}</TableCell>
                               <TableCell>{domain.domainPerformanceScore}</TableCell>
@@ -678,9 +698,7 @@ export default function PriorityDetailInsightsPage({
                     <SelectItem value={NONE}>{t("gapTypeNotSet")}</SelectItem>
                     {gapTypeOptions.map((option) => (
                       <SelectItem key={option.id} value={option.name}>
-                        {t.has(`gapType.${option.name}`)
-                          ? t(`gapType.${option.name}` as Parameters<typeof t>[0])
-                          : option.name}
+                        {localizedName(option, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>

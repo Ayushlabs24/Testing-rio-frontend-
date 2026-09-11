@@ -2,15 +2,19 @@
 
 import {
   Archive as ArchiveIcon,
+  Database,
   Download,
   ExternalLink,
   Eye,
   Plus,
   Search,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import { useAuth } from "@/components/providers/auth-provider";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -47,9 +51,11 @@ import { ARCHIVE_PAGE_SIZE } from "@/config/pagination";
 import { usePermission } from "@/hooks/use-permission";
 import { useRouter } from "@/i18n/navigation";
 import { studyConfigService } from "@/services/study-config/study-config.service";
+import { HistoricalStudyImportDialog } from "@/components/features/archive/historical-study-import-dialog";
 import { archiveService } from "@/services/archive/archive.service";
 import { historicalStudiesService } from "@/services/historical-studies/historical-studies.service";
 import type { ArchiveEntry, ArchiveEntryKind } from "@/services/archive/archive.types";
+import { isImportableFileName } from "@/services/historical-studies/historical-studies.types";
 
 const ALL = "all";
 
@@ -58,16 +64,26 @@ export default function ArchivePage() {
   const tDetail = useTranslations("app.archive.detail");
   const tUpload = useTranslations("app.archive.uploadHistorical");
   const tGeo = useTranslations("app.geography");
+  const tReportStatus = useTranslations("app.reports.status");
+  const locale = useLocale() as AppLocale;
   // RIO-FR-013 (client Q26): "sector" here is the study's own subject
   // (Target Sector, chosen at Study creation), not the owning entity's
   // sector — someone filtering for "Health" wants health studies, not
   // studies from health-sector organisations. Sourced live from the
   // Methodology Configuration's Target Sector list, same pattern as every
   // other configurable-list dropdown in the app.
-  const [sectorOptions, setSectorOptions] = useState<string[]>([]);
+  const [sectorOptions, setSectorOptions] = useState<
+    { name: string; nameAr: string | null }[]
+  >([]);
   const router = useRouter();
   const { session } = useAuth();
   const isCrossEntity = session?.role.crossEntity ?? false;
+  // RIO-DATA-002 — an import creates org-scoped Study and Need rows, so the
+  // server refuses one for another entity's archive entry
+  // (CROSS_ORG_IMPORT_FORBIDDEN). A crossEntity role browses every org's
+  // archive, so without this the Import button would appear on rows where
+  // it is guaranteed to fail.
+  const ownOrgId = session?.organization.id ?? null;
 
   const [entries, setEntries] = useState<ArchiveEntry[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -78,6 +94,9 @@ export default function ArchivePage() {
   const [sector, setSector] = useState<string | typeof ALL>(ALL);
   const [village, setVillage] = useState<string | typeof ALL>(ALL);
   const [page, setPage] = useState(1);
+  // RIO-FR-013 — uploading a pre-platform study is an archive write;
+  // RIO-DATA-002 importing it is a needs write. Different permissions
+  // because they are different acts on different data.
   const canUploadHistorical = usePermission("archiveSharingAudit", "write");
   const [uploadOpen, setUploadOpen] = useState(false);
   // RIO-FR-013 (client feedback 2026-09-04) — a historical row's own detail
@@ -87,6 +106,10 @@ export default function ArchivePage() {
   // (Governorates/Centers, Subject, Author, Methodology Version, uploaded
   // by/at).
   const [detailEntry, setDetailEntry] = useState<ArchiveEntry | null>(null);
+  // RIO-DATA-002 — the archive entry queued for import into the unified
+  // dashboard.
+  const [importEntry, setImportEntry] = useState<ArchiveEntry | null>(null);
+  const canImport = usePermission("dataCollection", "write");
 
   // Filter option lists (Entity/Region/Village) are derived from a single
   // unfiltered baseline fetch, same idea as the existing Entity-options
@@ -111,7 +134,11 @@ export default function ArchivePage() {
     studyConfigService
       .listTargetSectors()
       .then((options) =>
-        setSectorOptions(options.filter((o) => o.isActive).map((o) => o.name)),
+        setSectorOptions(
+          options
+            .filter((o) => o.isActive)
+            .map((o) => ({ name: o.name, nameAr: o.nameAr })),
+        ),
       )
       .catch(() => undefined);
   }, []);
@@ -140,7 +167,9 @@ export default function ArchivePage() {
 
   useEffect(loadEntries, [kind, search, organizationId, region, sector, village]);
 
-  const columnCount = isCrossEntity ? 7 : 6;
+  // +1 for the Actions column (view details, plus preview/download/import
+  // for historical entries).
+  const columnCount = (isCrossEntity ? 6 : 5) + 1;
   const pageCount = Math.max(1, Math.ceil((entries?.length ?? 0) / ARCHIVE_PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const pagedEntries = (entries ?? []).slice(
@@ -160,10 +189,15 @@ export default function ArchivePage() {
       router.push(`/studies/${entry.studyId}`);
     } else if (entry.kind === "report") {
       router.push(`/reports/${entry.id}`);
+    } else if (entry.kind === "historical" && entry.studyId) {
+      // RIO-DATA-002 — once imported, the entry's real content lives on the
+      // Study, so the row opens the imported needs rather than doing nothing.
+      router.push(`/studies/${entry.studyId}`);
     }
-    // "historical" entries have no page to navigate to — they're handled by
-    // the explicit Preview/Download buttons in the Actions column instead
-    // of a row click, since a click-to-download row surprised users.
+    // A not-yet-imported "historical" entry has no page to navigate to —
+    // it's handled by the explicit View/Preview/Download/Import buttons in
+    // the Actions column instead of a row click, since a click-to-download
+    // row surprised users.
   }
 
   // Fetched as a blob (authenticated, cookie-based session) rather than
@@ -260,7 +294,7 @@ export default function ArchivePage() {
                       <SelectItem value={ALL}>{t("filterEntityAll")}</SelectItem>
                       {allOrgs.map((org) => (
                         <SelectItem key={org.id} value={org.id}>
-                          {org.name}
+                          <AutoTranslate text={org.name} />
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -295,7 +329,7 @@ export default function ArchivePage() {
                     <SelectItem value={ALL}>{t("filterVillageAll")}</SelectItem>
                     {allVillages.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {v}
+                        <AutoTranslate text={v} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -310,8 +344,8 @@ export default function ArchivePage() {
                   <SelectContent>
                     <SelectItem value={ALL}>{t("filterSectorAll")}</SelectItem>
                     {sectorOptions.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
+                      <SelectItem key={s.name} value={s.name}>
+                        {localizedName(s, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -330,7 +364,7 @@ export default function ArchivePage() {
                   <TableHead className="w-28">{t("statusColumn")}</TableHead>
                   <TableHead className="w-52">{t("villagesColumn")}</TableHead>
                   <TableHead className="w-40">{t("dateColumn")}</TableHead>
-                  <TableHead className="w-32" />
+                  <TableHead className="w-56">{t("actionsColumn")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -373,30 +407,46 @@ export default function ArchivePage() {
                       <TableRow
                         key={`${entry.kind}-${entry.id}`}
                         onClick={
-                          isHistorical
+                          isHistorical && !entry.studyId
                             ? () => setDetailEntry(entry)
                             : () => openEntry(entry)
                         }
                         className="hover:bg-accent/50 cursor-pointer"
                       >
                         <TableCell className="max-w-64 py-4 text-sm font-medium break-words whitespace-normal">
-                          {entry.title}
+                          <AutoTranslate text={entry.title} />
                         </TableCell>
                         {isCrossEntity ? (
                           <TableCell className="text-muted-foreground max-w-56 text-sm break-words whitespace-normal">
-                            {entry.organizationName}
+                            <AutoTranslate text={entry.organizationName} />
                           </TableCell>
                         ) : null}
                         <TableCell>
                           <Badge variant="outline">{t(`kind.${entry.kind}`)}</Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{entry.status}</TableCell>
+                        <TableCell className="text-sm">
+                          {entry.kind === "report" && tReportStatus.has(entry.status)
+                            ? tReportStatus(
+                                entry.status as Parameters<typeof tReportStatus>[0],
+                              )
+                            : t.has(`statusValues.${entry.status}`)
+                              ? t(
+                                  `statusValues.${entry.status}` as Parameters<
+                                    typeof t
+                                  >[0],
+                                )
+                              : entry.status}
+                        </TableCell>
                         <TableCell className="text-muted-foreground max-w-52 text-sm break-words whitespace-normal">
                           {entry.villages.length === 0 ? (
                             "—"
                           ) : (
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span>{entry.villages.slice(0, 2).join(", ")}</span>
+                              <span>
+                                <AutoTranslate
+                                  text={entry.villages.slice(0, 2).join(", ")}
+                                />
+                              </span>
                               {entry.villages.length > 2 ? (
                                 <Badge
                                   variant="outline"
@@ -413,7 +463,7 @@ export default function ArchivePage() {
                           <FormattedDate value={entry.date} />
                         </TableCell>
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex flex-wrap items-center justify-end gap-1">
                             <Button
                               type="button"
                               size="icon"
@@ -422,7 +472,9 @@ export default function ArchivePage() {
                               title={t("viewDetails")}
                               aria-label={t("viewDetails")}
                               onClick={() =>
-                                isHistorical ? setDetailEntry(entry) : openEntry(entry)
+                                isHistorical && !entry.studyId
+                                  ? setDetailEntry(entry)
+                                  : openEntry(entry)
                               }
                             >
                               <Eye className="size-4" />
@@ -451,6 +503,35 @@ export default function ArchivePage() {
                                 >
                                   <Download className="size-4" />
                                 </Button>
+                                {/* RIO-DATA-002 — only a historical entry has
+                                    anything to import. Once imported this
+                                    becomes a link to the needs it produced;
+                                    a file the importer cannot parse (e.g. a
+                                    PDF) shows neither, because offering a
+                                    button that always fails is worse than
+                                    offering none. */}
+                                {entry.studyId ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      router.push(`/studies/${entry.studyId}`)
+                                    }
+                                  >
+                                    {t("viewImported")}
+                                  </Button>
+                                ) : canImport &&
+                                  entry.organizationId === ownOrgId &&
+                                  isImportableFileName(entry.fileName ?? "") ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setImportEntry(entry)}
+                                  >
+                                    <Database className="size-4" />
+                                    {t("importToDashboard")}
+                                  </Button>
+                                ) : null}
                               </>
                             ) : null}
                           </div>
@@ -501,7 +582,7 @@ export default function ArchivePage() {
                     {t("titleColumn")}
                   </p>
                   <p dir="auto" className="text-foreground text-sm break-words">
-                    {detailEntry.title}
+                    <AutoTranslate text={detailEntry.title} />
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -510,7 +591,7 @@ export default function ArchivePage() {
                       {tDetail("entityLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.organizationName}
+                      <AutoTranslate text={detailEntry.organizationName} />
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -518,7 +599,11 @@ export default function ArchivePage() {
                       {tUpload("regionLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.region.join(", ") || tDetail("notAvailable")}
+                      {detailEntry.region.length ? (
+                        <AutoTranslate text={detailEntry.region.join(", ")} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -526,8 +611,11 @@ export default function ArchivePage() {
                       {tGeo("governorateLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.governorateNames?.join(", ") ||
-                        tDetail("notAvailable")}
+                      {detailEntry.governorateNames?.length ? (
+                        <AutoTranslate text={detailEntry.governorateNames.join(", ")} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -535,7 +623,11 @@ export default function ArchivePage() {
                       {tGeo("centerLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.centerNames?.join(", ") || tDetail("notAvailable")}
+                      {detailEntry.centerNames?.length ? (
+                        <AutoTranslate text={detailEntry.centerNames.join(", ")} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -543,7 +635,11 @@ export default function ArchivePage() {
                       {tUpload("subjectLabel")}
                     </p>
                     <p className="text-foreground text-sm">
-                      {detailEntry.sector ?? tDetail("notAvailable")}
+                      {detailEntry.sector ? (
+                        <AutoTranslate text={detailEntry.sector} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -559,7 +655,11 @@ export default function ArchivePage() {
                       {tUpload("authorLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.author ?? tDetail("notAvailable")}
+                      {detailEntry.author ? (
+                        <AutoTranslate text={detailEntry.author} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -567,7 +667,11 @@ export default function ArchivePage() {
                       {tUpload("methodologyVersionLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.methodologyVersionLabel ?? tDetail("notAvailable")}
+                      {detailEntry.methodologyVersionLabel ? (
+                        <AutoTranslate text={detailEntry.methodologyVersionLabel} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -575,7 +679,11 @@ export default function ArchivePage() {
                       {tDetail("uploadedByLabel")}
                     </p>
                     <p className="text-foreground text-sm break-words">
-                      {detailEntry.uploadedByName ?? tDetail("notAvailable")}
+                      {detailEntry.uploadedByName ? (
+                        <AutoTranslate text={detailEntry.uploadedByName} />
+                      ) : (
+                        tDetail("notAvailable")
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -600,6 +708,15 @@ export default function ArchivePage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <HistoricalStudyImportDialog
+          entry={importEntry}
+          open={importEntry !== null}
+          onOpenChange={(next) => {
+            if (!next) setImportEntry(null);
+          }}
+          onImported={loadEntries}
+        />
       </PageContainer>
     </PermissionGuard>
   );

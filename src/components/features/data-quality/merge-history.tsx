@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,7 @@ function MergeRow({
 
         {merge.note && (
           <p dir="auto" className="text-muted-foreground text-sm">
-            {t("note")}: {merge.note}
+            {t("note")}: <AutoTranslate text={merge.note} />
           </p>
         )}
 

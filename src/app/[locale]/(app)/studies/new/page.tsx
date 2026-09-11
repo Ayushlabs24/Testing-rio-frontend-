@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -145,7 +146,7 @@ export default function NewStudyPage() {
                   <SelectContent>
                     {orgs.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>

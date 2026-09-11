@@ -18,14 +18,23 @@ const mocks = vi.hoisted(() => ({
   } as Record<string, boolean>,
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) =>
-    ({
-      loadErrorTitle: "Couldn't load evidence documents.",
-      actionErrorTitle: "Couldn't update the evidence document.",
-      retry: "Retry",
-    })[key] ?? key,
-}));
+vi.mock("next-intl", () => {
+  const messages: Record<string, string> = {
+    loadErrorTitle: "Couldn't load evidence documents.",
+    actionErrorTitle: "Couldn't update the evidence document.",
+    retry: "Retry",
+    officerConfirmSummary: "Officer Confirm Summary",
+  };
+  const t = (key: string) => messages[key] ?? key;
+  // The real `useTranslations` return value carries a `.has()` — the page
+  // uses it to guard optional enum-label lookups (documentTypeValues.*,
+  // summaryStatusValues.*), so the stub must expose it or the page throws.
+  t.has = (key: string) => key in messages;
+  return {
+    useTranslations: () => t,
+    useLocale: () => "en",
+  };
+});
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/hooks/use-permission", () => ({
   usePermission: (module: string, action: string) =>

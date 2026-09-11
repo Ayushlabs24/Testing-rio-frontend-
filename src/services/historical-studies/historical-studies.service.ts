@@ -3,6 +3,7 @@ import { endpoints } from "@/services/api/endpoints";
 import type {
   CreateHistoricalStudyPayload,
   HistoricalStudy,
+  HistoricalStudyImportResult,
 } from "@/services/historical-studies/historical-studies.types";
 
 export const historicalStudiesService = {
@@ -10,6 +11,9 @@ export const historicalStudiesService = {
     return apiClient.get<HistoricalStudy[]>(endpoints.historicalStudies.list);
   },
 
+  // RIO-FR-013 — multipart, because the archive entry is metadata plus one
+  // file. Arrays go over the wire JSON-stringified; the controller parses
+  // them back (multipart form fields are always plain strings).
   async create(payload: CreateHistoricalStudyPayload): Promise<HistoricalStudy> {
     const formData = new FormData();
     formData.append("title", payload.title);
@@ -29,5 +33,15 @@ export const historicalStudiesService = {
 
   async getFileBlob(id: string): Promise<Blob> {
     return apiClient.downloadBlob(endpoints.historicalStudies.file(id));
+  },
+
+  // RIO-DATA-002 — parses the archived file and creates the Study + Need
+  // rows. There is no request body: everything the import needs is already
+  // on the archive entry.
+  async importToDashboard(id: string): Promise<HistoricalStudyImportResult> {
+    return apiClient.post<HistoricalStudyImportResult>(
+      endpoints.historicalStudies.import(id),
+      undefined,
+    );
   },
 };

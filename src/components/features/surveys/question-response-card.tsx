@@ -1,5 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Eye } from "lucide-react";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +19,15 @@ function truncate(text: string): string {
   return text.length > TEXT_PREVIEW_MAX_CHARS
     ? `${text.slice(0, TEXT_PREVIEW_MAX_CHARS).trimEnd()}…`
     : text;
+}
+
+/** Translates a respondent's open-text answer (if the UI locale doesn't
+ * match what they typed) before truncating it for the preview — truncating
+ * first and translating the cut fragment would risk an odd, mid-word
+ * translation of a sentence that was never meant to end there. */
+function TextAnswerPreview({ answer }: { answer: string }) {
+  const { text } = useAutoTranslate(answer);
+  return <>{truncate(text)}</>;
 }
 
 /** One question's response summary — the distribution/numeric summary
@@ -40,11 +51,11 @@ export function QuestionResponseCard({
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <p dir="auto" className="text-foreground text-sm font-semibold">
-              {stat.questionText}
+              <AutoTranslate text={stat.questionText} />
             </p>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="font-normal">
-                {describeAnswerType(stat.answerType)}
+                {describeAnswerType(stat.answerType, t)}
               </Badge>
               <span className="text-muted-foreground text-xs">
                 {t("responseCount", { count: stat.totalAnswered })}
@@ -105,7 +116,7 @@ export function QuestionResponseCard({
               >
                 <span className="text-muted-foreground">•</span>
                 <span dir="auto" className="min-w-0 flex-1 break-words">
-                  {truncate(answer)}
+                  <TextAnswerPreview answer={answer} />
                 </span>
               </li>
             ))}

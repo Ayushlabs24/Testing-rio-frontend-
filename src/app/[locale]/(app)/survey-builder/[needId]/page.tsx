@@ -12,8 +12,13 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useRef, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
+import { localizedText } from "@/lib/bilingual";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
+import type { AppLocale } from "@/i18n/routing";
 import { BackButton } from "@/components/common/back-button";
 import { LoadingButton } from "@/components/common/loading-button";
 import { PageContainer } from "@/components/common/page-container";
@@ -46,7 +51,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePermission } from "@/hooks/use-permission";
 import { Link } from "@/i18n/navigation";
 import { actAsOrgOptions } from "@/lib/act-as-org";
-import { cn, formatDomainSummary, titleCase } from "@/lib/utils";
+import { cn, formatDomainSummary } from "@/lib/utils";
+import { describeAnswerType } from "@/lib/survey-response-stats";
+import { translationService } from "@/services/translation/translation.service";
 import { ApiError } from "@/services/api/types";
 import { aiReviewService } from "@/services/ai-decisions/ai-decisions.service";
 import { domainsService } from "@/services/domains/domains.service";
@@ -54,6 +61,7 @@ import { methodologyConfigService } from "@/services/methodology-config/methodol
 import type { MethodologyVersionOption } from "@/services/methodology-config/methodology-config.types";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need } from "@/services/needs/needs.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import {
   REJECTION_REASON_LABELS,
   surveysService,
@@ -103,6 +111,10 @@ export default function SurveyBuilderDetailPage({
 }) {
   const { needId } = use(params);
   const t = useTranslations("app.surveyBuilder.detail");
+  const tApiErr = useTranslations("apiErrors");
+  const tClassification = useTranslations("app.studies.classification");
+  const locale = useLocale() as AppLocale;
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   const canWrite = usePermission("surveyBuilder", "write");
   const canApprove = usePermission("surveyBuilder", "approve");
   // Bug fix (Aug 13): Publish and Create New Version were gated on `write`,
@@ -118,6 +130,9 @@ export default function SurveyBuilderDetailPage({
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [eligibleQuestions, setEligibleQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // PageHeader's `title` is a plain string, not JSX — resolved through the
+  // hook rather than wrapped in <AutoTranslate> at the call site.
+  const needTitle = useAutoTranslate(need?.title).text;
 
   // Both the Recommended and Question Bank lists can run into the hundreds
   // (e.g. an allDomainsSelected Need matches every active Question Bank
@@ -219,6 +234,15 @@ export default function SurveyBuilderDetailPage({
   // instead of free text, since it's the same underlying concept (who the
   // survey's sample is drawn from). Sourced live, not hardcoded.
   const [targetRespondentOptions, setTargetRespondentOptions] = useState<string[]>([]);
+  // No dedicated targetRespondentAr master-data column exists (unlike
+  // Domain/Sub-domain) — these are plain distinct strings off the Question
+  // Bank (see QuestionsService.getTargetRespondentOptions), so the picker's
+  // *labels* are resolved on demand through the same translation endpoint
+  // AutoTranslate calls; the *value* saved is always the original English
+  // string, unaffected by this map.
+  const [targetRespondentLabels, setTargetRespondentLabels] = useState<
+    Map<string, string>
+  >(new Map());
   // RIO-FR-024/RIO-FR-011 clarification (Aug 11, client-confirmed): the
   // Sample Description's Expected Size is a separate value entered by the
   // NGO, deliberately NOT auto-populated from the Study's own calculated
@@ -387,8 +411,23 @@ export default function SurveyBuilderDetailPage({
   useEffect(() => {
     surveysService
       .getTargetRespondentOptions()
-      .then(setTargetRespondentOptions)
+      .then(async (options) => {
+        setTargetRespondentOptions(options);
+        if (locale !== "ar") return;
+        const entries = await Promise.all(
+          options.map(async (v) => {
+            try {
+              const result = await translationService.translate(v, locale);
+              return [v, result.translatedText] as const;
+            } catch {
+              return [v, v] as const;
+            }
+          }),
+        );
+        setTargetRespondentLabels(new Map(entries));
+      })
       .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-select the currently published Methodology Version (the only
@@ -447,7 +486,7 @@ export default function SurveyBuilderDetailPage({
       );
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setManualClassifying(false);
     }
@@ -465,7 +504,7 @@ export default function SurveyBuilderDetailPage({
       );
       setSurvey(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSavingMethodologyVersion(false);
     }
@@ -504,7 +543,7 @@ export default function SurveyBuilderDetailPage({
       setSurvey(updated);
       setMessage(t("saved"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSavingSampleDescription(false);
     }
@@ -708,7 +747,7 @@ export default function SurveyBuilderDetailPage({
       loadDraftFromSurvey(updated);
       setMessage(t("saved"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -732,7 +771,7 @@ export default function SurveyBuilderDetailPage({
       );
       setSurvey({ ...survey, ...updated, approverComments: null });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -754,7 +793,7 @@ export default function SurveyBuilderDetailPage({
       );
       setSurvey(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setCreatingNewVersion(false);
     }
@@ -850,7 +889,7 @@ export default function SurveyBuilderDetailPage({
       setMessage(t("approvedMessage"));
       setApproveOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSubmitting(false);
     }
@@ -899,7 +938,7 @@ export default function SurveyBuilderDetailPage({
       setMessage(t("approvedMessage"));
       setApproveOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setApprovingSubmitted(false);
     }
@@ -924,7 +963,7 @@ export default function SurveyBuilderDetailPage({
       loadDraftFromSurvey(published);
       setMessage(t("publishedMessage"));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setPublishing(false);
     }
@@ -997,7 +1036,7 @@ export default function SurveyBuilderDetailPage({
       setRejectOpen(false);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setRejecting(false);
     }
@@ -1026,16 +1065,19 @@ export default function SurveyBuilderDetailPage({
         ) : (
           <>
             <PageHeader
-              title={need?.title ?? ""}
+              title={need?.title ? needTitle : ""}
               description={
                 need?.allDomainsSelected
-                  ? "All Domains"
+                  ? tClassification("allDomainsChip")
                   : need && need.needDomains.length > 0
                     ? formatDomainSummary(
-                        need.needDomains.map((d) => `${d.domain} / ${d.subDomain}`),
+                        need.needDomains.map(
+                          (d) =>
+                            `${localizedDomain(d.domain)} / ${localizedSubDomain(d.subDomain)}`,
+                        ),
                       )
                     : need?.domain && need?.subDomain
-                      ? `${need.domain} / ${need.subDomain}`
+                      ? `${localizedDomain(need.domain)} / ${localizedSubDomain(need.subDomain)}`
                       : undefined
               }
               actions={
@@ -1218,7 +1260,7 @@ export default function SurveyBuilderDetailPage({
                     {t("rejectedNoticeTitle")}
                   </p>
                   <p className="text-foreground text-sm whitespace-pre-wrap">
-                    {survey.approverComments}
+                    <AutoTranslate text={survey.approverComments} />
                   </p>
                 </div>
               </div>
@@ -1235,7 +1277,7 @@ export default function SurveyBuilderDetailPage({
                     {t("reviewerNotesTitle")}
                   </p>
                   <p className="text-foreground text-sm whitespace-pre-wrap">
-                    {survey.approverComments}
+                    <AutoTranslate text={survey.approverComments} />
                   </p>
                 </div>
               </div>
@@ -1271,7 +1313,11 @@ export default function SurveyBuilderDetailPage({
                 {t("unsavedChangesNote")}
               </p>
             ) : null}
-            {error ? <p className="text-destructive mb-4 text-sm">{error}</p> : null}
+            {error ? (
+              <p className="text-destructive mb-4 text-sm">
+                <AutoTranslate text={error} />
+              </p>
+            ) : null}
 
             {need?.status === "ai_classification_failed" ? (
               // Manual-classification gate — AI could not classify this
@@ -1392,25 +1438,20 @@ export default function SurveyBuilderDetailPage({
                       disabled={!isEditable || savingMethodologyVersion}
                     >
                       <SelectTrigger id="methodology-version" className="w-full sm:w-96">
-                        {/* Methodology version names are authored in English
-                            only, regardless of UI locale. The truncation
-                            edge for the trigger's line-clamped value is
-                            decided by ITS OWN `dir`, not the inner text's —
-                            without this, RTL silently clips the start of the
-                            name (e.g. "Village Needs..." became just "s...")
-                            with no ellipsis marker (found testing
-                            RIO-NFR-007). Only set once a real value is
-                            selected, so the (Arabic) placeholder keeps its
-                            normal RTL alignment. */}
-                        <SelectValue
-                          placeholder={t("methodologyVersionPlaceholder")}
-                          dir={survey.methodologyVersion ? "ltr" : undefined}
-                        />
+                        {/* Client-confirmed: methodology version names now
+                            follow the UI locale like every other piece of
+                            free text (AutoTranslate), rather than staying
+                            forced English/LTR — the RTL truncation-clipping
+                            concern from RIO-NFR-007 no longer applies since
+                            AutoTranslate's own `dir="auto"` on each option
+                            resolves direction from the rendered string
+                            itself, English or Arabic. */}
+                        <SelectValue placeholder={t("methodologyVersionPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {methodologyOptions.map((option) => (
                           <SelectItem key={option.id} value={option.version}>
-                            <span dir="ltr">{option.name}</span>
+                            <AutoTranslate text={option.name} />
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1461,12 +1502,12 @@ export default function SurveyBuilderDetailPage({
                                       { value: targetGroup, label: targetGroup },
                                       ...targetRespondentOptions.map((v) => ({
                                         value: v,
-                                        label: v,
+                                        label: targetRespondentLabels.get(v) ?? v,
                                       })),
                                     ]
                                   : targetRespondentOptions.map((v) => ({
                                       value: v,
-                                      label: v,
+                                      label: targetRespondentLabels.get(v) ?? v,
                                     }))
                               }
                               value={targetGroup || null}
@@ -1516,7 +1557,7 @@ export default function SurveyBuilderDetailPage({
                         </div>
                         {sampleDescriptionError ? (
                           <p className="text-destructive text-sm">
-                            {sampleDescriptionError}
+                            <AutoTranslate text={sampleDescriptionError} />
                           </p>
                         ) : null}
                         <div className="flex items-center justify-between">
@@ -1544,7 +1585,11 @@ export default function SurveyBuilderDetailPage({
                             {t("targetGroupLabel")}
                           </dt>
                           <dd className="text-foreground text-sm">
-                            {survey.targetGroup ?? t("sampleDescriptionNotProvided")}
+                            {survey.targetGroup ? (
+                              <AutoTranslate text={survey.targetGroup} />
+                            ) : (
+                              t("sampleDescriptionNotProvided")
+                            )}
                           </dd>
                         </div>
                         <div>
@@ -1561,8 +1606,11 @@ export default function SurveyBuilderDetailPage({
                             {t("selectionApproachLabel")}
                           </dt>
                           <dd className="text-foreground text-sm whitespace-pre-wrap">
-                            {survey.selectionApproach ??
-                              t("sampleDescriptionNotProvided")}
+                            {survey.selectionApproach ? (
+                              <AutoTranslate text={survey.selectionApproach} />
+                            ) : (
+                              t("sampleDescriptionNotProvided")
+                            )}
                           </dd>
                         </div>
                         <div className="sm:col-span-2">
@@ -1570,8 +1618,11 @@ export default function SurveyBuilderDetailPage({
                             {t("geographicCoverageLabel")}
                           </dt>
                           <dd className="text-foreground text-sm">
-                            {survey.geographicCoverage ??
-                              t("sampleDescriptionNotProvided")}
+                            {survey.geographicCoverage ? (
+                              <AutoTranslate text={survey.geographicCoverage} />
+                            ) : (
+                              t("sampleDescriptionNotProvided")
+                            )}
                           </dd>
                         </div>
                       </dl>
@@ -1609,17 +1660,18 @@ export default function SurveyBuilderDetailPage({
                               ? t("questionBankDescription", {
                                   scope: formatDomainSummary(
                                     need.needDomains.map(
-                                      (d) => `${d.domain} / ${d.subDomain}`,
+                                      (d) =>
+                                        `${localizedDomain(d.domain)} / ${localizedSubDomain(d.subDomain)}`,
                                     ),
                                   ),
                                 })
                               : need?.domain && need?.subDomain
                                 ? t("questionBankDescription", {
-                                    scope: `${need.domain} / ${need.subDomain}`,
+                                    scope: `${localizedDomain(need.domain)} / ${localizedSubDomain(need.subDomain)}`,
                                   })
                                 : need?.aiSuggestedDomain && need?.aiSuggestedSubDomain
                                   ? t("questionBankDescriptionSuggested", {
-                                      scope: `${need.aiSuggestedDomain} / ${need.aiSuggestedSubDomain}`,
+                                      scope: `${localizedDomain(need.aiSuggestedDomain)} / ${localizedSubDomain(need.aiSuggestedSubDomain)}`,
                                     })
                                   : t("questionBankNoDomain")}
                         </p>
@@ -1656,7 +1708,13 @@ export default function SurveyBuilderDetailPage({
                                 >
                                   <div className="flex items-start justify-between gap-3">
                                     <p dir="auto" className="text-foreground text-sm">
-                                      {q.questionText}
+                                      <AutoTranslate
+                                        text={localizedText(
+                                          q.questionText,
+                                          q.questionTextAr,
+                                          locale,
+                                        )}
+                                      />
                                     </p>
                                     {canEditQuestions ? (
                                       <Button
@@ -1694,7 +1752,14 @@ export default function SurveyBuilderDetailPage({
                                         <span className="font-medium">
                                           {q.questionId}
                                         </span>{" "}
-                                        · {q.indicator}
+                                        ·{" "}
+                                        <AutoTranslate
+                                          text={localizedText(
+                                            q.indicator,
+                                            q.indicatorAr,
+                                            locale,
+                                          )}
+                                        />
                                       </p>
                                     </div>
                                   ) : null}
@@ -1705,8 +1770,10 @@ export default function SurveyBuilderDetailPage({
                                         {t("domainLabel")}
                                       </p>
                                       <p className="text-foreground text-sm">
-                                        {q.domain}
-                                        {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                        {localizedDomain(q.domain)}
+                                        {q.subDomain
+                                          ? ` · ${localizedSubDomain(q.subDomain)}`
+                                          : ""}
                                       </p>
                                     </div>
                                   ) : null}
@@ -1716,7 +1783,11 @@ export default function SurveyBuilderDetailPage({
                                       <p className="text-muted-foreground text-xs font-medium">
                                         {t("kpiLabel")}
                                       </p>
-                                      <p className="text-foreground text-sm">{q.kpi}</p>
+                                      <p className="text-foreground text-sm">
+                                        <AutoTranslate
+                                          text={localizedText(q.kpi, q.kpiAr, locale)}
+                                        />
+                                      </p>
                                     </div>
                                   ) : null}
 
@@ -1725,7 +1796,7 @@ export default function SurveyBuilderDetailPage({
                                       {t("answerTypeLabel")}
                                     </p>
                                     <Badge variant="outline" className="mt-0.5">
-                                      {titleCase(q.answerType)}
+                                      {describeAnswerType(q.answerType, t)}
                                     </Badge>
                                   </div>
 
@@ -1735,13 +1806,19 @@ export default function SurveyBuilderDetailPage({
                                         {t("optionsLabel")}
                                       </p>
                                       <div className="mt-1 flex flex-wrap gap-1.5">
-                                        {q.answerOptions.map((option) => (
+                                        {q.answerOptions.map((option, i) => (
                                           <Badge
                                             key={option}
                                             variant="secondary"
                                             className="font-normal"
                                           >
-                                            {option}
+                                            <AutoTranslate
+                                              text={localizedText(
+                                                option,
+                                                q.answerOptionsAr?.[i],
+                                                locale,
+                                              )}
+                                            />
                                           </Badge>
                                         ))}
                                       </div>
@@ -1847,7 +1924,13 @@ export default function SurveyBuilderDetailPage({
                                     {t("questionLabel")}
                                   </p>
                                   <p dir="auto" className="text-foreground text-sm">
-                                    {q.questionText}
+                                    <AutoTranslate
+                                      text={localizedText(
+                                        q.questionText,
+                                        q.questionTextAr,
+                                        locale,
+                                      )}
+                                    />
                                   </p>
                                 </div>
 
@@ -1860,7 +1943,14 @@ export default function SurveyBuilderDetailPage({
                                       <span className="font-medium">
                                         {q.questionCode}
                                       </span>{" "}
-                                      · {q.indicator}
+                                      ·{" "}
+                                      <AutoTranslate
+                                        text={localizedText(
+                                          q.indicator,
+                                          q.indicatorAr,
+                                          locale,
+                                        )}
+                                      />
                                     </p>
                                   </div>
                                 ) : null}
@@ -1871,8 +1961,10 @@ export default function SurveyBuilderDetailPage({
                                       {t("domainLabel")}
                                     </p>
                                     <p className="text-foreground text-sm">
-                                      {q.domain}
-                                      {q.subDomain ? ` · ${q.subDomain}` : ""}
+                                      {localizedDomain(q.domain)}
+                                      {q.subDomain
+                                        ? ` · ${localizedSubDomain(q.subDomain)}`
+                                        : ""}
                                     </p>
                                   </div>
                                 ) : null}
@@ -1882,7 +1974,11 @@ export default function SurveyBuilderDetailPage({
                                     <p className="text-muted-foreground text-xs font-medium">
                                       {t("kpiLabel")}
                                     </p>
-                                    <p className="text-foreground text-sm">{q.kpi}</p>
+                                    <p className="text-foreground text-sm">
+                                      <AutoTranslate
+                                        text={localizedText(q.kpi, q.kpiAr, locale)}
+                                      />
+                                    </p>
                                   </div>
                                 ) : null}
 
@@ -1891,7 +1987,7 @@ export default function SurveyBuilderDetailPage({
                                     {t("answerTypeLabel")}
                                   </p>
                                   <Badge variant="outline" className="mt-0.5">
-                                    {titleCase(q.answerType)}
+                                    {describeAnswerType(q.answerType, t)}
                                   </Badge>
                                 </div>
 
@@ -1901,13 +1997,19 @@ export default function SurveyBuilderDetailPage({
                                       {t("optionsLabel")}
                                     </p>
                                     <div className="mt-1 flex flex-wrap gap-1.5">
-                                      {q.answerOptions.map((option) => (
+                                      {q.answerOptions.map((option, i) => (
                                         <Badge
                                           key={option}
                                           variant="secondary"
                                           className="font-normal"
                                         >
-                                          {option}
+                                          <AutoTranslate
+                                            text={localizedText(
+                                              option,
+                                              q.answerOptionsAr?.[i],
+                                              locale,
+                                            )}
+                                          />
                                         </Badge>
                                       ))}
                                     </div>
@@ -2006,7 +2108,13 @@ export default function SurveyBuilderDetailPage({
                                 {t("questionLabel")}
                               </p>
                               <p dir="auto" className="text-foreground text-sm">
-                                {q.questionText}
+                                <AutoTranslate
+                                  text={localizedText(
+                                    q.questionText,
+                                    q.questionTextAr,
+                                    locale,
+                                  )}
+                                />
                               </p>
                             </div>
 
@@ -2015,7 +2123,7 @@ export default function SurveyBuilderDetailPage({
                                 {t("answerTypeLabel")}
                               </p>
                               <Badge variant="outline" className="mt-0.5">
-                                {titleCase(q.answerType)}
+                                {describeAnswerType(q.answerType, t)}
                               </Badge>
                             </div>
 
@@ -2031,7 +2139,7 @@ export default function SurveyBuilderDetailPage({
                                       variant="secondary"
                                       className="font-normal"
                                     >
-                                      {option}
+                                      <AutoTranslate text={option} />
                                     </Badge>
                                   ))}
                                 </div>

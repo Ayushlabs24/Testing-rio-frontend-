@@ -4,9 +4,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
+import { AutoTranslate } from "@/components/common/auto-translate";
 
 interface NamedBarListItem {
   id: string;
+  /** May be user/master data (org name, region name, domain name) in either
+   * language — the NCNP report payload is not backend-localized, so it's
+   * rendered through AutoTranslate here. Pass an already-resolved string
+   * (e.g. `localizedDomain(...)`) when a proper master-data translation
+   * exists; AutoTranslate is a no-op once the script already matches. */
   name: string;
   count: number;
 }
@@ -15,6 +23,7 @@ interface NamedBarListProps {
   items: NamedBarListItem[];
   limit?: number;
   emptyText: string;
+  locale: AppLocale;
   /**
    * Called with (shownCount, totalCount) to render a disclosure caption
    * ("Showing 5 of 24") whenever the list is actually truncated — omit
@@ -36,6 +45,7 @@ export function NamedBarList({
   limit = 5,
   emptyText,
   formatCaption,
+  locale,
 }: NamedBarListProps) {
   const shown = items.slice(0, limit);
   const max = Math.max(1, ...shown.map((i) => i.count));
@@ -53,11 +63,11 @@ export function NamedBarList({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-muted-foreground w-32 shrink-0 truncate text-right text-sm">
-                    {item.name}
+                    <AutoTranslate text={item.name} />
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs text-wrap">
-                  {item.name}
+                  <AutoTranslate text={item.name} />
                 </TooltipContent>
               </Tooltip>
               <div className="bg-muted h-3 flex-1 overflow-hidden rounded-full">
@@ -67,7 +77,7 @@ export function NamedBarList({
                 />
               </div>
               <span className="text-foreground w-14 shrink-0 text-sm font-semibold tabular-nums">
-                {item.count.toLocaleString()}
+                {formatNumber(item.count, locale)}
               </span>
             </div>
           ))}

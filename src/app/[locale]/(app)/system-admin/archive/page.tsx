@@ -3,6 +3,8 @@
 import { Archive, Search, Eye, Building2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +51,11 @@ interface ArchiveEntry {
 
 export default function SystemAdminArchivePage() {
   const t = useTranslations("systemAdmin.archive");
+  // Kind/status enum labels live in the shared archive dictionary (same
+  // source the tenant-facing /archive page uses) — this screen only adds a
+  // System-Admin chrome around the same rows.
+  const tArchiveEnum = useTranslations("app.archive");
+  const tReportStatus = useTranslations("app.reports.status");
   const [entries, setEntries] = useState<ArchiveEntry[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("all");
@@ -153,7 +160,7 @@ export default function SystemAdminArchivePage() {
                     <SelectItem value="all">{t("allOrganizations")}</SelectItem>
                     {organizations.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -210,26 +217,34 @@ export default function SystemAdminArchivePage() {
                     pagedEntries.map((entry) => (
                       <TableRow key={`${entry.kind}-${entry.id}`}>
                         <TableCell className="text-foreground font-medium">
-                          {entry.title}
+                          <AutoTranslate text={entry.title} />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {entry.organizationName}
+                          <AutoTranslate text={entry.organizationName} />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                           {entry.region.length > 0 ? entry.region.join(", ") : "—"}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[10px] capitalize">
-                            {entry.kind}
+                          <Badge variant="outline" className="text-[10px]">
+                            {tArchiveEnum.has(`kind.${entry.kind}`)
+                              ? tArchiveEnum(`kind.${entry.kind}`)
+                              : entry.kind}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {entry.status}
+                          <Badge variant="secondary" className="text-xs">
+                            {entry.kind === "report" && tReportStatus.has(entry.status)
+                              ? tReportStatus(
+                                  entry.status as Parameters<typeof tReportStatus>[0],
+                                )
+                              : tArchiveEnum.has(`statusValues.${entry.status}`)
+                                ? tArchiveEnum(`statusValues.${entry.status}`)
+                                : entry.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground font-mono text-xs">
-                          {new Date(entry.date).toLocaleDateString()}
+                          <FormattedDate value={entry.date} />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">

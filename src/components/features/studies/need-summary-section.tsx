@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, FileText, Loader2, RotateCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/common/loading-button";
@@ -12,6 +13,7 @@ import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
 import { needSummaryService } from "@/services/needs/need-summary.service";
 import type { NeedSummary } from "@/services/needs/need-summary.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 /**
  * RIO-AI-003 — the reviewer's view of a suggested need-description summary.
@@ -36,6 +38,7 @@ import type { NeedSummary } from "@/services/needs/need-summary.types";
  */
 export function NeedSummarySection({ needId }: { needId: string }) {
   const t = useTranslations("app.studies.needSummary");
+  const tApiErr = useTranslations("apiErrors");
   const canReview = usePermission("aiReview", "approve");
 
   const [summary, setSummary] = useState<NeedSummary | null>(null);
@@ -91,7 +94,7 @@ export function NeedSummarySection({ needId }: { needId: string }) {
         apply(await needSummaryService.regenerate(needId));
       }
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setBusy(null);
     }
@@ -170,6 +173,14 @@ export function NeedSummarySection({ needId }: { needId: string }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="need-summary-text">{t("summaryLabel")}</Label>
+          {/* Deliberately NOT auto-translated: this is a reviewer verifying
+              the AI summary against `sourceStatement` word-for-word (AC 5's
+              hallucination checks), and it's the field they edit and save as
+              `reviewerEditedText` — silently swapping its language here would
+              undermine that review and could get a translated (not
+              reviewed) sentence saved as the record of what the reviewer
+              actually approved. `sourceStatement` above it is read-only
+              reference text, so that one is auto-translated. */}
           <Textarea
             id="need-summary-text"
             rows={7}
@@ -192,7 +203,7 @@ export function NeedSummarySection({ needId }: { needId: string }) {
             id="need-summary-source"
             className="border-border bg-muted/40 text-muted-foreground max-h-48 overflow-y-auto rounded-md border p-3 text-sm whitespace-pre-wrap"
           >
-            {summary.sourceStatement}
+            <AutoTranslate text={summary.sourceStatement} />
           </div>
           <p className="text-muted-foreground text-xs">{t("sourceNote")}</p>
         </div>

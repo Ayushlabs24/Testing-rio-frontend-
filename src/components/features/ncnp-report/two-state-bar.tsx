@@ -1,8 +1,12 @@
+import type { AppLocale } from "@/i18n/routing";
+import { formatNumber } from "@/lib/format-date";
+
 interface TwoStateBarProps {
   primaryLabel: string;
   primaryCount: number;
   secondaryLabel: string;
   secondaryCount: number;
+  locale: AppLocale;
 }
 
 // A donut/pie is the wrong chart for a two-category, heavily skewed split
@@ -13,6 +17,7 @@ export function TwoStateBar({
   primaryCount,
   secondaryLabel,
   secondaryCount,
+  locale,
 }: TwoStateBarProps) {
   const total = primaryCount + secondaryCount;
   const primaryPct = total === 0 ? 0 : (primaryCount / total) * 100;
@@ -33,14 +38,14 @@ export function TwoStateBar({
           <span className="bg-chart-2 size-2.5 rounded-sm" />
           <span className="text-muted-foreground">{primaryLabel}</span>
           <span className="text-foreground font-semibold tabular-nums">
-            {primaryCount.toLocaleString()} · {primaryPct.toFixed(0)}%
+            {formatNumber(primaryCount, locale)} · {primaryPct.toFixed(0)}%
           </span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="bg-chart-1 size-2.5 rounded-sm" />
           <span className="text-muted-foreground">{secondaryLabel}</span>
           <span className="text-foreground font-semibold tabular-nums">
-            {secondaryCount.toLocaleString()} · {secondaryPct.toFixed(0)}%
+            {formatNumber(secondaryCount, locale)} · {secondaryPct.toFixed(0)}%
           </span>
         </span>
       </div>

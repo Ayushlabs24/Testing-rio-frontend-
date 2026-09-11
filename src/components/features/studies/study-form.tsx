@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import type { AppLocale } from "@/i18n/routing";
 import { localizedName } from "@/lib/bilingual";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +27,7 @@ import type { Governorate } from "@/services/geography/geography.types";
 import type { MethodologyVersion } from "@/services/priority/severity-scoring.service";
 import type { StudyConfigOption } from "@/services/study-config/study-config.types";
 import type { Study } from "@/services/studies/studies.types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 export interface StudyFormValues {
   title: string;
@@ -90,6 +92,7 @@ export function StudyForm({
   onCancel,
 }: StudyFormProps) {
   const t = useTranslations("app.studies.form");
+  const tApiErr = useTranslations("apiErrors");
   const tValidation = useTranslations("app.studies.validation");
   const locale = useLocale() as AppLocale;
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -197,7 +200,7 @@ export function StudyForm({
       await onSubmit(values);
     } catch (error) {
       setSubmitError(
-        error instanceof ApiError ? error.message : tValidation("titleRequired"),
+        resolveApiErrorMessage(error, tApiErr, tValidation("titleRequired")),
       );
     }
   });
@@ -235,22 +238,23 @@ export function StudyForm({
             }
           >
             <SelectTrigger className="w-full">
-              {/* Methodology version names are authored in English only,
-                  regardless of UI locale. The truncation edge for the
-                  trigger's line-clamped value is decided by ITS OWN `dir`,
-                  not the inner text's — without this, RTL silently clips the
-                  start of the name with no ellipsis marker (found testing
-                  RIO-NFR-007). Only set once a real value is selected, so
-                  the (Arabic) placeholder keeps its normal RTL alignment. */}
+              {/* Client decision (Ganesh, 2026-09-08): every field must follow
+                  the UI locale when Arabic is selected — this reverses an
+                  earlier "authored in English only, never localized" call.
+                  There's no nameAr column for a Methodology Version, so this
+                  goes through AutoTranslate like any other user-typed field
+                  with no pre-existing translation. `dir="auto"` (not the
+                  earlier forced "ltr") lets the browser resolve direction
+                  from whichever script actually ends up rendered. */}
               <SelectValue
                 placeholder={t("methodologyVersionPlaceholder")}
-                dir={methodologyVersionId ? "ltr" : undefined}
+                dir={methodologyVersionId ? "auto" : undefined}
               />
             </SelectTrigger>
             <SelectContent>
               {methodologyVersions.map((mv) => (
                 <SelectItem key={mv.id} value={mv.id}>
-                  <span dir="ltr">{mv.name}</span>
+                  <AutoTranslate text={mv.name} />
                 </SelectItem>
               ))}
             </SelectContent>

@@ -13,7 +13,9 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { DomainChips } from "@/components/common/domain-chips";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { LoadingButton } from "@/components/common/loading-button";
 import { MultiSelect } from "@/components/ui/multi-select";
 import {
@@ -52,6 +54,7 @@ import { domainsService } from "@/services/domains/domains.service";
 import { needsService } from "@/services/needs/needs.service";
 import type { Need, NeedStatus } from "@/services/needs/needs.types";
 import { surveysService, type Survey } from "@/services/surveys/surveys.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 
 const STATUS_BADGE_CLASS: Record<NeedStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -85,7 +88,9 @@ export function AiClassificationSection({
   onNeedUpdated?: (need: Need) => void;
 }) {
   const t = useTranslations("app.studies.classification");
+  const tApiErr = useTranslations("apiErrors");
   const canReview = usePermission("aiReview", "approve");
+  const { localizedDomain, localizedSubDomain } = useDomainArabicMap();
   const { session } = useAuth();
   const router = useRouter();
 
@@ -269,11 +274,16 @@ export function AiClassificationSection({
 
   // Deduped — a staged override can carry several sub-domains under the
   // same domain, and each domain/sub-domain should only appear once here.
+  // .map(localizedDomain/SubDomain) below: these feed DomainChips display
+  // only (never fed back into the override submission, which reads
+  // `pendingOverride.pairs`/`need.needDomains` directly) — see
+  // useDomainArabicMap's own comment for why a plain Domain/Sub-domain name
+  // string needs this resolution at all.
   const workingDomains = pendingOverride
-    ? [...new Set(pendingOverride.pairs.map((p) => p.domain))]
+    ? [...new Set(pendingOverride.pairs.map((p) => p.domain))].map(localizedDomain)
     : [];
   const workingSubDomains = pendingOverride
-    ? [...new Set(pendingOverride.pairs.map((p) => p.subDomain))]
+    ? [...new Set(pendingOverride.pairs.map((p) => p.subDomain))].map(localizedSubDomain)
     : [];
   const workingSubDomainGroups = pendingOverride
     ? Object.entries(
@@ -289,25 +299,29 @@ export function AiClassificationSection({
       )
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([domain, subDomains]) => ({
-          domain,
-          subDomains: [...subDomains].sort((a, b) => a.localeCompare(b)),
+          domain: localizedDomain(domain),
+          subDomains: [...subDomains]
+            .sort((a, b) => a.localeCompare(b))
+            .map(localizedSubDomain),
         }))
     : [];
   // The real, multi-valued Approved classification once one exists (see
   // NeedDomain on the backend) — falls back to the single domain/subDomain
   // columns for a Need reviewed before this existed.
-  const approvedDomains =
+  const approvedDomains = (
     need.needDomains.length > 0
       ? [...new Set(need.needDomains.map((d) => d.domain))]
       : need.domain
         ? [need.domain]
-        : [];
-  const approvedSubDomains =
+        : []
+  ).map(localizedDomain);
+  const approvedSubDomains = (
     need.needDomains.length > 0
       ? [...new Set(need.needDomains.map((d) => d.subDomain))]
       : need.subDomain
         ? [need.subDomain]
-        : [];
+        : []
+  ).map(localizedSubDomain);
 
   const subDomainOptionsFor = (domain: string): string[] =>
     domainOptions.find((d) => d.name === domain)?.subDomains ?? [];
@@ -340,8 +354,8 @@ export function AiClassificationSection({
   const subDomainOptions = overrideDomains.flatMap((domain) =>
     subDomainOptionsFor(domain).map((subDomain) => ({
       value: subDomainOptionValue(domain, subDomain),
-      label: subDomain,
-      group: domain,
+      label: localizedSubDomain(subDomain),
+      group: localizedDomain(domain),
     })),
   );
   const subDomainSelectedValues = overrideDomains.flatMap((domain) =>
@@ -389,7 +403,7 @@ export function AiClassificationSection({
       const updated = await needsService.getById(need.id);
       onNeedUpdated?.(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("classifyError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("classifyError")));
     } finally {
       setRetrying(false);
     }
@@ -451,7 +465,7 @@ export function AiClassificationSection({
       await aiReviewService.approve(need.id, {}, actAsOrgOptions(need.orgId));
       await reloadAfterDecision();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("approveError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("approveError")));
     } finally {
       setApproving(false);
     }
@@ -475,7 +489,7 @@ export function AiClassificationSection({
       setOverriding(false);
       await reloadAfterDecision();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("overrideError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("overrideError")));
     } finally {
       setDecidingModify(false);
     }
@@ -496,7 +510,7 @@ export function AiClassificationSection({
       setRejectCommentsError(null);
       await reloadAfterDecision();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("rejectError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("rejectError")));
     } finally {
       setRejecting(false);
     }
@@ -512,7 +526,7 @@ export function AiClassificationSection({
       );
       setSurvey(created);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("regenerateSurveyError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("regenerateSurveyError")));
     } finally {
       setRegenerating(false);
     }
@@ -540,7 +554,7 @@ export function AiClassificationSection({
       onNeedUpdated?.(updated);
       setOverriding(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("overrideError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("overrideError")));
     } finally {
       setOverridePreviewLoading(false);
     }
@@ -659,7 +673,7 @@ export function AiClassificationSection({
                     need.allDomainsSelected
                       ? [t("allDomainsChip")]
                       : need.aiSuggestedDomain
-                        ? [need.aiSuggestedDomain]
+                        ? [localizedDomain(need.aiSuggestedDomain)]
                         : []
                   }
                   variant="secondary"
@@ -675,7 +689,7 @@ export function AiClassificationSection({
                     items={
                       need.allDomainsSelected
                         ? [t("allSubDomainsChip")]
-                        : [need.aiSuggestedSubDomain!]
+                        : [localizedSubDomain(need.aiSuggestedSubDomain!)]
                     }
                     variant="secondary"
                     border
@@ -687,7 +701,7 @@ export function AiClassificationSection({
                   dir="auto"
                   className="text-foreground/80 text-xs leading-relaxed italic"
                 >
-                  {latest.suggestion.rationale}
+                  <AutoTranslate text={latest.suggestion.rationale} />
                 </p>
               ) : null}
             </div>
@@ -781,7 +795,7 @@ export function AiClassificationSection({
                       need.allDomainsSelected
                         ? [t("allDomainsChip")]
                         : need.aiSuggestedDomain
-                          ? [need.aiSuggestedDomain]
+                          ? [localizedDomain(need.aiSuggestedDomain)]
                           : []
                     }
                     variant="secondary"
@@ -797,7 +811,7 @@ export function AiClassificationSection({
                       items={
                         need.allDomainsSelected
                           ? [t("allSubDomainsChip")]
-                          : [need.aiSuggestedSubDomain!]
+                          : [localizedSubDomain(need.aiSuggestedSubDomain!)]
                       }
                       variant="secondary"
                       border
@@ -809,7 +823,7 @@ export function AiClassificationSection({
                     dir="auto"
                     className="text-foreground/80 text-xs leading-relaxed italic"
                   >
-                    {latest.suggestion.rationale}
+                    <AutoTranslate text={latest.suggestion.rationale} />
                   </p>
                 ) : null}
               </div>
@@ -1083,7 +1097,19 @@ export function AiClassificationSection({
           </>
         ) : null}
 
-        {hasSurvey && !canReview ? (
+        {/* Fallback nav for once a decision has already been made
+            (isReadyForReview false) — the canReview branch above only
+            renders this same navigation while isReadyForReview is true
+            (it lives inside that ternary, alongside the Approve/Modify/
+            Reject row). Without this, an Approver who has already decided
+            a classification (e.g. Human Reviewer, or NGO Admin/System
+            Admin acting as reviewer) had no way back to the Survey
+            Builder from this page at all — found while tracing a
+            "the survey button just isn't there" report for a
+            reviewer_approved Need. Gated on `!isReadyForReview`, not
+            `!canReview`: an Approver still viewing an undecided
+            suggestion correctly sees the decision row instead, not this. */}
+        {hasSurvey && !isReadyForReview ? (
           <div className="pt-2">
             <Button asChild size="sm" className="gap-2 font-medium">
               <Link href={`/survey-builder/${need.id}`}>
@@ -1092,7 +1118,7 @@ export function AiClassificationSection({
               </Link>
             </Button>
           </div>
-        ) : canRegenerateSurvey && !canReview ? (
+        ) : canRegenerateSurvey && !isReadyForReview ? (
           <div className="space-y-1.5 pt-2">
             <Button
               type="button"
@@ -1125,7 +1151,10 @@ export function AiClassificationSection({
             <div className="space-y-1.5">
               <Label>{t("domainLabel")}</Label>
               <MultiSelect
-                options={domainOptions.map((d) => ({ value: d.name, label: d.name }))}
+                options={domainOptions.map((d) => ({
+                  value: d.name,
+                  label: localizedDomain(d.name),
+                }))}
                 values={overrideDomains}
                 onChange={handleOverrideDomainsChange}
                 placeholder={t("selectDomain")}

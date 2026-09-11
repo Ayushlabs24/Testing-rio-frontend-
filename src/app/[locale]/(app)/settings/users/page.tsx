@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ModuleAccessList } from "@/components/features/settings/module-access-list";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { LoadingButton } from "@/components/common/loading-button";
 import {
   AlertDialog,
@@ -114,6 +115,7 @@ function UserDialog({
 }: UserDialogProps) {
   const t = useTranslations("app.settings.users");
   const tValidation = useTranslations("auth.validation");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
   const [formError, setFormError] = useState<string | null>(null);
   // Set only right after a successful create — shows a confirmation step
   // (emailed, or the temporary password itself if the mailer isn't
@@ -164,7 +166,7 @@ function UserDialog({
   // When editing someone who already holds a non-assignable role, keep it in
   // the options so the Select shows their current role instead of a blank —
   // it simply can't be freshly assigned to anyone via this entity screen.
-  const roleOptions = useMemo<Array<Pick<RoleSummary, "id" | "name">>>(() => {
+  const roleOptions = useMemo<Array<Pick<RoleSummary, "id" | "name" | "key">>>(() => {
     if (user && !roles.some((role) => role.id === user.role.id)) {
       return [user.role, ...roles];
     }
@@ -296,7 +298,7 @@ function UserDialog({
                 <SelectContent>
                   {roleOptions.map((role) => (
                     <SelectItem key={role.id} value={role.id}>
-                      {role.name}
+                      {tRoleNames.has(role.key) ? tRoleNames(role.key) : role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -427,6 +429,7 @@ function UserDetailSheet({
   onDeleted: (id: string) => void;
 }) {
   const t = useTranslations("app.settings.users");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -441,15 +444,23 @@ function UserDetailSheet({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <SheetTitle>{user.name}</SheetTitle>
+                  <SheetTitle>
+                    <AutoTranslate text={user.name} />
+                  </SheetTitle>
                   <SheetDescription>{user.email}</SheetDescription>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {isCrossEntity ? (
-                  <Badge variant="outline">{user.organizationName}</Badge>
+                  <Badge variant="outline">
+                    <AutoTranslate text={user.organizationName} />
+                  </Badge>
                 ) : null}
-                <Badge variant="secondary">{user.role.name}</Badge>
+                <Badge variant="secondary">
+                  {tRoleNames.has(user.role.key)
+                    ? tRoleNames(user.role.key)
+                    : user.role.name}
+                </Badge>
                 <StatusBadge status={user.status} label={t(`status.${user.status}`)} />
               </div>
             </SheetHeader>
@@ -499,6 +510,7 @@ function UserDetailSheet({
 export default function UsersSettingsPage() {
   const t = useTranslations("app.settings.users");
   const tOrgs = useTranslations("app.settings.organizations");
+  const tRoleNames = useTranslations("app.settings.roles.roleNames");
   const { session } = useAuth();
   const isCrossEntity = session?.role.crossEntity ?? false;
   const canWrite = usePermission("entityTeam", "write");
@@ -670,7 +682,7 @@ export default function UsersSettingsPage() {
                     <SelectItem value={ALL}>{t("filterOrganizationAll")}</SelectItem>
                     {availableOrganizations.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -746,7 +758,7 @@ export default function UsersSettingsPage() {
                           </Avatar>
                           <div>
                             <p className="text-foreground text-sm font-medium">
-                              {user.name}
+                              <AutoTranslate text={user.name} />
                             </p>
                             <p className="text-muted-foreground text-xs">{user.email}</p>
                           </div>
@@ -754,11 +766,15 @@ export default function UsersSettingsPage() {
                       </TableCell>
                       {isCrossEntity ? (
                         <TableCell className="text-muted-foreground">
-                          {user.organizationName}
+                          <AutoTranslate text={user.organizationName} />
                         </TableCell>
                       ) : null}
                       <TableCell>
-                        <Badge variant="secondary">{user.role.name}</Badge>
+                        <Badge variant="secondary">
+                          {tRoleNames.has(user.role.key)
+                            ? tRoleNames(user.role.key)
+                            : user.role.name}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <StatusBadge

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/routing";
+import { localizedName } from "@/lib/bilingual";
 import {
   Sparkles,
   MapPin,
@@ -20,6 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -60,21 +63,27 @@ export function GenerateSummaryModal({
   onGenerated: (response: PrioritySummaryResponse) => void;
 }) {
   const t = useTranslations("PriorityDashboard.generateModal");
+  const locale = useLocale() as AppLocale;
   const dynamicDomains = useSectorOptions(true);
-  const [regionsList, setRegionsList] = useState<string[]>([]);
+  const [regionsList, setRegionsList] = useState<
+    { name: string; nameAr: string | null }[]
+  >([]);
   const domainsList = useMemo(() => dynamicDomains, [dynamicDomains]);
 
   const [scope, setScope] = useState<SummaryScopeType>("VILLAGE");
   const [selectedVillage, setSelectedVillage] = useState<string>(villages[0] || "");
-  const [selectedDomain, setSelectedDomain] = useState<string>(domainsList[0] || "");
+  const [selectedDomain, setSelectedDomain] = useState<string>(
+    domainsList[0]?.name || "",
+  );
   const [selectedRegion, setSelectedRegion] = useState<string>("");
 
   useEffect(() => {
     geographyService
       .listRegions()
       .then((regs) => {
-        const names = regs.map((r) => r.name);
-        setRegionsList(names);
+        const options = regs.map((r) => ({ name: r.name, nameAr: r.nameAr }));
+        setRegionsList(options);
+        const names = options.map((o) => o.name);
         if (names.length > 0) {
           setSelectedRegion((prev) => prev || names[0]);
         }
@@ -267,7 +276,7 @@ export function GenerateSummaryModal({
                     <SelectItem value="">{t("allVillagesConsolidated")}</SelectItem>
                     {villages.map((v) => (
                       <SelectItem key={v} value={v}>
-                        {v}
+                        <AutoTranslate text={v} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -287,8 +296,8 @@ export function GenerateSummaryModal({
                     </SelectTrigger>
                     <SelectContent>
                       {domainsList.map((d) => (
-                        <SelectItem key={d} value={d}>
-                          {d}
+                        <SelectItem key={d.name} value={d.name}>
+                          {localizedName(d, locale)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -306,7 +315,7 @@ export function GenerateSummaryModal({
                       <SelectItem value="">{t("allVillages")}</SelectItem>
                       {villages.map((v) => (
                         <SelectItem key={v} value={v}>
-                          {v}
+                          <AutoTranslate text={v} />
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -327,8 +336,8 @@ export function GenerateSummaryModal({
                     </SelectTrigger>
                     <SelectContent>
                       {regionsList.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
+                        <SelectItem key={r.name} value={r.name}>
+                          {localizedName(r, locale)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -346,7 +355,7 @@ export function GenerateSummaryModal({
                       <SelectItem value="">{t("allRegionVillages")}</SelectItem>
                       {villages.map((v) => (
                         <SelectItem key={v} value={v}>
-                          {v}
+                          <AutoTranslate text={v} />
                         </SelectItem>
                       ))}
                     </SelectContent>

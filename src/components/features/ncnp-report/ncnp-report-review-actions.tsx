@@ -14,6 +14,7 @@ import {
 import { RejectReasonDialog } from "@/components/features/sharing/reject-reason-dialog";
 import { usePermission } from "@/hooks/use-permission";
 import { ApiError } from "@/services/api/types";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import {
   ncnpReportReviewService,
   type NcnpReportReviewSummary,
@@ -68,6 +69,7 @@ export function NcnpReportReviewActions({
   onError: (message: string) => void;
 }) {
   const t = useTranslations("systemAdmin.ncnpReport.review");
+  const tApiErr = useTranslations("apiErrors");
   const canPublish = usePermission("ncnpReport", "write");
   const canReview = usePermission("ncnpReport", "approve");
   const [dialogMode, setDialogMode] = useState<"approve" | "reject" | null>(null);
@@ -79,7 +81,7 @@ export function NcnpReportReviewActions({
       onChanged();
       return true;
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : t("actionError"));
+      onError(resolveApiErrorMessage(err, tApiErr, t("actionError")));
       return false;
     }
   }

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { use, useEffect, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useAutoTranslate } from "@/hooks/use-auto-translate";
 import { BackButton } from "@/components/common/back-button";
 import type { AppLocale } from "@/i18n/routing";
 import {
@@ -27,6 +29,7 @@ import {
   isFlaggedConfidence,
 } from "@/lib/confidence-band";
 import { cn } from "@/lib/utils";
+import { localizedName } from "@/lib/bilingual";
 import { DeleteNeedDialog } from "@/components/features/studies/delete-need-dialog";
 import { DeleteStudyDialog } from "@/components/features/studies/delete-study-dialog";
 import { ImportNeedsDialog } from "@/components/features/studies/import-needs-dialog";
@@ -123,7 +126,7 @@ function VillageChips({ villages }: { villages: string[] }) {
       {villages.map((village) => (
         <Badge key={village} variant="secondary" className="gap-1">
           <MapPin className="size-3" />
-          {village}
+          <AutoTranslate text={village} />
         </Badge>
       ))}
     </div>
@@ -139,7 +142,10 @@ function CompactNameList({ names }: { names: string[] }) {
   if (names.length === 0) return <span className="text-muted-foreground">—</span>;
   return (
     <span className="text-foreground truncate" title={names.join(", ")}>
-      {names[0]}
+      {/* Names can be master data already resolved to the locale
+          (governorate/center via localizedName — a no-op here) or free-text
+          villages that still need translating on a language switch. */}
+      <AutoTranslate text={names[0]} />
       {names.length > 1 ? (
         <span className="text-muted-foreground"> +{names.length - 1}</span>
       ) : null}
@@ -219,6 +225,10 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
   const canDeleteNeed = usePermission("dataCollection", "write");
 
   const [study, setStudy] = useState<StudyDetail | null>(null);
+  // PageHeader's `title` is a plain string, not JSX — resolved through the
+  // hook (called unconditionally, ahead of the early returns below) rather
+  // than wrapped in <AutoTranslate> at the call site.
+  const studyTitle = useAutoTranslate(study?.title).text;
   const studyGovernorates = useStudyGovernorates(study);
   const studyCenters = useStudyCenters(study);
   const [needRows, setNeedRows] = useState<NeedRowData[] | null>(null);
@@ -368,7 +378,7 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
           {t("eyebrow")}
         </p>
         <PageHeader
-          title={study.title}
+          title={studyTitle}
           actions={
             canWrite ? (
               <>
@@ -522,23 +532,26 @@ export default function StudyDetailPage({ params }: { params: Promise<{ id: stri
                               dir="auto"
                               className="max-w-52 text-sm font-medium break-words whitespace-normal"
                             >
-                              {need.title}
+                              <AutoTranslate text={need.title} />
                             </TableCell>
                             <TableCell className="max-w-40 text-sm">
                               <CompactNameList
-                                names={need.governorateIds.map(
-                                  (id) =>
-                                    studyGovernorates.find((g) => g.id === id)?.name ??
-                                    id,
-                                )}
+                                names={need.governorateIds.map((id) => {
+                                  const governorate = studyGovernorates.find(
+                                    (g) => g.id === id,
+                                  );
+                                  return governorate
+                                    ? localizedName(governorate, locale)
+                                    : id;
+                                })}
                               />
                             </TableCell>
                             <TableCell className="max-w-40 text-sm">
                               <CompactNameList
-                                names={need.centerIds.map(
-                                  (id) =>
-                                    studyCenters.find((c) => c.id === id)?.name ?? id,
-                                )}
+                                names={need.centerIds.map((id) => {
+                                  const center = studyCenters.find((c) => c.id === id);
+                                  return center ? localizedName(center, locale) : id;
+                                })}
                               />
                             </TableCell>
                             <TableCell className="max-w-32 text-sm">

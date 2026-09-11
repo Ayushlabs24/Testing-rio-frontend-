@@ -2,6 +2,7 @@
 
 import { ArrowRight, Eye, User } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { FormattedDate } from "@/components/common/formatted-date";
 import {
   Dialog,
   DialogContent,
@@ -73,7 +74,7 @@ export function ChangeDetailsDialog({
             </div>
             {createdAt ? (
               <span className="text-muted-foreground shrink-0 tabular-nums">
-                {new Date(createdAt).toLocaleString()}
+                <FormattedDate value={createdAt} withTime />
               </span>
             ) : null}
           </div>

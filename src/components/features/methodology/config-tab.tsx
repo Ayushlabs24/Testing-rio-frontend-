@@ -4,6 +4,8 @@ import { CheckCircle2, Info, Pencil, Plus, ShieldCheck, XCircle } from "lucide-r
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { AppLocale } from "@/i18n/routing";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { localizedName } from "@/lib/bilingual";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,13 +42,13 @@ import { METHODOLOGY_CONFIG_HISTORY_PAGE_SIZE } from "@/config/pagination";
 import { CleaningSettingsPanel } from "@/components/features/data-quality/cleaning-settings-panel";
 import { usePermission } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
-import { ApiError } from "@/services/api/types";
 import { methodologyConfigService } from "@/services/methodology-config/methodology-config.service";
 import type {
   MethodologyConfig,
   MethodologyConfigHistoryEntry,
 } from "@/services/methodology-config/methodology-config.types";
 import { studyConfigService } from "@/services/study-config/study-config.service";
+import { resolveApiErrorMessage } from "@/lib/api-error-message";
 import type {
   CreateStudyConfigOptionPayload,
   StudyConfigOption,
@@ -72,6 +74,7 @@ function VersionCard({
   onChanged: (updated: MethodologyConfig) => void;
 }) {
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   const [editOpen, setEditOpen] = useState(false);
   const [versionInput, setVersionInput] = useState(config.version);
   const [saving, setSaving] = useState(false);
@@ -89,7 +92,7 @@ function VersionCard({
       onChanged(updated);
       setEditOpen(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -118,7 +121,7 @@ function VersionCard({
       onChanged(updated);
       setReviewDialogMode(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     }
   }
 
@@ -142,7 +145,9 @@ function VersionCard({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <p className="text-muted-foreground text-xs">{t("versionLabel")}</p>
-            <p className="text-foreground text-sm font-medium">{config.version}</p>
+            <p className="text-foreground text-sm font-medium">
+              <AutoTranslate text={config.version} />
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t("statusLabel")}</p>
@@ -164,7 +169,11 @@ function VersionCard({
           <div>
             <p className="text-muted-foreground text-xs">{t("publishedByLabel")}</p>
             <p className="text-foreground text-sm font-medium">
-              {config.publishedByName ?? "—"}
+              {config.publishedByName ? (
+                <AutoTranslate text={config.publishedByName} />
+              ) : (
+                "—"
+              )}
             </p>
           </div>
           <div>
@@ -194,11 +203,11 @@ function VersionCard({
           <div className="bg-muted/50 mt-4 rounded-md p-3">
             <p className="text-muted-foreground text-xs">{t("reviewerNoteLabel")}</p>
             <p className="text-foreground mt-1 text-sm">
-              {config.reviewNotes ?? "—"}
+              {config.reviewNotes ? <AutoTranslate text={config.reviewNotes} /> : "—"}
               {config.reviewedByName ? (
                 <span className="text-muted-foreground">
                   {" — "}
-                  {config.reviewedByName}
+                  <AutoTranslate text={config.reviewedByName} />
                   {config.reviewedAt ? (
                     <>
                       {" · "}
@@ -298,6 +307,7 @@ function VersionCard({
 // there was no UI anywhere to see it, only the single current row.
 function ConfigHistoryCard() {
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<MethodologyConfigHistoryEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -314,7 +324,7 @@ function ConfigHistoryCard() {
         // as a quiet empty state, or a real outage looks identical to a
         // brand-new config with nothing recorded.
         setHistory(null);
-        setLoadError(err instanceof ApiError ? err.message : t("historyLoadError"));
+        setLoadError(resolveApiErrorMessage(err, tApiErr, t("historyLoadError")));
       });
   }
 
@@ -371,11 +381,17 @@ function ConfigHistoryCard() {
                       >
                         {t(`historyChangeType.${entry.changeType}`)}
                       </Badge>
-                      <span className="text-foreground">{entry.version}</span>
+                      <span className="text-foreground">
+                        <AutoTranslate text={entry.version} />
+                      </span>
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      {entry.changedByName ?? t("historyUnknownActor")} ·{" "}
-                      <FormattedDate value={entry.changedAt} withTime />
+                      {entry.changedByName ? (
+                        <AutoTranslate text={entry.changedByName} />
+                      ) : (
+                        t("historyUnknownActor")
+                      )}{" "}
+                      · <FormattedDate value={entry.changedAt} withTime />
                     </div>
                   </li>
                 ))}
@@ -451,6 +467,7 @@ function ConfigurableOptionsCard({
   setActive: (id: string, isActive: boolean) => Promise<StudyConfigOption>;
 }) {
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
   const locale = useLocale() as AppLocale;
   const [options, setOptions] = useState<StudyConfigOption[] | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -493,7 +510,7 @@ function ConfigurableOptionsCard({
       setAddOpen(false);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setAdding(false);
     }
@@ -506,7 +523,7 @@ function ConfigurableOptionsCard({
       await setActive(option.id, !option.isActive);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setTogglingId(null);
     }
@@ -529,7 +546,7 @@ function ConfigurableOptionsCard({
       setEditing(null);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSavingEdit(false);
     }
@@ -672,6 +689,12 @@ export function MethodologyConfigTab() {
   // a DIFFERENT grant from this page's own write permission.
   const canTuneCleaning = usePermission("dataQuality", "write");
   const t = useTranslations("app.settings.methodology.config");
+  const tApiErr = useTranslations("apiErrors");
+  // Client-reported gap (2026-09-10) — each Strategic Axis's domain-list
+  // subtitle (e.g. "Livelihood, Culture") is a plain denormalized English
+  // name list on MethodologyConfig, same shape `useDomainArabicMap` already
+  // exists to resolve for Need/AI-decision domain strings elsewhere.
+  const { localizedDomain } = useDomainArabicMap();
   const canWrite = usePermission("methodologyQuestionBank", "write");
   const canApprove = usePermission("methodologyQuestionBank", "approve");
 
@@ -885,7 +908,7 @@ export function MethodologyConfigTab() {
       applyConfig(updated);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t("genericError"));
+      setError(resolveApiErrorMessage(err, tApiErr, t("genericError")));
     } finally {
       setSaving(false);
     }
@@ -1247,7 +1270,7 @@ export function MethodologyConfigTab() {
                     <div>
                       <span className="text-foreground text-sm">{axisLabel}</span>
                       <p className="text-muted-foreground text-xs">
-                        {axis.domains.join(", ")}
+                        {axis.domains.map(localizedDomain).join(", ")}
                       </p>
                     </div>
                     <Input
@@ -1501,6 +1524,7 @@ export function MethodologyConfigTab() {
         update={studyConfigService.updateNeedTheme}
         setActive={studyConfigService.setNeedThemeActive}
       />
+      */}
 
       {/* RIO-FR-002 / Q23 — the data-cleaning thresholds. They live HERE
           rather than on the Data Quality screen because that is where they are

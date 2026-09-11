@@ -16,12 +16,24 @@ export interface Question {
   subDomain: string;
   indicator?: string;
   kpi?: string;
+  // RIO Arabic Localization (Approach 3, Hybrid) — the backend has always
+  // returned these (see questions.service.ts's toQuestionRow), this type
+  // just never declared them, so Survey Builder's eligible/recommended
+  // question lists always showed the English indicator/KPI even when the
+  // Question Bank had a client-supplied Arabic value sitting right there.
+  indicatorAr?: string | null;
+  kpiAr?: string | null;
   /** RIO-AI-002: the methodology weight behind this question — null when
    * the bank entry has none set. */
   priorityWeight?: number | null;
   questionText: string;
+  // RIO Arabic Localization (Approach 3, Hybrid) — the backend has always
+  // returned this (see questions.service.ts's toQuestionRow), this type just
+  // never declared it, so nothing in Survey Builder ever read it.
+  questionTextAr?: string | null;
   answerType: string;
   answerOptions?: string[] | null;
+  answerOptionsAr?: string[] | null;
   requiredOptional: string;
 }
 
@@ -40,12 +52,26 @@ export interface SurveyQuestionItem {
   bankQuestionId: string | null;
   questionCode: string | null;
   questionText: string;
+  // RIO Arabic Localization (Approach 3, Hybrid) — added 2026-09-08. Set
+  // for a Question Bank item (client-supplied translation); always null/
+  // undefined for a custom/additional item (isCustom: true), which has no
+  // such column — see the backend's toQuestionDto. Optional (like
+  // priorityWeight below) so a client-constructed optimistic item — added
+  // locally before the next save/reload round-trips it through the API —
+  // doesn't have to fabricate a value for a field it can't know yet.
+  questionTextAr?: string | null;
   answerType: string;
   answerOptions: string[] | null;
+  answerOptionsAr?: string[] | null;
   domain: string | null;
   subDomain: string | null;
   indicator: string | null;
   kpi: string | null;
+  // RIO Arabic Localization (Approach 3, Hybrid) — same as questionTextAr
+  // above: set for a Question Bank item (client-supplied translation),
+  // always null for a custom/additional item (isCustom: true).
+  indicatorAr?: string | null;
+  kpiAr?: string | null;
   /** RIO-AI-002: only ever set for a Question Bank item (isCustom: false)
    * on internal Survey Builder screens — undefined on the citizen-facing
    * response payload, which never receives it (see the backend's

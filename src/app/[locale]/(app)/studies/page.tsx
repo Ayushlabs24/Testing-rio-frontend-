@@ -3,6 +3,7 @@
 import { ClipboardList, Plus, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { PageHeader } from "@/components/common/page-header";
@@ -170,7 +171,7 @@ export default function StudiesPage() {
                     <SelectItem value={ALL_ORGS}>{t("filterOrganizationAll")}</SelectItem>
                     {availableOrganizations.map((org) => (
                       <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                        <AutoTranslate text={org.name} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -226,12 +227,12 @@ export default function StudiesPage() {
                           href={`/studies/${study.id}`}
                           className="text-foreground block text-sm font-medium break-words hover:underline"
                         >
-                          {study.title}
+                          <AutoTranslate text={study.title} />
                         </Link>
                       </TableCell>
                       {isCrossEntity ? (
                         <TableCell className="text-muted-foreground py-4 align-middle text-sm whitespace-normal">
-                          {study.orgName ?? "—"}
+                          {study.orgName ? <AutoTranslate text={study.orgName} /> : "—"}
                         </TableCell>
                       ) : null}
                       <TableCell className="text-muted-foreground py-4 align-middle text-sm tabular-nums">

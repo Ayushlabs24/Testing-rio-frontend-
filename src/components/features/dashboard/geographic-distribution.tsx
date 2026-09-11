@@ -13,7 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AutoTranslate } from "@/components/common/auto-translate";
 import { Link } from "@/i18n/navigation";
+import { useDomainArabicMap } from "@/hooks/use-domain-arabic-map";
 import { cn } from "@/lib/utils";
 import { geographicDashboardService } from "@/services/geographic-dashboard/geographic-dashboard.service";
 import {
@@ -68,6 +70,8 @@ export function GeographicDistribution({
   // that would drift.
   const tUrgency = useTranslations("app.studies.urgency");
   const tStatus = useTranslations("app.studies.status");
+  const tInitiativeStatus = useTranslations("app.initiatives.statusValues");
+  const { localizedDomain } = useDomainArabicMap();
 
   // Center is the default: it is the finest grain the client's own
   // geographic reference goes to, and 1,022 of the 1,404 centers now carry a
@@ -124,6 +128,7 @@ export function GeographicDistribution({
       initiatives: (count: number) => tMap("initiativesCount", { count }),
       empty: tMap("noPlaces"),
       approximate: (km: number) => tMap("approximate", { km }),
+      band: (band: (typeof PRIORITY_BANDS)[number]) => tMap(`band.${band}`),
     }),
     [tMap],
   );
@@ -171,7 +176,7 @@ export function GeographicDistribution({
               <SelectItem value={ALL}>{tMap("filter.allSectors")}</SelectItem>
               {(data?.available.sectors ?? []).map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s}
+                  <AutoTranslate text={s} />
                 </SelectItem>
               ))}
             </SelectContent>
@@ -257,7 +262,9 @@ export function GeographicDistribution({
               {selected ? (
                 <div className="space-y-5">
                   <div>
-                    <h3 className="text-foreground text-xl font-bold">{selected.name}</h3>
+                    <h3 className="text-foreground text-xl font-bold">
+                      <AutoTranslate text={selected.name} />
+                    </h3>
                     <p className="text-muted-foreground mt-0.5 text-sm font-medium">
                       {variant === "ncnp"
                         ? t("geoOrgsActive", { count: selected.orgCount })
@@ -311,7 +318,7 @@ export function GeographicDistribution({
                     <div className="space-y-1">
                       <PanelLabel>{t("geoLeadingDomain")}</PanelLabel>
                       <p className="text-foreground text-base font-bold">
-                        {selected.leadingDomain}
+                        {localizedDomain(selected.leadingDomain)}
                       </p>
                     </div>
                   ) : null}
@@ -327,9 +334,13 @@ export function GeographicDistribution({
                             href="/initiatives"
                             className="text-primary inline-flex items-center gap-1 text-sm underline-offset-2 hover:underline"
                           >
-                            {i.name}
+                            <AutoTranslate text={i.name} />
                             <span className="text-muted-foreground text-xs">
-                              ({i.status})
+                              (
+                              {tInitiativeStatus.has(i.status)
+                                ? tInitiativeStatus(i.status)
+                                : i.status}
+                              )
                             </span>
                             <ArrowUpRight className="size-3.5" />
                           </Link>
@@ -354,7 +365,7 @@ export function GeographicDistribution({
                             <Row
                               key={org.name}
                               icon={<Building2 className="text-primary size-4" />}
-                              name={org.name}
+                              name={<AutoTranslate text={org.name} />}
                               meta={`${org.studyCount} ${
                                 org.studyCount === 1
                                   ? t("studySingular")
@@ -377,7 +388,7 @@ export function GeographicDistribution({
                           <Row
                             key={v}
                             icon={<MapPin className="text-primary size-4" />}
-                            name={v}
+                            name={<AutoTranslate text={v} />}
                           />
                         ))}
                       </div>
@@ -441,7 +452,7 @@ function Row({
   meta,
 }: {
   icon: React.ReactNode;
-  name: string;
+  name: React.ReactNode;
   meta?: string;
 }) {
   return (

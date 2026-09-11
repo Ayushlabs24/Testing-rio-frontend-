@@ -9,8 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { FormattedDate } from "@/components/common/formatted-date";
 import { PageContainer } from "@/components/common/page-container";
 import { CrossEntityGuard } from "@/components/layout/cross-entity-guard";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AutoTranslate } from "@/components/common/auto-translate";
+import {
+  isEntityLabelTranslatable,
+  localizeAuditReportPhrases,
+  type AuditEntityType,
+} from "@/config/audit";
 import { apiClient } from "@/services/api/client";
 import { organizationsService } from "@/services/organizations/organizations.service";
 import type { Organization } from "@/services/organizations/organizations.types";
@@ -95,13 +102,21 @@ function formatAuditActionLabel(
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * `translatable` distinguishes real entityLabel content (a Study/Report
+ * title, a composed English sentence — safe for `isEntityLabelTranslatable`
+ * to decide on) from an org name or a synthesized "Entity (uuid8)" fallback,
+ * neither of which should ever go through `<AutoTranslate>` regardless of
+ * entityType — an org's registered name is a proper name no matter which
+ * audit row it's attached to, and the uuid fallback has nothing to translate.
+ */
 function resolveAuditItemLabel(
   item: AuditItem,
   orgMap: Map<string, Organization>,
-): string {
+): { text: string; translatable: boolean } {
   const isUuid = !!item.entityLabel && UUID_REGEX.test(item.entityLabel);
   if (!isUuid && item.entityLabel) {
-    return item.entityLabel;
+    return { text: item.entityLabel, translatable: true };
   }
 
   const targetOrgId =
@@ -110,18 +125,29 @@ function resolveAuditItemLabel(
       : item.organizationId;
 
   if (targetOrgId && orgMap.has(targetOrgId)) {
-    return orgMap.get(targetOrgId)!.name;
+    return { text: orgMap.get(targetOrgId)!.name, translatable: false };
   }
 
   if (isUuid && item.entityLabel) {
-    return `${item.entityType.charAt(0).toUpperCase() + item.entityType.slice(1)} (${item.entityLabel.slice(0, 8)})`;
+    return {
+      text: `${item.entityType.charAt(0).toUpperCase() + item.entityType.slice(1)} (${item.entityLabel.slice(0, 8)})`,
+      translatable: false,
+    };
   }
 
-  return item.entityLabel || item.entityType;
+  return { text: item.entityLabel || item.entityType, translatable: !!item.entityLabel };
 }
 
 export default function SystemAdminAuditLogPage() {
   const t = useTranslations("systemAdmin.auditLog");
+  const locale = useLocale();
+  // Bug found in the 2026-09-08 bilingual audit: `formatAuditActionLabel`
+  // has always supported an optional translator argument, but nothing in
+  // this file ever obtained one — every call fell straight through to the
+  // manual title-casing fallback, so action labels here never actually
+  // translated despite the function looking like it handled it.
+  const tActions = useTranslations("app.settings.audit.actions");
+  const tEntities = useTranslations("app.settings.audit.entities");
   const [items, setItems] = useState<AuditItem[]>([]);
   const [total, setTotal] = useState(0);
   const [limit] = useState(25);
@@ -375,12 +401,14 @@ export default function SystemAdminAuditLogPage() {
                     items.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                          {new Date(item.createdAt).toLocaleString()}
+                          <FormattedDate value={item.createdAt} withTime />
                         </TableCell>
                         <TableCell className="text-foreground text-xs font-medium">
                           {item.actor ? (
                             <div>
-                              <span>{item.actor.name}</span>
+                              <span>
+                                <AutoTranslate text={item.actor.name} />
+                              </span>
                               <span className="text-muted-foreground block font-mono text-[10px]">
                                 {item.actor.email}
                               </span>
@@ -392,22 +420,43 @@ export default function SystemAdminAuditLogPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs font-medium">
-                          {item.organizationId
-                            ? (orgMap.get(item.organizationId)?.name ??
-                              item.organizationId.slice(0, 8) + "...")
-                            : t("globalScope")}
+                          {item.organizationId ? (
+                            orgMap.get(item.organizationId)?.name ? (
+                              <AutoTranslate
+                                text={orgMap.get(item.organizationId)!.name}
+                              />
+                            ) : (
+                              item.organizationId.slice(0, 8) + "..."
+                            )
+                          ) : (
+                            t("globalScope")
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[11px] font-medium">
-                            {formatAuditActionLabel(item.action)}
+                            {formatAuditActionLabel(item.action, tActions)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">
                           <span className="text-foreground block font-semibold break-words">
-                            {resolveAuditItemLabel(item, orgMap)}
+                            {(() => {
+                              const label = resolveAuditItemLabel(item, orgMap);
+                              return label.translatable &&
+                                isEntityLabelTranslatable(
+                                  item.entityType as AuditEntityType,
+                                ) ? (
+                                <AutoTranslate
+                                  text={localizeAuditReportPhrases(label.text, locale)}
+                                />
+                              ) : (
+                                label.text
+                              );
+                            })()}
                           </span>
                           <span className="text-muted-foreground block font-mono text-[10px] capitalize">
-                            {item.entityType}
+                            {tEntities.has(item.entityType)
+                              ? tEntities(item.entityType)
+                              : item.entityType}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
