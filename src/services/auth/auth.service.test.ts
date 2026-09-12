@@ -315,10 +315,10 @@ describe("authService", () => {
       delete process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH;
       vi.mocked(apiClient.post).mockResolvedValue({ message: "Code sent." });
 
-      await authService.requestOtp({ email: "priya@demo.org" });
+      await authService.requestOtp({ identifier: "priya@demo.org" });
 
       expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.requestOtp, {
-        email: "priya@demo.org",
+        identifier: "priya@demo.org",
       });
     });
 
@@ -327,12 +327,12 @@ describe("authService", () => {
       vi.mocked(apiClient.post).mockResolvedValue(apiSession);
 
       const session = await authService.verifyOtp({
-        email: "priya@demo.org",
+        identifier: "priya@demo.org",
         code: "000000",
       });
 
       expect(apiClient.post).toHaveBeenCalledWith(endpoints.auth.verifyOtp, {
-        email: "priya@demo.org",
+        identifier: "priya@demo.org",
         code: "000000",
       });
       expect(session.token).toBe("jwt-token");
@@ -346,7 +346,7 @@ describe("authService", () => {
       });
 
       await expect(
-        authService.verifyOtp({ email: "priya@demo.org", code: "123456" }),
+        authService.verifyOtp({ identifier: "priya@demo.org", code: "123456" }),
       ).rejects.toMatchObject({ status: 401 });
     });
 
@@ -357,14 +357,14 @@ describe("authService", () => {
       // The mock path resolves against the mock user directory, not the
       // (mocked-away) apiClient — apiClient must never be called here.
       await expect(
-        authService.requestOtp({ email: "not-a-real-mock-user@example.com" }),
+        authService.requestOtp({ identifier: "not-a-real-mock-user@example.com" }),
       ).rejects.toMatchObject({ status: 404 });
       expect(apiClient.post).not.toHaveBeenCalled();
 
       // A wrong code is rejected without ever reaching apiClient either.
       await expect(
         authService.verifyOtp({
-          email: "not-a-real-mock-user@example.com",
+          identifier: "not-a-real-mock-user@example.com",
           code: mockOtpCodeForTests(),
         }),
       ).rejects.toMatchObject({ status: 401 });

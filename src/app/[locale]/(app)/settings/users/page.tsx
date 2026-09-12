@@ -9,6 +9,7 @@ import { z } from "zod";
 import { ModuleAccessList } from "@/components/features/settings/module-access-list";
 import { AutoTranslate } from "@/components/common/auto-translate";
 import { LoadingButton } from "@/components/common/loading-button";
+import { PhoneNumberInput } from "@/components/common/phone-number-input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -136,6 +137,11 @@ function UserDialog({
   const schema = z.object({
     name: z.string().min(1, { message: tValidation("nameRequired") }),
     email: z.string().email({ message: tValidation("emailInvalid") }),
+    // RIO MFA — optional; captured here (invite or later edit) is what
+    // makes "Sign in with OTP" over SMS available to this user, whatever
+    // their role. No format validation beyond "just whitespace" — same
+    // reasoning as the signup form's own mobileNumber field.
+    mobileNumber: z.string(),
     roleId: z.string().min(1, { message: tValidation("roleRequired") }),
     status: z.enum(["active", "invited", "disabled"]),
   });
@@ -153,12 +159,14 @@ function UserDialog({
     values: {
       name: user?.name ?? "",
       email: user?.email ?? "",
+      mobileNumber: user?.mobileNumber ?? "",
       roleId: user?.role.id ?? "",
       status: user?.status ?? "active",
     },
   });
 
   const selectedRoleId = useWatch({ control, name: "roleId" });
+  const mobileNumber = useWatch({ control, name: "mobileNumber" });
   const selectedStatus = useWatch({ control, name: "status" });
   const selectedRole = roles.find((role) => role.id === selectedRoleId);
 
@@ -181,6 +189,7 @@ function UserDialog({
           name: values.name,
           roleId: values.roleId,
           status: values.status,
+          mobileNumber: values.mobileNumber.trim(),
         };
         const updated = await usersService.update(user!.id, changes);
         onSaved({
@@ -203,6 +212,7 @@ function UserDialog({
         name: values.name,
         email: values.email,
         roleId: values.roleId,
+        mobileNumber: values.mobileNumber.trim() ? values.mobileNumber.trim() : undefined,
       });
       onSaved({
         ...created,
@@ -278,13 +288,35 @@ function UserDialog({
                 <p className="text-destructive text-sm">{errors.name.message}</p>
               ) : null}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("emailLabel")}</Label>
-              <Input id="email" type="email" disabled={isEdit} {...register("email")} />
-              {errors.email ? (
-                <p className="text-destructive text-sm">{errors.email.message}</p>
-              ) : null}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="email">{t("emailLabel")}</Label>
+                <Input id="email" type="email" disabled={isEdit} {...register("email")} />
+                {errors.email ? (
+                  <p className="text-destructive text-sm">{errors.email.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mobileNumber">{t("mobileNumberLabel")}</Label>
+                <PhoneNumberInput
+                  id="mobileNumber"
+                  value={mobileNumber}
+                  onChange={(value) =>
+                    setValue("mobileNumber", value, { shouldValidate: true })
+                  }
+                  countryLabel={t("mobileNumberCountryLabel")}
+                  countrySearchPlaceholder={t("countrySearchPlaceholder")}
+                  countryEmptyText={t("countryEmptyText")}
+                  aria-invalid={errors.mobileNumber ? true : undefined}
+                />
+                {errors.mobileNumber ? (
+                  <p className="text-destructive text-sm">
+                    {errors.mobileNumber.message}
+                  </p>
+                ) : null}
+              </div>
             </div>
+            <p className="text-muted-foreground -mt-2 text-xs">{t("mobileNumberHint")}</p>
 
             <div className="space-y-2">
               <Label htmlFor="roleId">{t("roleLabel")}</Label>
