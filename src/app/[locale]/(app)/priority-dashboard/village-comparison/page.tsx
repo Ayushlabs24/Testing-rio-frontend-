@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { cn } from "@/lib/utils";
 import { priorityService } from "@/services/priority/priority.service";
-import type { VillageComparisonEntry } from "@/services/priority/priority.types";
+import type { CenterComparisonEntry } from "@/services/priority/priority.types";
 import { studiesService } from "@/services/studies/studies.service";
 import type { StudySummary } from "@/services/studies/studies.types";
 import { resolveApiErrorMessage } from "@/lib/api-error-message";
@@ -39,15 +39,19 @@ function statusVariant(
   return STATUS_VARIANT[status.toLowerCase()] ?? "outline";
 }
 
-/** One village's full comparison, as its own card — laid out so every card
+/** One Centre's full comparison, as its own card — laid out so every card
  * shows the same fields in the same vertical order, making a column-to-
  * column scan across cards do the actual "compare" work a plain wide table
- * left to horizontal scrolling. */
-function VillageCard({
+ * left to horizontal scrolling.
+ *
+ * Keyed on Centre rather than on `Need.village`: village is free text with
+ * nothing validating it, so two spellings of one place produced two cards.
+ * The village names still appear, as labels under the Centre name. */
+function CenterCard({
   entry,
   t,
 }: {
-  entry: VillageComparisonEntry;
+  entry: CenterComparisonEntry;
   t: ReturnType<typeof useTranslations>;
 }) {
   const hasAffected = entry.affectedPeople !== null || entry.affectedHouseholds !== null;
@@ -60,9 +64,38 @@ function VillageCard({
     <Card className="flex flex-col">
       <CardHeader className="gap-3 pb-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-foreground text-base font-semibold break-words">
-            <AutoTranslate text={entry.village} />
-          </h3>
+          <div className="min-w-0">
+            <h3 className="text-foreground text-base font-semibold break-words">
+              <AutoTranslate text={entry.centerName} />
+            </h3>
+            {entry.governorateName ? (
+              <p className="text-muted-foreground text-xs break-words">
+                <AutoTranslate text={entry.governorateName} />
+                {entry.regionName ? (
+                  <>
+                    {" · "}
+                    <AutoTranslate text={entry.regionName} />
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+            {entry.villages.length > 0 ? (
+              /* Village names are free text a researcher typed, so they carry
+                 no nameAr of their own — AutoTranslate is the right tool, the
+                 same one the Need and Study titles use. Translated one name at
+                 a time rather than as a single joined string: the separator is
+                 punctuation, not language, and each name caches on its own so
+                 a village repeated across cards is only translated once. */
+              <p className="text-muted-foreground mt-0.5 text-xs break-words">
+                {entry.villages.map((v, i) => (
+                  <span key={v}>
+                    {i > 0 ? " · " : null}
+                    <AutoTranslate text={v} />
+                  </span>
+                ))}
+              </p>
+            ) : null}
+          </div>
           {entry.priorityStatus ? (
             <Badge variant={statusVariant(entry.priorityStatus)} className="shrink-0">
               {tLevel(`level.${entry.priorityStatus.toLowerCase()}`)}
@@ -75,6 +108,14 @@ function VillageCard({
           </span>
           <span className="text-muted-foreground text-xs">
             {t("columns.priorityScore")}
+            {entry.scoredNeedCount > 0 ? (
+              <>
+                {" "}
+                <span className="opacity-70">
+                  ({entry.scoredNeedCount}/{entry.totalNeedCount})
+                </span>
+              </>
+            ) : null}
           </span>
         </div>
       </CardHeader>
@@ -139,18 +180,17 @@ function VillageCard({
           <p className="text-muted-foreground mb-1 text-xs font-medium">
             {t("columns.domainSeverity")}
           </p>
-          {entry.domainComponents === null || entry.domainComponents.length === 0 ? (
+          {entry.domainBreakdown.length === 0 ? (
             <p className="text-muted-foreground text-xs">{t("noDomainData")}</p>
           ) : (
             <div className="flex flex-wrap gap-1">
-              {entry.domainComponents.map((dc) => (
+              {entry.domainBreakdown.map((d) => (
                 <Badge
-                  key={dc.domainKey}
-                  variant={dc.triggeredOverride ? "destructive" : "outline"}
+                  key={d.domain}
+                  variant={statusVariant(d.level)}
                   className="text-xs"
                 >
-                  {localizedDomain(dc.domainNameSnapshot)}:{" "}
-                  {Math.round(dc.domainSeverityScore)}
+                  {localizedDomain(d.domain)}: {Math.round(d.averageScore)}
                 </Badge>
               ))}
             </div>
@@ -166,7 +206,7 @@ export default function VillageComparisonPage() {
   const tApiErr = useTranslations("apiErrors");
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [selectedStudyIds, setSelectedStudyIds] = useState<string[]>([]);
-  const [entries, setEntries] = useState<VillageComparisonEntry[] | null>(null);
+  const [entries, setEntries] = useState<CenterComparisonEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -182,7 +222,7 @@ export default function VillageComparisonPage() {
     setLoading(true);
     setError(null);
     try {
-      setEntries(await priorityService.compareVillages(studyIds));
+      setEntries(await priorityService.compareCenters(studyIds));
     } catch (err) {
       setError(resolveApiErrorMessage(err, tApiErr, t("loadError")));
     } finally {
@@ -254,7 +294,7 @@ export default function VillageComparisonPage() {
             )}
           >
             {entries.map((entry) => (
-              <VillageCard key={entry.village} entry={entry} t={t} />
+              <CenterCard key={entry.centerId} entry={entry} t={t} />
             ))}
           </div>
         ) : null}

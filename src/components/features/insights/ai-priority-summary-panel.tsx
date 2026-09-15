@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   Sparkles,
   CheckCircle2,
+  CircleAlert,
   Loader2,
   RefreshCw,
   Edit3,
@@ -55,6 +56,33 @@ import {
 } from "@/services/reports/priority-summary.schemas";
 import { GenerateSummaryModal } from "./generate-summary-modal";
 import { SaveReportModal } from "./save-report-modal";
+
+/** One validation row. Green tick and "Yes" when the condition holds, amber
+ *  circle and "No" when it does not — the Generate button reads exactly these
+ *  same values, so the two can never disagree. */
+function ChecklistRow({
+  ok,
+  label,
+  t,
+}: {
+  ok: boolean;
+  label: string;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {ok ? (
+        <CheckCircle2 className="text-success size-4 shrink-0" />
+      ) : (
+        <CircleAlert className="text-warning size-4 shrink-0" />
+      )}
+      <span>
+        {label}:{" "}
+        <span className="font-medium">{ok ? t("checklistYes") : t("checklistNo")}</span>
+      </span>
+    </div>
+  );
+}
 
 export function AiPrioritySummaryPanel({
   studyId,
@@ -294,19 +322,24 @@ export function AiPrioritySummaryPanel({
 
             <div className="bg-muted/30 border-border space-y-2.5 rounded-lg border p-4 text-xs">
               <p className="text-foreground font-semibold">{t("checklistTitle")}</p>
+              {/* Each row reports its own real state. These were three fixed
+                  green ticks with the word "Yes" baked into the string, so the
+                  checklist read "Yes" to everything while the Generate button
+                  below it stayed disabled on the very conditions it claimed
+                  were met — the one thing a validation checklist must never
+                  do. A failing row now says which one is missing. */}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="text-success size-4" />
-                  <span>{t("severityComplete")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="text-success size-4" />
-                  <span>{t("priorityComplete")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="text-success size-4" />
-                  <span>{t("snapshotReady")}</span>
-                </div>
+                <ChecklistRow
+                  ok={hasSeverityScoring}
+                  label={t("severityComplete")}
+                  t={t}
+                />
+                <ChecklistRow
+                  ok={hasPriorityScoring}
+                  label={t("priorityComplete")}
+                  t={t}
+                />
+                <ChecklistRow ok={Boolean(surveyId)} label={t("snapshotReady")} t={t} />
                 <div className="flex items-center gap-2">
                   <Info className="text-primary size-4" />
                   <span>{t("approvedSelected", { count: approvedEvidenceCount })}</span>

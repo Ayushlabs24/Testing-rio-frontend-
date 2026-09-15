@@ -298,7 +298,7 @@ export const endpoints = {
     // RIO-FR-003 AC 5 — a reviewer replacing the computed number, with a
     // mandatory reason. The computed value stays on the record.
     override: (id: string) => `/priority-scores/${id}/override`,
-    villageComparison: "/priority-scores/village-comparison",
+    centerComparison: "/priority-scores/center-comparison",
   },
   reports: {
     list: "/reports",

@@ -128,6 +128,11 @@ export default function PriorityDashboardPage() {
         <PageHeader
           title={t("title")}
           description={t("description")}
+          // FR-005 asks for this by name ("Highlight priorities, compare
+          // villages, and log follow-up decisions"), so the entry point
+          // stays. What changed underneath is the grouping key: the page now
+          // compares Centres, with village names shown as labels — see
+          // CenterAggregationService for why village could not stay the key.
           actions={
             <Button variant="outline" size="sm" asChild>
               <Link href="/priority-dashboard/village-comparison">

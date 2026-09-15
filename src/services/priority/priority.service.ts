@@ -4,7 +4,7 @@ import type { RequestOptions } from "@/services/api/types";
 import type {
   PriorityDashboardEntry,
   PriorityScore,
-  VillageComparisonEntry,
+  CenterComparisonEntry,
 } from "@/services/priority/priority.types";
 
 export const priorityService = {
@@ -58,8 +58,8 @@ export const priorityService = {
   // RIO-FR-005 (Q9) — cross-study village comparison. Scope is enforced
   // server-side by role (NGO: own org's studies only; NCNP/Center
   // Supervisor: any org's studies), not by anything this call does.
-  async compareVillages(studyIds: string[]): Promise<VillageComparisonEntry[]> {
-    return apiClient.get<VillageComparisonEntry[]>(endpoints.priority.villageComparison, {
+  async compareCenters(studyIds: string[]): Promise<CenterComparisonEntry[]> {
+    return apiClient.get<CenterComparisonEntry[]>(endpoints.priority.centerComparison, {
       params: { studyIds: studyIds.join(",") },
     });
   },

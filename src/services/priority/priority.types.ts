@@ -55,9 +55,17 @@ export interface PriorityScore {
 }
 
 // Org-wide dashboard row — every Need, whether or not it's been scored yet.
-// Backed by the real village-priority pipeline (weighted domain rollup, per
-// the org's methodology config) — not the older per-indicator PriorityScore
-// above, which no screen writes to anymore.
+//
+// `score` has two sources, tried in this order (PriorityV2Service#listForOrg):
+//   1. The Need's own APPROVED PriorityScore — the per-need, reviewer-signed-
+//      off number defined by the interface above. An unapproved score is never
+//      sent here, so a need can be scored and still read "Not scored yet"
+//      until someone signs it off.
+//   2. Failing that, the village-priority rollup (VillagePriorityAssessment),
+//      a separate weighted-domain pipeline that also feeds RPT14.
+//
+// Both arrive on the same 0-100 scale with high = urgent, so the column reads
+// one way down the whole table regardless of which source filled it.
 export interface PriorityDashboardEntry {
   studyId: string;
   studyTitle: string;
@@ -79,12 +87,28 @@ export interface PriorityDashboardEntry {
     level: "critical" | "high" | "medium" | "low";
     overrideReason: string | null;
     scoredAt: string;
+    /** Which of the two pipelines above produced `overallScore`, and so which
+     *  way the number runs: `priorityScore` is a severity (high = urgent),
+     *  `villageRollup` a performance figure (low = urgent). Only matters to
+     *  code that does arithmetic on the number rather than displaying it — the
+     *  Collective Dashboard's Severity column read the wrong direction for a
+     *  while because it had no way to tell them apart. */
+    source: "priorityScore" | "villageRollup";
   } | null;
 }
 
-// RIO-FR-005 (Q12, client-confirmed) — final, no additions.
+// RIO-FR-005 (Q12, client-confirmed). Mirrors the backend's GapType union in
+// `src/modules/priority/scoring.ts` — keep the two in step.
+//
+// `Conflict-related` keeps the client-approved list's exact casing rather than
+// being lower-cased to match its neighbours, because that list is also what
+// `prisma/import-arabic-config-lists.ts` translates against.
+//
+// Labels shown in the UI come from the GapTypeOption rows the API returns
+// (name/nameAr), not from this union — this is the type-level contract only.
 export const GAP_TYPES = [
   "acute",
+  "Conflict-related",
   "chronic",
   "structural",
   "seasonal",
@@ -106,21 +130,47 @@ export interface DomainPriorityComponent {
   triggeredOverride: boolean;
 }
 
-export interface VillageComparisonEntry {
-  village: string;
+/** One Domain's mean within a Centre. Same scale and direction as every other
+ *  priority number: 0-100, high = urgent. */
+export interface CenterDomainBreakdown {
+  domain: string;
+  needCount: number;
+  averageScore: number;
+  level: "critical" | "high" | "medium" | "low";
+}
+
+/** Grouped by Centre, not by `Need.village`. Village is free text a researcher
+ *  types with nothing validating it — the client confirmed no authoritative
+ *  village dataset exists — while Centre is a real key into their own
+ *  geographic reference. Village names travel in `villages` as labels.
+ *
+ *  `priorityScore` is the mean of this Centre's approved Need PriorityScores,
+ *  so it reads on the same 0-100 scale and in the same direction as a single
+ *  need's score. It replaced a second, separately-computed figure that ran the
+ *  opposite way (low meant urgent), which had already caused one real bug. */
+export interface CenterComparisonEntry {
+  centerId: string;
+  centerName: string;
+  centerNameAr: string | null;
+  governorateName: string | null;
+  governorateNameAr: string | null;
+  regionName: string | null;
+  regionNameAr: string | null;
+  villages: string[];
   studyIds: string[];
   priorityScore: number | null;
-  priorityStatus: string | null;
-  // RIO-FR-005 criterion 2 — per-domain severity, already computed by
-  // VillageAggregationService; null until the village has a scored Need.
-  domainComponents: DomainPriorityComponent[] | null;
+  priorityStatus: "critical" | "high" | "medium" | "low" | null;
+  /** How many of `totalNeedCount` carried an approved score — the mean is
+   *  over these, so a place scored on 2 of 9 needs is not read as complete. */
+  scoredNeedCount: number;
+  domainBreakdown: CenterDomainBreakdown[];
   criticalNeedCount: number;
   highNeedCount: number;
   needTypeCounts: Record<string, number>;
   totalNeedCount: number;
   // RIO-FR-005 (Round 4, client-confirmed 2026-08-24) — sum of each Need's
-  // manually entered affectedPeople/affectedHouseholds for this village.
-  // Null (not 0) when none of the village's Needs have a value entered yet.
+  // manually entered affectedPeople/affectedHouseholds at this Centre.
+  // Null (not 0) when none of them have a value entered yet.
   affectedPeople: number | null;
   affectedHouseholds: number | null;
 }

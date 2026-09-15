@@ -130,6 +130,11 @@ export default function PriorityDetailInsightsPage({
   // different questions (this need vs this village) and have opposite
   // polarity, so they are deliberately shown as two panels, not merged.
   const [needScore, setNeedScore] = useState<PriorityScore | null>(null);
+  // Whether the severity side has actually produced a number, read from the
+  // same endpoint the Severity Score tab renders. The AI summary panel needs
+  // to know this independently of the village rollup — see the props it is
+  // given below for why.
+  const [hasSeverity, setHasSeverity] = useState(false);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,6 +165,29 @@ export default function PriorityDetailInsightsPage({
       stale = true;
     };
   }, [needId]);
+
+  // Severity readiness for the AI summary panel. Same endpoint the Severity
+  // Score tab renders, so the two can never disagree about whether a score
+  // exists. Silent on failure: no severity data is a legitimate state, not an
+  // error worth putting on screen twice.
+  useEffect(() => {
+    let stale = false;
+    // No synchronous reset for the no-survey case: the panel this feeds only
+    // renders inside a `survey ? ... : ...`, so a stale `true` can never be
+    // read, and setting state synchronously in an effect cascades renders.
+    if (!survey) return;
+    severityScoringService
+      .getDashboard(survey.studyId, survey.id)
+      .then((res) => {
+        if (!stale) setHasSeverity(res?.overall?.severityScore != null);
+      })
+      .catch(() => {
+        if (!stale) setHasSeverity(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [survey]);
 
   // `needId` (route param) and `surveyLinkId` (scope filter) can both change
   // while a previous loadPriorityInsights() from an earlier value is still
@@ -649,8 +677,17 @@ export default function PriorityDetailInsightsPage({
                 surveyId={survey.id}
                 villageId={need?.village?.[0] || ""}
                 villages={need?.village || []}
-                hasSeverityScoring={Boolean(priorityV2)}
-                hasPriorityScoring={Boolean(priorityV2)}
+                /* Both of these used to read `Boolean(priorityV2)` — the
+                   VILLAGE rollup. That is a third thing, and neither of the
+                   two the checklist names: it needs a DomainPriorityConfig for
+                   the study's methodology version, so on v5.0 (which has none
+                   seeded yet) it is always null. The result was a need with a
+                   real severity score AND a real approved priority score, a
+                   checklist reading "Yes" to everything, and a permanently
+                   greyed-out Generate button. Each flag now reads the thing it
+                   is named after. */
+                hasSeverityScoring={hasSeverity}
+                hasPriorityScoring={Boolean(needScore)}
               />
             ) : (
               <p className="text-muted-foreground text-sm">{t("noSurveyAssociated")}</p>

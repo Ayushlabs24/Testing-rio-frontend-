@@ -687,7 +687,12 @@ export function DocumentBasedSummaryTab({
 
       {/* UPLOAD DIALOG */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="max-w-md">
+        {/* `sm:max-w-2xl`, not `max-w-2xl`. DialogContent's own base class ends
+            in `sm:max-w-sm`, and a media-query utility beats a plain one at
+            that breakpoint — so an unprefixed `max-w-*` here is silently
+            ignored on every screen wider than 640px and the dialog renders at
+            384px whatever number you write. */}
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("uploadButton")}</DialogTitle>
             <DialogDescription>{t("uploadDialogDescription")}</DialogDescription>
@@ -700,7 +705,7 @@ export function DocumentBasedSummaryTab({
               </div>
             )}
 
-            <div>
+            <div className="space-y-1.5">
               <Label>{t("fields.title")} *</Label>
               <Input
                 required
@@ -710,18 +715,34 @@ export function DocumentBasedSummaryTab({
               />
             </div>
 
-            <div>
-              <Label>{t("fields.file")} *</Label>
-              <Input
-                type="file"
-                required
-                accept=".txt,.docx,.pdf,.csv,.xlsx"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              />
+            {/* Two short controls per row on a real screen, stacked on a
+                phone — `grid-cols-2` alone squeezed both to ~200px there. */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>{t("fields.file")} *</Label>
+                <Input
+                  type="file"
+                  required
+                  accept=".txt,.docx,.pdf,.csv,.xlsx"
+                  className="file:text-foreground file:mr-3 file:cursor-pointer"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("fields.collectedDate")} *</Label>
+                <Input
+                  type="date"
+                  required
+                  value={uploadForm.collectedDate}
+                  onChange={(e) =>
+                    setUploadForm({ ...uploadForm, collectedDate: e.target.value })
+                  }
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
                 <Label>{t("fields.documentType")}</Label>
                 <Select
                   value={uploadForm.documentType}
@@ -748,7 +769,7 @@ export function DocumentBasedSummaryTab({
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>{t("fields.sourceReferenceId")} *</Label>
                 <Input
                   required
@@ -761,21 +782,10 @@ export function DocumentBasedSummaryTab({
               </div>
             </div>
 
-            <div>
-              <Label>{t("fields.collectedDate")} *</Label>
-              <Input
-                type="date"
-                required
-                value={uploadForm.collectedDate}
-                onChange={(e) =>
-                  setUploadForm({ ...uploadForm, collectedDate: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
+            <div className="space-y-1.5">
               <Label>{t("fields.description")}</Label>
               <Textarea
+                rows={3}
                 value={uploadForm.description}
                 onChange={(e) =>
                   setUploadForm({ ...uploadForm, description: e.target.value })
@@ -784,7 +794,7 @@ export function DocumentBasedSummaryTab({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="border-border flex justify-end gap-2 border-t pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -924,7 +934,7 @@ export function DocumentBasedSummaryTab({
 
       {/* SUMMARY MODAL */}
       <Dialog open={summaryModalOpen} onOpenChange={setSummaryModalOpen}>
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="text-primary size-5" />
@@ -1172,7 +1182,7 @@ export function DocumentBasedSummaryTab({
 
       {/* READ-ONLY VIEW OF A PREVIOUSLY GENERATED SUMMARY */}
       <Dialog open={Boolean(viewSummary)} onOpenChange={() => setViewSummary(null)}>
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="text-primary size-5" />
