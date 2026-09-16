@@ -24,15 +24,36 @@ const envSchema = z.object({
     .transform((v) => v === "true"),
 });
 
+/**
+ * A variable declared in a hosting dashboard but left blank arrives as `""`,
+ * not as `undefined` — so Zod's `.default()` never applies and `.url()` fails
+ * on the empty string. Treat blank (and whitespace-only) as "not set" so the
+ * defaults above do their job, which is what someone who cleared the field
+ * meant. A value that is present but genuinely wrong still fails, loudly.
+ */
+const orUndefined = (v: string | undefined) =>
+  v === undefined || v.trim() === "" ? undefined : v.trim();
+
 const parsed = envSchema.safeParse({
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  NEXT_PUBLIC_API_TIMEOUT_MS: process.env.NEXT_PUBLIC_API_TIMEOUT_MS,
-  NEXT_PUBLIC_ENABLE_MOCK_AUTH: process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH,
+  NEXT_PUBLIC_APP_URL: orUndefined(process.env.NEXT_PUBLIC_APP_URL),
+  NEXT_PUBLIC_API_BASE_URL: orUndefined(process.env.NEXT_PUBLIC_API_BASE_URL),
+  NEXT_PUBLIC_API_TIMEOUT_MS: orUndefined(process.env.NEXT_PUBLIC_API_TIMEOUT_MS),
+  NEXT_PUBLIC_ENABLE_MOCK_AUTH: orUndefined(process.env.NEXT_PUBLIC_ENABLE_MOCK_AUTH),
 });
 
 if (!parsed.success) {
-  throw new Error(`Invalid environment configuration: ${parsed.error.message}`);
+  // This module is imported during `next build`'s page-data collection, where
+  // a raw throw surfaces only as "Failed to collect page data for <route>" and
+  // names neither the variable nor the reason. Name both, so a bad deploy
+  // setting is a one-line fix instead of a bisect through the route list.
+  const details = parsed.error.issues
+    .map((i) => `  ${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("\n");
+  throw new Error(
+    `Invalid environment configuration:\n${details}\n` +
+      `Each NEXT_PUBLIC_* URL must be absolute and include the scheme, ` +
+      `e.g. https://api.example.com/api`,
+  );
 }
 
 export const env = parsed.data;
