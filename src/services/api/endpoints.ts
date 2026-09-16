@@ -323,6 +323,9 @@ export const endpoints = {
   // governorate / center) without needing a different endpoint per level.
   geographicDashboard: {
     map: "/geographic-dashboard/map",
+    // The rows behind one point's figures — the same data at a finer grain,
+    // so the panel's counts can be opened instead of only read.
+    pointItems: (pointId: string) => `/geographic-dashboard/points/${pointId}/items`,
   },
   // RIO-FR-013 pre-platform study uploads, and RIO-DATA-002 importing one
   // of them into the unified dashboard as real Need rows.

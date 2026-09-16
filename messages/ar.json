@@ -528,7 +528,17 @@
         "linkedInitiatives": "المبادرات المرتبطة",
         "moreInitiatives": "و{count} أخرى",
         "statNeeds": "الاحتياجات",
-        "statPriority": "توزيع الأولويات"
+        "statPriority": "توزيع الأولويات",
+        "pointItemsNeedsTitle": "الاحتياجات في {place}",
+        "pointItemsStudiesTitle": "الدراسات في {place}",
+        "pointItemsPublishedTitle": "الاحتياجات المعتمدة في {place}",
+        "pointItemsLoading": "جارٍ التحميل…",
+        "pointItemsFailed": "تعذّر تحميل هذه القائمة. أغلق النافذة وحاول مرة أخرى.",
+        "pointItemsEmpty": "لا توجد سجلات هنا بعد.",
+        "pointItemsCount": "{count, plural, zero {لا توجد سجلات} one {سجل واحد} two {سجلان} few {# سجلات} many {# سجلاً} other {# سجل}}",
+        "pointItemsShowing": "عرض {shown} من {total}. افتح سجلاً لعرض القائمة كاملة.",
+        "pointItemsNeedsHere": "{count, plural, zero {لا احتياجات هنا} one {احتياج واحد هنا} two {احتياجان هنا} few {# احتياجات هنا} many {# احتياجاً هنا} other {# احتياج هنا}}",
+        "pointItemsDetail": "التفاصيل"
       }
     },
     "evidence": {

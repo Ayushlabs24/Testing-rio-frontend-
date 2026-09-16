@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { ArrowUpRight, Building2, Globe2, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -20,10 +20,12 @@ import { cn } from "@/lib/utils";
 import { geographicDashboardService } from "@/services/geographic-dashboard/geographic-dashboard.service";
 import {
   PRIORITY_BANDS,
+  type GeoItemKind,
   type GeoLevel,
   type GeoMapResponse,
 } from "@/services/geographic-dashboard/geographic-dashboard.types";
 import { BAND_COLOURS } from "./needs-map";
+import { PointItemsDialog } from "./point-items-dialog";
 
 // Leaflet needs `window`, so the map itself only loads in the browser.
 const NeedsMap = dynamic(() => import("./needs-map").then((m) => m.NeedsMap), {
@@ -85,6 +87,8 @@ export function GeographicDistribution({
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Which of the panel's figures is open as a list, or null for none.
+  const [itemsKind, setItemsKind] = useState<GeoItemKind | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +123,18 @@ export function GeographicDistribution({
   const selected = useMemo(
     () => data?.points.find((p) => p.id === selectedId) ?? null,
     [data, selectedId],
+  );
+
+  // Memoised because the dialog lists this object in an effect dependency: a
+  // new object on every render would refetch the list in a loop. ALL is the
+  // "no filter" sentinel and must not be sent as a value.
+  const itemFilters = useMemo(
+    () => ({
+      sector: sector === ALL ? undefined : sector,
+      urgency: urgency === ALL ? undefined : urgency,
+      status: status === ALL ? undefined : status,
+    }),
+    [sector, urgency, status],
   );
 
   const labels = useMemo(
@@ -275,12 +291,26 @@ export function GeographicDistribution({
                   {/* Needs first: this is a needs dashboard, and the count is
                       what the map is sized by. */}
                   <div className="grid grid-cols-3 gap-2.5">
-                    <Stat value={selected.needCount} label={tMap("statNeeds")} />
-                    <Stat value={selected.studyCount} label={t("geoStudies")} />
+                    <Stat
+                      value={selected.needCount}
+                      label={tMap("statNeeds")}
+                      onClick={() => setItemsKind("needs")}
+                    />
+                    <Stat
+                      value={selected.studyCount}
+                      label={t("geoStudies")}
+                      onClick={() => setItemsKind("studies")}
+                    />
                     {variant === "ncnp" ? (
+                      // No onClick: the endpoint lists needs and studies, not
+                      // organisations.
                       <Stat value={selected.orgCount} label={t("geoOrgs")} />
                     ) : (
-                      <Stat value={selected.publishedCount} label={t("geoPublished")} />
+                      <Stat
+                        value={selected.publishedCount}
+                        label={t("geoPublished")}
+                        onClick={() => setItemsKind("published")}
+                      />
                     )}
                   </div>
 
@@ -422,19 +452,121 @@ export function GeographicDistribution({
               : ""}
           </p>
         ) : null}
+
+        {/* The rows behind whichever figure was clicked. Rendered once here
+            rather than per Stat so only one list can ever be open, and it is
+            handed the same filters the map is currently showing. */}
+        <PointItemsDialog
+          pointId={itemsKind && selected ? selected.id : null}
+          pointName={selected?.name ?? ""}
+          kind={itemsKind ?? "needs"}
+          level={level}
+          filters={itemFilters}
+          onClose={() => setItemsKind(null)}
+        />
       </CardContent>
     </Card>
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="bg-muted/30 border-border/50 rounded-xl border p-3.5 text-center">
-      <p className="text-foreground text-2xl leading-none font-extrabold tabular-nums">
-        {value}
+/**
+ * Counts from zero up to `target` whenever it changes, so selecting a place on
+ * the map reads as its figures arriving rather than silently swapping.
+ *
+ * Returns `target` immediately when the reader has asked for reduced motion.
+ * That is not a nicety here: these are four numbers animating at once, in a
+ * panel that re-renders on every map click, and for a motion-sensitive reader
+ * that is exactly the kind of repeated movement the setting exists to stop.
+ */
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+// Read through useSyncExternalStore rather than an effect: the preference is
+// external state that can change mid-session, and subscribing to it keeps the
+// first render correct instead of painting an animation and then cancelling it.
+const subscribeToReducedMotion = (onChange: () => void) => {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+
+function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(
+    subscribeToReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false, // server render: assume motion is fine, the client corrects it
+  );
+}
+
+function useCountUp(target: number, durationMs = 850): number {
+  const reduced = usePrefersReducedMotion();
+  const [display, setDisplay] = useState(target);
+
+  useEffect(() => {
+    if (reduced || target === 0) return;
+    let frame = 0;
+    const started = performance.now();
+    const step = (now: number) => {
+      // Clamped at both ends. rAF hands back the frame's own start timestamp,
+      // which can predate the performance.now() taken a moment earlier — that
+      // makes the elapsed time negative, and easeOutCubic then renders a
+      // negative count on the first frame (observed: "-7" before "157").
+      const t = Math.min(1, Math.max(0, (now - started) / durationMs));
+      // easeOutCubic: fast first, settling onto the final figure rather than
+      // stopping dead on it.
+      setDisplay(Math.round(target * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [target, durationMs, reduced]);
+
+  return reduced ? target : display;
+}
+
+function Stat({
+  value,
+  label,
+  onClick,
+}: {
+  value: number;
+  label: string;
+  /** Omitted for figures with nothing to open — the Organisations count on the
+   *  NCNP view has no drill-down, and a tile that looks clickable but is not
+   *  is worse than one that plainly is not. */
+  onClick?: () => void;
+}) {
+  const shown = useCountUp(value);
+
+  // aria-label carries the settled figure so a screen reader announces the
+  // result once, instead of every intermediate frame. tabular-nums keeps the
+  // digits from jittering as the width of each numeral changes.
+  const body = (
+    <>
+      <p
+        className="text-foreground text-2xl leading-none font-extrabold tabular-nums"
+        aria-label={`${value} ${label}`}
+      >
+        <span aria-hidden="true">{shown}</span>
       </p>
       <p className="text-muted-foreground mt-1.5 text-xs font-semibold">{label}</p>
-    </div>
+    </>
+  );
+
+  const shell = "bg-muted/30 border-border/50 rounded-xl border p-3.5 text-center";
+  if (!onClick) return <div className={shell}>{body}</div>;
+
+  // A real button, not a div with a handler: this has to be reachable by
+  // keyboard and announced as actionable, like any other control that opens a
+  // dialog. Zero counts stay disabled — an empty list answers nothing.
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={value === 0}
+      className={`${shell} hover:bg-muted/60 hover:border-border focus-visible:ring-ring cursor-pointer transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default disabled:hover:bg-transparent`}
+    >
+      {body}
+    </button>
   );
 }
 

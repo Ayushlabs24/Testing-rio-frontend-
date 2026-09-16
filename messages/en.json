@@ -528,7 +528,17 @@
         "linkedInitiatives": "Linked initiatives",
         "moreInitiatives": "and {count} more",
         "statNeeds": "Needs",
-        "statPriority": "Priority breakdown"
+        "statPriority": "Priority breakdown",
+        "pointItemsNeedsTitle": "Needs in {place}",
+        "pointItemsStudiesTitle": "Studies in {place}",
+        "pointItemsPublishedTitle": "Published needs in {place}",
+        "pointItemsLoading": "Loading…",
+        "pointItemsFailed": "Could not load this list. Close and try again.",
+        "pointItemsEmpty": "Nothing recorded here yet.",
+        "pointItemsCount": "{count, plural, =0 {No records} one {# record} other {# records}}",
+        "pointItemsShowing": "Showing {shown} of {total}. Open a record for the full list.",
+        "pointItemsNeedsHere": "{count, plural, one {# need here} other {# needs here}}",
+        "pointItemsDetail": "Detail"
       }
     },
     "evidence": {

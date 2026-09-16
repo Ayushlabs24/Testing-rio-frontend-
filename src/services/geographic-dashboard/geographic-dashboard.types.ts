@@ -88,3 +88,44 @@ export interface GeoMapParams {
   urgency?: string;
   status?: string;
 }
+
+/** What a point's drill-down lists. Mirrors the three figures the map panel
+ *  shows, so every number a reader can see is a number they can open. */
+export type GeoItemKind = "needs" | "studies" | "published";
+
+export interface GeoNeedItem {
+  id: string;
+  title: string;
+  status: string;
+  urgency: string | null;
+  domain: string | null;
+  band: PriorityBand | null;
+  /** Both ids are needed: a need's page lives under its study. */
+  studyId: string;
+  studyTitle: string;
+  orgName: string;
+}
+
+export interface GeoStudyItem {
+  id: string;
+  title: string;
+  /** Needs at THIS point, not the study's total, so it agrees with the panel. */
+  needCount: number;
+  orgName: string;
+}
+
+export interface GeoPointItemsResponse {
+  pointId: string;
+  pointName: string;
+  level: GeoLevel;
+  kind: GeoItemKind;
+  /** Rows before the server's cap, so the list can say "showing 50 of 367"
+   *  rather than appearing to be the whole set. */
+  total: number;
+  needs?: GeoNeedItem[];
+  studies?: GeoStudyItem[];
+}
+
+export interface GeoPointItemsParams extends GeoMapParams {
+  kind?: GeoItemKind;
+}
