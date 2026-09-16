@@ -132,11 +132,23 @@ export function NeedsMap({ points, selectedId, onSelect, labels }: NeedsMapProps
     const map = L.map(containerRef.current, {
       center: [24.0, 45.0],
       zoom: 5.4,
-      minZoom: 5,
+      // Below the 5 this used to sit at: fitBounds never picks a zoom under
+      // minZoom, so a floor of 5 clamped the fit on shorter panels and left
+      // the country overflowing the frame instead of fitting inside it.
+      minZoom: 4,
       maxZoom: 11,
       maxBounds: ksaBounds,
       maxBoundsViscosity: 1.0,
       scrollWheelZoom: false,
+      // The view is fixed on the Kingdom. Everything outside it is masked out
+      // below, so there is nothing to pan to — and a map that slides off the
+      // country under a stray drag or arrow key reads as broken. Each of these
+      // is a separate way to move the centre, so all of them have to go.
+      dragging: false,
+      keyboard: false,
+      boxZoom: false,
+      touchZoom: false,
+      doubleClickZoom: false,
     });
     // `animate: false` is required, not cosmetic: an animated fitBounds right
     // after L.map() schedules Leaflet's 250ms transition timer, which React
@@ -157,7 +169,99 @@ export function NeedsMap({ points, selectedId, onSelect, labels }: NeedsMapProps
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
+    // Grey out everything that is not Saudi Arabia, so the eye is not drawn to
+    // Iran or Egypt on a map read for funding priority inside the Kingdom.
+    //
+    // The boundaries are real (geoBoundaries ADM1, simplified to ~1 km and
+    // served from /public) rather than drawn by hand. An approximate outline
+    // was visibly wrong along the Gulf coast, and on a map whose whole job is
+    // to say *where* a need is, a border nobody trusts undermines the dots.
+    //
+    // Fetched rather than imported so the 45 KB never enters the JS bundle;
+    // the browser caches it like any other static asset. If it fails the map
+    // still works — it just loses the mask, which beats rendering nothing.
+    let cancelled = false;
+    void fetch("/sa-regions.geojson")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((regions: GeoJSON.FeatureCollection) => {
+        if (cancelled || !mapRef.current) return;
+
+        // One polygon covering the world, with every region punched out of it.
+        // Rings after the first are holes, and the regions tile the country, so
+        // their union is exactly the Kingdom. Building the mask from the same
+        // data that draws the borders keeps the two from ever disagreeing.
+        // Only outer rings are used: a region's own holes are lakes, not gaps
+        // in the country, and punching those through would grey them out.
+        const holes: GeoJSON.Position[][] = [];
+        for (const f of regions.features) {
+          const polys =
+            f.geometry.type === "Polygon"
+              ? [f.geometry.coordinates]
+              : f.geometry.type === "MultiPolygon"
+                ? f.geometry.coordinates
+                : [];
+          for (const poly of polys) if (poly[0]) holes.push(poly[0]);
+        }
+
+        // interactive: false on both layers matters. Either one sits above the
+        // tiles and would otherwise swallow the clicks meant for the need
+        // markers underneath, making every dot on the map unselectable.
+        L.geoJSON(
+          {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [-180, -85],
+                  [180, -85],
+                  [180, 85],
+                  [-180, 85],
+                  [-180, -85],
+                ],
+                ...holes,
+              ],
+            },
+          } as GeoJSON.Feature,
+          {
+            interactive: false,
+            style: { stroke: false, fillColor: "#eef1f5", fillOpacity: 0.95 },
+          },
+        ).addTo(map);
+
+        // Region divisions: hairline and pale, so they read as context behind
+        // the markers rather than competing with them. No fill — the base map
+        // inside the Kingdom is the part worth seeing, and a wash over it left
+        // the country as flat as the masked-out area around it.
+        const outline = L.geoJSON(regions, {
+          interactive: false,
+          style: { color: "#94a3b8", weight: 0.8, opacity: 0.9, fill: false },
+        }).addTo(map);
+
+        // Frame the country by its real extent rather than the hard-coded box,
+        // which was wider than the Kingdom and left the shape cut off against
+        // the panel edges.
+        //
+        // Order matters. invalidateSize() first, because this runs after a
+        // fetch and the panel may have been laid out since the map was built —
+        // fitting against a stale size is what leaves the country floating in
+        // the middle of the frame. maxBounds last, because setting it first
+        // constrains the very fit being computed.
+        const bounds = outline.getBounds();
+        map.invalidateSize({ animate: false });
+        map.fitBounds(bounds, { padding: [8, 8], animate: false });
+        map.setMaxBounds(bounds.pad(0.05));
+      })
+      .catch(() => {
+        /* mask unavailable — the map and its markers still render */
+      });
+
     return () => {
+      // Stops the fetch above from touching a map this cleanup has removed —
+      // React Strict Mode runs the effect twice, so the first request is
+      // usually still in flight when the first map is torn down.
+      cancelled = true;
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
